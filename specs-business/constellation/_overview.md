@@ -10,6 +10,8 @@ Visible proof the project is understood. The outcome is that anyone — a collab
 
 - **A stakeholder sees, at a glance, that the project is understood** — one connected, traceable map of code, rules, memory, and promises, with gaps shown honestly.
 
+- **A stakeholder opens the project map and finds their way around it** — one local command, a private read-only viewer, five honest lenses including "what's unconnected" and "just this area".
+
 _Planned outcomes (not yet written):_
 
 - **A navigable map anyone can open** — understanding is something you can look at, not something you have to ask for.

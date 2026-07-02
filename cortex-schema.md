@@ -63,6 +63,7 @@ These were underspecified or contradictory in `cortex-design.md`. Each is now **
 │   ├── preferences.md                        project conventions (stack, formatting)
 │   ├── environment.md                        operational pointers — never secrets
 │   ├── do-not-repeat.md                      index of recurring-mistake rules
+│   ├── standing-authorities.md               default decisions Claude holds without asking
 │   ├── decisions.md                          ADRs (cross-link to atlas/decisions/)
 │   ├── bugs/                                  the unified bug ledger
 │   │   ├── _index.md
@@ -286,6 +287,10 @@ All atlas leaf files carry minimal frontmatter. **Common optional:** `confidence
 Transient; gitignored. Each loop output is markdown with a minimal header. **Required:** `kind` (string const, e.g. `pulse-hygiene-report`, `pulse-suggestions`, `pulse-rule-candidates`, …), `generated` (iso-datetime), `loop` (string — the skill that wrote it). Suggestion entries inside `suggestions.md` use `S-NNN` IDs.
 
 `dismissed.md` **persists** (rejection memory, design §10.3): one entry per dismissed `S-NNN`, with `dismissed` (iso-datetime) and `expires` (iso-datetime, default +90 days). **Validated by** `check.pulse` (header present; loose otherwise — transient data is not held to artefact-grade rigor).
+
+**Suggestion entries** (in `suggestions.md`, `kind: pulse-suggestions`): one `## S-NNN: <title>` section per suggestion. Required field lines inside each section: `**Target:**` (a project-relative path that MUST lie inside `.cortex/cerebrum/`) and `**Proposed addition:**` followed by a fenced block holding the exact text to apply. Optional: `**Status:** pending | accepted | rejected` (absent = `pending`); free evidence lines (pattern, occurrences, source sessions, confidence) are unconstrained. The review CLI parses exactly these fields; accept appends the fenced block to the target verbatim.
+
+**`dismissed.md`** (`kind: pulse-dismissed`) holds one `## S-NNN` section per rejection with `**Dismissed:**` (iso-datetime) and `**Expires:**` (iso-datetime; default now + `pulse.dismissedWindowDays`, 90). `pulse-list` hides unexpired dismissed ids; expired ones may resurface.
 
 `hook-errors.md` (`kind: pulse-hook-errors`) is the hooks' degradation log (§5): hooks **append** one structured entry per internal error (hook name, file involved, failure, iso-datetime), capped at the most recent 100 entries. Unlike loop reports it is append-not-overwrite; like everything in `pulse/` it is transient and surfaced by hygiene.
 

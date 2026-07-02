@@ -10,6 +10,8 @@ The read-only graph compiler and renderer for humans. `cortex scan` produces `.c
 
 - `constellation.compiler` — pure-Core compiler: four knowledge surfaces in, `.cortex/constellation.json` out per schema §4.9 (module-prefixed nodes, citation-graph edges only, Level-1 groups, dropped-ref counters, deterministic).
 
+- `constellation.renderer` — localhost-only read-only server + Cytoscape SPA over the compiled map; five locked presets filtered server-side (`default`, `anatomy-only`, `knowledge-only`, `orphans`, `domain`); visual behaviour deferred to journey tier.
+
 _Planned coverage (not yet written):_
 
 - Compiling `.cortex/constellation.json` — a hierarchical node-group tree plus edges from frontmatter cross-references

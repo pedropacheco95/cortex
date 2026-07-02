@@ -72,8 +72,8 @@ export interface Constellation {
   };
 }
 
-/** The four cerebrum core files (§1) — `cerebrum:<file>` nodes when present. */
-const CEREBRUM_CORE_FILES = ['decisions.md', 'do-not-repeat.md', 'environment.md', 'preferences.md'];
+/** The five cerebrum core files (§1) — `cerebrum:<file>` nodes when present. */
+const CEREBRUM_CORE_FILES = ['decisions.md', 'do-not-repeat.md', 'environment.md', 'preferences.md', 'standing-authorities.md'];
 
 const UNASSIGNED_LAYER = '(unassigned)';
 
@@ -225,7 +225,7 @@ export async function compile(root: string): Promise<Constellation> {
   }
 
   // -------------------------------------------------------------------------
-  // Nodes — cerebrum (rules, bugs, the four core files)
+  // Nodes — cerebrum (rules, bugs, the five core files)
   // -------------------------------------------------------------------------
   interface RuleArtefact {
     nodeId: string;

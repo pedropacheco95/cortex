@@ -26,6 +26,10 @@ Current edges (`A → depends on B`):
 - `hooks.pre-write` → `core-cli.init`
 - `hooks.post-write` → `core-cli.init`, `anatomy.scanner`
 - `constellation.compiler` → `schema.validator`, `anatomy.scanner`
+- `constellation.renderer` → `constellation.compiler`
+- `atlas.ingest-skill` → `core-cli.init`, `schema.validator`
+- `pulse.review-cli` → `core-cli.init`, `schema.validator`
+- `loops.session-reading` → `schema.validator`
 
 ## Build Order
 
@@ -36,4 +40,8 @@ Following the design doc's §16.2 implementation order:
 3. `core-cli.init` — implemented
 4. `hooks.session-start`, `hooks.pre-write`, `hooks.post-write` — implemented
 5. `constellation.compiler` — implemented
-6. _(next: constellation renderer, cortex-ingest, then shared loop infrastructure — specs to be written)_
+6. `constellation.renderer` — implemented
+7. `atlas.ingest-skill` — implemented
+8. `pulse.review-cli` — implemented
+9. `loops.session-reading` — implemented
+10. _(next: writer/verifier harness, scheduled-task writer, then the thirteen loops — specs to be written)_

@@ -676,7 +676,7 @@ Distil depends on programmatically reading Claude Code session history. The exac
 - **Global session storage** (e.g. in `~/.claude/`) — needs filtering by project. Possible but requires care.
 - **Ephemeral or hard-to-access storage** — distil moves to v1.5; v1 ships hygiene only.
 
-This needs to be verified in Phase 1 (schema doc) before distil's design is finalised. If session access is the third case, the v1 scope drops to hygiene-only and distil becomes a deferred goal.
+**Resolved (verified 2026-07-02):** session storage is the second case — global, at `~/.claude/projects/<slug>/<session-id>.jsonl` where `<slug>` is the project's absolute path with `/` replaced by `-`; JSONL of typed entries. Distil and skill-suggest stay in v1 scope; the session-reading layer (`loops.session-reading`) owns the location/parsing and is deliberately tolerant of format drift since the format is Claude-Code-owned.
 
 ---
 
@@ -845,13 +845,15 @@ Discrete level transitions triggered by clicking into a constellation. The zoom 
 
 **Not** continuous zoom where nodes fade in/out based on viewport scale. That's what Gephi does and it's awful to use.
 
-### 12.5 Three view presets
+### 12.5 Five view presets
 
-Same graph data, three filter toggles:
+Same graph data, five server-side lenses (locked at spec time; each is a testable contract — "preset X returns the node set matching predicate Z"):
 
-- **Project map** (default) — everything visible. The stakeholder demo view.
-- **Code map** — anatomy + specs only. Technical handover view.
-- **Knowledge map** — cerebrum + atlas only, no code. Decisions and rationale view.
+- **default** — everything visible. The stakeholder demo view.
+- **anatomy-only** — structure view.
+- **knowledge-only** — cerebrum + atlas + specs; no code.
+- **orphans** — nodes with no connections in either direction; surfaces unmapped state honestly (§12.6).
+- **domain** (parameterized) — all spec-tree nodes in a single domain.
 
 ### 12.6 What the constellation surfaces
 

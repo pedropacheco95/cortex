@@ -6,7 +6,11 @@ The project's memory of why. The outcome is that decisions, the people involved,
 
 ## What it covers
 
-_No business specs written yet — this tree is scaffolded structure only. Planned outcomes:_
+**Outcomes written:**
+
+- **A developer turns raw sources into durable project memory** — originals preserved untouched, extracted memory always traceable to its source, re-ingest refreshes instead of duplicating.
+
+_Planned (not yet written):_
 
 - **Decisions with their reasons** — not just what was chosen, but why, kept where it can be found.
 - **The people behind the work** — who was involved, so context isn't lost when they move on.

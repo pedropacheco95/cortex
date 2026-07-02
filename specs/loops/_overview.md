@@ -6,7 +6,11 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 
 ## What it covers
 
-_No specs written yet — this tree is scaffolded structure only. Planned coverage:_
+**Specs written:**
+
+- `loops.session-reading` — the shared transcript substrate: project-slug resolution, project-isolated session enumeration, tolerant JSONL parsing, message extraction; read-only, format-drift-defensive.
+
+_Planned (not yet written):_
 
 - The thirteen Cortex loops and their composition properties
 - The Desktop scheduled-task SKILL.md writer

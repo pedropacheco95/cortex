@@ -6,7 +6,11 @@ The self-maintenance process: two loops, Hygiene (fast, mostly deterministic, da
 
 ## What it covers
 
-_No specs written yet — this tree is scaffolded structure only. Planned coverage:_
+**Specs written:**
+
+- `pulse.review-cli` — the human gate: `pulse-list` / `pulse-accept` / `pulse-reject`, verbatim application to cerebrum-only targets, dismissal memory with the configurable window.
+
+_Planned (not yet written):_
 
 - Hygiene: orphan branches, stale PRs, drop-offs, anatomy drift, cerebrum dead refs, spec orphans, and aged TODOs → `pulse/hygiene-report.md`
 - Distil: extracting recurring patterns from session transcripts → `pulse/suggestions.md`

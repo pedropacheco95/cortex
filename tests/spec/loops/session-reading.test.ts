@@ -1,0 +1,102 @@
+/**
+ * Spec-level test — loops.session-reading. The integrated slice: build a
+ * realistic fake home with multiple sessions for one project (plus a
+ * prefix-sharing neighbour and a noise-heavy transcript) and walk the full
+ * pipeline end-to-end — listSessions → readSession → extractMessages — against
+ * an injected home so the real ~/.claude is never touched.
+ */
+import { describe, it, expect, afterEach } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
+import { makeTmpDir, cleanTmp, snapshotTree } from '../../fixtures/init-harness.js';
+import { projectSlug, listSessions, readSession, extractMessages } from '../../../src/sessions/read.js';
+
+const dirs: string[] = [];
+function tmp(label: string): string {
+  const d = makeTmpDir(`spec-session-reading-${label}`);
+  dirs.push(d);
+  return d;
+}
+afterEach(() => {
+  while (dirs.length > 0) cleanTmp(dirs.pop() as string);
+});
+
+function writeTranscript(home: string, slug: string, id: string, lines: string[], mtimeSec: number): void {
+  const dir = path.join(home, '.claude', 'projects', slug);
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `${id}.jsonl`);
+  fs.writeFileSync(file, lines.join('\n') + '\n', 'utf-8');
+  fs.utimesSync(file, mtimeSec, mtimeSec);
+}
+
+describe('loops.session-reading — integrated list → read → extract slice', () => {
+  it('enumerates this project only, tolerates noise, and distils the conversation', () => {
+    const home = tmp('home');
+    const root = '/Users/dev/myproject';
+    const slug = projectSlug(root);
+
+    // Newest session: a clean two-turn conversation.
+    writeTranscript(
+      home,
+      slug,
+      'session-newest',
+      [
+        '{"type":"summary","summary":"session recap"}',
+        '{"type":"user","message":{"role":"user","content":"how do I add a rule?"},"timestamp":"2026-07-02T09:00:00Z"}',
+        '{"type":"mode","mode":"default"}',
+        '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"write it under .cortex/cerebrum/rules/"}]},"timestamp":"2026-07-02T09:00:05Z"}',
+      ],
+      3000,
+    );
+    // Older session: valid entries interleaved with malformed lines (90/10 tolerance).
+    writeTranscript(
+      home,
+      slug,
+      'session-older',
+      [
+        '{"type":"user","message":{"role":"user","content":"earlier question"},"timestamp":"2026-07-01T09:00:00Z"}',
+        'GARBAGE not-json',
+        '{"type":"last-prompt","prompt":"unknown future type"}',
+        '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"earlier answer"}]},"timestamp":"2026-07-01T09:00:05Z"}',
+      ],
+      2000,
+    );
+    // A DIFFERENT project sharing a slug prefix — must never appear.
+    writeTranscript(
+      home,
+      projectSlug('/Users/dev/myproject-sandbox'),
+      'intruder',
+      ['{"type":"user","message":{"role":"user","content":"should not be read"}}'],
+      9999,
+    );
+
+    const homeBefore = snapshotTree(home);
+
+    const sessions = listSessions(root, { home });
+    // This project only, newest-first.
+    expect(sessions.map((s) => s.id)).toEqual(['session-newest', 'session-older']);
+
+    // Walk each session: read tolerantly, then extract the messages.
+    const conversations = sessions.map((s) => {
+      const { entries, skipped } = readSession(root, s.id, { home });
+      return { id: s.id, skipped, messages: extractMessages(entries) };
+    });
+
+    const newest = conversations[0];
+    expect(newest?.skipped).toBe(0);
+    expect(newest?.messages).toEqual([
+      { role: 'user', text: 'how do I add a rule?', timestamp: '2026-07-02T09:00:00Z' },
+      { role: 'assistant', text: 'write it under .cortex/cerebrum/rules/', timestamp: '2026-07-02T09:00:05Z' },
+    ]);
+
+    const older = conversations[1];
+    expect(older?.skipped).toBe(1); // the one malformed line
+    expect(older?.messages).toEqual([
+      { role: 'user', text: 'earlier question', timestamp: '2026-07-01T09:00:00Z' },
+      { role: 'assistant', text: 'earlier answer', timestamp: '2026-07-01T09:00:05Z' },
+    ]);
+
+    // Read-only: the whole pipeline changed nothing under the fake home.
+    expect(snapshotTree(home)).toEqual(homeBefore);
+  });
+});

@@ -11,6 +11,7 @@
     "dev": "node dist/schema/cli.js"
   },
   "dependencies": {
+    "cytoscape": "3.34.0",
     "fast-glob": "^3.3.3",
     "gray-matter": "^4.0.3",
     "ignore": "5.3.2",

@@ -200,6 +200,14 @@ describe('nodes: module-prefixed unique ids per surface (Rule 3)', () => {
     expect(node(c, 'cerebrum:environment.md')).toBeUndefined();
     expect(node(c, 'cerebrum:do-not-repeat.md')).toBeUndefined();
   });
+
+  it('the standing-authorities.md core file becomes a cerebrum node when present', async () => {
+    const root = tmp('standing-authorities');
+    fullFixture(root);
+    writeCerebrumCoreFile(root, 'standing-authorities.md');
+    const c = await compile(root);
+    expect(node(c, 'cerebrum:standing-authorities.md')?.module).toBe('cerebrum');
+  });
 });
 
 describe('groups: natural children (Rule 4)', () => {

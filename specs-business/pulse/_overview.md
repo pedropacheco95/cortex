@@ -6,7 +6,11 @@ A system that keeps itself honest. The outcome is that the knowledge layer stays
 
 ## What it covers
 
-_No business specs written yet — this tree is scaffolded structure only. Planned outcomes:_
+**Outcomes written:**
+
+- **A developer approves or declines what the system proposes — in seconds** — accept applies exactly what was shown, decline snoozes for the window, nothing becomes curated knowledge without an explicit yes.
+
+_Planned (not yet written):_
 
 - **Knowledge that stays current** — the picture keeps pace with reality without constant manual upkeep.
 - **Drift surfaced early** — where understanding and code have parted ways, it gets flagged.

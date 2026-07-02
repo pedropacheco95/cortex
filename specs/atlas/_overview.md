@@ -6,7 +6,11 @@ The project knowledge base, following the Karpathy LLM Wiki pattern. It is the n
 
 ## What it covers
 
-_No specs written yet — this tree is scaffolded structure only. Planned coverage:_
+**Specs written:**
+
+- `atlas.ingest-skill` — the shipped `cortex-ingest` skill bundle: verbatim source preservation + §4.4-conformant extraction (stakeholders, decisions, domain terms) with mandatory provenance, atlas-only write boundary, post-write validation. Includes the `cortex validate` CLI rider.
+
+_Planned (not yet written):_
 
 - `stakeholders/` — who the project serves
 - `decisions/` — human-readable narrative decisions, cross-linked to cerebrum

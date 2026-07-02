@@ -6,7 +6,11 @@ Knowledge that compounds across autonomous runs. The outcome is that automated, 
 
 ## What it covers
 
-_No business specs written yet — this tree is scaffolded structure only. Planned outcomes:_
+**Outcomes written:**
+
+- **A developer benefits from what past sessions already taught** — repeated corrections and preferences surface as cited proposals instead of being said a fourth time; strictly local, strictly this project.
+
+_Planned (not yet written):_
 
 - **Runs that remember** — each unattended run starts from what earlier ones discovered, not from scratch.
 - **Learning that accumulates** — value builds up over many runs rather than resetting each time.

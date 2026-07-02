@@ -1,6 +1,9 @@
 /**
- * Thin argv wrapper for `cortex init` (spec core-cli.init), plus the
- * `cortex hook <name>` dispatch (specs hooks.*, Rule 1).
+ * Thin argv wrapper for `cortex init` (spec core-cli.init), the
+ * `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
+ * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
+ * `cortex validate [path] [--json]` (atlas.ingest-skill Rule 4 rider), and
+ * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1).
  */
 import { init } from './init.js';
 
@@ -9,6 +12,45 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'hook') {
     const { main } = await import('../hooks/cli.js');
     return main(argv.slice(1));
+  }
+
+  // `cortex validate [path] [--json]` — wires the schema validator's existing
+  // run(); exit 0 conformant / 1 not (atlas.ingest-skill Rule 4).
+  if (argv[0] === 'validate') {
+    const { run: validateRun } = await import('../schema/cli.js');
+    return validateRun(argv.slice(1));
+  }
+
+  // `cortex pulse-list|pulse-accept|pulse-reject` — the pulse review gate
+  // (pulse.review-cli Rule 1).
+  if (argv[0] === 'pulse-list' || argv[0] === 'pulse-accept' || argv[0] === 'pulse-reject') {
+    const { pulseCli } = await import('../pulse/review.js');
+    return pulseCli(argv[0], argv.slice(1));
+  }
+
+  // `cortex constellation [--port N]` — localhost-only read-only renderer
+  // server (constellation.renderer Rules 1-2). Prints the URL, never opens a
+  // browser; runs until Ctrl-C (nothing persists).
+  if (argv[0] === 'constellation') {
+    const { serveConstellation, DEFAULT_PORT } = await import('../constellation/server.js');
+    let port = DEFAULT_PORT;
+    const portIdx = argv.indexOf('--port');
+    if (portIdx >= 0) {
+      const parsed = Number(argv[portIdx + 1]);
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
+        console.error('cortex constellation: --port requires an integer between 0 and 65535');
+        return 1;
+      }
+      port = parsed;
+    }
+    try {
+      const server = await serveConstellation('.', port);
+      await new Promise<void>((resolve) => server.once('close', resolve));
+      return 0;
+    } catch (err) {
+      console.error(`cortex constellation: ${(err as Error).message}`);
+      return 1;
+    }
   }
 
   // Otherwise argv is everything after `cortex init`.
