@@ -114,3 +114,4 @@ The writer/verifier harness is the safety mechanism required before any Cortex a
 - Consumers own everything after the verdict: branch/PR creation, `pulse/` reporting, applying the diff. The harness is verdict-and-changeset only.
 - `harness.maxIterations` added to schema §10.1 this round (standing authority: schema addition unblocking the current spec).
 - Also supports: `cortex-loop-test-runner` (v1 consumer, design §11.4 item 11) and any future code-mutating loop. Primary parent remains `loops.developer-trusts-changes-the-system-writes`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

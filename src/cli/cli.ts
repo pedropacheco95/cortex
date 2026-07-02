@@ -6,26 +6,31 @@
  * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1),
  * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), the deterministic
  * loops `cortex loop-rule-decay|loop-atlas-staleness|loop-onboarding-drift|`
- * `loop-spec-drift` (specs loops.*, Rule 1 each), and the two
- * collect/judge/propose loops `cortex pulse-distil [--collect|--propose <f>|--no-llm]`
- * (spec pulse.distil, Rule 1) and `cortex loop-skill-suggest [--propose <f>]`
- * (spec loops.skill-suggest, Rule 1).
+ * `loop-spec-drift|loop-specflow-lint|loop-specflow-verify` (specs loops.*,
+ * Rule 1 each), the two collect/judge/propose loops
+ * `cortex pulse-distil [--collect|--propose <f>|--no-llm]` (spec pulse.distil,
+ * Rule 1) and `cortex loop-skill-suggest [--propose <f>]`
+ * (spec loops.skill-suggest, Rule 1), and the collect/judge/report loop
+ * `cortex loop-bug-triage [--collect|--report <f>|--no-llm]`
+ * (spec loops.bug-triage, Rule 1).
  */
 import { init } from './init.js';
 
-/** Shared flag parsing for the two collect/judge/propose loops. */
+/** Shared flag parsing for the collect/judge/propose-or-report loops. */
 function parseLoopFlags(
   command: string,
   rest: string[],
-): { collect: boolean; noLlm: boolean; proposeFile?: string; timeoutMs?: number } | null {
+  fileFlag: '--propose' | '--report' = '--propose',
+  fileNoun = 'candidates',
+): { collect: boolean; noLlm: boolean; file?: string; timeoutMs?: number } | null {
   const collect = rest.includes('--collect');
   const noLlm = rest.includes('--no-llm');
-  const proposeIdx = rest.indexOf('--propose');
-  let proposeFile: string | undefined;
-  if (proposeIdx >= 0) {
-    proposeFile = rest[proposeIdx + 1];
-    if (!proposeFile || proposeFile.startsWith('-')) {
-      console.error(`cortex ${command}: --propose requires a candidates JSON file path.`);
+  const fileIdx = rest.indexOf(fileFlag);
+  let file: string | undefined;
+  if (fileIdx >= 0) {
+    file = rest[fileIdx + 1];
+    if (!file || file.startsWith('-')) {
+      console.error(`cortex ${command}: ${fileFlag} requires a ${fileNoun} JSON file path.`);
       return null;
     }
   }
@@ -38,7 +43,7 @@ function parseLoopFlags(
   return {
     collect,
     noLlm,
-    ...(proposeFile !== undefined ? { proposeFile } : {}),
+    ...(file !== undefined ? { file } : {}),
     ...(timeoutMs !== undefined ? { timeoutMs } : {}),
   };
 }
@@ -109,7 +114,8 @@ export async function run(argv: string[]): Promise<number> {
     if (flags === null) return 1;
     try {
       const { runDistil } = await import('../pulse/distil.js');
-      return await runDistil('.', flags);
+      const { file, ...rest } = flags;
+      return await runDistil('.', { ...rest, ...(file !== undefined ? { proposeFile: file } : {}) });
     } catch (err) {
       console.error(`cortex pulse-distil: ${(err as Error).message}`);
       return 1;
@@ -122,9 +128,46 @@ export async function run(argv: string[]): Promise<number> {
     if (flags === null) return 1;
     try {
       const { runSkillSuggest } = await import('../loops/skill-suggest.js');
-      return await runSkillSuggest('.', flags);
+      const { file, ...rest } = flags;
+      return await runSkillSuggest('.', { ...rest, ...(file !== undefined ? { proposeFile: file } : {}) });
     } catch (err) {
       console.error(`cortex loop-skill-suggest: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex loop-bug-triage [--collect|--report <file>|--no-llm]` — the daily
+  // bug-ledger triage loop (loops.bug-triage Rule 1; collect/judge/report).
+  if (argv[0] === 'loop-bug-triage') {
+    const flags = parseLoopFlags('loop-bug-triage', argv.slice(1), '--report', 'results');
+    if (flags === null) return 1;
+    try {
+      const { runBugTriage } = await import('../loops/bug-triage.js');
+      const { file, ...rest } = flags;
+      return await runBugTriage('.', { ...rest, ...(file !== undefined ? { reportFile: file } : {}) });
+    } catch (err) {
+      console.error(`cortex loop-bug-triage: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex loop-specflow-lint` — the daily structural spec-lint record
+  // (loops.lint-scheduled Rule 1; exit 0 clean or dirty).
+  if (argv[0] === 'loop-specflow-lint') {
+    try {
+      const { runLintScheduled } = await import('../loops/lint-scheduled.js');
+      return await runLintScheduled('.');
+    } catch (err) {
+      console.error(`cortex loop-specflow-lint: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex loop-specflow-verify` — the daily owed-tests coverage record
+  // (loops.verify-scheduled Rule 1; exit 0 regardless).
+  if (argv[0] === 'loop-specflow-verify') {
+    try {
+      const { runVerifyScheduled } = await import('../loops/verify-scheduled.js');
+      return await runVerifyScheduled('.');
+    } catch (err) {
+      console.error(`cortex loop-specflow-verify: ${(err as Error).message}`);
       return 1;
     }
   }

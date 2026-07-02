@@ -59,6 +59,12 @@ governed_by:
 - **Given** a candidate whose draft lacks a `name:` or whose name mismatches the slug
 - **Then** it is skipped and counted as malformed
 
+### Drafts containing fences get a longer outer fence (B-003 regression)
+
+- **Given** a passing candidate whose `draftSkillMd` contains a triple-backtick code example
+- **When** `--propose` runs
+- **Then** the emitted section wraps the payload in a fence longer than three backticks, per §4.5
+
 ### Shared counter, no collisions with distil
 
 - **Given** distil proposals ending at `S-009`
@@ -73,3 +79,4 @@ governed_by:
 
 - The accept-side behaviour (new-skill-only creation) is `pulse.review-cli`'s Rule 4, tested there.
 - Design question 16 (which namespace an accepted skill lands in) resolves as: wherever the proposal's target says — the drafting judgment picks project-local by default; the human can edit the target before accepting by editing the section (a human edit, sanctioned).
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

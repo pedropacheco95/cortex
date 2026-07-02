@@ -82,3 +82,4 @@ governed_by:
 
 - The end-to-end acceptance path (proposal → `pulse-accept` → cerebrum) is covered by `pulse.review-cli`'s tests; this spec owns production of valid §4.5 sections.
 - The judgment prompt/skill body instructs conservative extraction (design §10.3: one-offs filtered, evidence cited) — prompt content is pinned by string assertions on the shipped SKILL.md, same convention as `atlas.ingest-skill`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

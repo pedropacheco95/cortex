@@ -6,6 +6,8 @@ Conventions that get enforced and mistakes that don't recur. The outcome is that
 
 ## What it covers
 
+- **Filed problems classify themselves and point at their fix** — daily triage of the bug ledger; human classifications never overwritten, divergences reported.
+
 _No business specs written yet — this tree is scaffolded structure only. Planned outcomes:_
 
 - **Rules captured once** — a convention is written down a single time and then upheld everywhere.

@@ -98,3 +98,4 @@ The validator operates on files, not database records. It reads artefacts and pr
 - **Resolved (was OPEN): coverage-completeness is out of scope.** Per `cortex-schema.md` Decision 4 / §3 / §4.8, this validator checks only that `covers:` entries *resolve* (`check.covers-resolves`). The constraint "every business spec appears in ≥1 scenario's `covers:`" is owned by `specflow-verify` (design §11.4), not the validator.
 - **Resolved (was OPEN): `ValidationReport` format** is fixed in `cortex-schema.md` §6.1; see the Entities section above.
 - Also supports: the `core-cli` outcome (the validator is invoked by `cortex scan` / `cortex init`) and the `specflow` lineage (the scheduled `specflow-lint` loop overlaps with these structural checks). Primary parent remains `schema.contributor-trusts-project-knowledge`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

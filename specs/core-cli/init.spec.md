@@ -184,3 +184,4 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Decision (§8.4 bridge 5 reconciliation):** init scaffolds empty spec trees and *recommends* onboarding; it never auto-runs `specflow-onboard-codebase`. Pending design-doc edit to match.
 - OPEN: the exact `_index.md` template texts (schema §7.1 fixes the shape and budget; the per-module wording ships with the implementation and should be reviewed against the token budgets).
 - Also supports: every other domain — init is the entry point that wires scaffolding, hooks, pulse, loops, and specflow together. Primary parent remains `core-cli.developer-sets-up-cortex-in-one-command`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

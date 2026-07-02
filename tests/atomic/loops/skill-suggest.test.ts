@@ -378,3 +378,41 @@ describe('Shipped skills/cortex-loop-skill-suggest/SKILL.md is pinned', () => {
     expect(body).toMatch(/never mutate anything outside `\.cortex\/pulse\/`/i);
   });
 });
+
+// ---------------------------------------------------------------------------
+// AC — Drafts containing fences get a longer outer fence (B-003 regression)
+// ---------------------------------------------------------------------------
+describe('Drafts containing fences get a longer outer fence (B-003 regression)', () => {
+  const FENCED_DRAFT = [
+    '---',
+    'name: fenced-flow',
+    'description: A workflow whose body carries a fenced example.',
+    '---',
+    '',
+    '# fenced-flow',
+    '',
+    '```bash',
+    'pnpm test',
+    '```',
+    '',
+  ].join('\n');
+
+  it('the emitted section wraps the payload in a fence longer than three backticks, per §4.5', () => {
+    const root = makeProject('b003-fence');
+    proposeSkillCandidates(root, [cand({ workflowName: 'fenced-flow', draftSkillMd: FENCED_DRAFT })]);
+    const report = fs.readFileSync(pulsePath(root, SKILL_SUGGESTIONS_FILE), 'utf-8');
+    // Outer fence strictly longer than the inner triple-backtick run.
+    expect(report).toContain('**Proposed addition:**\n\n````\n');
+    expect(report).toContain('\n````\n');
+    // The inner fence survives verbatim inside the section.
+    expect(report).toContain('```bash\npnpm test\n```');
+  });
+
+  it('a fenceless draft keeps the minimum three-backtick fence', () => {
+    const root = makeProject('b003-plain');
+    proposeSkillCandidates(root, [cand({ workflowName: 'plain-flow' })]);
+    const report = fs.readFileSync(pulsePath(root, SKILL_SUGGESTIONS_FILE), 'utf-8');
+    expect(report).toContain('**Proposed addition:**\n\n```\n---\nname: plain-flow');
+    expect(report).not.toContain('````');
+  });
+});

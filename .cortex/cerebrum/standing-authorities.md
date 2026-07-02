@@ -13,6 +13,8 @@ Default decisions Claude holds per-round without asking. Granted by Pedro, 2026-
 
 File in `cerebrum/bugs/` with the seven-type classification and a populated `proposed_fix`. **Ride the fix into the current round** if it is under ~30 lines *and* the fix's regression test is included; otherwise file it for the next round.
 
+**Blocking-batch exception:** when a filed bug blocks the correctness of the current or immediately-next batch (not merely future rounds), it rides with the blocking batch even past the threshold — the scoped reason is *unblock the batch*, never "small enough to ride". Record that reason explicitly on the ride so exceptions don't erode the general rule. (First exercise: B-003 riding the bug-triage batch — skill-suggest's draft payloads contain fences, so the batch's own outputs would be mangled without it.)
+
 **Ride-along is for mechanical fixes only.** When a filed bug has design surface — multiple sub-decisions, edge cases not obvious from the report — defer to the next round even if the line count is small. (B-002's handling is the template: small-looking fix, but crash-recovery semantics deserved a spec Rule, so it waited.) Resolved bugs stay filed permanently (see `preferences.md`).
 
 ## Orchestration depth constraint (temporary)

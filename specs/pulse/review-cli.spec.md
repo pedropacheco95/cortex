@@ -95,6 +95,12 @@ The pulse review CLI is the human gate of the propose-don't-mutate convention (d
 - **When** any command addresses `S-006`
 - **Then** exit 1 naming both files, nothing changed
 
+### Fenced payload round-trips byte-exact (B-003 regression)
+
+- **Given** a proposal whose payload is a draft SKILL.md containing a triple-backtick example, wrapped per §4.5 in a four-backtick outer fence
+- **When** `cortex pulse-accept` applies it
+- **Then** the created file contains the payload byte-exact, inner fences included
+
 ### Unknown id errors
 
 - **When** `cortex pulse-accept S-999` runs against a suggestions file without it
@@ -105,3 +111,4 @@ The pulse review CLI is the human gate of the propose-don't-mutate convention (d
 - The suggestion entry format this CLI parses was locked in schema §4.5 as part of this round (standing authority: schema addition unblocking the current spec) — `**Target:**` + fenced `**Proposed addition:**` + optional `**Status:**`.
 - v1 is accept-as-is or reject; editing-before-accept is deliberately out (business Out of Scope).
 - Also supports: every loop that writes suggestions (`pulse.*`, future `cortex-loop-*`). Primary parent remains `pulse.developer-approves-what-the-system-proposes`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

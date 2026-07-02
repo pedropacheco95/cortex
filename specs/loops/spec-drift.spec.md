@@ -63,3 +63,4 @@ governs:
 ## Notes
 
 - The 14-day grace window is an engineering-call constant (stated in the footer) — code normally changes days after its spec during implementation; drift is when it keeps changing later.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

@@ -340,8 +340,8 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
   {
     name: 'bug-triage',
     description: 'Triage open bugs in .cortex/cerebrum/bugs/: classify, prioritise, and propose fixes.',
-    requiredSkills: ['specflow-bugs'],
-    body: 'Invoke the `specflow-bugs` skill on every `status: open` bug in `.cortex/cerebrum/bugs/`: confirm its seven-type classification, severity, and `affects:` targets; draft a `proposed_fix`. Write triage proposals to `.cortex/pulse/` for human approval.',
+    requiredSkills: ['cortex-loop-bug-triage', 'specflow-bugs'],
+    body: 'Invoke the `cortex-loop-bug-triage` skill: run `cortex loop-bug-triage --collect`, classify every worklist bug in-session against the seven-type taxonomy using the `specflow-bugs` skill\'s diagnostic discipline, write the results JSON to a scratchpad, then run `cortex loop-bug-triage --report <file>`. Fill-only (loops.bug-triage Rule 3): absent type/severity/proposed_fix fields on open bugs are filled; present fields are never overwritten — divergences land in `.cortex/pulse/bug-triage.md` for human review.',
   },
 ];
 

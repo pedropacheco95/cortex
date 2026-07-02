@@ -3,13 +3,14 @@ id: B-003
 title: §4.5 proposal fence grammar cannot carry payloads containing code fences
 type: incomplete-rule
 severity: medium
-status: open
+status: resolved
 affects:
   - pulse.review-cli
   - pulse.distil
   - loops.skill-suggest
   - src/pulse/review.ts
 proposed_fix: Amend schema §4.5 to specify CommonMark longer-fence wrapping — a proposal block whose payload contains triple-backtick fences MUST be wrapped in a longer outer fence (four or more backticks); writers (distil, skill-suggest) emit the longer fence automatically when the payload needs it; the review parser matches the opening fence length. Add ACs to review-cli (accept a skill draft containing fenced code, applied byte-exact) and to skill-suggest (draft with fences wrapped correctly).
+resolved: 2026-07-02T21:10:57Z
 opened: 2026-07-02T20:33:12Z
 ---
 
@@ -26,3 +27,9 @@ Schema §4.5 states "a fenced block holding the exact text to apply" without cov
 ## Intended semantics
 
 CommonMark already solves this: outer fences longer than any inner fence. Writers choose fence length by payload inspection; the parser honours the opening fence's length. Grammar decision belongs in the schema, hence filed rather than ridden (design surface, per standing authorities).
+
+## Resolution (2026-07-02, triage round — blocking ride)
+
+Shipped as the four-step coordinated sequence (preferences.md convention, first exercise): §4.5 fence-grammar amendment → fence-aware parsers (`review.ts`, `distil.ts`, unified in the new shared `src/pulse/fences.ts`) → auto-length writers (distil, skill-suggest) → byte-exact round-trip regression ACs. Ride reason, scoped: skill-suggest's own draft payloads contain fences — the batch's outputs were incorrect without it.
+
+Calibration note: `cortex loop-bug-triage`'s first live run independently re-derived this bug's classification — type and severity agreed; its `proposed_fix` was a strict refinement of the filed one (adding the closing-fence length semantics). The loop's wording was better than the filing.

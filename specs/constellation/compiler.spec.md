@@ -107,3 +107,4 @@ The constellation compiler turns everything Cortex knows about a project into on
 - **Decision (ripple, enumerated per RULES.md rule 19):** `.cortex/constellation.json` joins the gitignored set (schema Decision 1, §1; `core-cli.init` Rule 2 + gitignore AC amended in the same change). The init implementation gains the fourth gitignore line in this spec's implementation round.
 - The renderer (design §12.8 steps 2-4, §16.2 step 7) is a separate spec — first UI surface in the project; its ACs will need a depth decision (compiler-contract assertions vs visual behaviour).
 - Also supports: `core-cli` (`cortex scan` invokes the compiler). Primary parent remains `constellation.stakeholder-sees-the-project-understood`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

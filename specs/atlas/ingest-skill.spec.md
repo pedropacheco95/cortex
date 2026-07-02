@@ -73,3 +73,4 @@ governs:
 - A Skill is a prompt artefact — its runtime behaviour is exercised by an LLM and is deliberately not unit-tested here. What IS mechanically pinned: the bundle ships, installs, and its body contains the exact workflow contract. Runtime conformance is caught downstream by the validator (`cortex validate`, instructed in the body) and, later, the scheduled `specflow-lint`/verification loops. Journey-tier skill testing is deferred with the rest (v1.1).
 - The `cortex validate` rider (Rule 4) also serves every future Skill and loop — first shared CLI surface for the agentic layer.
 - Also supports: `core-cli` (validate command, skills-install path). Primary parent remains `atlas.developer-turns-raw-sources-into-project-memory`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

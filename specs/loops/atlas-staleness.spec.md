@@ -68,3 +68,4 @@ governs:
 ## Notes
 
 - 180-day thresholds are engineering-call constants stated in the report footer.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

@@ -30,11 +30,14 @@ const DARWIN = { platform: 'darwin' as const };
 /**
  * Skill bundles shipped in the package's skills/ dir that a scheduled task's
  * prompt invokes (pulse.hygiene Rule 1; loops.* Rule 1 each; pulse.distil
- * Rule 1; loops.skill-suggest Rule 1). Rule 4 installs them into every
- * project, so their seven tasks are always registrable under --partial.
+ * Rule 1; loops.skill-suggest Rule 1; loops.bug-triage Rule 1). Rule 4
+ * installs them into every project, so the seven tasks they fully satisfy are
+ * always registrable under --partial (bug-triage additionally needs the
+ * external specflow-bugs skill, so its task is not in PACKAGED_LOOP_TASKS).
  */
 const PACKAGED_LOOP_SKILLS = [
   'cortex-loop-atlas-staleness',
+  'cortex-loop-bug-triage',
   'cortex-loop-onboarding-drift',
   'cortex-loop-rule-decay',
   'cortex-loop-skill-suggest',
@@ -670,7 +673,8 @@ describe('AC16: --partial with some skills present → only those tasks, skips n
     for (const task of skippedTasks) {
       const line = result.summary.split('\n').find((l) => l.includes('Skipped task') && l.includes(`"${task.name}"`));
       expect(line, `no skipped-task line for ${task.name}`).toBeTruthy();
-      for (const skill of task.requiredSkills) {
+      // The line names each MISSING skill (present ones are not gaps).
+      for (const skill of task.requiredSkills.filter((s) => !present.includes(s))) {
         expect(line, `${task.name} line does not name ${skill}`).toContain(skill);
       }
     }
@@ -709,7 +713,8 @@ describe('AC17: default mode with missing skills → all twelve written, warning
     );
     expect(lackingTasks).toHaveLength(3);
     for (const task of lackingTasks) {
-      expect(warning, `warning does not name ${task.name}`).toContain(`${task.name} (needs ${task.requiredSkills.join(', ')})`);
+      const missing = task.requiredSkills.filter((s) => !present.includes(s));
+      expect(warning, `warning does not name ${task.name}`).toContain(`${task.name} (needs ${missing.join(', ')})`);
     }
     // tasks whose skills are present are not flagged
     expect(warning).not.toContain('specflow-verify (needs');

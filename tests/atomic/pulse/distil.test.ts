@@ -488,3 +488,18 @@ describe('Shipped skills/cortex-pulse-distil/SKILL.md is pinned', () => {
     expect(body).toContain('cortex pulse-accept');
   });
 });
+
+// ===========================================================================
+// §4.5 fence grammar (B-003) — distil's writer picks a longer outer fence
+// ===========================================================================
+describe('Proposals whose text contains fences get a longer outer fence (B-003)', () => {
+  it('a proposedText carrying a triple-backtick example is wrapped in four backticks and survives byte-exact', () => {
+    const root = makeProject('b003-writer');
+    const text = 'Always run:\n\n```bash\npnpm test\n```';
+    proposeFromCandidates(root, [
+      { pattern: 'fenced pattern', occurrences: 4, sessionIds: ['s1'], proposedTarget: '.cortex/cerebrum/preferences.md', proposedText: text, confidence: 'high' },
+    ]);
+    const report = fs.readFileSync(pulsePath(root, 'suggestions.md'), 'utf-8');
+    expect(report).toContain('**Proposed addition:**\n\n````\n' + text + '\n````');
+  });
+});

@@ -29,6 +29,7 @@ import {
 } from '../pulse/distil.js';
 import type { CollectOptions, CollectResult } from '../pulse/distil.js';
 import { allocateSuggestionIds } from '../pulse/suggestion-ids.js';
+import { chooseOuterFence } from '../pulse/fences.js';
 import { AUTH_FAILURE_PATTERN } from '../cli/claude-auth.js';
 import { writePulseReport } from './report.js';
 
@@ -111,6 +112,10 @@ export interface SkillProposeCounts {
 }
 
 function sectionText(id: string, source: string, c: SkillCandidate): string {
+  const payload = c.draftSkillMd.replace(/\n+$/, '');
+  // §4.5 fence grammar (B-003): a draft SKILL.md routinely contains fenced
+  // examples — the outer fence is strictly longer than any inner backtick run.
+  const fence = chooseOuterFence(payload);
   return [
     `## ${id}: ${c.workflowName}`,
     '',
@@ -121,9 +126,9 @@ function sectionText(id: string, source: string, c: SkillCandidate): string {
     '',
     '**Proposed addition:**',
     '',
-    '```',
-    c.draftSkillMd.replace(/\n+$/, ''),
-    '```',
+    fence,
+    payload,
+    fence,
   ].join('\n');
 }
 

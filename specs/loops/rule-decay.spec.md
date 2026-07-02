@@ -71,3 +71,4 @@ governs:
 ## Notes
 
 - Design's "violated recently without correction" signal needs violation telemetry that doesn't exist yet — deliberately out of v1; noted for when hook-warning history lands.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

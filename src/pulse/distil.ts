@@ -21,6 +21,8 @@ import type { ExtractedMessage } from '../sessions/read.js';
 import { allocateSuggestionIds } from './suggestion-ids.js';
 import { AUTH_FAILURE_PATTERN } from '../cli/claude-auth.js';
 import { writePulseReport } from '../loops/report.js';
+import { openingFence, closesFence, chooseOuterFence, headingLinesOutsideFences } from './fences.js';
+import type { FenceOpen } from './fences.js';
 
 /** Engineering call (spec Rule 7): a first run bounds itself to the last 30 days. */
 export const DISTIL_FIRST_RUN_WINDOW_DAYS = 30;
@@ -57,13 +59,15 @@ export interface PriorSection {
 const SECTION_HEADING_RE = /^##\s+(S-\d{3,})\s*:?\s*(.*)$/;
 const FIELD_LINE_RE = /^\*\*([A-Za-z][A-Za-z -]*):\*\*\s*(.*)$/;
 
-/** Parse every `## S-NNN` section of a §4.5 report body. */
+/**
+ * Parse every `## S-NNN` section of a §4.5 report body. Fence-aware (§4.5
+ * fence grammar, B-003): heading- or field-looking lines INSIDE a fenced
+ * payload are payload — never section boundaries or field lines. A fenced
+ * block closes only on a fence of at least the opening length.
+ */
 export function parseSuggestionSections(content: string): PriorSection[] {
   const lines = content.split('\n');
-  const headings: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (SECTION_HEADING_RE.test(lines[i] as string)) headings.push(i);
-  }
+  const headings = headingLinesOutsideFences(lines, SECTION_HEADING_RE);
   const sections: PriorSection[] = [];
   for (let h = 0; h < headings.length; h++) {
     const start = headings[h] as number;
@@ -78,8 +82,19 @@ export function parseSuggestionSections(content: string): PriorSection[] {
       fields: {},
       raw: lines.slice(start, end).join('\n').replace(/\n+$/, ''),
     };
+    let inFence: FenceOpen | null = null;
     for (let i = start + 1; i < end; i++) {
-      const fm = (lines[i] as string).match(FIELD_LINE_RE);
+      const line = lines[i] as string;
+      if (inFence !== null) {
+        if (closesFence(line, inFence)) inFence = null;
+        continue;
+      }
+      const fence = openingFence(line);
+      if (fence !== null) {
+        inFence = fence;
+        continue;
+      }
+      const fm = line.match(FIELD_LINE_RE);
       if (!fm) continue;
       const key = (fm[1] as string).toLowerCase();
       const value = (fm[2] ?? '').trim();
@@ -312,6 +327,9 @@ interface ProposalDraft {
 
 function distilSectionText(p: ProposalDraft): string {
   const title = p.candidate.pattern.length > 80 ? `${p.candidate.pattern.slice(0, 77)}...` : p.candidate.pattern;
+  // §4.5 fence grammar (B-003): the outer fence is strictly longer than any
+  // backtick run inside the payload.
+  const fence = chooseOuterFence(p.candidate.proposedText);
   return [
     `## ${p.id}: ${title}`,
     '',
@@ -323,9 +341,9 @@ function distilSectionText(p: ProposalDraft): string {
     '',
     '**Proposed addition:**',
     '',
-    '```',
+    fence,
     p.candidate.proposedText,
-    '```',
+    fence,
   ].join('\n');
 }
 

@@ -75,3 +75,4 @@ governs:
 
 - SessionStart integration already exists (schema §5): the hook reads this report's `generated` against the freshness window — no new wiring in this spec.
 - Drop-off detection (design §10.2) is the deliberate v1 deferral; noted in the report footer, owned by the skill layer later.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

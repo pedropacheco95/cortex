@@ -80,3 +80,4 @@ The session-reading layer is the shared substrate (design §11.5, §16.2 step 10
 - The real fixture shapes for tests are modelled on observed entries (`{"type":"last-prompt",...}`, `{"type":"mode",...}`, message entries) but the layer never *requires* those types — Rule 3/6 tolerance is the contract, precisely because the format is Claude-Code-owned.
 - Sensitive-content note: transcripts may contain anything the user typed. This layer confines exposure by design — in-process return only, project-scoped, read-only; the only durable artefacts derived from transcripts are the suggestion entries the human reviews at the pulse gate.
 - Also supports: `cortex-pulse-distil` and `cortex-loop-skill-suggest` (design §11.5 shared machinery). Primary parent remains `loops.developer-benefits-from-what-past-sessions-taught`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

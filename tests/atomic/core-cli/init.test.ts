@@ -398,7 +398,7 @@ describe('Rule 17: task→skill mapping owned by the task definitions', () => {
     'specflow-lint': ['specflow-lint'],
     'specflow-verify': ['specflow-tests'],
     'test-runner': ['cortex-loop-test-runner'],
-    'bug-triage': ['specflow-bugs'],
+    'bug-triage': ['cortex-loop-bug-triage', 'specflow-bugs'],
   };
 
   it('all twelve tasks declare ≥1 required skill matching the design skill names', () => {

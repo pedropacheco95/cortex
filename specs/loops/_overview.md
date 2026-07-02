@@ -16,6 +16,9 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 
 - `loops.skill-suggest` — weekly did-things miner sharing distil's corpus: repeated workflows become draft SKILL.md proposals targeting new skill files, accepted through the pulse gate.
 
+- `loops.bug-triage` — daily ledger triage: fill-only classification of unclassified open bugs, compare-and-report on classified ones (never overwrites a human's judgment).
+- `loops.lint-scheduled` / `loops.verify-scheduled` — the daily paper trail: validator-backed structural report and owed-tests coverage report (incl. the §8.2 covers-completeness check; deferrals distinguished).
+
 _Planned (not yet written):_
 
 - The thirteen Cortex loops and their composition properties

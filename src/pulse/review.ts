@@ -11,6 +11,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { pulseDismissedTemplate } from '../cli/templates.js';
+import { openingFence, closesFence, headingLinesOutsideFences } from './fences.js';
 
 const DEFAULT_DISMISSED_WINDOW_DAYS = 90;
 
@@ -47,15 +48,18 @@ const SOURCE_RE = /^\*\*Source:\*\*\s*(.*)$/;
 const TARGET_RE = /^\*\*Target:\*\*\s*(.*)$/;
 const STATUS_RE = /^\*\*Status:\*\*\s*(.*)$/;
 const PROPOSED_RE = /^\*\*Proposed addition:\*\*/;
-const FENCE_RE = /^\s*(```|~~~)/;
 
-/** Split `## S-NNN` section content out of a markdown file's lines. */
-function parseSuggestions(lines: string[]): Suggestion[] {
-  const headings: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line !== undefined && HEADING_RE.test(line)) headings.push(i);
-  }
+/**
+ * Split `## S-NNN` section content out of a markdown file's lines.
+ * Fence grammar (§4.5, B-003): the proposed block honours its opening fence's
+ * length — it closes only on a fence of the same character and at least that
+ * length — so payloads containing shorter fences round-trip byte-exact.
+ * Exported for the parser/writer round-trip tests.
+ */
+export function parseSuggestions(lines: string[]): Suggestion[] {
+  // Heading scan is fence-aware: a `## S-NNN`-looking line INSIDE a fenced
+  // payload is payload, never a section boundary.
+  const headings = headingLinesOutsideFences(lines, HEADING_RE);
 
   const suggestions: Suggestion[] = [];
   for (let h = 0; h < headings.length; h++) {
@@ -102,25 +106,36 @@ function parseSuggestions(lines: string[]): Suggestion[] {
       if (PROPOSED_RE.test(line) && block === null) {
         // Scan forward (within the section) for the opening fence.
         let openIdx = -1;
+        let open: ReturnType<typeof openingFence> = null;
         for (let j = i; j < endLine; j++) {
           const cand = lines[j];
-          if (cand !== undefined && FENCE_RE.test(cand)) {
+          if (cand === undefined) continue;
+          open = openingFence(cand);
+          if (open !== null) {
             openIdx = j;
             break;
           }
         }
-        if (openIdx >= 0) {
+        if (openIdx >= 0 && open !== null) {
+          // §4.5 fence grammar (B-003): close ONLY on a fence of the same
+          // character and at least the opening length — shorter inner fences
+          // are payload, extracted byte-exact.
           const body: string[] = [];
-          let closed = false;
+          let closeIdx = -1;
           for (let j = openIdx + 1; j < endLine; j++) {
             const cand = lines[j];
-            if (cand !== undefined && FENCE_RE.test(cand)) {
-              closed = true;
+            if (cand !== undefined && closesFence(cand, open)) {
+              closeIdx = j;
               break;
             }
             body.push(cand ?? '');
           }
-          if (closed) block = body.join('\n');
+          if (closeIdx >= 0) {
+            block = body.join('\n');
+            // Skip past the payload so its lines are never mistaken for
+            // section field lines (Target/Status inside a payload is payload).
+            i = closeIdx;
+          }
         }
       }
     }
@@ -180,11 +195,7 @@ interface Dismissal {
 
 function parseDismissals(lines: string[]): Map<string, Dismissal> {
   const map = new Map<string, Dismissal>();
-  const headings: number[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line !== undefined && HEADING_RE.test(line)) headings.push(i);
-  }
+  const headings = headingLinesOutsideFences(lines, HEADING_RE);
   for (let h = 0; h < headings.length; h++) {
     const headingLine = headings[h] as number;
     const endLine = h + 1 < headings.length ? (headings[h + 1] as number) : lines.length;

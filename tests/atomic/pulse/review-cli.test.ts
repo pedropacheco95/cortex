@@ -564,3 +564,67 @@ describe('Cerebrum core files are created if absent (Rule 4)', () => {
     expect(snapshotTree(root)).toEqual(before);
   });
 });
+
+// ---------------------------------------------------------------------------
+// AC — Fenced payload round-trips byte-exact (B-003 regression)
+// ---------------------------------------------------------------------------
+describe('Fenced payload round-trips byte-exact (B-003 regression)', () => {
+  // A draft SKILL.md whose body contains a triple-backtick example — the
+  // NORMAL case for skill-suggest payloads (B-003's evidence).
+  const PAYLOAD = [
+    '---',
+    'name: fenced-workflow',
+    'description: Demonstrates a fenced example.',
+    '---',
+    '',
+    '# fenced-workflow',
+    '',
+    '```bash',
+    'cortex validate --json',
+    '```',
+    '',
+    'Done.',
+  ].join('\n');
+
+  /** §4.5 four-backtick outer fence around the triple-backtick payload. */
+  function fencedEntry(id: string, target: string): string {
+    return `## ${id}: fenced-workflow
+
+**Target:** ${target}
+
+**Proposed addition:**
+
+\`\`\`\`
+${PAYLOAD}
+\`\`\`\`
+
+`;
+  }
+
+  it('pulse-accept applies a four-backtick-wrapped payload byte-exact, inner fences included', async () => {
+    const root = makeProject('b003-accept', {
+      suggestions: SUGGESTIONS_HEADER + fencedEntry('S-030', '.claude/skills/fenced-workflow/SKILL.md'),
+    });
+    expect(await pulseCli('pulse-accept', ['S-030'], root)).toBe(0);
+    const created = fs.readFileSync(path.join(root, '.claude', 'skills', 'fenced-workflow', 'SKILL.md'), 'utf-8');
+    expect(created).toBe(PAYLOAD);
+  });
+
+  it('pulse-list prints the whole payload — the inner ``` fence does not truncate it', async () => {
+    const root = makeProject('b003-list', {
+      suggestions: SUGGESTIONS_HEADER + fencedEntry('S-031', '.claude/skills/fenced-workflow/SKILL.md'),
+    });
+    expect(await pulseCli('pulse-list', [], root)).toBe(0);
+    expect(stdout()).toContain('cortex validate --json');
+    expect(stdout()).toContain('Done.');
+  });
+
+  it('accept to a cerebrum core file lands the payload byte-exact too', async () => {
+    const root = makeProject('b003-cerebrum', {
+      suggestions: SUGGESTIONS_HEADER + fencedEntry('S-032', '.cortex/cerebrum/preferences.md'),
+    });
+    expect(await pulseCli('pulse-accept', ['S-032'], root)).toBe(0);
+    const target = fs.readFileSync(path.join(root, '.cortex', 'cerebrum', 'preferences.md'), 'utf-8');
+    expect(target).toBe(PAYLOAD);
+  });
+});

@@ -6,7 +6,11 @@ Confidence that the product does what it should. The outcome is that every inten
 
 ## What it covers
 
-_No business specs written yet — this tree is scaffolded structure only. Planned outcomes:_
+**Outcomes written:**
+
+- **The developer knows the specs and their tests stay sound — without checking** — daily structural and owed-tests reports, deferrals distinguished from gaps.
+
+_Planned outcomes (not yet written):_
 
 - **Every intended behaviour written down** — what the product should do is captured, not assumed.
 - **A clear line from outcome to test** — each promise can be traced to the check that proves it.
