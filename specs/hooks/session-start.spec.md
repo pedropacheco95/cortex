@@ -5,6 +5,8 @@ depends_on:
   - core-cli.init
 implements: ../../specs-business/hooks/assistant-gets-timely-guardrails.business.md
 governed_by: []
+governs:
+  - "src/hooks/session-start.ts"
 ---
 
 # SessionStart Hook

@@ -7,6 +7,8 @@ depends_on:
 implements: ../../specs-business/pulse/developer-approves-what-the-system-proposes.business.md
 governed_by:
   - R-001
+governs:
+  - "src/pulse/review.ts"
 ---
 
 # Pulse Review CLI

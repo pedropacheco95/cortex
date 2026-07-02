@@ -2,6 +2,25 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { Violation } from '../types.js';
 
+/** Schema §8 start marker — carries the schema version (`<!-- cortex:start v1.0 -->`). */
+export const CORTEX_START_MARKER_RE = /<!-- cortex:start(?:\s+v(\S+))? -->/;
+export const CORTEX_END_MARKER = '<!-- cortex:end -->';
+
+/**
+ * Shared §8 managed-block parse (validator + loops.onboarding-drift): is a
+ * managed block present, and which version does it declare? Prefers the `v…`
+ * in the start marker; tolerates a legacy `version:` line inside the block.
+ */
+export function readManagedBlockVersion(content: string): { present: boolean; version: string | null } {
+  const m = CORTEX_START_MARKER_RE.exec(content);
+  if (!m) return { present: false, version: null };
+  if (m[1]) return { present: true, version: m[1] };
+  const endIdx = content.indexOf(CORTEX_END_MARKER);
+  const block = endIdx >= 0 ? content.slice(m.index, endIdx) : content.slice(m.index);
+  const vm = block.match(/version:\s*"?([^"\s]+)"?/);
+  return { present: true, version: vm?.[1] ?? null };
+}
+
 export function checkClaudeMd(root: string, config: Record<string, unknown>): Violation[] {
   const violations: Violation[] = [];
   const claudeMdPath = path.join(root, 'CLAUDE.md');
@@ -11,8 +30,8 @@ export function checkClaudeMd(root: string, config: Record<string, unknown>): Vi
   const content = fs.readFileSync(claudeMdPath, 'utf-8');
   // Schema §8: the start marker carries the schema version — `<!-- cortex:start v1.0 -->`.
   // Bare `<!-- cortex:start -->` markers are tolerated (version then read from a `version:` line).
-  const startMatch = /<!-- cortex:start(?:\s+v(\S+))? -->/.exec(content);
-  const endMarker = '<!-- cortex:end -->';
+  const startMatch = CORTEX_START_MARKER_RE.exec(content);
+  const endMarker = CORTEX_END_MARKER;
 
   const startIdx = startMatch ? startMatch.index : -1;
   const markerVersion = startMatch?.[1];

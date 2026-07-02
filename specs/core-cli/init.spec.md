@@ -6,6 +6,8 @@ depends_on:
   - anatomy.scanner
 implements: ../../specs-business/core-cli/developer-sets-up-cortex-in-one-command.business.md
 governed_by: []
+governs:
+  - "src/cli/**/*.ts"
 ---
 
 # cortex init — Day-1 Bootstrap
@@ -146,13 +148,14 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Then** `~/.claude/scheduled-tasks/` contains twelve task directories each holding a `SKILL.md` with `name` and `description` frontmatter
 - **And** re-running without `--force` leaves user-modified task files untouched
 
-### --partial with zero loop skills → no tasks, everything else complete
+### --partial registers exactly the tasks whose skills ship or are present
 
-- **Given** a project whose `.claude/skills/` contains no skill any task's prompt invokes
-- **When** `cortex init --partial --no-llm` runs
-- **Then** `~/.claude/scheduled-tasks/` gains no task directories, exit code 0
+- **Given** a fresh project and a package shipping the five loop skill bundles (installed by Rule 4 before the task check)
+- **When** `cortex init --partial --no-llm --yes` runs
+- **Then** exactly the tasks whose invoked skills are now present register, exit code 0
 - **And** the `.cortex/` skeleton, anatomy, hooks, and CLAUDE.md block are all complete
-- **And** the summary states "0 loops registered" and that the skills are not present
+- **And** the summary names each skipped task with the missing skill it needs
+- _(Historical note: before any bundles shipped, this AC's premise was "zero loop skills → 0 tasks registered" — superseded when the loop bundles began shipping with the package.)_
 
 ### --partial with some skills present → only those tasks, skips named
 

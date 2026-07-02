@@ -3,11 +3,12 @@ id: B-002
 title: A killed harness process orphans its worktree with no recovery path
 type: missing-criterion
 severity: low
-status: open
+status: resolved
 affects:
   - loops.writer-verifier
   - src/harness/run.ts
 proposed_fix: Add a Rule + AC to loops.writer-verifier for crash recovery — on startup, runWriterVerifier sweeps stale cortex-harness-* workspace dirs (older than a threshold) and prunes orphaned git worktrees for root — then implement the sweep with a regression test (plant a stale workspace, assert it is removed and git worktree list is clean).
+resolved: 2026-07-02T19:58:38Z
 opened: 2026-07-02T19:17:02Z
 ---
 
@@ -24,3 +25,7 @@ Spec Rule 2 pins cleanup via `finally`, which is correct for every in-process fa
 ## Intended semantics
 
 Workspace dirs are predictably named (`cortex-harness-*`); a startup sweep in `runWriterVerifier` removes stale ones and prunes orphaned worktrees before creating a new workspace. Alternative/complement: the hygiene loop flags them. Sweep-at-startup is self-contained and needs no scheduling.
+
+## Resolution (2026-07-02, loops round)
+
+Fixed as proposed: `loops.writer-verifier` gained Rule 9 (startup stale-workspace sweep, ~2h threshold, plus worktree prune for `root`) and its regression AC; `sweepStaleWorkspaces` implemented in `src/harness/run.ts` and called before workspace creation; regression test plants a stale registered worktree and asserts it is swept. Deferred-not-ridden per the standing-authorities design-surface rule — the fix waited one round for its spec Rule. Suite green (445).

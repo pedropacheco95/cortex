@@ -6,6 +6,9 @@ depends_on:
 implements: ../../specs-business/constellation/stakeholder-navigates-the-project-map.business.md
 governed_by:
   - R-001
+governs:
+  - "src/constellation/server.ts"
+  - "src/constellation/spa.ts"
 ---
 
 # Constellation Renderer

@@ -12,6 +12,8 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 
 - `loops.writer-verifier` — the generic writer/verifier harness: isolated-workspace writer, independence-preserving blind verifier, checks-gate-first loop, first-class iteration limit, pass/fail/unavailable outcomes with full verdict audit trail.
 
+- `loops.rule-decay` / `loops.atlas-staleness` / `loops.onboarding-drift` / `loops.spec-drift` — the four curation reviewers: retirement/re-verify/refresh/drift candidates with evidence, each writing only its own always-write pulse report.
+
 _Planned (not yet written):_
 
 - The thirteen Cortex loops and their composition properties

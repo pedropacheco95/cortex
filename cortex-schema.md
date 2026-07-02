@@ -284,7 +284,7 @@ All atlas leaf files carry minimal frontmatter. **Common optional:** `confidence
 
 ### 4.5 `pulse/` artefacts
 
-Transient; gitignored. Each loop output is markdown with a minimal header. **Required:** `kind` (string const, e.g. `pulse-hygiene-report`, `pulse-suggestions`, `pulse-rule-candidates`, …), `generated` (iso-datetime), `loop` (string — the skill that wrote it). Suggestion entries inside `suggestions.md` use `S-NNN` IDs.
+Transient; gitignored. Each loop output is markdown with a minimal header. **Always-write convention:** every loop writes its output file on **every** run, overwriting, with a fresh `generated` timestamp — when there is nothing to report, the body carries an explicit "No candidates this cycle." (or loop-appropriate phrasing) rather than an empty or untouched file. The pulse directory is thereby self-documenting: any `pulse/*.md` tells the reader when its loop last ran and what it found or didn't. **Required:** `kind` (string const, e.g. `pulse-hygiene-report`, `pulse-suggestions`, `pulse-rule-candidates`, …), `generated` (iso-datetime), `loop` (string — the skill that wrote it). Suggestion entries inside `suggestions.md` use `S-NNN` IDs.
 
 `dismissed.md` **persists** (rejection memory, design §10.3): one entry per dismissed `S-NNN`, with `dismissed` (iso-datetime) and `expires` (iso-datetime, default +90 days). **Validated by** `check.pulse` (header present; loose otherwise — transient data is not held to artefact-grade rigor).
 

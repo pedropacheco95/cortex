@@ -2,8 +2,11 @@
  * Thin argv wrapper for `cortex init` (spec core-cli.init), the
  * `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
- * `cortex validate [path] [--json]` (atlas.ingest-skill Rule 4 rider), and
- * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1).
+ * `cortex validate [path] [--json]` (atlas.ingest-skill Rule 4 rider),
+ * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1),
+ * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), and the deterministic
+ * loops `cortex loop-rule-decay|loop-atlas-staleness|loop-onboarding-drift|`
+ * `loop-spec-drift` (specs loops.*, Rule 1 each).
  */
 import { init } from './init.js';
 
@@ -26,6 +29,54 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'pulse-list' || argv[0] === 'pulse-accept' || argv[0] === 'pulse-reject') {
     const { pulseCli } = await import('../pulse/review.js');
     return pulseCli(argv[0], argv.slice(1));
+  }
+
+  // `cortex pulse-hygiene` + the four deterministic loops — each writes only
+  // its own pulse report and exits 0 on clean runs (schema §4.5 always-write).
+  if (argv[0] === 'pulse-hygiene') {
+    try {
+      const { runHygiene } = await import('../pulse/hygiene.js');
+      return await runHygiene('.');
+    } catch (err) {
+      console.error(`cortex pulse-hygiene: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  if (argv[0] === 'loop-rule-decay') {
+    try {
+      const { runRuleDecay } = await import('../loops/rule-decay.js');
+      return await runRuleDecay('.');
+    } catch (err) {
+      console.error(`cortex loop-rule-decay: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  if (argv[0] === 'loop-atlas-staleness') {
+    try {
+      const { runAtlasStaleness } = await import('../loops/atlas-staleness.js');
+      return await runAtlasStaleness('.');
+    } catch (err) {
+      console.error(`cortex loop-atlas-staleness: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  if (argv[0] === 'loop-onboarding-drift') {
+    try {
+      const { runOnboardingDrift } = await import('../loops/onboarding-drift.js');
+      return await runOnboardingDrift('.');
+    } catch (err) {
+      console.error(`cortex loop-onboarding-drift: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  if (argv[0] === 'loop-spec-drift') {
+    try {
+      const { runSpecDrift } = await import('../loops/spec-drift.js');
+      return await runSpecDrift('.');
+    } catch (err) {
+      console.error(`cortex loop-spec-drift: ${(err as Error).message}`);
+      return 1;
+    }
   }
 
   // `cortex constellation [--port N]` — localhost-only read-only renderer

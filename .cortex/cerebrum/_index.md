@@ -3,8 +3,6 @@
 **Read this when:** the user asks "why" about a convention or decision, before you
 propose a write that touches governed files, or when triaging a bug.
 
-- `standing-authorities.md` — default decisions Claude holds without asking; check before gating work on approval.
-
 **What's here:**
 - `rules/` — one file per rule (R-NNN). Match a write's path against each rule's `governs`.
 - `bugs/` — the bug ledger (B-NNN), classified by the seven-type taxonomy.

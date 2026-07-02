@@ -27,6 +27,21 @@ import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
 const TEST_TIMEOUT = 60_000;
 const DARWIN = { platform: 'darwin' as const };
 
+/**
+ * Skill bundles shipped in the package's skills/ dir that a scheduled task's
+ * prompt invokes (pulse.hygiene Rule 1; loops.* Rule 1 each). Rule 4 installs
+ * them into every project, so their five tasks are always registrable under
+ * --partial.
+ */
+const PACKAGED_LOOP_SKILLS = [
+  'cortex-loop-atlas-staleness',
+  'cortex-loop-onboarding-drift',
+  'cortex-loop-rule-decay',
+  'cortex-loop-spec-drift',
+  'cortex-pulse-hygiene',
+];
+const PACKAGED_LOOP_TASKS = ['atlas-staleness', 'hygiene', 'onboarding-drift', 'rule-decay', 'spec-drift'];
+
 // ---------------------------------------------------------------------------
 // AC1: Fresh init on an empty project succeeds end-to-end
 // ---------------------------------------------------------------------------
@@ -568,25 +583,27 @@ describe('AC14: twelve scheduled task definitions written to the stubbed home', 
 });
 
 // ---------------------------------------------------------------------------
-// AC15: --partial with zero loop skills → no tasks, everything else complete
+// AC15: --partial with no extra loop skills → only the packaged five register
+// (Rule 4 installs the shipped loop bundles, so their tasks are always
+// registrable — pulse.hygiene Rule 1, loops.* Rule 1.)
 // ---------------------------------------------------------------------------
-describe('AC15: --partial with zero loop skills → no tasks, everything else complete', () => {
+describe('AC15: --partial with no extra loop skills → only the packaged loop tasks register', () => {
   let root: string;
   let home: string;
   let result: { exitCode: number; summary: string };
   beforeAll(async () => {
     root = makeTmpDir('ac15p-proj');
     home = makeTmpDir('ac15p-home');
-    // .claude/skills/ contains no skill any task's prompt invokes.
+    // .claude/skills/ contains no task-invoked skill beyond what Rule 4 installs.
     seedProjectSkills(root, ['some-unrelated-skill']);
     result = await init(root, { partial: true, noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('~/.claude/scheduled-tasks gains no task directories and exit code is 0', () => {
+  it('~/.claude/scheduled-tasks gains exactly the five packaged loop tasks and exit code is 0', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    if (fs.existsSync(base)) expect(fs.readdirSync(base)).toEqual([]);
+    expect(fs.readdirSync(base).sort()).toEqual(PACKAGED_LOOP_TASKS);
   });
 
   it('.cortex/ skeleton, anatomy, hooks, and CLAUDE.md block are all complete', () => {
@@ -600,9 +617,16 @@ describe('AC15: --partial with zero loop skills → no tasks, everything else co
     expect(claudeMd).toContain('<!-- cortex:end -->');
   });
 
-  it('summary states "0 loops registered" and that the skills are not present', () => {
-    expect(result.summary).toContain('0 loops registered');
-    expect(result.summary).toContain('skills not present');
+  it('summary states "5 loops registered" and names each skipped task with its missing skill', () => {
+    expect(result.summary).toContain('5 loops registered');
+    const skippedTasks = SCHEDULED_TASKS.filter(
+      (t) => !t.requiredSkills.every((s) => PACKAGED_LOOP_SKILLS.includes(s)),
+    );
+    expect(skippedTasks.length).toBeGreaterThan(0);
+    for (const task of skippedTasks) {
+      const line = result.summary.split('\n').find((l) => l.includes('Skipped task') && l.includes(`"${task.name}"`));
+      expect(line, `no skipped-task line for ${task.name}`).toBeTruthy();
+    }
   });
 });
 
@@ -622,20 +646,23 @@ describe('AC16: --partial with some skills present → only those tasks, skips n
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('exactly the tasks whose invoked skills are present are written (specflow-lint and specflow-verify)', () => {
+  it('exactly the tasks whose invoked skills are present are written (seeded specflow pair + packaged loops)', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.readdirSync(base).sort()).toEqual(['specflow-lint', 'specflow-verify']);
+    expect(fs.readdirSync(base).sort()).toEqual(
+      [...PACKAGED_LOOP_TASKS, 'specflow-lint', 'specflow-verify'].sort(),
+    );
     expect(fs.existsSync(path.join(base, 'specflow-lint', 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(base, 'specflow-verify', 'SKILL.md'))).toBe(true);
-    expect(result.summary).toContain('2 loops registered');
+    expect(result.summary).toContain('7 loops registered');
   });
 
   it('summary names each skipped task with the missing skill it needs', () => {
+    const present = ['specflow-lint', 'specflow-tests', ...PACKAGED_LOOP_SKILLS];
     const skippedTasks = SCHEDULED_TASKS.filter(
-      (t) => !t.requiredSkills.every((s) => ['specflow-lint', 'specflow-tests'].includes(s)),
+      (t) => !t.requiredSkills.every((s) => present.includes(s)),
     );
-    expect(skippedTasks).toHaveLength(10);
+    expect(skippedTasks).toHaveLength(5);
     for (const task of skippedTasks) {
       const line = result.summary.split('\n').find((l) => l.includes('Skipped task') && l.includes(`"${task.name}"`));
       expect(line, `no skipped-task line for ${task.name}`).toBeTruthy();
@@ -672,15 +699,18 @@ describe('AC17: default mode with missing skills → all twelve written, warning
   it('summary warns which registered tasks lack their skill and mentions --partial', () => {
     const warning = result.summary.split('\n').find((l) => l.startsWith('Warning:'));
     expect(warning).toBeTruthy();
+    const present = ['specflow-lint', 'specflow-tests', ...PACKAGED_LOOP_SKILLS];
     const lackingTasks = SCHEDULED_TASKS.filter(
-      (t) => !t.requiredSkills.every((s) => ['specflow-lint', 'specflow-tests'].includes(s)),
+      (t) => !t.requiredSkills.every((s) => present.includes(s)),
     );
+    expect(lackingTasks).toHaveLength(5);
     for (const task of lackingTasks) {
       expect(warning, `warning does not name ${task.name}`).toContain(`${task.name} (needs ${task.requiredSkills.join(', ')})`);
     }
     // tasks whose skills are present are not flagged
     expect(warning).not.toContain('specflow-verify (needs');
     expect(warning).not.toContain('specflow-lint (needs');
+    expect(warning).not.toContain('hygiene (needs');
     expect(warning).toContain('--partial');
   });
 });

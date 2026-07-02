@@ -3,6 +3,8 @@ id: schema.validator
 status: implemented
 depends_on: []
 implements: ../../specs-business/schema/contributor-trusts-project-knowledge.business.md
+governs:
+  - "src/schema/**/*.ts"
 ---
 
 # Schema Validator

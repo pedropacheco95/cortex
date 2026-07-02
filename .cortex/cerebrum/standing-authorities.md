@@ -11,11 +11,17 @@ Default decisions Claude holds per-round without asking. Granted by Pedro, 2026-
 
 ## Dogfooding bugs found during a /goal round
 
-File in `cerebrum/bugs/` with the seven-type classification and a populated `proposed_fix`. **Ride the fix into the current round** if it is under ~30 lines *and* the fix's regression test is included; otherwise file it for the next round. Resolved bugs stay filed permanently (see `preferences.md`).
+File in `cerebrum/bugs/` with the seven-type classification and a populated `proposed_fix`. **Ride the fix into the current round** if it is under ~30 lines *and* the fix's regression test is included; otherwise file it for the next round.
+
+**Ride-along is for mechanical fixes only.** When a filed bug has design surface — multiple sub-decisions, edge cases not obvious from the report — defer to the next round even if the line count is small. (B-002's handling is the template: small-looking fix, but crash-recovery semantics deserved a spec Rule, so it waited.) Resolved bugs stay filed permanently (see `preferences.md`).
 
 ## Orchestration depth constraint (temporary)
 
 Until §16.2 step 11 (writer/verifier harness) is complete, `/goal` invocations must be scoped so `specflow-develop` runs at **Minimal or Light depth** — sub-agents cannot spawn sub-agents (the same constraint that killed SpecFlow's agent path, design §8.3), so Standard/Full recursive orchestration fails silently. If a spec's scope would trigger Standard or Full, **split the batch**. Fan-out failures are recovered by breaking the work apart, not by retrying at lower depth mid-run. This constraint lifts when step 11 ships.
+
+## Extraction preference
+
+When a class of behaviour is implemented by two or more modules with the same contract, extract it to a shared source-of-truth module rather than maintaining parallel implementations. The `claude-auth.ts` extraction (init + harness sharing one auth-detection pattern) is the template. Preference, not a rule.
 
 ## Ask first, as before
 

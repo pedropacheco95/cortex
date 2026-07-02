@@ -6,6 +6,8 @@ depends_on:
   - schema.validator
 implements: ../../specs-business/atlas/developer-turns-raw-sources-into-project-memory.business.md
 governed_by: []
+governs:
+  - "skills/cortex-ingest/**"
 ---
 
 # cortex-ingest Skill

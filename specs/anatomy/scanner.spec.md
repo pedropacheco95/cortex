@@ -5,6 +5,8 @@ depends_on:
   - schema.validator
 implements: ../../specs-business/anatomy/contributor-gets-a-legible-codebase.business.md
 governed_by: []
+governs:
+  - "src/anatomy/**/*.ts"
 ---
 
 # Native Anatomy Scanner

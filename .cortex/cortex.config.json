@@ -15,6 +15,9 @@
     "dismissedWindowDays": 90,
     "hygieneFreshnessHours": 48
   },
+  "harness": {
+    "maxIterations": 3
+  },
   "loop": {
     "enabled": false
   }

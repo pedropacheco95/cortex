@@ -31,6 +31,9 @@ Current edges (`A → depends on B`):
 - `pulse.review-cli` → `core-cli.init`, `schema.validator`
 - `loops.session-reading` → `schema.validator`
 - `loops.writer-verifier` → `core-cli.init`, `schema.validator`
+- `pulse.hygiene` → `core-cli.init`, `schema.validator`, `anatomy.scanner`
+- `loops.rule-decay` / `loops.atlas-staleness` / `loops.onboarding-drift` → `core-cli.init`, `schema.validator`
+- `loops.spec-drift` → `core-cli.init`, `schema.validator`, `anatomy.scanner`
 
 ## Build Order
 
@@ -46,4 +49,5 @@ Following the design doc's §16.2 implementation order:
 8. `pulse.review-cli` — implemented
 9. `loops.session-reading` — implemented
 10. `loops.writer-verifier` — implemented
-11. _(next: the thirteen loops, starting with the cheap curation set — specs to be written)_
+11. `pulse.hygiene`, `loops.rule-decay`, `loops.atlas-staleness`, `loops.onboarding-drift`, `loops.spec-drift` — implemented
+12. _(next: distil + skill-suggest, then bug-triage, specflow-lint/verify scheduling, test-runner last — specs to be written)_

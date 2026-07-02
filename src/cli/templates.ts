@@ -384,6 +384,20 @@ Architecture decision records. Each entry cross-links to the narrative decision 
 (no decisions recorded yet)
 `;
 
+/**
+ * Schema §4.5 pulse artefact header — the one shape every loop report opens
+ * with (`kind` + `generated` + `loop`), shared so the always-write convention
+ * cannot drift per loop.
+ */
+export function pulseReportHeader(kind: string, loop: string, generatedIso: string): string {
+  return `---
+kind: ${kind}
+generated: ${generatedIso}
+loop: ${loop}
+---
+`;
+}
+
 export function pulseDismissedTemplate(nowIso: string): string {
   return `---
 kind: pulse-dismissed

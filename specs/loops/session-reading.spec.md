@@ -6,6 +6,8 @@ depends_on:
 implements: ../../specs-business/loops/developer-benefits-from-what-past-sessions-taught.business.md
 governed_by:
   - R-001
+governs:
+  - "src/sessions/**/*.ts"
 ---
 
 # Session-Reading Layer

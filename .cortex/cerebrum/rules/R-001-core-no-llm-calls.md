@@ -11,13 +11,14 @@ governs:
   - "src/pulse/**/*.ts"
   - "src/sessions/**/*.ts"
   - "src/harness/**/*.ts"
+  - "src/loops/**/*.ts"
 related_specs:
   - schema.validator
   - anatomy.scanner
 confidence: STATED
 check:
   kind: regex
-  applies_to: "src/{schema,anatomy,constellation,pulse,sessions,harness}/**/*.ts"
+  applies_to: "src/{schema,anatomy,constellation,pulse,sessions,harness,loops}/**/*.ts"
   pattern: "@anthropic-ai/|['\"]openai['\"]|['\"]@google/genai['\"]|['\"]cohere-ai['\"]"
   expect: absent
 ---

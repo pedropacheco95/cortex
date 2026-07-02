@@ -6,6 +6,8 @@ depends_on:
   - anatomy.scanner
 implements: ../../specs-business/hooks/assistant-gets-timely-guardrails.business.md
 governed_by: []
+governs:
+  - "src/hooks/post-write.ts"
 ---
 
 # PostWrite Hook (PostToolUse on Write|Edit)

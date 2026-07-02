@@ -12,6 +12,8 @@ Knowledge that compounds across autonomous runs. The outcome is that automated, 
 
 - **A developer can trust a change the system wrote without reading every line** — independent blind judgment on every automated change, bounded retries, nothing lands without an explicit apply.
 
+- **The knowledge layer proposes its own upkeep** — four reviewers on their own cadences; evidence-carrying proposals; the developer just decides.
+
 _Planned (not yet written):_
 
 - **Runs that remember** — each unattended run starts from what earlier ones discovered, not from scratch.

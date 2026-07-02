@@ -10,6 +10,8 @@ A system that keeps itself honest. The outcome is that the knowledge layer stays
 
 - **A developer approves or declines what the system proposes — in seconds** — accept applies exactly what was shown, decline snoozes for the window, nothing becomes curated knowledge without an explicit yes.
 
+- **A developer sees the project's health without asking** — a daily observe-only sweep, surfaced one line at session start, explicit even when clean.
+
 _Planned (not yet written):_
 
 - **Knowledge that stays current** — the picture keeps pace with reality without constant manual upkeep.

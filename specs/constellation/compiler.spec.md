@@ -7,6 +7,8 @@ depends_on:
 implements: ../../specs-business/constellation/stakeholder-sees-the-project-understood.business.md
 governed_by:
   - R-001
+governs:
+  - "src/constellation/compile.ts"
 ---
 
 # Constellation Compiler

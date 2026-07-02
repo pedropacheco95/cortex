@@ -8,7 +8,9 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { execFileSync } from 'child_process';
 import { makeTmpDir, cleanTmp, authFailStub, hangingStub } from '../../fixtures/init-harness.js';
 import {
   harnessStub,
@@ -22,7 +24,7 @@ import {
   MARKER_FIXING_WRITER_SH,
   HARNESS_TEST_COMMAND,
 } from '../../fixtures/harness-stubs.js';
-import { runWriterVerifier, RETRY_FLAG } from '../../../src/harness/run.js';
+import { runWriterVerifier, RETRY_FLAG, STALE_WORKSPACE_MS } from '../../../src/harness/run.js';
 
 const TEST_TIMEOUT = 30_000;
 
@@ -412,6 +414,50 @@ describe('AC: Full audit trail on failure', () => {
         { verdict: 'fail', reasoning: 'REASON-TWO' },
         { verdict: 'fail', reasoning: 'REASON-THREE' },
       ]);
+    },
+    TEST_TIMEOUT,
+  );
+});
+
+// ===========================================================================
+describe('AC: Stale workspace from a killed run is swept (B-002 regression)', () => {
+  it(
+    'a planted stale workspace registered as a worktree of root is removed, and its registration pruned, before the new workspace is used',
+    async () => {
+      const { root, rec, claudeBin } = makeSandbox('b002');
+      gitCommitAll(root); // worktree isolation (the B-002 crash scenario)
+
+      // Plant the "killed run" leftovers: a cortex-harness-* dir in the real
+      // temp base, registered as a worktree of root, with an old mtime.
+      const planted = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-harness-'));
+      execFileSync('git', ['-C', root, 'worktree', 'add', '--detach', path.join(planted, 'workspace')], {
+        stdio: 'ignore',
+      });
+      const old = new Date(Date.now() - STALE_WORKSPACE_MS - 60_000);
+      fs.utimesSync(planted, old, old);
+
+      // The writer runs inside the NEW workspace; it records whether the
+      // planted dir still existed at that moment (i.e. sweep-before-create).
+      fs.writeFileSync(
+        path.join(rec, 'writer.sh'),
+        `if [ -e "${planted}" ]; then echo yes > "${path.join(rec, 'planted-existed')}"; else echo no > "${path.join(rec, 'planted-existed')}"; fi\n` +
+          FIXING_WRITER_SH,
+      );
+
+      const result = await runWriterVerifier({
+        root,
+        brief: 'make target.txt contain FIXED',
+        testCommand: HARNESS_TEST_COMMAND,
+        claudeBin,
+      });
+
+      expect(result.outcome).toBe('pass');
+      // Swept: the stale dir is gone and was already gone when the writer ran.
+      expect(fs.existsSync(planted)).toBe(false);
+      expect(fs.readFileSync(path.join(rec, 'planted-existed'), 'utf-8').trim()).toBe('no');
+      // No orphaned registration remains for root.
+      const list = execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain'], { encoding: 'utf-8' });
+      expect(list).not.toContain(planted);
     },
     TEST_TIMEOUT,
   );

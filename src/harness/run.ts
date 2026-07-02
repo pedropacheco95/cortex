@@ -1,5 +1,5 @@
 /**
- * Writer/verifier sub-agent harness (spec loops.writer-verifier, 9 rules).
+ * Writer/verifier sub-agent harness (spec loops.writer-verifier, 10 rules).
  *
  * Deterministic Core orchestrator (R-001: NO LLM calls from this process —
  * the two headless Claude CLI subprocesses are the only agentic touch).
@@ -231,6 +231,44 @@ function isGitRepo(root: string): boolean {
   return fs.existsSync(path.join(root, '.git'));
 }
 
+/** Rule 9 (B-002): a leftover `cortex-harness-*` dir is stale after ~2h —
+ *  long past any bounded run, short enough to self-heal within the day. */
+export const STALE_WORKSPACE_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * Rule 9 (B-002) crash recovery: `finally`-cleanup cannot survive a process
+ * kill, so every run starts by sweeping leftover `cortex-harness-*` workspace
+ * dirs older than STALE_WORKSPACE_MS in the temp base, then pruning orphaned
+ * worktree registrations for `root`. Best-effort throughout — a sweep failure
+ * never blocks the run.
+ */
+export function sweepStaleWorkspaces(root: string, tmpBase: string = os.tmpdir(), now: number = Date.now()): void {
+  let entries: fs.Dirent[] = [];
+  try {
+    entries = fs.readdirSync(tmpBase, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith('cortex-harness-')) continue;
+    const full = path.join(tmpBase, entry.name);
+    try {
+      if (now - fs.statSync(full).mtimeMs >= STALE_WORKSPACE_MS) {
+        fs.rmSync(full, { recursive: true, force: true });
+      }
+    } catch {
+      /* best effort */
+    }
+  }
+  if (isGitRepo(root)) {
+    try {
+      git(['-C', root, 'worktree', 'prune']);
+    } catch {
+      /* best effort */
+    }
+  }
+}
+
 function createWorkspace(root: string): Workspace {
   const tmpParent = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-harness-'));
   const dir = path.join(tmpParent, 'workspace');
@@ -351,6 +389,9 @@ export async function runWriterVerifier(opts: HarnessOptions): Promise<HarnessRe
   const claudeBin = opts.claudeBin ?? 'claude';
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxIterations = resolveMaxIterations(root, opts.maxIterations);
+
+  // Rule 9 (B-002): self-heal after a killed run BEFORE creating this run's workspace.
+  sweepStaleWorkspaces(root);
 
   const ws = createWorkspace(root);
   const verdicts: HarnessVerdict[] = [];

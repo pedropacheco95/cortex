@@ -1,0 +1,206 @@
+/**
+ * Spec-level tests — pulse.hygiene, one describe per acceptance criterion,
+ * driven over realistic tmp fixtures (git init where the AC needs history).
+ * gh is always a stub or absent — the real gh (and any network) is never
+ * touched. The CLI-driven AC uses a PATH restricted to a bin dir holding
+ * only git, so `gh` is genuinely absent for the child processes.
+ */
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
+import { execFileSync } from 'child_process';
+import { makeTmpDir, cleanTmp, snapshotTree, writeExecutable } from '../../fixtures/init-harness.js';
+import {
+  daysAgoIso,
+  writeAt,
+  gitInitRepo,
+  gitCommitAllAt,
+  gitRun,
+  filesMdContent,
+  ruleMd,
+  parsePulseReport,
+} from '../../fixtures/loops-harness.js';
+import { runHygiene } from '../../../src/pulse/hygiene.js';
+import { run } from '../../../src/cli/cli.js';
+
+const dirs: string[] = [];
+function tmp(label: string): string {
+  const d = makeTmpDir(`hygiene-spec-${label}`);
+  dirs.push(d);
+  return d;
+}
+
+let originalCwd: string;
+let originalPath: string | undefined;
+beforeEach(() => {
+  originalCwd = process.cwd();
+  originalPath = process.env['PATH'];
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+afterEach(() => {
+  process.chdir(originalCwd);
+  if (originalPath !== undefined) process.env['PATH'] = originalPath;
+  while (dirs.length > 0) cleanTmp(dirs.pop() as string);
+  vi.restoreAllMocks();
+});
+
+/** gh stub answering `pr list` with an empty JSON array (gh present, no PRs).
+ *  Lives in its OWN tmp dir, outside the fixture project tree. */
+function emptyGhStub(): string {
+  return writeExecutable(path.join(tmp('gh-stub'), 'gh'), "#!/bin/sh\nprintf '[]'\n");
+}
+
+/**
+ * A fully conformant clean fixture: git repo, one branch, no TODOs, and an
+ * anatomy files.md that matches the disk exactly (rows for every listed file).
+ */
+function makeCleanProject(label: string): string {
+  const root = tmp(label);
+  writeAt(root, 'README.md', '# clean\n');
+  writeAt(root, 'src/app.ts', 'export const ok = true;\n');
+  fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
+  writeAt(root, '.cortex/cortex.config.json', JSON.stringify({ schemaVersion: '1.0' }) + '\n');
+  writeAt(
+    root,
+    '.cortex/anatomy/files.md',
+    filesMdContent([{ path: 'README.md' }, { path: 'src/app.ts' }]),
+  );
+  gitInitRepo(root);
+  gitCommitAllAt(root, daysAgoIso(1));
+  return root;
+}
+
+const REPORT_REL = path.join('.cortex', 'pulse', 'hygiene-report.md');
+
+// ===========================================================================
+describe('AC: Always-writes, even when clean', () => {
+  it('a clean project yields kind/generated/loop and six "No findings this cycle." sections', async () => {
+    const root = makeCleanProject('clean');
+    const t1 = new Date('2026-07-01T10:00:00.000Z');
+    const code = await runHygiene(root, { ghBin: emptyGhStub(), now: t1 });
+    expect(code).toBe(0);
+
+    const report = parsePulseReport(path.join(root, REPORT_REL));
+    expect(report.kind).toBe('pulse-hygiene-report');
+    expect(report.loop).toBe('cortex-pulse-hygiene');
+    expect(report.generated).toBe(t1.toISOString());
+    expect(report.body.match(/No findings this cycle\./g)).toHaveLength(6);
+  });
+
+  it('every run overwrites with a fresh generated (schema §4.5 always-write)', async () => {
+    const root = makeCleanProject('rewrite');
+    const gh = emptyGhStub();
+    await runHygiene(root, { ghBin: gh, now: new Date('2026-07-01T10:00:00.000Z') });
+    await runHygiene(root, { ghBin: gh, now: new Date('2026-07-02T10:00:00.000Z') });
+    const report = parsePulseReport(path.join(root, REPORT_REL));
+    expect(report.generated).toBe('2026-07-02T10:00:00.000Z');
+  });
+
+  it('the footer states the thresholds and that drop-off detection was not run (Rules 4-5)', async () => {
+    const root = makeCleanProject('footer');
+    await runHygiene(root, { ghBin: emptyGhStub() });
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('Thresholds:');
+    expect(body).toContain('30 days');
+    expect(body).toContain('14 days');
+    expect(body).toContain('drop-off detection was not run');
+  });
+});
+
+// ===========================================================================
+describe('AC: Anatomy drift both directions', () => {
+  it('names the deleted-but-indexed file and the created-but-unscanned file', async () => {
+    const root = makeCleanProject('drift');
+    fs.rmSync(path.join(root, 'src/app.ts'));
+    writeAt(root, 'src/brand-new.ts', 'export {};\n');
+    await runHygiene(root, { ghBin: emptyGhStub() });
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('src/app.ts');
+    expect(body).toContain('missing on disk');
+    expect(body).toContain('src/brand-new.ts');
+    expect(body).toContain('not in anatomy');
+  });
+});
+
+// ===========================================================================
+describe('AC: Cerebrum dead reference caught', () => {
+  it('names the rule and the dead source path', async () => {
+    const root = makeCleanProject('cerebrum');
+    writeAt(
+      root,
+      '.cortex/cerebrum/rules/R-201-dead.md',
+      ruleMd('R-201', { source: ['../../../docs/deleted.md'], governs: ['src/**/*.ts'] }),
+    );
+    await runHygiene(root, { ghBin: emptyGhStub() });
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('R-201');
+    expect(body).toContain('docs/deleted.md');
+  });
+});
+
+// ===========================================================================
+describe('AC: Orphan branch flagged', () => {
+  it('names the 40-day-old unmerged branch with its age', async () => {
+    const root = makeCleanProject('branch');
+    gitRun(root, ['checkout', '-b', 'stale-work', '--quiet']);
+    writeAt(root, 'stale.txt', 's\n');
+    gitCommitAllAt(root, daysAgoIso(40));
+    gitRun(root, ['checkout', 'main', '--quiet']);
+    writeAt(root, 'main.txt', 'm\n');
+    // keep anatomy in sync so the anatomy section stays out of the way
+    writeAt(
+      root,
+      '.cortex/anatomy/files.md',
+      filesMdContent([
+        { path: 'README.md' },
+        { path: 'src/app.ts' },
+        { path: 'main.txt' },
+      ]),
+    );
+    gitCommitAllAt(root, daysAgoIso(0));
+
+    await runHygiene(root, { ghBin: emptyGhStub() });
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('stale-work');
+    expect(body).toContain('40 days');
+  });
+});
+
+// ===========================================================================
+describe('AC: gh absence degrades to a notice', () => {
+  it('via the real CLI with gh genuinely absent from PATH: skipped-with-reason, exit 0', async () => {
+    const root = makeCleanProject('gh-absent');
+    // A PATH holding only git — gh is absent for every child process.
+    const realGit = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf-8' }).trim();
+    const binDir = path.join(root, 'restricted-bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.symlinkSync(realGit, path.join(binDir, 'git'));
+    process.env['PATH'] = binDir;
+    process.chdir(root);
+
+    const code = await run(['pulse-hygiene']);
+    expect(code).toBe(0);
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('skipped — gh unavailable');
+  });
+});
+
+// ===========================================================================
+describe('AC: Only the report is written', () => {
+  it('a full-tree snapshot differs only by pulse/hygiene-report.md', async () => {
+    const root = makeCleanProject('only-report');
+    const before = snapshotTree(root);
+    await runHygiene(root, { ghBin: emptyGhStub() });
+    const after = snapshotTree(root);
+
+    const changed: string[] = [];
+    for (const [rel, content] of after) {
+      if (!before.has(rel) || before.get(rel) !== content) changed.push(rel);
+    }
+    for (const rel of before.keys()) {
+      if (!after.has(rel)) changed.push(`(deleted) ${rel}`);
+    }
+    expect(changed).toEqual([REPORT_REL]);
+  });
+});

@@ -26,8 +26,11 @@ import {
   buildVerifierPrompt,
   parseVerdict,
   resolveMaxIterations,
+  sweepStaleWorkspaces,
+  STALE_WORKSPACE_MS,
   RETRY_FLAG,
 } from '../../../src/harness/run.js';
+import { execFileSync } from 'child_process';
 
 const TEST_TIMEOUT = 30_000;
 
@@ -294,7 +297,59 @@ describe('Rule 7: unavailability is not failure', () => {
 });
 
 // ===========================================================================
-describe('Rule 9: the harness never discards a verdict', () => {
+describe('Rule 9 (B-002): stale-workspace sweep', () => {
+  function makeDirAgedMs(base: string, name: string, ageMs: number): string {
+    const dir = path.join(base, name);
+    fs.mkdirSync(path.join(dir, 'workspace'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'workspace', 'leftover.txt'), 'x\n');
+    const t = new Date(Date.now() - ageMs);
+    fs.utimesSync(dir, t, t);
+    return dir;
+  }
+
+  it('removes cortex-harness-* dirs older than the threshold; keeps fresh and unrelated dirs', () => {
+    const base = tmp('sweep-base');
+    const root = tmp('sweep-root'); // non-git root: only the dir sweep applies
+    const stale = makeDirAgedMs(base, 'cortex-harness-stale', STALE_WORKSPACE_MS + 60_000);
+    const young = makeDirAgedMs(base, 'cortex-harness-young', 60_000);
+    const unrelated = makeDirAgedMs(base, 'someone-elses-old-dir', STALE_WORKSPACE_MS + 60_000);
+
+    sweepStaleWorkspaces(root, base);
+
+    expect(fs.existsSync(stale)).toBe(false);
+    expect(fs.existsSync(young)).toBe(true);
+    expect(fs.existsSync(unrelated)).toBe(true);
+  });
+
+  it('prunes orphaned worktree registrations for root after removing the stale dir', () => {
+    const root = tmp('sweep-git-root');
+    const base = tmp('sweep-git-base');
+    makeHarnessProject(root);
+    gitCommitAll(root);
+    const parent = path.join(base, 'cortex-harness-orphan');
+    fs.mkdirSync(parent, { recursive: true });
+    execFileSync('git', ['-C', root, 'worktree', 'add', '--detach', path.join(parent, 'workspace')], {
+      stdio: 'ignore',
+    });
+    const t = new Date(Date.now() - STALE_WORKSPACE_MS - 60_000);
+    fs.utimesSync(parent, t, t);
+
+    sweepStaleWorkspaces(root, base);
+
+    expect(fs.existsSync(parent)).toBe(false);
+    const list = execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain'], { encoding: 'utf-8' });
+    expect(list).not.toContain('cortex-harness-orphan');
+  });
+
+  it('is best-effort: a missing temp base and a non-git root never throw', () => {
+    const root = tmp('sweep-safe-root');
+    expect(() => sweepStaleWorkspaces(root, path.join(root, 'no-such-base'))).not.toThrow();
+    expect(() => sweepStaleWorkspaces(root, tmp('sweep-safe-base'))).not.toThrow();
+  });
+});
+
+// ===========================================================================
+describe('Rule 10: the harness never discards a verdict', () => {
   it(
     'mixed run (gate fail, then verifier fail) → one audit entry per writer attempt, in order',
     async () => {
