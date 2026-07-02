@@ -1,0 +1,65 @@
+{
+  "skill_name": "specflow-change-router",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app (CourtTime) with both `specs/` and `specs-business/` trees. The user says: 'Login is returning 500 errors when I use a wrong password — it should return 401.' Classify this request and propose an action.",
+      "expected_output": "Classify as Category 2 (Bug Report). Layer: Dev-only. Identify the relevant dev spec under specs/auth/login/, find the acceptance criterion for invalid credentials, note the spec says 401 but code returns 500. Check the linked business spec via `implements:` — note that the business outcome 'secure login' is still correctly described and needs no change. Propose: fix code, no spec changes needed. Folder overview impact: none. Mapping status: linked. Should NOT classify as spec change, gap, or drift.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app with both `specs/` and `specs-business/`. The user (a non-technical product owner) says: 'I want to add a waitlist feature — when a court is fully booked, players can join a queue and get notified when a spot opens up.' Classify this request and propose an action.",
+      "expected_output": "Classify as Category 4 (New Feature). Layer: Both. Propose creating a new business spec at `specs-business/booking/waitlist.md` (outcome, journey, success metric — e.g. 'X% of waitlisted players convert to bookings within 24h') AND new dev specs under `specs/booking/waitlist/` (queue-join, notification capabilities) with bidirectional `implements:`/`implemented_by:` links. Flag folder overview impact: `specs/booking/_overview.md` and `specs-business/booking/_overview.md` need to mention the new waitlist capability. Note dev-spec dependencies on existing booking and notification specs.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. The user says: 'How do I center a div in CSS?' Classify this request.",
+      "expected_output": "Classify as Category 1 (Standalone). No layer applies. Answer the CSS question directly without involving the spec tree at all.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. A new engineer asks: 'What does the auth group of specs cover? I'm trying to get oriented before I dive into the individual files.' Classify this request and respond appropriately.",
+      "expected_output": "Classify as Category 6 (Exploration). Layer: high-level / fuzzy — must read folder overview first. Read `specs/auth/_overview.md` (and `specs-business/auth/_overview.md` if present) and answer from there rather than diving into individual capability specs. If the overview is missing or too thin, flag that and propose updating it. Should NOT enumerate every spec file — that's the wrong granularity for this question.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. A backend engineer says: 'I want to swap our password hashing from bcrypt to argon2id — it's a pure implementation swap, observable behavior is unchanged.' Classify this request and propose an action.",
+      "expected_output": "Classify as Category 3 (Spec Change). Layer: Dev-only — implementation detail with no observable behavior change. Update the relevant dev spec(s) under specs/auth/ to reflect the new hashing algorithm in Rules. Check `implements:` link to confirm the business spec (e.g. 'secure account protection') still describes the outcome correctly — it should, since the user-facing security guarantee is unchanged. Propose: update dev spec, run tests, no business-spec change needed, no folder overview impact, mapping intact.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. The CEO says: 'We're repositioning — corporate accounts (companies booking courts for employee teambuilding) is our new growth segment. Add this as a strategic outcome.' Classify this request and propose an action.",
+      "expected_output": "Classify as Category 4 (New Feature) or Category 3 (Spec Change), depending on whether a business outcome already covers corporate-account journeys. Layer: Business-only (initially) — this is forward-looking strategy with no implementation yet. Propose creating a new business spec under `specs-business/corporate-accounts/` with `status: draft` and an empty `implemented_by:` list. Flag folder overview impact: `specs-business/_overview.md` (root) needs to mention the new domain, and a new `specs-business/corporate-accounts/_overview.md` is needed. Should NOT yet draft any developer spec — wait for product to scope the implementation phase.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. A QA engineer says: 'The marketing-facing business spec at specs-business/notifications/reminders.md says we send booking confirmations within 1 minute, but the dev spec specs/notifications/booking-confirmation.md only specifies eventual delivery via a background queue with no SLA. We just got a customer complaint about a 15-minute delay.' Classify this request.",
+      "expected_output": "Classify as Category 8 (Drift Between Layers). Both layers are involved but they no longer agree. The router must (a) identify both ends of the broken link, (b) ask the user which side is the source of truth — should the business outcome be honored (then dev spec + code must add an SLA and the queue must meet it), or was the business spec aspirational marketing copy (then update business spec to match reality and surface that to the stakeholder)? Propose both updates in one change set. Folder overview impact: probably none. Mapping status: drift detected. Should NOT classify as a plain bug — the spec layer itself is internally inconsistent, which is the bigger issue.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. A developer says: 'I want to tighten the rate-limit on POST /bookings from 10/min to 3/min — the spec is at specs/booking/creation/rate-limit.md.' When you go to check the linked business spec, you find that the dev spec has no `implements:` field. Classify this request and propose an action.",
+      "expected_output": "Classify as Category 9 (Unmapped Spec) — flag this BEFORE proceeding with the rate-limit change. The dev spec specs/booking/creation/rate-limit.md has no `implements:` link, meaning either the business spec exists and the link is missing or no business spec covers the abuse-prevention outcome at all. Offer the user three choices: (a) find and link the existing business spec, (b) draft a missing business spec (e.g. `specs-business/booking/abuse-prevention.md` describing the user-protection outcome), or (c) proceed unmapped and record the choice in frontmatter. Resolve mapping first, then handle the original Category 3 (Spec Change) for the rate-limit value.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. A product manager says: 'Remove the social-feed capability entirely — we're killing that feature, it's not driving engagement.' Classify this request and propose an action.",
+      "expected_output": "Classify as Category 3 (Spec Change), specifically a removal. Layer: Both — the business spec(s) under `specs-business/social-feed/` and the dev specs under `specs/social-feed/` all need to be marked deprecated or removed. CRITICAL: flag folder overview impact prominently — `specs/_overview.md` (root) and `specs-business/_overview.md` (root) both currently mention the social-feed group and need to be updated to reflect its removal. The folder's own `_overview.md` files are also affected (whole folder may be deleted, or marked archived). Run impact analysis for any dev spec that `depends_on` social-feed specs. This is a high-risk change because of the cross-cutting overview updates.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "The project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-new-project-workspace/iteration-1/padel-booking-app/with_skill/outputs/ is a Specflow-managed padel court booking app. The user says: 'Reminders should go out earlier.' Classify this request.",
+      "expected_output": "Classify as Category 7 (Ambiguous). Present multiple interpretations across both axes (category AND layer): (1) Bug, dev-layer — reminders are going out late vs. their spec'd time. (2) Spec change, dev-layer — change the reminder window. (3) Spec change, business-layer — the user-facing promise about timing is shifting (then dev follows). (4) New feature, both layers — add a second earlier reminder. Ask the user which they mean with concrete spec references on both layers.",
+      "files": []
+    }
+  ]
+}

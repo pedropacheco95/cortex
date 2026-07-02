@@ -1,0 +1,277 @@
+---
+name: specflow-tests
+description: >
+  Complete testing framework for Specflow projects. Builds the test infrastructure first,
+  then generates tests across four layers (Atomic, Spec, Journey, Scenario) via delegated
+  agents per domain, then hands off to a separate verification agent that runs all tests,
+  performs adversarial quality checks, and loops until everything passes. A test that does
+  not execute is not a test. Use this skill for: generating tests from specs, setting up
+  test infrastructure, creating test fixtures, designing scenario tests, running test
+  suites, or auditing coverage.
+---
+
+# Specflow Testing
+
+## Core Principle
+
+**A test that does not execute is not a test.** A test file that exists but throws on
+import, crashes on setup, or stubs its assertions with `expect(true).toBe(true)` is
+documentation, not a test. Testing is not complete until every test runs, passes or
+fails for legitimate reasons, and the verification agent confirms quality.
+
+## Agent Architecture
+
+This skill delegates to three types of agents. Each has a distinct scope and context.
+
+| Agent | Context contains | Does NOT contain | Spawned by |
+|---|---|---|---|
+| Infrastructure agent | Project stack, package files, configs | Specs, test files | Orchestrator |
+| Generation agent (per domain) | That domain's specs + fixtures + conventions | Other domains, test results | Orchestrator |
+| Verification agent | Test files + spec tree | Generation context, fixture internals | Orchestrator |
+| Blind reader (per domain per layer) | Test files only | Specs, fixtures, generation context | Verification agent |
+
+**The verification agent is separate from the generation agents.** It reads the tests
+with fresh eyes — it wasn't involved in writing them. The blind reader sub-agents it
+spawns have even less context — they see only the test code, nothing else.
+
+## How It Works: Five Phases
+
+### Phase 0: Build Test Infrastructure
+
+**Before writing any test, build the platform that runs them.** Spawn an infrastructure
+agent that:
+
+1. **Reads the project stack.** Language, framework, test runner, ORM, frontend framework,
+   package manager, monorepo layout.
+
+2. **Creates test runner configuration.** Jest with correct presets (`jest-preset-angular`
+   for Angular, `ts-jest` for TypeScript, JSDOM for frontend), or Vitest, pytest, RSpec —
+   whatever the project uses. Separate configs per layer if needed.
+
+3. **Creates the integration harness.** Database setup/teardown, API server bootstrap
+   (real Strapi test instance, Express test server, etc.), container orchestration. The
+   harness must actually start and stop the server — not throw a placeholder error.
+
+4. **Creates fixture factory infrastructure.** Base classes, helper functions, seed
+   script runners. Actual fixture data comes in Phase 2.
+
+5. **Writes and runs smoke tests.** One trivial test per layer:
+   - Atomic: `test('smoke', () => expect(1+1).toBe(2))`
+   - Spec: same, using the integrated config
+   - Journey: bootstrap harness, hit one endpoint, assert response, teardown
+   - Scenario: same as journey with full sandbox config
+
+   **All smoke tests must pass before proceeding.** If the journey smoke test can't
+   bootstrap the server, fix the harness. If the Angular smoke test can't resolve
+   `@angular/core`, fix the Jest config. Do not proceed until all 4 pass.
+
+### Phase 1: Gather Information and Design Test Data
+
+Two agents in parallel:
+
+**Agent 1 — Read specs:** Dev specs (rules, criteria, entity references), business specs
+(outcomes, journey steps, `implemented_by:`).
+
+**Agent 2 — Read code:** Model/migration/schema files for field names, types, constraints,
+defaults, relationships. Specs only reference entity NAMES — the code has the fields.
+
+Then four passes to produce test data (see `references/test-data-architecture.md`):
+entity inventory (from code), state catalog (from specs), relationship graph (from both),
+temporal state map (from journey/scenario steps). Generate fixture factories and seed
+scripts wired into the Phase 0 infrastructure.
+
+### Phase 2: Generate Tests (parallel, per domain)
+
+Spawn one generation agent per domain. Each receives that domain's specs, the fixture
+factories, the test conventions, and the infrastructure config.
+
+#### What each layer tests
+
+**Atomic** — One test per acceptance criterion. Mocked dependencies. Tests one
+Given/When/Then in isolation.
+
+**Spec** — Tests the dev spec as a whole. NOT a sequential replay of criteria. Verifies:
+- **Rule interactions** — do the rules work together?
+- **Entity reference accuracy** — does code actually read/write the claimed entities?
+- **Implementation completeness** — does code implement ALL numbered rules?
+- **State accumulation** — after multiple operations, is cumulative state consistent?
+
+A spec test that replays criteria in sequence is wrong — it duplicates the atomic layer.
+Spec tests use integrated dependencies (real slice, mocked externals beyond the boundary).
+
+**Journey** — Follows a business spec's User Journey end-to-end with real infrastructure.
+Each step touches a different dev spec's slice.
+
+**Scenario** — A realistic workflow crossing multiple business specs. Full sandbox. Every
+business spec must appear in at least one scenario's `covers:` list.
+
+#### Rules for generation agents
+
+- Use fixtures and harness from Phases 0 and 1. No inline mock setup that bypasses infra.
+- Every test must have real assertions. `expect(true).toBe(true)` is forbidden.
+- If a test cannot be written because infrastructure doesn't support it (e.g., needs
+  Playwright), do NOT write a stub. Flag the gap: "criterion X needs [capability]."
+- If a spec is `status: draft`, either write real tests that will fail until code exists
+  (TDD), or don't write the test and report the gap honestly. Never write a skip/stub.
+
+### Phase 3: Execute, Verify, and Fix (verification agent)
+
+**Hand off to a separate verification agent.** The orchestrator does not verify its own
+work. The verification agent receives: all test files, the spec tree, and the test
+runner configuration. It did NOT participate in generating the tests.
+
+The verification agent runs a loop:
+
+#### 3a. Execute all tests
+
+Run every test. Classify results:
+
+| Result | Meaning | Action |
+|---|---|---|
+| Pass | Assertions hold | Done |
+| Fail — assertion | Legitimate failure (code bug or spec wrong) | Document, do NOT make test pass |
+| Fail — execution | Test crashes (import, setup, teardown) | Fix the test |
+| Fail — infrastructure | Harness won't start, DB unavailable | Phase 0 incomplete — report back |
+| Skip | Marked as skip | NOT counted as coverage |
+
+**Exit criterion:** Zero execution failures, zero infrastructure failures.
+
+#### 3b. Fake test scan
+
+Scan every test file for forbidden patterns (see `references/verification-protocol.md`):
+`expect(true).toBe(true)`, empty bodies, skip markers, TODO/FIXME, `pass` as only
+statement. **Any hit = FAIL. No exceptions.** Not for "documented stubs," not for
+"audit tests," not for "will be wired later."
+
+If the test can't have real assertions, the correct action is to delete it and report
+the coverage gap honestly.
+
+#### 3c. Coverage completeness
+
+Four invariants. **Only executing tests with real assertions count.**
+
+```
+Atomic: [N]/[N] criteria covered by executing tests
+Spec: [N]/[N] dev specs covered
+Journey: [N]/[N] business specs covered
+Scenario: [N]/[M] business specs in executing scenario covers:
+Gaps: [list — what's not covered and why]
+```
+
+Honest gaps are acceptable. Counting stubs or skips as coverage is FAIL.
+
+#### 3d. Adversarial quality check (100% — not sampled)
+
+The verification agent spawns blind reader sub-agents — one per domain per layer. Each
+blind reader receives ONLY the test files for its scope — NO access to specs, fixtures,
+or generation context.
+
+**Atomic blind reader:** Describes what each test sets up, does, and asserts.
+Comparator checks against the criterion's Given/When/Then. Catches: wrong boundary
+values, insufficient assertions, mismatched state.
+
+**Spec blind reader:** Describes what invariants and rules the test exercises, what
+entity writes it checks. Comparator checks: does it exercise ALL numbered rules? Does
+it verify entity writes? Is it a criteria replay? **If the test looks like "criterion 1,
+then 2, then 3 in order" — FLAG AS WRONG.**
+
+**Journey blind reader:** Describes the journey steps and infrastructure used.
+Comparator checks: does each step match the business spec journey? Real infra or mocked?
+Outcome verified at each step? Any `jest.mock` in a journey test = suspect.
+
+**Scenario blind reader:** Describes which outcomes each step exercises. Comparator
+checks: does each step reach the claimed business outcome, or just touch an endpoint?
+`POST /bookings` without asserting a booking was created = false coverage.
+
+**Every test is checked. Not a sample.**
+
+#### 3e. Fix and re-verify
+
+If any check fails:
+1. Fix execution errors (rewrite broken tests)
+2. Remove or rewrite fake tests (delete stubs, report gaps honestly)
+3. Fix adversarial mismatches (correct assertions, redesign criteria-replay spec tests)
+4. Re-run from 3a
+
+**Loop until all checks pass.**
+
+#### 3f. Verification report
+
+The verification agent writes `tests/verification-report.md`:
+
+```markdown
+# Test Verification Report
+
+## Execution results
+- Total tests: [N]
+- Passed: [N]
+- Failed (assertion — legitimate): [N]
+- Failed (execution — test error): [N] ← must be 0
+- Failed (infrastructure): [N] ← must be 0
+- Skipped: [N] (NOT counted as coverage)
+
+## Fake test check
+- Files scanned: [N]
+- Clean: [N]
+- Failures: [list] ← must be 0
+
+## Coverage completeness
+- Atomic: [N]/[N] criteria covered by executing tests
+- Spec: [N]/[N] dev specs covered
+- Journey: [N]/[N] business specs covered
+- Scenario: [N]/[M] business specs in executing scenario covers:
+- Gaps: [list with justification]
+
+## Adversarial quality check (100%)
+- Atomic: [N] checked, [N] correct, [N] mismatches
+- Spec: [N] checked, [N] correct, [N] criteria-replay flagged
+- Journey: [N] checked, [N] correct, [N] mock leakage
+- Scenario: [N] checked, [N] correct, [N] false coverage
+
+## Verdict: PASS / FAIL
+```
+
+**PASS requires:** zero execution errors, zero fake tests, zero adversarial mismatches.
+Coverage gaps are acceptable if honestly reported with justification.
+
+### Phase 4: Report
+
+Final output: the verification report from Phase 3 (after PASS), placed at
+`tests/verification-report.md`. The orchestrator presents it to the human.
+
+## Test Output Structure
+
+```
+tests/
+├── jest.config.ts (or vitest.config, pytest.ini, etc.)
+├── setup/
+│   ├── harness.ts
+│   ├── db-setup.ts
+│   └── smoke.test.ts
+├── fixtures/
+│   ├── factories/
+│   └── seeds/
+├── atomic/{domain}/{capability}/{leaf}.test.{ext}
+├── spec/{domain}/{capability}/{leaf}.test.{ext}
+├── journey/{business-domain}/{outcome}.test.{ext}
+├── scenario/
+│   ├── specs/{scenario-name}.md
+│   └── {scenario-name}.test.{ext}
+├── verification-report.md
+└── docker-compose.test.yml
+```
+
+## The Coverage Constraint
+
+**Every business spec must appear in at least one executing scenario's `covers:` list.**
+A scenario that exists as a file but doesn't run doesn't count.
+
+## Reference Files
+
+| File | Read when |
+|---|---|
+| `references/test-data-architecture.md` | Phase 1 — fixture generation |
+| `references/test-layers.md` | Phase 2 — layer rules, naming, structure |
+| `references/scenario-design.md` | Phase 2 — scenario design, coverage |
+| `references/verification-protocol.md` | Phase 3 — full verification process |
+| `references/environment-provisioning.md` | Phase 0 — infrastructure setup |

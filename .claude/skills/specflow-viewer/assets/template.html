@@ -1,0 +1,1600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><!--__TITLE__--> — Specs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fdfbf8;
+    --bg-raised: #ffffff;
+    --bg-sunken: #f5f1eb;
+    --border: #e5dfd4;
+    --border-strong: #c8c0b0;
+    --text: #1e1c18;
+    --text-muted: #6b6459;
+    --text-dim: #9a9286;
+    --accent: #2c5e8a;
+    --accent-soft: #e6eef5;
+    --hit: #fef5cd;
+
+    --st-draft-fg: #8a6530;
+    --st-draft-bg: #f8eed9;
+    --st-approved-fg: #335a80;
+    --st-approved-bg: #dfe8f2;
+    --st-implemented-fg: #3f6e4c;
+    --st-implemented-bg: #dfecd6;
+    --st-deprecated-fg: #6b6459;
+    --st-deprecated-bg: #e8e4dc;
+
+    --test-pass-fg: #3f6e4c;
+    --test-pass-bg: #dfecd6;
+    --test-fail-fg: #9a3a3a;
+    --test-fail-bg: #f3dcdc;
+    --test-skip-fg: #8a6530;
+    --test-skip-bg: #f8eed9;
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 14px;
+
+    --header-h: 64px;
+    --sidebar-w: 320px;
+  }
+
+  html[data-theme="dark"] {
+    --bg: #14130f;
+    --bg-raised: #1c1a16;
+    --bg-sunken: #0f0e0b;
+    --border: #2c2a24;
+    --border-strong: #413d34;
+    --text: #ebe7dc;
+    --text-muted: #a8a192;
+    --text-dim: #7a7465;
+    --accent: #7cb0e0;
+    --accent-soft: #1f3242;
+    --hit: #3d3515;
+
+    --st-draft-fg: #d6b87a;
+    --st-draft-bg: #3a3018;
+    --st-approved-fg: #a8c6e5;
+    --st-approved-bg: #1e3249;
+    --st-implemented-fg: #a2c8a9;
+    --st-implemented-bg: #1f3623;
+    --st-deprecated-fg: #a8a192;
+    --st-deprecated-bg: #26231d;
+
+    --test-pass-fg: #a2c8a9;
+    --test-pass-bg: #1f3623;
+    --test-fail-fg: #e09595;
+    --test-fail-bg: #3d1f1f;
+    --test-skip-fg: #d6b87a;
+    --test-skip-bg: #3a3018;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+  pre code { font-size: 13.5px; }
+
+  /* header */
+  header.topbar {
+    position: sticky; top: 0; z-index: 10;
+    height: var(--header-h);
+    background: color-mix(in srgb, var(--bg-raised) 92%, transparent);
+    backdrop-filter: saturate(160%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 24px;
+  }
+  .brand {
+    font-weight: 600; font-size: 15px; letter-spacing: -0.01em;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .brand .dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); margin-right: 10px; vertical-align: middle;
+  }
+  .search {
+    flex: 1; max-width: 520px;
+    position: relative;
+  }
+  .search input {
+    width: 100%; height: 36px; padding: 0 14px 0 38px;
+    font: 500 14px var(--font-sans);
+    color: var(--text);
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  .search input::placeholder { color: var(--text-dim); }
+  .search input:focus { border-color: var(--accent); background: var(--bg-raised); }
+  .search .icon {
+    position: absolute; left: 14px; top: 10px; color: var(--text-dim);
+    width: 16px; height: 16px;
+  }
+  .search kbd {
+    position: absolute; right: 8px; top: 7px;
+    font: 500 11px var(--font-mono); color: var(--text-dim);
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 6px;
+  }
+  /* tree toggle (Business / Developer) */
+  .tree-toggle {
+    display: inline-flex; gap: 0; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--bg-sunken); flex-shrink: 0;
+  }
+  .tree-toggle button {
+    font: 500 12.5px var(--font-sans); padding: 5px 16px;
+    border: none; background: transparent; cursor: pointer;
+    color: var(--text-muted); border-radius: 999px;
+    transition: background .12s, color .12s;
+  }
+  .tree-toggle button.active {
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+  .tree-toggle button:hover:not(.active) { color: var(--text); }
+
+  .header-spacer { flex: 1; }
+  .summary {
+    display: flex; gap: 10px; align-items: center;
+    color: var(--text-muted); font-size: 12.5px;
+  }
+  .summary b { color: var(--text); font-weight: 600; }
+  .theme-toggle {
+    width: 36px; height: 36px; border-radius: 999px;
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    cursor: pointer; display: grid; place-items: center;
+    color: var(--text-muted);
+  }
+  .theme-toggle:hover { background: var(--bg-raised); color: var(--text); }
+
+  /* layout */
+  .layout {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    min-height: calc(100vh - var(--header-h));
+  }
+  aside.sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--bg-sunken);
+    overflow-y: auto;
+    padding: 18px 12px 40px;
+    position: sticky;
+    top: var(--header-h);
+    height: calc(100vh - var(--header-h));
+  }
+  main.content {
+    padding: 32px 48px 80px;
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* sidebar tree */
+  .tree-domain { margin-bottom: 6px; }
+  .tree-domain > .tree-row {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    font-size: 13px;
+    text-transform: uppercase;
+  }
+  .tree-domain > .tree-row:hover { background: var(--bg-raised); }
+  .tree-domain.collapsed .tree-leaves { display: none; }
+  .tree-domain > .tree-row .chev {
+    width: 12px; height: 12px; color: var(--text-dim);
+    transition: transform .12s;
+  }
+  .tree-domain.collapsed > .tree-row .chev { transform: rotate(-90deg); }
+  .tree-domain > .tree-row .count {
+    margin-left: auto; font: 500 11.5px var(--font-mono);
+    color: var(--text-dim); text-transform: none;
+  }
+  .tree-leaves { padding: 2px 0 8px 18px; }
+  .tree-leaf {
+    padding: 5px 10px; border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text-muted);
+    font-size: 13.25px;
+    border-left: 2px solid transparent;
+  }
+  .tree-leaf:hover { background: var(--bg-raised); color: var(--text); }
+  .tree-leaf.active {
+    background: var(--accent-soft);
+    color: var(--text);
+    border-left-color: var(--accent);
+    font-weight: 500;
+  }
+  .tree-leaf .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .tree-leaf .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tree-leaf.hidden { display: none; }
+  .tree-domain.hidden { display: none; }
+
+  /* status dots & pills */
+  .status-dot.draft, .pill.draft { background: var(--st-draft-fg); }
+  .status-dot.approved, .pill.approved { background: var(--st-approved-fg); }
+  .status-dot.implemented, .pill.implemented { background: var(--st-implemented-fg); }
+  .status-dot.deprecated, .pill.deprecated { background: var(--st-deprecated-fg); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font: 500 11.5px var(--font-sans);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+  .pill.draft { background: var(--st-draft-bg); color: var(--st-draft-fg); }
+  .pill.approved { background: var(--st-approved-bg); color: var(--st-approved-fg); }
+  .pill.implemented { background: var(--st-implemented-bg); color: var(--st-implemented-fg); }
+  .pill.deprecated { background: var(--st-deprecated-bg); color: var(--st-deprecated-fg); }
+
+  /* dashboard */
+  .dashboard h1 {
+    font: 600 34px/1.2 var(--font-serif);
+    letter-spacing: -0.01em;
+    margin: 8px 0 12px;
+  }
+  .dashboard .tagline {
+    font: 400 17px/1.55 var(--font-serif);
+    color: var(--text-muted);
+    margin: 0 0 28px;
+    max-width: 68ch;
+  }
+  .dashboard .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 28px 0;
+  }
+  .stat-card {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .stat-card .n { font: 600 28px/1 var(--font-sans); color: var(--text); }
+  .stat-card .l { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 6px; }
+
+  .section-heading {
+    font: 600 13px var(--font-sans);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 32px 0 12px;
+  }
+
+  .tooling-grid {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 0;
+  }
+  .tooling-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .tooling-row:last-child { border-bottom: none; }
+  .tooling-row .layer { color: var(--text-muted); font-weight: 500; }
+  .tooling-row .stack { color: var(--text); }
+
+  .domain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .domain-card {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: border-color .12s, transform .12s;
+  }
+  .domain-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .domain-card .name {
+    font: 600 15px var(--font-sans);
+    margin-bottom: 4px;
+  }
+  .domain-card .meta { font-size: 12.5px; color: var(--text-muted); }
+
+  .warnings-panel {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-top: 16px;
+  }
+  .warnings-panel summary {
+    cursor: pointer; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; gap: 8px;
+    list-style: none;
+    color: var(--st-draft-fg);
+  }
+  .warnings-panel summary::-webkit-details-marker { display: none; }
+  .warnings-panel ul { margin: 10px 0 2px; padding-left: 18px; color: var(--text-muted); font-size: 13.5px; }
+  .warnings-panel li { margin: 4px 0; }
+  .warnings-panel li code { background: var(--bg-sunken); padding: 1px 5px; border-radius: 3px; color: var(--text); }
+
+  /* spec view */
+  .spec-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .breadcrumb {
+    font-size: 12.5px; color: var(--text-muted);
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+  }
+  .breadcrumb .sep { opacity: 0.5; margin: 0 6px; }
+  .spec-title-row {
+    display: flex; align-items: center; gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .spec-title-row h1 {
+    font: 600 30px/1.2 var(--font-serif);
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .spec-id {
+    font: 500 13px var(--font-mono);
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .spec-section {
+    margin: 32px 0;
+  }
+  .spec-section h2 {
+    font: 600 13px var(--font-sans);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0 0 14px;
+  }
+
+  .prose {
+    font-family: var(--font-serif);
+    font-size: 16.5px;
+    line-height: 1.65;
+    color: var(--text);
+    max-width: 68ch;
+  }
+  .prose p { margin: 0 0 14px; }
+  .prose code, .prose em code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--bg-sunken);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .prose strong { font-weight: 600; }
+  .prose em { font-style: italic; }
+  .prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .prose ul, .prose ol { margin: 10px 0 16px; padding-left: 22px; }
+  .prose li { margin: 4px 0; }
+
+  .entities-list {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .entity {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: minmax(180px, 220px) 1fr;
+    gap: 16px;
+    font-size: 14.25px;
+  }
+  .entity .name { font: 500 13.25px var(--font-mono); color: var(--text); word-break: break-word; }
+  .entity .desc { color: var(--text-muted); }
+  .entity .desc code { font-family: var(--font-mono); font-size: 0.9em; background: var(--bg-sunken); padding: 1px 4px; border-radius: 3px; color: var(--text); }
+
+  .rules-list {
+    counter-reset: rule;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+  .rule {
+    counter-increment: rule;
+    padding: 14px 18px 14px 52px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    position: relative;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .rule::before {
+    content: counter(rule);
+    position: absolute;
+    left: 14px; top: 14px;
+    width: 24px; height: 24px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font: 600 12px var(--font-mono);
+  }
+  .rule code {
+    background: var(--bg-sunken);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* acceptance criteria — the highlight */
+  .ac-grid {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ac-card {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    transition: border-left-color .12s;
+  }
+  .ac-card.pass { border-left-color: var(--test-pass-fg); }
+  .ac-card.fail { border-left-color: var(--test-fail-fg); }
+  .ac-card.skip { border-left-color: var(--test-skip-fg); }
+
+  .ac-title-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 12px;
+  }
+  .ac-title {
+    font: 600 16px var(--font-sans);
+    letter-spacing: -0.005em;
+    color: var(--text);
+  }
+  .test-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 11.5px var(--font-sans);
+    padding: 3px 9px; border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .test-badge.pass { color: var(--test-pass-fg); background: var(--test-pass-bg); }
+  .test-badge.fail { color: var(--test-fail-fg); background: var(--test-fail-bg); }
+  .test-badge.skip { color: var(--test-skip-fg); background: var(--test-skip-bg); }
+  .test-badge.expected { color: var(--text-muted); background: var(--bg-sunken); }
+  .test-badge .tick { width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: 0.85; }
+
+  .ac-steps {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .ac-step {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 12px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    padding: 4px 0;
+  }
+  .ac-step .kw {
+    font: 600 12.5px var(--font-mono);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-align: right;
+    padding-top: 2px;
+  }
+  .ac-step .kw.given { color: var(--st-approved-fg); }
+  .ac-step .kw.when { color: var(--accent); }
+  .ac-step .kw.then { color: var(--st-implemented-fg); }
+  .ac-step .kw.and, .ac-step .kw.but { color: var(--text-muted); }
+  .ac-step .txt { color: var(--text); }
+  .ac-step .txt code {
+    background: var(--bg-sunken);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .ac-test-file {
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    font: 500 12px var(--font-mono);
+    color: var(--text-muted);
+    display: flex; gap: 16px; align-items: center;
+  }
+  .ac-test-file .duration { margin-left: auto; color: var(--text-dim); }
+
+  /* dependencies */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    font: 500 12.5px var(--font-mono);
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip.missing {
+    color: var(--st-draft-fg); background: var(--st-draft-bg); cursor: default;
+  }
+  .chip .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  .downstream-heading { font-size: 12.5px; color: var(--text-muted); margin: 16px 0 8px; }
+
+  .notes-list { padding-left: 20px; margin: 0; color: var(--text); font-family: var(--font-serif); font-size: 15.5px; line-height: 1.6; }
+  .notes-list li { margin: 4px 0; }
+  .notes-list li code {
+    font-family: var(--font-mono);
+    background: var(--bg-sunken);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.88em;
+  }
+
+  .open-list {
+    background: color-mix(in srgb, var(--st-draft-bg) 60%, transparent);
+    border: 1px solid var(--st-draft-fg);
+    border-radius: var(--radius);
+    padding: 12px 18px 14px;
+    margin-top: 14px;
+  }
+  .open-list .heading {
+    font: 600 12px var(--font-sans);
+    color: var(--st-draft-fg);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .open-list ul { margin: 0; padding-left: 18px; color: var(--text); font-family: var(--font-serif); font-size: 15px; }
+  .open-list li { margin: 3px 0; }
+
+  /* dependency tree view */
+  .dep-tree { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); }
+  .dep-tree ul { list-style: none; padding-left: 18px; border-left: 1px dotted var(--border); margin: 2px 0; }
+  .dep-tree li { padding: 2px 0; }
+  .dep-tree .link { cursor: pointer; color: var(--accent); }
+  .dep-tree .link:hover { text-decoration: underline; }
+
+  /* search results */
+  .hit-wrap mark {
+    background: var(--hit); color: inherit;
+    padding: 0 2px; border-radius: 2px;
+  }
+
+  /* cross-link sections (Implements / Implemented by) */
+  .cross-links { margin-top: 14px; }
+  .cross-links h3 {
+    font: 600 12px var(--font-sans); color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px;
+  }
+  .cross-links .chips { margin-bottom: 8px; }
+
+  /* unmapped / unimplemented badges */
+  .badge-unmapped, .badge-unimplemented {
+    display: inline-flex; align-items: center; gap: 5px;
+    font: 600 11px var(--font-sans); padding: 3px 10px;
+    border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .badge-unmapped { color: var(--test-fail-fg); background: var(--test-fail-bg); }
+  .badge-unimplemented { color: var(--st-draft-fg); background: var(--st-draft-bg); }
+
+  /* sidebar folder subtitle */
+  .tree-domain .folder-subtitle {
+    font: 400 11.5px var(--font-sans); color: var(--text-dim);
+    padding: 0 10px 4px 30px;
+    line-height: 1.35;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .tree-domain.collapsed .folder-subtitle { display: none; }
+
+  /* sidebar unmapped indicator */
+  .tree-leaf .leaf-badge {
+    font: 600 9px var(--font-sans); padding: 1px 6px;
+    border-radius: 999px; text-transform: uppercase; flex-shrink: 0;
+  }
+  .tree-leaf .leaf-badge.unmapped { color: var(--test-fail-fg); background: var(--test-fail-bg); }
+
+  /* test detail in AC card */
+  .ac-test-detail {
+    margin-top: 12px; padding: 12px 14px;
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .ac-test-detail .test-intent {
+    font: 500 13.5px var(--font-sans); color: var(--text); margin-bottom: 6px;
+  }
+  .ac-test-detail .test-path {
+    font: 400 12px var(--font-mono); color: var(--text-muted);
+    word-break: break-all;
+  }
+  .ac-test-detail .test-code-toggle {
+    font: 500 12px var(--font-sans); color: var(--accent);
+    cursor: pointer; margin-top: 8px; display: inline-block;
+    border: none; background: none; padding: 0;
+  }
+  .ac-test-detail .test-code-toggle:hover { text-decoration: underline; }
+  .ac-test-detail pre {
+    margin: 8px 0 0; padding: 10px; border-radius: var(--radius-sm);
+    background: var(--bg-raised); border: 1px solid var(--border);
+    font: 400 12.5px var(--font-mono); overflow-x: auto;
+    max-height: 300px; overflow-y: auto;
+  }
+  .ac-no-test-warning {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 10px; padding: 8px 12px;
+    background: var(--test-fail-bg); border: 1px solid color-mix(in srgb, var(--test-fail-fg) 30%, transparent);
+    border-radius: var(--radius-sm);
+    font: 500 12.5px var(--font-sans); color: var(--test-fail-fg);
+  }
+
+  /* dashboard chooser cards */
+  .chooser-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    margin: 32px 0;
+  }
+  .chooser-card {
+    background: var(--bg-raised); border: 2px solid var(--border);
+    border-radius: var(--radius-lg); padding: 28px 24px; cursor: pointer;
+    transition: border-color .15s, transform .12s, box-shadow .15s;
+    text-align: center;
+  }
+  .chooser-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+  .chooser-card .chooser-icon { font-size: 36px; margin-bottom: 12px; }
+  .chooser-card .chooser-title { font: 600 20px var(--font-sans); margin-bottom: 6px; color: var(--text); }
+  .chooser-card .chooser-desc { font: 400 14px var(--font-sans); color: var(--text-muted); line-height: 1.45; }
+  .chooser-card .chooser-count { font: 600 28px var(--font-sans); color: var(--accent); margin-top: 14px; }
+
+  /* overview pane for folders */
+  .overview-pane {
+    background: var(--bg-raised); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 28px; margin-bottom: 24px;
+  }
+  .overview-pane h2 { font: 600 22px var(--font-serif); margin: 0 0 14px; color: var(--text); }
+
+  /* empty states */
+  .empty-hint {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 14px;
+  }
+
+  /* footer */
+  footer {
+    margin-top: 60px; padding: 18px 0 0;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* responsive */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside.sidebar { position: static; height: auto; max-height: 50vh; }
+    .summary { display: none; }
+    main.content { padding: 24px 20px 60px; }
+    .dashboard .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .entity { grid-template-columns: 1fr; gap: 4px; }
+    .ac-step { grid-template-columns: 72px 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand" id="brand"><span class="dot"></span><!--__TITLE__--></div>
+  <div class="search">
+    <svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
+    <input id="search" type="search" placeholder="Search specs, rules, acceptance criteria…" autocomplete="off" spellcheck="false">
+    <kbd>/</kbd>
+  </div>
+  <div class="tree-toggle" id="treeToggle" style="display:none">
+    <button data-tree="business" id="btnBusiness">Business</button>
+    <button data-tree="dev" id="btnDev">Developer</button>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="summary" id="summary"></div>
+  <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+    <svg id="themeIconLight" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg id="themeIconDark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+  </button>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="content" id="content"></main>
+</div>
+
+<script>
+"use strict";
+
+const SPEC_DATA = /*__SPEC_DATA__*/ null;
+
+// ---------------------------------------------------------------------------
+// tiny Markdown → HTML converter
+// ---------------------------------------------------------------------------
+function mdEscape(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function mdInline(s) {
+  s = mdEscape(s);
+  s = s.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  return s;
+}
+function mdRender(src) {
+  if (!src) return "";
+  const lines = String(src).split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.startsWith("```")) {
+      const buf = []; i++;
+      while (i < lines.length && !lines[i].startsWith("```")) { buf.push(mdEscape(lines[i])); i++; }
+      i++;
+      out.push(`<pre><code>${buf.join("\n")}</code></pre>`);
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { out.push(`<h${h[1].length}>${mdInline(h[2])}</h${h[1].length}>`); i++; continue; }
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { buf.push(`<li>${mdInline(lines[i].replace(/^\s*\d+\.\s+/, ""))}</li>`); i++; }
+      out.push(`<ol>${buf.join("")}</ol>`); continue;
+    }
+    if (/^\s*[-*]\s+/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) { buf.push(`<li>${mdInline(lines[i].replace(/^\s*[-*]\s+/, ""))}</li>`); i++; }
+      out.push(`<ul>${buf.join("")}</ul>`); continue;
+    }
+    if (line.trim() === "") { i++; continue; }
+    const buf = [];
+    while (i < lines.length && lines[i].trim() !== "" && !/^(#{1,6})\s+/.test(lines[i]) && !/^\s*[-*]\s+/.test(lines[i]) && !/^\s*\d+\.\s+/.test(lines[i]) && !lines[i].startsWith("```")) { buf.push(lines[i]); i++; }
+    out.push(`<p>${mdInline(buf.join(" "))}</p>`);
+  }
+  return out.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// state
+// ---------------------------------------------------------------------------
+const STATE = {
+  selectedId: null,       // spec id or null (dashboard)
+  selectedFolder: null,   // folder path or null
+  activeTree: null,       // "dev" | "business"
+  search: "",
+};
+
+// ---------------------------------------------------------------------------
+// data setup — supports flat (legacy) and two-tree layouts
+// ---------------------------------------------------------------------------
+const _trees = (SPEC_DATA && SPEC_DATA.trees) || {};
+const _businessPresent = (SPEC_DATA && SPEC_DATA.business_present) || false;
+const _defaultTree = (SPEC_DATA && SPEC_DATA.default_tree) || "dev";
+
+// All specs from all trees, keyed by id — needed so cross-tree links resolve
+const ALL_SPECS = (function () {
+  if (SPEC_DATA && SPEC_DATA.specs) return SPEC_DATA.specs;
+  const out = [];
+  for (const key of Object.keys(_trees)) {
+    const t = _trees[key];
+    if (t && t.specs) out.push(...t.specs);
+  }
+  return out;
+})();
+const SPEC_BY_ID = Object.fromEntries(ALL_SPECS.map(s => [s.id, s]));
+
+// Per-tree accessors
+function getTreeData(treeName) {
+  return _trees[treeName] || {specs: [], domains: [], overviews: {}, status_counts: {}};
+}
+function getTreeSpecs(treeName) {
+  const td = getTreeData(treeName);
+  return td.specs || [];
+}
+function getTreeDomains(treeName) {
+  const td = getTreeData(treeName);
+  return td.domains || [];
+}
+function getTreeOverviews(treeName) {
+  const td = getTreeData(treeName);
+  return td.overviews || {};
+}
+function getTreeStatusCounts(treeName) {
+  const td = getTreeData(treeName);
+  return td.status_counts || {};
+}
+
+const PROJECT = (SPEC_DATA && SPEC_DATA.project) || {title: "Specs", description: "", tooling: []};
+const WARNINGS = (SPEC_DATA && SPEC_DATA.warnings) || [];
+const TEST_RESULTS = (SPEC_DATA && SPEC_DATA.test_results) || null;
+
+// Discovered tests (embedded by build script via --discover-tests)
+const DISCOVERED_TESTS = (SPEC_DATA && SPEC_DATA.discovered_tests) || [];
+
+// index test results by spec_id::criterion
+const TEST_LOOKUP = new Map();
+if (TEST_RESULTS && TEST_RESULTS.results) {
+  for (const r of TEST_RESULTS.results) {
+    const key = `${r.spec_id}::${(r.criterion || "").trim().toLowerCase()}`;
+    TEST_LOOKUP.set(key, r);
+  }
+}
+
+// index discovered tests by spec_id::ac_ref
+const DISCOVERED_LOOKUP = new Map(); // key → array of test entries
+for (const t of DISCOVERED_TESTS) {
+  const key = `${t.spec_id}::${(t.ac_ref || "").trim().toLowerCase()}`;
+  if (!DISCOVERED_LOOKUP.has(key)) DISCOVERED_LOOKUP.set(key, []);
+  DISCOVERED_LOOKUP.get(key).push(t);
+}
+
+// downstream map
+const DOWNSTREAM = {};
+for (const s of ALL_SPECS) {
+  for (const dep of s.depends_on || []) {
+    (DOWNSTREAM[dep] = DOWNSTREAM[dep] || []).push(s.id);
+  }
+}
+
+// build search index including overview text
+for (const s of ALL_SPECS) {
+  const parts = [s.id, s.title, s.intent, s.rules_raw, s.entities_raw];
+  for (const ac of (s.acceptance_criteria || [])) { parts.push(ac.title, ac.raw); }
+  for (const e of (s.entities || [])) { parts.push(e.name, e.description); }
+  for (const n of (s.notes || [])) parts.push(n);
+  for (const q of (s.open_questions || [])) parts.push(q);
+  s._searchIndex = parts.join(" ").toLowerCase();
+}
+
+// build overview search index per tree
+const OVERVIEW_SEARCH = {}; // treeName → [{folder_path, text}]
+for (const treeName of Object.keys(_trees)) {
+  const overviews = getTreeOverviews(treeName);
+  OVERVIEW_SEARCH[treeName] = Object.entries(overviews).map(([fp, o]) => ({
+    folder_path: fp,
+    text: ((o.title || "") + " " + (o.body || "") + " " + (o.summary || "")).toLowerCase()
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// tree toggle
+// ---------------------------------------------------------------------------
+function switchTree(treeName) {
+  STATE.activeTree = treeName;
+  STATE.selectedId = null;
+  STATE.selectedFolder = null;
+  updateTreeToggleUI();
+  renderSidebar();
+  renderSummary();
+  renderContent();
+  highlightSidebar();
+}
+
+function updateTreeToggleUI() {
+  const toggle = document.getElementById("treeToggle");
+  if (!_businessPresent) { toggle.style.display = "none"; return; }
+  toggle.style.display = "";
+  document.getElementById("btnBusiness").classList.toggle("active", STATE.activeTree === "business");
+  document.getElementById("btnDev").classList.toggle("active", STATE.activeTree === "dev");
+}
+
+// ---------------------------------------------------------------------------
+// rendering: sidebar (tree-aware)
+// ---------------------------------------------------------------------------
+function renderSidebar() {
+  const root = document.getElementById("sidebar");
+  const treeName = STATE.activeTree;
+  const domains = getTreeDomains(treeName);
+  const overviews = getTreeOverviews(treeName);
+  const frag = document.createDocumentFragment();
+
+  for (const d of domains) {
+    const domainEl = document.createElement("div");
+    domainEl.className = "tree-domain";
+    domainEl.dataset.domain = d.domain;
+
+    const rowEl = document.createElement("div");
+    rowEl.className = "tree-row";
+    rowEl.innerHTML = `
+      <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4.5l3 3 3-3"/></svg>
+      <span>${mdEscape(d.domain || "(root)")}</span>
+      <span class="count">${d.leaves.length}</span>`;
+    rowEl.addEventListener("click", (e) => {
+      if (e.target.closest(".chev") || e.shiftKey) {
+        domainEl.classList.toggle("collapsed");
+      } else {
+        showFolder(d.domain, treeName);
+      }
+    });
+    domainEl.appendChild(rowEl);
+
+    // folder subtitle from overview
+    const ov = overviews[d.domain];
+    if (ov && ov.summary) {
+      const sub = document.createElement("div");
+      sub.className = "folder-subtitle";
+      sub.textContent = ov.summary;
+      domainEl.appendChild(sub);
+    }
+
+    const leavesEl = document.createElement("div");
+    leavesEl.className = "tree-leaves";
+
+    if (d.domain_spec) {
+      const s = SPEC_BY_ID[d.domain_spec];
+      if (s) leavesEl.appendChild(leafEl(s, true));
+    }
+    for (const leafId of d.leaves) {
+      const s = SPEC_BY_ID[leafId];
+      if (s) leavesEl.appendChild(leafEl(s, false));
+    }
+    domainEl.appendChild(leavesEl);
+    frag.appendChild(domainEl);
+  }
+  root.innerHTML = "";
+  root.appendChild(frag);
+}
+
+function leafEl(spec, isDomainSpec) {
+  const el = document.createElement("div");
+  el.className = "tree-leaf";
+  el.dataset.id = spec.id;
+  const name = isDomainSpec ? `${spec.title} (domain)` : (spec.capability || spec.id);
+  let badgeHtml = "";
+  if (spec.tree === "dev" && _businessPresent && !(spec.implements && spec.implements.length)) {
+    badgeHtml = '<span class="leaf-badge unmapped">unmapped</span>';
+  }
+  el.innerHTML = `<span class="status-dot ${spec.status}"></span><span class="label">${mdEscape(name)}</span>${badgeHtml}`;
+  el.addEventListener("click", () => selectSpec(spec.id));
+  return el;
+}
+
+function highlightSidebar() {
+  for (const el of document.querySelectorAll(".tree-leaf")) {
+    el.classList.toggle("active", el.dataset.id === STATE.selectedId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// rendering: main content
+// ---------------------------------------------------------------------------
+function renderContent() {
+  const root = document.getElementById("content");
+  if (STATE.selectedFolder !== null) {
+    root.innerHTML = renderFolderOverview(STATE.selectedFolder, STATE.activeTree);
+    root.scrollTop = 0;
+    window.scrollTo({top: 0, behavior: "instant"});
+    return;
+  }
+  if (!STATE.selectedId) {
+    root.innerHTML = renderDashboard();
+    attachDashboardHandlers(root);
+    return;
+  }
+  const spec = SPEC_BY_ID[STATE.selectedId];
+  if (!spec) {
+    root.innerHTML = `<p class="empty-hint">Spec not found: ${mdEscape(STATE.selectedId)}</p>`;
+    return;
+  }
+  root.innerHTML = renderSpec(spec);
+  attachSpecHandlers(root);
+  applySearchHighlight(root);
+  root.scrollTop = 0;
+  window.scrollTo({top: 0, behavior: "instant"});
+}
+
+// ---------------------------------------------------------------------------
+// folder overview rendering
+// ---------------------------------------------------------------------------
+function showFolder(folderPath, treeName) {
+  STATE.selectedId = null;
+  STATE.selectedFolder = folderPath;
+  STATE.activeTree = treeName || STATE.activeTree;
+  renderContent();
+  highlightSidebar();
+}
+
+function renderFolderOverview(folderPath, treeName) {
+  const overviews = getTreeOverviews(treeName);
+  const ov = overviews[folderPath];
+  const title = ov && ov.title ? ov.title : folderPath || (treeName === "business" ? "Business Specs" : "Developer Specs");
+  const body = ov && ov.body ? mdRender(ov.body) : '<p class="empty-hint">No overview written for this group yet — add <code>_overview.md</code>.</p>';
+
+  // list children in this folder
+  const domains = getTreeDomains(treeName);
+  const childDomains = domains.filter(d => d.domain === folderPath || (folderPath && d.domain.startsWith(folderPath + "/")));
+  const childCards = childDomains.map(d => {
+    const breakdown = d.leaves.reduce((acc, id) => {
+      const s = SPEC_BY_ID[id]; if (s) acc[s.status] = (acc[s.status] || 0) + 1; return acc;
+    }, {});
+    const breakdownStr = Object.entries(breakdown).map(([k, n]) => `${n} ${k}`).join(" · ");
+    return `<div class="domain-card" data-domain="${mdEscape(d.domain)}"><div class="name">${mdEscape(d.domain)}</div><div class="meta">${d.leaves.length} specs${breakdownStr ? " · " + breakdownStr : ""}</div></div>`;
+  }).join("");
+
+  return `
+    <div class="overview-pane">
+      <h2>${mdEscape(title)}</h2>
+      <div class="prose">${body}</div>
+    </div>
+    ${childCards ? `<div class="section-heading">Sub-groups</div><div class="domain-grid">${childCards}</div>` : ""}
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// dashboard with chooser
+// ---------------------------------------------------------------------------
+function renderDashboard() {
+  const description = PROJECT.description || "";
+
+  if (_businessPresent) {
+    // show chooser — two big cards
+    const devSpecs = getTreeSpecs("dev");
+    const bizSpecs = getTreeSpecs("business");
+    const devLeaves = devSpecs.filter(s => s.kind === "leaf").length;
+    const bizLeaves = bizSpecs.filter(s => s.kind === "leaf").length;
+    const devCounts = getTreeStatusCounts("dev");
+    const bizCounts = getTreeStatusCounts("business");
+    const devSummary = Object.entries(devCounts).filter(([,n]) => n > 0).map(([k,n]) => `${n} ${k}`).join(", ");
+    const bizSummary = Object.entries(bizCounts).filter(([,n]) => n > 0).map(([k,n]) => `${n} ${k}`).join(", ");
+
+    const warningsPanel = WARNINGS.length ? `
+      <details class="warnings-panel">
+        <summary>⚠ Spec health · ${WARNINGS.length} item${WARNINGS.length === 1 ? "" : "s"} to review</summary>
+        <ul>${WARNINGS.map(w => `<li><code>${mdEscape(w.spec_id)}</code> — ${mdEscape(w.message)}</li>`).join("")}</ul>
+      </details>` : "";
+
+    return `
+      <div class="dashboard">
+        <h1>${mdEscape(PROJECT.title)}</h1>
+        ${description ? `<p class="tagline">${mdInline(description)}</p>` : ""}
+        <div class="chooser-grid">
+          <div class="chooser-card" data-choose="business">
+            <div class="chooser-icon">📋</div>
+            <div class="chooser-title">Business Specs</div>
+            <div class="chooser-desc">Outcomes, user journeys, business rules, and success metrics for stakeholders.</div>
+            <div class="chooser-count">${bizLeaves} specs</div>
+            <div class="chooser-desc" style="margin-top:6px">${bizSummary || "no specs yet"}</div>
+          </div>
+          <div class="chooser-card" data-choose="dev">
+            <div class="chooser-icon">⚙️</div>
+            <div class="chooser-title">Developer Specs</div>
+            <div class="chooser-desc">Schemas, APIs, acceptance criteria, and implementation contracts.</div>
+            <div class="chooser-count">${devLeaves} specs</div>
+            <div class="chooser-desc" style="margin-top:6px">${devSummary || "no specs yet"}</div>
+          </div>
+        </div>
+        ${warningsPanel}
+      </div>`;
+  }
+
+  // no business tree — single-tree dashboard (original)
+  const treeName = STATE.activeTree;
+  const sc = getTreeStatusCounts(treeName);
+  const stats = ["implemented", "approved", "draft", "deprecated"].map(k => {
+    const n = sc[k] || 0;
+    return `<div class="stat-card"><div class="n">${n}</div><div class="l">${k}</div></div>`;
+  }).join("");
+
+  const domains = getTreeDomains(treeName);
+  const domainCards = domains.map(d => {
+    const breakdown = d.leaves.reduce((acc, id) => {
+      const s = SPEC_BY_ID[id]; if (s) acc[s.status] = (acc[s.status] || 0) + 1; return acc;
+    }, {});
+    const breakdownStr = Object.entries(breakdown).map(([k, n]) => `${n} ${k}`).join(" · ");
+    return `<div class="domain-card" data-domain="${mdEscape(d.domain)}"><div class="name">${mdEscape(d.domain)}</div><div class="meta">${d.leaves.length} specs${breakdownStr ? " · " + breakdownStr : ""}</div></div>`;
+  }).join("");
+
+  const tooling = PROJECT.tooling || [];
+  const toolingRows = tooling.length
+    ? `<div class="tooling-grid">${tooling.map(t => {
+        const layer = t.layer || t.col0 || "";
+        const stack = t.stack || t.col1 || "";
+        return `<div class="tooling-row"><div class="layer">${mdEscape(layer)}</div><div class="stack">${mdInline(stack)}</div></div>`;
+      }).join("")}</div>`
+    : `<div class="empty-hint">No tooling manifest found.</div>`;
+
+  const testsBlock = TEST_RESULTS
+    ? `<p class="empty-hint">Loaded ${TEST_RESULTS.results.length} test results${TEST_RESULTS.generated_at ? ` (generated ${mdEscape(TEST_RESULTS.generated_at)})` : ""}.</p>`
+    : `<p class="empty-hint">No <code>test-results.json</code> found.</p>`;
+
+  const warningsPanel = WARNINGS.length ? `
+    <details class="warnings-panel">
+      <summary>⚠ Spec health · ${WARNINGS.length} item${WARNINGS.length === 1 ? "" : "s"} to review</summary>
+      <ul>${WARNINGS.map(w => `<li><code>${mdEscape(w.spec_id)}</code> — ${mdEscape(w.message)}</li>`).join("")}</ul>
+    </details>` : "";
+
+  return `
+    <div class="dashboard">
+      <h1>${mdEscape(PROJECT.title)}</h1>
+      ${description ? `<p class="tagline">${mdInline(description)}</p>` : ""}
+      <div class="stats-row">${stats}</div>
+      <div class="section-heading">Tooling manifest</div>
+      ${toolingRows}
+      <div class="section-heading">Domains · ${domains.length}</div>
+      <div class="domain-grid">${domainCards}</div>
+      <div class="section-heading">Tests</div>
+      ${testsBlock}
+      ${warningsPanel}
+    </div>`;
+}
+
+function attachDashboardHandlers(root) {
+  // chooser cards (business / dev)
+  for (const card of root.querySelectorAll(".chooser-card[data-choose]")) {
+    card.addEventListener("click", () => switchTree(card.dataset.choose));
+  }
+  // domain cards
+  for (const card of root.querySelectorAll(".domain-card")) {
+    card.addEventListener("click", () => {
+      const d = card.dataset.domain;
+      const domains = getTreeDomains(STATE.activeTree);
+      const domain = domains.find(x => x.domain === d);
+      if (!domain) return;
+      const first = domain.domain_spec || domain.leaves[0];
+      if (first) selectSpec(first);
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// spec rendering (with cross-links and test detail)
+// ---------------------------------------------------------------------------
+function renderSpec(spec) {
+  const breadcrumb = spec.kind === "leaf"
+    ? `${mdEscape(spec.tree === "business" ? "Business" : "Developer")} <span class="sep">›</span> ${mdEscape(spec.domain)} <span class="sep">›</span> ${mdEscape(spec.capability || spec.id)}`
+    : `${mdEscape(spec.tree === "business" ? "Business" : "Developer")} <span class="sep">›</span> ${mdEscape(spec.domain || spec.id)}`;
+
+  const deps = (spec.depends_on || []).map(d => renderChip(d));
+  const depsDown = (DOWNSTREAM[spec.id] || []).map(d => renderChip(d));
+
+  // mapping badges
+  let mappingBadge = "";
+  if (spec.tree === "dev" && _businessPresent && !(spec.implements && spec.implements.length)) {
+    mappingBadge = '<span class="badge-unmapped">Unmapped</span>';
+  }
+  if (spec.tree === "business" && !(spec.implemented_by && spec.implemented_by.length)) {
+    mappingBadge = '<span class="badge-unimplemented">Unimplemented</span>';
+  }
+
+  const sections = [];
+
+  // cross-links: Implements (on dev specs → business)
+  if (spec.tree === "dev" && spec.implements && spec.implements.length) {
+    const chips = spec.implements.map(id => renderCrossChip(id, "business")).join("");
+    sections.push(`<div class="spec-section cross-links"><h2>Implements (business specs)</h2><div class="chips">${chips}</div></div>`);
+  }
+
+  // cross-links: Implemented by (on business specs → dev)
+  if (spec.tree === "business" && spec.implemented_by && spec.implemented_by.length) {
+    const chips = spec.implemented_by.map(id => renderCrossChip(id, "dev")).join("");
+    sections.push(`<div class="spec-section cross-links"><h2>Implemented by (developer specs)</h2><div class="chips">${chips}</div></div>`);
+  }
+
+  if (spec.intent) {
+    sections.push(`<div class="spec-section"><h2>Intent</h2><div class="prose">${mdRender(spec.intent)}</div></div>`);
+  }
+
+  if (spec.entities && spec.entities.length) {
+    const rows = spec.entities.map(e => `
+      <div class="entity">
+        <div class="name">${mdInline(e.name || "—")}</div>
+        <div class="desc">${mdInline(e.description || "")}</div>
+      </div>`).join("");
+    sections.push(`<div class="spec-section"><h2>Entities</h2><div class="entities-list">${rows}</div></div>`);
+  }
+
+  if (spec.rules && spec.rules.length) {
+    const items = spec.rules.map(r => `<li class="rule">${mdInline(r)}</li>`).join("");
+    sections.push(`<div class="spec-section"><h2>Rules</h2><ol class="rules-list">${items}</ol></div>`);
+  }
+
+  // Acceptance criteria with mapped tests (dev specs only)
+  if (spec.acceptance_criteria && spec.acceptance_criteria.length) {
+    const cards = spec.acceptance_criteria.map(ac => renderAcCard(spec, ac)).join("");
+    sections.push(`<div class="spec-section"><h2>Acceptance Criteria</h2><div class="ac-grid">${cards}</div></div>`);
+  }
+
+  if (deps.length || depsDown.length) {
+    let depsHtml = `<div class="spec-section"><h2>Dependencies</h2>`;
+    if (deps.length) { depsHtml += `<div class="chips">${deps.join("")}</div>`; }
+    else { depsHtml += `<div class="empty-hint">No upstream dependencies.</div>`; }
+    if (depsDown.length) { depsHtml += `<div class="downstream-heading">Consumed by</div><div class="chips">${depsDown.join("")}</div>`; }
+    depsHtml += `</div>`;
+    sections.push(depsHtml);
+  }
+
+  const notes = spec.notes && spec.notes.length
+    ? `<ul class="notes-list">${spec.notes.map(n => `<li>${mdInline(n)}</li>`).join("")}</ul>` : "";
+  const openQs = spec.open_questions && spec.open_questions.length
+    ? `<div class="open-list"><div class="heading">Open questions</div><ul>${spec.open_questions.map(q => `<li>${mdInline(q)}</li>`).join("")}</ul></div>` : "";
+  if (notes || openQs) {
+    sections.push(`<div class="spec-section"><h2>Notes</h2>${notes}${openQs}</div>`);
+  }
+
+  const sourcePrefix = spec.tree === "business" ? "specs-business/" : "specs/";
+  return `
+    <div class="spec-header">
+      <div class="breadcrumb">${breadcrumb}</div>
+      <div class="spec-title-row">
+        <h1>${mdEscape(spec.title)}</h1>
+        <span class="pill ${spec.status}">${mdEscape(spec.status)}</span>
+        ${mappingBadge}
+      </div>
+      <div class="spec-id">${mdEscape(spec.id)}</div>
+    </div>
+    <div class="hit-wrap">${sections.join("")}</div>
+    <footer>Source: <code>${sourcePrefix}${mdEscape(spec.path)}</code></footer>`;
+}
+
+function renderCrossChip(targetId, targetTree) {
+  const s = SPEC_BY_ID[targetId];
+  if (!s) {
+    return `<span class="chip missing" title="unknown spec">${mdEscape(targetId)} · missing</span>`;
+  }
+  return `<span class="chip" data-goto="${mdEscape(targetId)}" data-tree="${targetTree}"><span class="status-dot ${s.status}"></span>${mdEscape(s.title || targetId)}</span>`;
+}
+
+function renderChip(depId) {
+  const s = SPEC_BY_ID[depId];
+  if (!s) return `<span class="chip missing" title="unknown spec">${mdEscape(depId)} · missing</span>`;
+  return `<span class="chip" data-goto="${mdEscape(depId)}"><span class="status-dot ${s.status}"></span>${mdEscape(depId)}</span>`;
+}
+
+function renderAcCard(spec, ac) {
+  const key = `${spec.id}::${(ac.title || "").trim().toLowerCase()}`;
+  const tr = TEST_LOOKUP.get(key);
+  const discovered = DISCOVERED_LOOKUP.get(key) || [];
+
+  // determine badge and card class
+  let badge, cardClass = "";
+  if (tr) {
+    const s = (tr.status || "").toLowerCase();
+    cardClass = s;
+    badge = `<span class="test-badge ${s}"><span class="tick"></span>${mdEscape(s)}</span>`;
+  } else if (discovered.length > 0) {
+    badge = `<span class="test-badge expected"><span class="tick"></span>test found</span>`;
+  } else if (spec.tree === "dev") {
+    badge = "";
+  } else {
+    badge = "";
+  }
+
+  const steps = (ac.steps || []).map(step => {
+    const kwClass = step.keyword.toLowerCase().replace(/\s+/g, "-").split("-")[0];
+    return `<div class="ac-step"><div class="kw ${kwClass}">${mdEscape(step.keyword)}</div><div class="txt">${mdInline(step.text)}</div></div>`;
+  }).join("");
+
+  const noSteps = !(ac.steps || []).length;
+  const stepsBlock = noSteps
+    ? `<div class="empty-hint">${mdInline(ac.raw || "(no Given/When/Then steps parsed)")}</div>`
+    : `<div class="ac-steps">${steps}</div>`;
+
+  // test details: from test-results.json
+  let testDetailHtml = "";
+  if (tr && tr.file) {
+    testDetailHtml += `
+      <div class="ac-test-detail">
+        ${tr.intent ? `<div class="test-intent">${mdEscape(tr.intent)}</div>` : ""}
+        <div class="test-path">${mdEscape(tr.file)}</div>
+        ${tr.duration_ms != null ? `<div style="font-size:12px;color:var(--text-dim);margin-top:4px">${tr.duration_ms} ms</div>` : ""}
+        ${tr.message ? `<div style="margin-top:6px;font:400 12.5px var(--font-mono);color:var(--test-fail-fg)">${mdEscape(tr.message)}</div>` : ""}
+        ${tr.code ? `<button class="test-code-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">Show test code</button><pre style="display:none"><code>${mdEscape(tr.code)}</code></pre>` : ""}
+      </div>`;
+  }
+
+  // test details: from discovered tests (when no test-results.json match)
+  if (!tr && discovered.length > 0) {
+    for (const dt of discovered) {
+      testDetailHtml += `
+        <div class="ac-test-detail">
+          <div class="test-intent">${mdEscape(dt.intent || dt.describe || "")}</div>
+          <div class="test-path">${mdEscape(dt.file || "")}</div>
+          ${dt.code ? `<button class="test-code-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">Show test code</button><pre style="display:none"><code>${mdEscape(dt.code)}</code></pre>` : ""}
+        </div>`;
+    }
+  }
+
+  // no test warning — only on dev specs
+  let noTestWarning = "";
+  if (spec.tree === "dev" && !tr && discovered.length === 0) {
+    noTestWarning = `<div class="ac-no-test-warning">⚠ No test coverage for this acceptance criterion</div>`;
+  }
+
+  return `
+    <div class="ac-card ${cardClass}">
+      <div class="ac-title-row">
+        <div class="ac-title">${mdEscape(ac.title)}</div>
+        ${badge}
+      </div>
+      ${stepsBlock}
+      ${testDetailHtml}
+      ${noTestWarning}
+    </div>`;
+}
+
+function attachSpecHandlers(root) {
+  for (const chip of root.querySelectorAll(".chip[data-goto]")) {
+    chip.addEventListener("click", () => {
+      const targetTree = chip.dataset.tree;
+      if (targetTree && targetTree !== STATE.activeTree) {
+        STATE.activeTree = targetTree;
+        updateTreeToggleUI();
+        renderSidebar();
+        renderSummary();
+      }
+      selectSpec(chip.dataset.goto);
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// selection
+// ---------------------------------------------------------------------------
+function selectSpec(id) {
+  STATE.selectedId = id;
+  STATE.selectedFolder = null;
+  // auto-switch tree if the spec belongs to the other tree
+  const spec = SPEC_BY_ID[id];
+  if (spec && spec.tree !== STATE.activeTree) {
+    STATE.activeTree = spec.tree;
+    updateTreeToggleUI();
+    renderSidebar();
+    renderSummary();
+  }
+  if (id) location.hash = "#" + encodeURIComponent(id);
+  else location.hash = "";
+  renderContent();
+  highlightSidebar();
+  if (spec) {
+    const dEl = document.querySelector(`.tree-domain[data-domain="${CSS.escape(spec.domain)}"]`);
+    if (dEl) dEl.classList.remove("collapsed");
+  }
+}
+
+function goHome() {
+  STATE.selectedId = null;
+  STATE.selectedFolder = null;
+  location.hash = "";
+  renderContent();
+  highlightSidebar();
+}
+
+// ---------------------------------------------------------------------------
+// search (includes overview text)
+// ---------------------------------------------------------------------------
+function applySearch(query) {
+  STATE.search = query.trim().toLowerCase();
+  const active = STATE.search !== "";
+  const treeName = STATE.activeTree;
+  const treeSpecs = getTreeSpecs(treeName);
+
+  const visibleDomains = new Set();
+
+  // match specs
+  for (const s of treeSpecs) {
+    const matches = !active || s._searchIndex.includes(STATE.search);
+    const el = document.querySelector(`.tree-leaf[data-id="${CSS.escape(s.id)}"]`);
+    if (el) el.classList.toggle("hidden", !matches);
+    if (matches) visibleDomains.add(s.domain);
+  }
+
+  // match overview text (surface folder even if no specs match)
+  if (active && OVERVIEW_SEARCH[treeName]) {
+    for (const ov of OVERVIEW_SEARCH[treeName]) {
+      if (ov.text.includes(STATE.search)) {
+        visibleDomains.add(ov.folder_path);
+      }
+    }
+  }
+
+  for (const dEl of document.querySelectorAll(".tree-domain")) {
+    const show = !active || visibleDomains.has(dEl.dataset.domain);
+    dEl.classList.toggle("hidden", !show);
+    if (active && show) dEl.classList.remove("collapsed");
+  }
+  applySearchHighlight(document.getElementById("content"));
+}
+
+function applySearchHighlight(root) {
+  if (!root) return;
+  for (const m of root.querySelectorAll("mark")) {
+    const p = m.parentNode;
+    while (m.firstChild) p.insertBefore(m.firstChild, m);
+    p.removeChild(m);
+    p.normalize();
+  }
+  if (!STATE.search) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(n) {
+      if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      if (n.parentElement && ["SCRIPT","STYLE","MARK"].includes(n.parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+      return n.nodeValue.toLowerCase().includes(STATE.search) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+  const targets = [];
+  let n;
+  while ((n = walker.nextNode())) targets.push(n);
+  for (const node of targets) {
+    const lc = node.nodeValue.toLowerCase();
+    const parts = [];
+    let i = 0;
+    while (i < node.nodeValue.length) {
+      const idx = lc.indexOf(STATE.search, i);
+      if (idx < 0) { parts.push(document.createTextNode(node.nodeValue.slice(i))); break; }
+      if (idx > i) parts.push(document.createTextNode(node.nodeValue.slice(i, idx)));
+      const m = document.createElement("mark");
+      m.textContent = node.nodeValue.slice(idx, idx + STATE.search.length);
+      parts.push(m);
+      i = idx + STATE.search.length;
+    }
+    const frag = document.createDocumentFragment();
+    for (const p of parts) frag.appendChild(p);
+    node.parentNode.replaceChild(frag, node);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// theme
+// ---------------------------------------------------------------------------
+function initTheme() {
+  const saved = localStorage.getItem("spec-viewer-theme");
+  const theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(theme);
+}
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("spec-viewer-theme", theme);
+  document.getElementById("themeIconLight").style.display = theme === "dark" ? "none" : "";
+  document.getElementById("themeIconDark").style.display = theme === "dark" ? "" : "none";
+}
+
+// ---------------------------------------------------------------------------
+// header summary (tree-aware)
+// ---------------------------------------------------------------------------
+function renderSummary() {
+  const el = document.getElementById("summary");
+  const sc = getTreeStatusCounts(STATE.activeTree);
+  const treeSpecs = getTreeSpecs(STATE.activeTree);
+  const totalLeaves = treeSpecs.filter(s => s.kind === "leaf").length;
+  const pieces = [`<span><b>${totalLeaves}</b> ${STATE.activeTree === "business" ? "business" : "dev"} specs</span>`];
+  for (const k of ["implemented", "approved", "draft", "deprecated"]) {
+    const n = sc[k] || 0;
+    if (n > 0) pieces.push(`<span style="display:inline-flex;gap:6px;align-items:center"><span class="status-dot ${k}" style="width:7px;height:7px;border-radius:50%;display:inline-block"></span>${n} ${k}</span>`);
+  }
+  el.innerHTML = pieces.join('<span style="color:var(--border-strong)">·</span>');
+}
+
+// ---------------------------------------------------------------------------
+// bootstrap
+// ---------------------------------------------------------------------------
+function boot() {
+  if (!SPEC_DATA) {
+    document.getElementById("content").innerHTML = `<p class="empty-hint">No spec data. Did you run the build script?</p>`;
+    return;
+  }
+
+  // when both trees exist, show dashboard chooser first (no tree selected)
+  STATE.activeTree = _businessPresent ? null : "dev";
+
+  initTheme();
+
+  // if no tree selected yet (chooser), don't render sidebar — just show dashboard
+  if (STATE.activeTree) {
+    renderSidebar();
+    renderSummary();
+    updateTreeToggleUI();
+  } else {
+    document.getElementById("sidebar").innerHTML = "";
+    document.getElementById("summary").innerHTML = "";
+    document.getElementById("treeToggle").style.display = "none";
+  }
+
+  // hash navigation
+  if (location.hash) {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (SPEC_BY_ID[id]) {
+      STATE.selectedId = id;
+      STATE.activeTree = SPEC_BY_ID[id].tree;
+      renderSidebar();
+      renderSummary();
+      updateTreeToggleUI();
+    }
+  }
+  renderContent();
+  if (STATE.activeTree) highlightSidebar();
+
+  document.getElementById("search").addEventListener("input", (e) => applySearch(e.target.value));
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+  });
+  document.getElementById("brand").addEventListener("click", goHome);
+
+  // tree toggle buttons
+  document.getElementById("btnBusiness").addEventListener("click", () => switchTree("business"));
+  document.getElementById("btnDev").addEventListener("click", () => switchTree("dev"));
+
+  // keyboard shortcuts
+  document.addEventListener("keydown", (e) => {
+    const target = e.target;
+    const inField = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+    if ((e.key === "/" && !inField) || (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey))) {
+      e.preventDefault();
+      document.getElementById("search").focus();
+      document.getElementById("search").select();
+    } else if (e.key === "Escape" && target.id === "search") {
+      target.value = "";
+      applySearch("");
+      target.blur();
+    }
+  });
+
+  window.addEventListener("hashchange", () => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (id && SPEC_BY_ID[id]) {
+      STATE.selectedId = id;
+      STATE.selectedFolder = null;
+      const spec = SPEC_BY_ID[id];
+      if (spec.tree !== STATE.activeTree) {
+        STATE.activeTree = spec.tree;
+        updateTreeToggleUI();
+        renderSidebar();
+        renderSummary();
+      }
+      renderContent();
+      highlightSidebar();
+    } else if (!id) goHome();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>

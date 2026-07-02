@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0",
+  "anatomy": {
+    "exclude": [
+      "dist/**",
+      "node_modules/**"
+    ],
+    "enhancement": "none"
+  },
+  "hooks": {
+    "preRead": false
+  },
+  "pulse": {
+    "distilThresholdN": 3,
+    "dismissedWindowDays": 90,
+    "hygieneFreshnessHours": 48
+  },
+  "loop": {
+    "enabled": false
+  }
+}

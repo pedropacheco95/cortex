@@ -1,0 +1,147 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import type { ValidationReport, Violation } from './types.js';
+import { buildIndex } from './index-build.js';
+import { checkConfig } from './checks/config.js';
+import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout.js';
+import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatchesPath } from './checks/specs.js';
+import { checkAnatomyFiles, checkAnatomyGraph } from './checks/anatomy.js';
+import { checkRules, checkBugs } from './checks/cerebrum.js';
+import { checkAtlas } from './checks/atlas.js';
+import { checkPulse } from './checks/pulse.js';
+import { checkDevSpecs } from './checks/devspec.js';
+import { checkBizSpecs } from './checks/bizspec.js';
+import { checkScenarios } from './checks/scenario.js';
+import { checkXrefSymmetry, checkXrefUnique, checkXrefAcyclic } from './checks/xref.js';
+import { checkHookConfig } from './checks/hooks.js';
+import { checkClaudeMd } from './checks/claude-md.js';
+import { checkLoopMd } from './checks/loop-md.js';
+import { checkConstellation } from './checks/constellation.js';
+
+export interface ValidateOptions {
+  scope?: 'project' | 'tree' | 'file';
+  root?: string;
+}
+
+function findProjectRoot(startPath: string): string | undefined {
+  let current = fs.statSync(startPath).isDirectory() ? startPath : path.dirname(startPath);
+  while (true) {
+    if (fs.existsSync(path.join(current, '.cortex', 'cortex.config.json'))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+function countViolations(violations: Violation[]): { error: number; warning: number } {
+  let error = 0;
+  let warning = 0;
+  for (const v of violations) {
+    if (v.severity === 'error') error++;
+    else warning++;
+  }
+  return { error, warning };
+}
+
+export async function validate(target: string, opts?: ValidateOptions): Promise<ValidationReport> {
+  const absTarget = path.resolve(target);
+
+  // Find project root
+  const root = opts?.root ? path.resolve(opts.root) : findProjectRoot(absTarget) ?? (fs.statSync(absTarget).isDirectory() ? absTarget : path.dirname(absTarget));
+
+  // 1. Check config first
+  const configResult = checkConfig(root);
+
+  if (!configResult.majorOk) {
+    // Short-circuit: return only config violations
+    const counts = countViolations(configResult.violations);
+    return {
+      schemaVersion: '1.0',
+      target,
+      conformant: counts.error === 0,
+      violations: configResult.violations,
+      counts,
+    };
+  }
+
+  const config = configResult.config ?? {};
+
+  // 2. Build global index
+  const index = await buildIndex(root);
+
+  // 3. Run all checks
+  const allViolations: Violation[] = [...configResult.violations];
+
+  // Layout checks
+  allViolations.push(...checkLayout(root));
+  allViolations.push(...checkIndexPresent(root));
+  allViolations.push(...checkIndexShape(root));
+
+  // Specs checks
+  allViolations.push(...checkSpecsIndex(root));
+  allViolations.push(...checkOverviewPresent(root));
+  allViolations.push(...checkOverviewShape(root));
+  allViolations.push(...checkIdMatchesPath(root));
+
+  // Anatomy checks
+  allViolations.push(...checkAnatomyFiles(root, index));
+  allViolations.push(...checkAnatomyGraph(root));
+
+  // Cerebrum checks
+  allViolations.push(...checkRules(root, index));
+  allViolations.push(...checkBugs(root, index));
+
+  // Atlas checks
+  allViolations.push(...await checkAtlas(root, index));
+
+  // Pulse checks
+  allViolations.push(...await checkPulse(root));
+
+  // Dev spec checks
+  allViolations.push(...await checkDevSpecs(root, index));
+
+  // Business spec checks
+  allViolations.push(...await checkBizSpecs(root, index));
+
+  // Scenario checks
+  allViolations.push(...await checkScenarios(root, index));
+
+  // Cross-reference checks
+  allViolations.push(...await checkXrefSymmetry(root, index));
+  allViolations.push(...await checkXrefUnique(root, index));
+  allViolations.push(...await checkXrefAcyclic(root, index));
+
+  // Hook config check
+  allViolations.push(...checkHookConfig(root, config));
+
+  // CLAUDE.md check
+  allViolations.push(...checkClaudeMd(root, config));
+
+  // loop.md check
+  allViolations.push(...checkLoopMd(root));
+
+  // constellation.json check (§4.9 — only when the file exists)
+  allViolations.push(...checkConstellation(root));
+
+  // When scoped to a single file, filter violations to only those relevant to that file
+  let filteredViolations = allViolations;
+  if (opts?.scope === 'file') {
+    const absFile = path.resolve(target);
+    filteredViolations = allViolations.filter((v) => {
+      // Keep violations for the specific file or config errors
+      return v.location.path === absFile || v.check === 'check.config';
+    });
+  }
+
+  const counts = countViolations(filteredViolations);
+
+  return {
+    schemaVersion: '1.0',
+    target,
+    conformant: counts.error === 0,
+    violations: filteredViolations,
+    counts,
+  };
+}
