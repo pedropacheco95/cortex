@@ -13,6 +13,10 @@ Default decisions Claude holds per-round without asking. Granted by Pedro, 2026-
 
 File in `cerebrum/bugs/` with the seven-type classification and a populated `proposed_fix`. **Ride the fix into the current round** if it is under ~30 lines *and* the fix's regression test is included; otherwise file it for the next round. Resolved bugs stay filed permanently (see `preferences.md`).
 
+## Orchestration depth constraint (temporary)
+
+Until §16.2 step 11 (writer/verifier harness) is complete, `/goal` invocations must be scoped so `specflow-develop` runs at **Minimal or Light depth** — sub-agents cannot spawn sub-agents (the same constraint that killed SpecFlow's agent path, design §8.3), so Standard/Full recursive orchestration fails silently. If a spec's scope would trigger Standard or Full, **split the batch**. Fan-out failures are recovered by breaking the work apart, not by retrying at lower depth mid-run. This constraint lifts when step 11 ships.
+
 ## Ask first, as before
 
 - **Design-doc edits that are architectural decisions** — new boundaries, changed semantics.

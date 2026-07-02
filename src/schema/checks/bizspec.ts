@@ -61,3 +61,68 @@ export async function checkBizSpecs(root: string, index: ProjectIndex): Promise<
 
   return violations;
 }
+
+/**
+ * check.business-status (§4.7 Status Policy A, mechanical): a business spec
+ * whose `implemented_by:` dev specs are ALL `status: implemented` but whose
+ * own `status` is not `implemented` lags — warning. Partially-implemented
+ * implementers (or unresolvable entries — check.business-spec's territory)
+ * stay silent.
+ */
+export async function checkBusinessStatus(root: string): Promise<Violation[]> {
+  const violations: Violation[] = [];
+  const bizDir = path.join(root, 'specs-business');
+
+  if (!fs.existsSync(bizDir)) return violations;
+
+  const files = await fg('**/*.business.md', { cwd: bizDir, absolute: true });
+
+  for (const filePath of files) {
+    let data: Record<string, unknown> = {};
+    try {
+      data = matter(fs.readFileSync(filePath, 'utf-8')).data as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+
+    const status = data['status'];
+    const implementedBy = data['implemented_by'];
+    if (status === 'implemented') continue;
+    if (!Array.isArray(implementedBy) || implementedBy.length === 0) continue;
+
+    let allImplemented = true;
+    for (const ref of implementedBy) {
+      if (typeof ref !== 'string') {
+        allImplemented = false;
+        break;
+      }
+      const resolved = resolveRelativePath(filePath, ref);
+      if (!resolved) {
+        allImplemented = false; // unresolvable → check.business-spec errors; stay silent here
+        break;
+      }
+      try {
+        const devData = matter(fs.readFileSync(resolved, 'utf-8')).data as Record<string, unknown>;
+        if (devData['status'] !== 'implemented') {
+          allImplemented = false;
+          break;
+        }
+      } catch {
+        allImplemented = false;
+        break;
+      }
+    }
+
+    if (allImplemented) {
+      violations.push({
+        severity: 'warning',
+        check: 'check.business-status',
+        clause: '§4.7',
+        location: { path: filePath, key: 'status' },
+        message: `Business spec status "${String(status)}" lags its implementers: every dev spec in implemented_by has status "implemented" (Policy A) — set status: implemented`,
+      });
+    }
+  }
+
+  return violations;
+}

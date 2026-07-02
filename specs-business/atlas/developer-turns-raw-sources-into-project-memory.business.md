@@ -1,6 +1,6 @@
 ---
 id: atlas.developer-turns-raw-sources-into-project-memory
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/atlas/ingest-skill.spec.md
 ---

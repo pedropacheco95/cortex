@@ -1,6 +1,6 @@
 ---
 id: anatomy.contributor-gets-a-legible-codebase
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/anatomy/scanner.spec.md
 ---

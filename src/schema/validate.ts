@@ -10,7 +10,7 @@ import { checkRules, checkBugs } from './checks/cerebrum.js';
 import { checkAtlas } from './checks/atlas.js';
 import { checkPulse } from './checks/pulse.js';
 import { checkDevSpecs } from './checks/devspec.js';
-import { checkBizSpecs } from './checks/bizspec.js';
+import { checkBizSpecs, checkBusinessStatus } from './checks/bizspec.js';
 import { checkScenarios } from './checks/scenario.js';
 import { checkXrefSymmetry, checkXrefUnique, checkXrefAcyclic } from './checks/xref.js';
 import { checkHookConfig } from './checks/hooks.js';
@@ -104,6 +104,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
 
   // Business spec checks
   allViolations.push(...await checkBizSpecs(root, index));
+  allViolations.push(...await checkBusinessStatus(root)); // §4.7 Policy A status lag
 
   // Scenario checks
   allViolations.push(...await checkScenarios(root, index));

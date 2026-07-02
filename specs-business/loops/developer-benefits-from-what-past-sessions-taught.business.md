@@ -1,6 +1,6 @@
 ---
 id: loops.developer-benefits-from-what-past-sessions-taught
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/loops/session-reading.spec.md
 ---

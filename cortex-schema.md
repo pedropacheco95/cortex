@@ -323,7 +323,9 @@ implemented_by:
 ---
 ```
 
-Body sections: Outcome, Who This Is For, User Journey, Business Rules, Success Metrics, Out of Scope, Notes. **No schemas, APIs, or Given/When/Then** (business-spec template). **Validated by** `check.business-spec`: `id` matches path and is globally unique; `implemented_by` paths resolve and are symmetric (§6); body contains no fenced code / HTTP-verb / `Given`-`When`-`Then` markers → `warning` (drift into dev territory).
+Body sections: Outcome, Who This Is For, User Journey, Business Rules, Success Metrics, Out of Scope, Notes. **No schemas, APIs, or Given/When/Then** (business-spec template). **Status policy (Policy A, mechanical).** A business spec's `status` is `implemented` when **every** dev spec in its `implemented_by:` list has `status: implemented`; until then it stays `draft`/`implementing`. A business spec whose implementers are all implemented but whose own status lags is flagged by `check.business-status` (warning). *Policy B — "implemented when a passing journey test exists" — is the v1.1 target once the test-runner loop ships; Policy A is deliberately the weaker, mechanically-available stand-in until then.*
+
+**Validated by** `check.business-spec`: `id` matches path and is globally unique; `implemented_by` paths resolve and are symmetric (§6); body contains no fenced code / HTTP-verb / `Given`-`When`-`Then` markers → `warning` (drift into dev territory).
 
 ### 4.8 Scenario test specs — `tests/scenario/specs/<name>.md`
 
@@ -599,6 +601,7 @@ flow, which is governed by its own spec.)
   "anatomy": { "exclude": ["dist/**", "node_modules/**"], "enhancement": "none" },
   "hooks": { "preRead": false },
   "pulse": { "distilThresholdN": 3, "dismissedWindowDays": 90, "hygieneFreshnessHours": 48 },
+  "harness": { "maxIterations": 3 },
   "loop": { "enabled": false }
 }
 ```
@@ -645,6 +648,7 @@ The mechanical check set (one row ⇒ one implementable check). Grouped by the d
 | `check.rule-governs-resolves` | every glob in a rule's `governs` matches ≥1 real file | §4.2, §6 | warning |
 | `check.dev-spec-governs-resolves` | every glob in a dev spec's `governs` matches ≥1 real file | §4.6, §6 | warning |
 | `check.business-spec` | business-spec frontmatter + no-dev-content | §4.7 | error (frontmatter) / warning (content) |
+| `check.business-status` | business status lags its all-implemented `implemented_by` (Policy A) | §4.7 | warning |
 | `check.covers-resolves` | scenario `covers:` resolves | §4.8 | error |
 | `check.xref-resolve` | all paths/IDs resolve | §6 | error |
 | `check.xref-symmetry` | `implements`↔`implemented_by` | §6 | error |

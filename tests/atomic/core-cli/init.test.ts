@@ -124,6 +124,7 @@ describe('Rule 3: skeleton', () => {
       anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
       hooks: { preRead: false },
       pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
+      harness: { maxIterations: 3 },
       loop: { enabled: false },
     });
   });

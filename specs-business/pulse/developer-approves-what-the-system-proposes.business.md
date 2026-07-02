@@ -1,6 +1,6 @@
 ---
 id: pulse.developer-approves-what-the-system-proposes
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/pulse/review-cli.spec.md
 ---

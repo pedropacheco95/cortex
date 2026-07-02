@@ -30,6 +30,7 @@ Current edges (`A → depends on B`):
 - `atlas.ingest-skill` → `core-cli.init`, `schema.validator`
 - `pulse.review-cli` → `core-cli.init`, `schema.validator`
 - `loops.session-reading` → `schema.validator`
+- `loops.writer-verifier` → `core-cli.init`, `schema.validator`
 
 ## Build Order
 
@@ -44,4 +45,5 @@ Following the design doc's §16.2 implementation order:
 7. `atlas.ingest-skill` — implemented
 8. `pulse.review-cli` — implemented
 9. `loops.session-reading` — implemented
-10. _(next: writer/verifier harness, scheduled-task writer, then the thirteen loops — specs to be written)_
+10. `loops.writer-verifier` — implemented
+11. _(next: the thirteen loops, starting with the cheap curation set — specs to be written)_

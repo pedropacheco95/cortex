@@ -1,6 +1,6 @@
 ---
 id: constellation.stakeholder-sees-the-project-understood
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/constellation/compiler.spec.md
 ---

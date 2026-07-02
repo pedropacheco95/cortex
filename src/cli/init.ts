@@ -12,6 +12,8 @@ import { fileURLToPath } from 'url';
 import * as readline from 'readline/promises';
 import { scan } from '../anatomy/scan.js';
 import { validate } from '../schema/validate.js';
+// Rule 6 auth-failure detection, shared with the writer/verifier harness.
+import { AUTH_FAILURE_PATTERN } from './claude-auth.js';
 import {
   SCHEMA_VERSION,
   CONFIG_DEFAULTS,
@@ -51,10 +53,6 @@ export interface InitResult {
 }
 
 const DEFAULT_TIMEOUT_MS = 300_000;
-
-/** Patterns that mean the Claude CLI subprocess reported an authentication failure (Rule 6). */
-const AUTH_FAILURE_PATTERN =
-  /not\s+logged\s+in|not\s+signed\s+in|unauthoriz|unauthenticat|authentication\s+(?:required|failed|error)|invalid\s+api\s+key|please\s+(?:log|sign)\s*in|login\s+required|\/login/i;
 
 // ---------------------------------------------------------------------------
 // small fs helpers

@@ -10,6 +10,8 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 
 - `loops.session-reading` — the shared transcript substrate: project-slug resolution, project-isolated session enumeration, tolerant JSONL parsing, message extraction; read-only, format-drift-defensive.
 
+- `loops.writer-verifier` — the generic writer/verifier harness: isolated-workspace writer, independence-preserving blind verifier, checks-gate-first loop, first-class iteration limit, pass/fail/unavailable outcomes with full verdict audit trail.
+
 _Planned (not yet written):_
 
 - The thirteen Cortex loops and their composition properties

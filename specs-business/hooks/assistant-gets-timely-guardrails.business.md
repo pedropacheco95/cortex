@@ -1,6 +1,6 @@
 ---
 id: hooks.assistant-gets-timely-guardrails
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/hooks/session-start.spec.md
   - ../../specs/hooks/pre-write.spec.md

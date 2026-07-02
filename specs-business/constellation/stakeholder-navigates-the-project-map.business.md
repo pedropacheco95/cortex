@@ -1,6 +1,6 @@
 ---
 id: constellation.stakeholder-navigates-the-project-map
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/constellation/renderer.spec.md
 ---
