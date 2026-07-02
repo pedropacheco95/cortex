@@ -2,8 +2,11 @@
  * The pulse review CLI — the human gate of propose-don't-mutate (spec
  * pulse.review-cli; schema §4.5). `pulse-list` shows pending suggestions,
  * `pulse-accept <S-NNN>` applies one verbatim, `pulse-reject <S-NNN>` records a
- * windowed dismissal. Deterministic Core (R-001): fs/path only — no LLM, no
- * network, no subprocess.
+ * windowed dismissal. Discovery spans ALL `.cortex/pulse/*.md` reports (§4.5
+ * single S-namespace; Rule 2) — a duplicate id across files is a hard error
+ * (Rule 4b). Accept targets must lie inside `.cortex/cerebrum/` or be a NEW
+ * `.claude/skills/<name>/SKILL.md` (Rule 4). Deterministic Core (R-001):
+ * fs/path only — no LLM, no network, no subprocess.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,6 +29,8 @@ type Status = 'pending' | 'accepted' | 'rejected';
 interface Suggestion {
   id: string;
   title: string;
+  /** `**Source:**` provenance line (§4.5 mandatory field; shown by pulse-list). */
+  source: string | null;
   target: string | null;
   /** Verbatim fenced-block content (no fences, no trailing newline). */
   block: string | null;
@@ -38,6 +43,7 @@ interface Suggestion {
 }
 
 const HEADING_RE = /^##\s+(S-\d{3,})\s*:?\s*(.*)$/;
+const SOURCE_RE = /^\*\*Source:\*\*\s*(.*)$/;
 const TARGET_RE = /^\*\*Target:\*\*\s*(.*)$/;
 const STATUS_RE = /^\*\*Status:\*\*\s*(.*)$/;
 const PROPOSED_RE = /^\*\*Proposed addition:\*\*/;
@@ -61,6 +67,7 @@ function parseSuggestions(lines: string[]): Suggestion[] {
     const id = match[1] as string;
     const title = (match[2] ?? '').trim();
 
+    let source: string | null = null;
     let target: string | null = null;
     let targetLine: number | null = null;
     let status: Status = 'pending';
@@ -70,6 +77,12 @@ function parseSuggestions(lines: string[]): Suggestion[] {
     for (let i = headingLine + 1; i < endLine; i++) {
       const line = lines[i];
       if (line === undefined) continue;
+
+      const srcMatch = line.match(SOURCE_RE);
+      if (srcMatch && source === null) {
+        source = (srcMatch[1] ?? '').trim();
+        continue;
+      }
 
       const tMatch = line.match(TARGET_RE);
       if (tMatch && target === null) {
@@ -112,9 +125,52 @@ function parseSuggestions(lines: string[]): Suggestion[] {
       }
     }
 
-    suggestions.push({ id, title, target, block, status, headingLine, endLine, targetLine, statusLine });
+    suggestions.push({ id, title, source, target, block, status, headingLine, endLine, targetLine, statusLine });
   }
   return suggestions;
+}
+
+/** A suggestion plus the pulse report file it was discovered in (Rule 2). */
+interface SourcedSuggestion extends Suggestion {
+  /** Absolute path of the report file holding the section. */
+  file: string;
+  /** Project-relative path, for messages. */
+  rel: string;
+}
+
+/**
+ * Rule 2 — discover proposal sections across ALL `.cortex/pulse/*.md` reports
+ * (single S-namespace). `dismissed.md` is rejection memory, not a report: its
+ * `## S-NNN` sections are never proposals, so it is excluded.
+ */
+function discoverSuggestions(root: string): SourcedSuggestion[] {
+  const pulseDir = path.join(root, '.cortex', 'pulse');
+  let names: string[];
+  try {
+    names = fs.readdirSync(pulseDir).filter((n) => n.endsWith('.md') && n !== 'dismissed.md');
+  } catch {
+    return [];
+  }
+  names.sort();
+  const discovered: SourcedSuggestion[] = [];
+  for (const name of names) {
+    const file = path.join(pulseDir, name);
+    const lines = readLines(file);
+    if (lines === null) continue;
+    for (const s of parseSuggestions(lines)) {
+      discovered.push({ ...s, file, rel: path.join('.cortex', 'pulse', name) });
+    }
+  }
+  return discovered;
+}
+
+/**
+ * Rule 4b — the same `S-NNN` in two pulse files is a hard error. Returns the
+ * distinct files carrying `id`, when more than one.
+ */
+function duplicateFiles(suggestions: SourcedSuggestion[], id: string): string[] {
+  const files = [...new Set(suggestions.filter((s) => s.id === id).map((s) => s.rel))];
+  return files.length > 1 ? files : [];
 }
 
 interface Dismissal {
@@ -180,6 +236,21 @@ function isInsideCerebrum(root: string, target: string): boolean {
   return !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
+/**
+ * Rule 4 (skills root) — when `target` (project-relative) is exactly
+ * `.claude/skills/<name>/SKILL.md`, return the skill name; else null.
+ */
+function skillTargetName(root: string, target: string): string | null {
+  if (path.isAbsolute(target)) return null;
+  const skillsRoot = path.resolve(root, '.claude', 'skills');
+  const resolved = path.resolve(root, target);
+  const rel = path.relative(skillsRoot, resolved);
+  if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return null;
+  const parts = rel.split(path.sep);
+  if (parts.length !== 2 || parts[1] !== 'SKILL.md' || !parts[0]) return null;
+  return parts[0] as string;
+}
+
 /** Insert or replace `**Status:** <status>` in the addressed section only. */
 function annotateStatus(lines: string[], suggestion: Suggestion, status: Status): string[] {
   const next = lines.slice();
@@ -202,6 +273,7 @@ function appendBlock(existing: string, block: string): string {
 
 function printSuggestion(s: Suggestion): void {
   console.log(`${s.id}: ${s.title}`);
+  if (s.source !== null) console.log(`  Source: ${s.source}`);
   console.log(`  Target: ${s.target}`);
   console.log('  Proposed addition:');
   for (const line of (s.block ?? '').split('\n')) console.log(`    ${line}`);
@@ -209,16 +281,21 @@ function printSuggestion(s: Suggestion): void {
 }
 
 export async function pulseCli(command: string, argv: string[], root = '.'): Promise<number> {
-  const suggestionsPath = path.join(root, '.cortex', 'pulse', 'suggestions.md');
   const dismissedPath = path.join(root, '.cortex', 'pulse', 'dismissed.md');
+  const suggestions = discoverSuggestions(root);
 
   if (command === 'pulse-list') {
-    const lines = readLines(suggestionsPath);
-    if (lines === null) {
-      console.log('Nothing pending.');
-      return 0;
+    // Rule 4b: a duplicate id across files is a hard error at review time.
+    const seen = new Set<string>();
+    for (const s of suggestions) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      const dupes = duplicateFiles(suggestions, s.id);
+      if (dupes.length > 0) {
+        console.error(`Duplicate suggestion id ${s.id} across pulse files: ${dupes.join(' and ')}. Nothing done.`);
+        return 1;
+      }
     }
-    const suggestions = parseSuggestions(lines);
     const dismissals = parseDismissals(readLines(dismissedPath) ?? []);
     const now = Date.now();
 
@@ -249,17 +326,19 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
     return 1;
   }
 
-  const lines = readLines(suggestionsPath);
-  if (lines === null) {
-    console.error(`Unknown suggestion ${id} (no suggestions file).`);
+  // Rule 4b: the addressed id in two pulse files → exit 1 naming both, no action.
+  const dupes = duplicateFiles(suggestions, id);
+  if (dupes.length > 0) {
+    console.error(`Duplicate suggestion id ${id} across pulse files: ${dupes.join(' and ')}. Nothing done.`);
     return 1;
   }
-  const suggestions = parseSuggestions(lines);
   const suggestion = suggestions.find((s) => s.id === id);
   if (!suggestion) {
     console.error(`Unknown suggestion ${id}.`);
     return 1;
   }
+  // Status annotation lands in the report file the section was discovered in.
+  const sourceLines = readLines(suggestion.file) as string[];
 
   if (command === 'pulse-accept') {
     // Idempotence / reversal (Rule 6).
@@ -276,29 +355,44 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
       console.error(`Suggestion ${id} is malformed (missing Target or proposed block); cannot accept.`);
       return 1;
     }
-    // Cerebrum-only target (Rule 4).
-    if (!isInsideCerebrum(root, suggestion.target)) {
-      console.error(`Refusing target outside .cortex/cerebrum/: ${suggestion.target}`);
+    // Target roots (Rule 4): inside .cortex/cerebrum/ or a NEW .claude/skills/<name>/SKILL.md.
+    const skillName = skillTargetName(root, suggestion.target);
+    if (!isInsideCerebrum(root, suggestion.target) && skillName === null) {
+      console.error(
+        `Refusing target outside .cortex/cerebrum/ (or a new .claude/skills/<name>/SKILL.md): ${suggestion.target}`,
+      );
       return 1;
     }
     const targetAbs = path.resolve(root, suggestion.target);
-    const cerebrumRoot = path.resolve(root, '.cortex', 'cerebrum');
-    const relFromCerebrum = path.relative(cerebrumRoot, targetAbs);
-    const isCore = CEREBRUM_CORE_FILES.has(relFromCerebrum);
-    if (!fs.existsSync(targetAbs) && !isCore) {
-      console.error(`Target file does not exist: ${suggestion.target}`);
-      return 1;
+    if (skillName !== null) {
+      // Rule 4: accept never overwrites a skill — an existing target is refused.
+      if (fs.existsSync(targetAbs)) {
+        console.error(`Refusing existing skill file (accept never overwrites a skill): ${suggestion.target}`);
+        return 1;
+      }
+    } else {
+      const cerebrumRoot = path.resolve(root, '.cortex', 'cerebrum');
+      const relFromCerebrum = path.relative(cerebrumRoot, targetAbs);
+      const isCore = CEREBRUM_CORE_FILES.has(relFromCerebrum);
+      if (!fs.existsSync(targetAbs) && !isCore) {
+        console.error(`Target file does not exist: ${suggestion.target}`);
+        return 1;
+      }
     }
 
     // Compute everything before touching disk (Rule 7: never half-applied).
     const existing = fs.existsSync(targetAbs) ? fs.readFileSync(targetAbs, 'utf-8') : '';
     const nextTarget = appendBlock(existing, suggestion.block);
-    const nextSuggestions = annotateStatus(lines, suggestion, 'accepted').join('\n');
+    const nextSource = annotateStatus(sourceLines, suggestion, 'accepted').join('\n');
 
     fs.mkdirSync(path.dirname(targetAbs), { recursive: true });
     fs.writeFileSync(targetAbs, nextTarget, 'utf-8');
-    fs.writeFileSync(suggestionsPath, nextSuggestions, 'utf-8');
-    console.log(`Accepted ${id}: appended to ${suggestion.target}.`);
+    fs.writeFileSync(suggestion.file, nextSource, 'utf-8');
+    console.log(
+      skillName !== null
+        ? `Accepted ${id}: created ${suggestion.target}.`
+        : `Accepted ${id}: appended to ${suggestion.target}.`,
+    );
     return 0;
   }
 
@@ -322,17 +416,20 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
   const nowIso = now.toISOString();
   const expiresIso = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000).toISOString();
 
-  const nextSuggestions = annotateStatus(lines, suggestion, 'rejected').join('\n');
+  const nextSource = annotateStatus(sourceLines, suggestion, 'rejected').join('\n');
 
   // Build the dismissed.md content (create with its §4.5 header if absent).
+  // The section records the suggestion title — the rejection memory text the
+  // proposing loops match candidate patterns against (pulse.distil Rule 3c).
   const existingDismissed = fs.existsSync(dismissedPath)
     ? fs.readFileSync(dismissedPath, 'utf-8')
     : pulseDismissedTemplate(nowIso);
-  const section = `## ${id}\n\n**Dismissed:** ${nowIso}\n**Expires:** ${expiresIso}\n`;
+  const heading = suggestion.title !== '' ? `## ${id}: ${suggestion.title}` : `## ${id}`;
+  const section = `${heading}\n\n**Dismissed:** ${nowIso}\n**Expires:** ${expiresIso}\n`;
   const nextDismissed = existingDismissed.replace(/\n+$/, '') + '\n\n' + section;
 
   fs.mkdirSync(path.dirname(dismissedPath), { recursive: true });
-  fs.writeFileSync(suggestionsPath, nextSuggestions, 'utf-8');
+  fs.writeFileSync(suggestion.file, nextSource, 'utf-8');
   fs.writeFileSync(dismissedPath, nextDismissed, 'utf-8');
   console.log(`Rejected ${id}: dismissed until ${expiresIso}.`);
   return 0;

@@ -4,11 +4,44 @@
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
  * `cortex validate [path] [--json]` (atlas.ingest-skill Rule 4 rider),
  * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1),
- * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), and the deterministic
+ * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), the deterministic
  * loops `cortex loop-rule-decay|loop-atlas-staleness|loop-onboarding-drift|`
- * `loop-spec-drift` (specs loops.*, Rule 1 each).
+ * `loop-spec-drift` (specs loops.*, Rule 1 each), and the two
+ * collect/judge/propose loops `cortex pulse-distil [--collect|--propose <f>|--no-llm]`
+ * (spec pulse.distil, Rule 1) and `cortex loop-skill-suggest [--propose <f>]`
+ * (spec loops.skill-suggest, Rule 1).
  */
 import { init } from './init.js';
+
+/** Shared flag parsing for the two collect/judge/propose loops. */
+function parseLoopFlags(
+  command: string,
+  rest: string[],
+): { collect: boolean; noLlm: boolean; proposeFile?: string; timeoutMs?: number } | null {
+  const collect = rest.includes('--collect');
+  const noLlm = rest.includes('--no-llm');
+  const proposeIdx = rest.indexOf('--propose');
+  let proposeFile: string | undefined;
+  if (proposeIdx >= 0) {
+    proposeFile = rest[proposeIdx + 1];
+    if (!proposeFile || proposeFile.startsWith('-')) {
+      console.error(`cortex ${command}: --propose requires a candidates JSON file path.`);
+      return null;
+    }
+  }
+  let timeoutMs: number | undefined;
+  const timeoutIdx = rest.indexOf('--timeout-ms');
+  if (timeoutIdx >= 0) {
+    const parsed = Number(rest[timeoutIdx + 1]);
+    if (Number.isFinite(parsed) && parsed > 0) timeoutMs = parsed;
+  }
+  return {
+    collect,
+    noLlm,
+    ...(proposeFile !== undefined ? { proposeFile } : {}),
+    ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+  };
+}
 
 export async function run(argv: string[]): Promise<number> {
   // `cortex hook <name>` — names match init's settings.json registrations.
@@ -66,6 +99,32 @@ export async function run(argv: string[]): Promise<number> {
       return await runOnboardingDrift('.');
     } catch (err) {
       console.error(`cortex loop-onboarding-drift: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex pulse-distil [--collect|--propose <file>|--no-llm]` — the weekly
+  // session-distillation loop (pulse.distil Rule 1).
+  if (argv[0] === 'pulse-distil') {
+    const flags = parseLoopFlags('pulse-distil', argv.slice(1));
+    if (flags === null) return 1;
+    try {
+      const { runDistil } = await import('../pulse/distil.js');
+      return await runDistil('.', flags);
+    } catch (err) {
+      console.error(`cortex pulse-distil: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex loop-skill-suggest [--propose <file>]` — the workflow-mining
+  // sibling (loops.skill-suggest Rule 1; same modes as pulse-distil).
+  if (argv[0] === 'loop-skill-suggest') {
+    const flags = parseLoopFlags('loop-skill-suggest', argv.slice(1));
+    if (flags === null) return 1;
+    try {
+      const { runSkillSuggest } = await import('../loops/skill-suggest.js');
+      return await runSkillSuggest('.', flags);
+    } catch (err) {
+      console.error(`cortex loop-skill-suggest: ${(err as Error).message}`);
       return 1;
     }
   }

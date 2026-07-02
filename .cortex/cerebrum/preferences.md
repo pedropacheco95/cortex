@@ -25,3 +25,5 @@ status: draft
 ## Curated conventions (human-added)
 
 - **Resolved bugs remain filed.** A bug's `status:` transitions to `resolved` with a Resolution section added to the body; the file is never deleted. The ledger is durable history — resolved bugs are design-refinement evidence and feed future pattern extraction.
+
+- **Prefer "required with a well-defined empty-state value" over "optional" when defining schema fields.** Optional-but-meaningful fields get silently omitted — `governs:` was optional and 17 dev specs shipped without it, blinding spec-drift and spec_links until a loop caught it. Not enforceable as a check; a preference for future schema decisions. (Pedro, 2026-07-02)

@@ -380,6 +380,162 @@ orphan block
   });
 });
 
+describe('Discovery spans all pulse reports', () => {
+  it('pulse-list and pulse-accept both find S-004 proposed inside rule-candidates.md, and accept applies its block', async () => {
+    const root = makeProject('discovery', {
+      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'In suggestions', '.cortex/cerebrum/preferences.md', 'text one'),
+      extra: {
+        '.cortex/pulse/rule-candidates.md':
+          `---
+kind: pulse-rule-candidates
+generated: 2026-07-01T00:00:00Z
+loop: cortex-loop-rule-decay
+---
+
+# Rule retirement candidates
+
+` + entry('S-004', 'From another loop', '.cortex/cerebrum/environment.md', 'Discovered across files.'),
+        '.cortex/cerebrum/environment.md': '# Environment\n',
+      },
+    });
+
+    expect(await pulseCli('pulse-list', [], root)).toBe(0);
+    expect(stdout()).toContain('S-001');
+    expect(stdout()).toContain('S-004');
+
+    expect(await pulseCli('pulse-accept', ['S-004'], root)).toBe(0);
+    const env = fs.readFileSync(path.join(root, '.cortex', 'cerebrum', 'environment.md'), 'utf-8');
+    expect(env.endsWith('Discovered across files.')).toBe(true);
+    // The status annotation lands in the report the section came from.
+    const rcFile = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'rule-candidates.md'), 'utf-8');
+    expect(rcFile).toContain('**Status:** accepted');
+    const suggestions = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
+    expect(suggestions).not.toContain('**Status:**');
+  });
+
+  it("dismissed.md's own S-NNN sections are rejection memory, never discovered as proposals", async () => {
+    const root = makeProject('discovery-dismissed', {
+      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'Real one', '.cortex/cerebrum/preferences.md', 'text'),
+      dismissed: `---
+kind: pulse-dismissed
+generated: 2026-07-01T00:00:00Z
+loop: cortex-init
+---
+
+## S-777: an old rejection
+
+**Dismissed:** 2026-01-01T00:00:00Z
+**Expires:** 2026-02-01T00:00:00Z
+`,
+    });
+    expect(await pulseCli('pulse-list', [], root)).toBe(0);
+    expect(stdout()).toContain('S-001');
+    expect(stdout()).not.toContain('S-777');
+    expect(stderr()).not.toContain('S-777'); // not even as a malformed-entry notice
+  });
+});
+
+describe('Skill proposal accepted to a new skill only', () => {
+  it('accept on S-005 targeting a nonexistent .claude/skills/my-workflow/SKILL.md creates it with the block', async () => {
+    const root = makeProject('skill-new', {
+      suggestions:
+        SUGGESTIONS_HEADER +
+        entry('S-005', 'my-workflow', '.claude/skills/my-workflow/SKILL.md', '---\nname: my-workflow\ndescription: Test.\n---\n\n# my-workflow\n\n1. Do it.'),
+    });
+    expect(await pulseCli('pulse-accept', ['S-005'], root)).toBe(0);
+    const target = path.join(root, '.claude', 'skills', 'my-workflow', 'SKILL.md');
+    expect(fs.existsSync(target)).toBe(true);
+    expect(fs.readFileSync(target, 'utf-8')).toContain('name: my-workflow');
+    const suggestions = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
+    expect(suggestions).toContain('**Status:** accepted');
+  });
+
+  it('a suggestion targeting an EXISTING skill file is refused, exit 1, nothing changed', async () => {
+    const root = makeProject('skill-existing', {
+      suggestions:
+        SUGGESTIONS_HEADER +
+        entry('S-006', 'Overwrite attempt', '.claude/skills/already-there/SKILL.md', 'malicious overwrite'),
+      extra: { '.claude/skills/already-there/SKILL.md': '---\nname: already-there\n---\n\noriginal\n' },
+    });
+    const before = snapshotTree(root);
+    expect(await pulseCli('pulse-accept', ['S-006'], root)).toBe(1);
+    expect(stderr()).toContain('.claude/skills/already-there/SKILL.md');
+    expect(snapshotTree(root)).toEqual(before);
+  });
+
+  it('a skills path that is not exactly .claude/skills/<name>/SKILL.md stays refused', async () => {
+    const root = makeProject('skill-shape', {
+      suggestions:
+        SUGGESTIONS_HEADER +
+        entry('S-007', 'Wrong shape', '.claude/skills/rogue.md', 'nope') +
+        entry('S-008', 'Nested escape', '.claude/skills/a/b/SKILL.md', 'nope'),
+    });
+    const before = snapshotTree(root);
+    expect(await pulseCli('pulse-accept', ['S-007'], root)).toBe(1);
+    expect(stderr()).toContain('.claude/skills/rogue.md');
+    expect(await pulseCli('pulse-accept', ['S-008'], root)).toBe(1);
+    expect(snapshotTree(root)).toEqual(before);
+  });
+});
+
+describe('Duplicate id across files errors', () => {
+  function makeDuplicateProject(label: string): string {
+    return makeProject(label, {
+      suggestions: SUGGESTIONS_HEADER + entry('S-006', 'First copy', '.cortex/cerebrum/preferences.md', 'text A'),
+      extra: {
+        '.cortex/pulse/skill-suggestions.md':
+          `---
+kind: pulse-skill-suggestions
+generated: 2026-07-01T00:00:00Z
+loop: cortex-loop-skill-suggest
+---
+
+# Skill suggestions
+
+` + entry('S-006', 'Second copy', '.cortex/cerebrum/environment.md', 'text B'),
+        '.cortex/cerebrum/preferences.md': '# Preferences\n',
+        '.cortex/cerebrum/environment.md': '# Environment\n',
+      },
+    });
+  }
+
+  it('pulse-accept on the duplicated id exits 1 naming both files, nothing changed', async () => {
+    const root = makeDuplicateProject('dup-accept');
+    const before = snapshotTree(root);
+    expect(await pulseCli('pulse-accept', ['S-006'], root)).toBe(1);
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'suggestions.md'));
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'skill-suggestions.md'));
+    expect(snapshotTree(root)).toEqual(before);
+  });
+
+  it('pulse-reject on the duplicated id exits 1 naming both files, nothing changed', async () => {
+    const root = makeDuplicateProject('dup-reject');
+    const before = snapshotTree(root);
+    expect(await pulseCli('pulse-reject', ['S-006'], root)).toBe(1);
+    expect(stderr()).toContain('S-006');
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'skill-suggestions.md'));
+    expect(snapshotTree(root)).toEqual(before);
+  });
+
+  it('pulse-list also treats the duplicate as a hard error (exit 1 naming both files)', async () => {
+    const root = makeDuplicateProject('dup-list');
+    expect(await pulseCli('pulse-list', [], root)).toBe(1);
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'suggestions.md'));
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'skill-suggestions.md'));
+  });
+});
+
+describe('Reject records the suggestion title (rejection memory text, pulse.distil Rule 3c)', () => {
+  it('the dismissed.md section heading carries the rejected suggestion title', async () => {
+    const root = makeProject('reject-title', {
+      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'use pnpm not npm', '.cortex/cerebrum/preferences.md', 'Always pnpm.'),
+    });
+    expect(await pulseCli('pulse-reject', ['S-001'], root)).toBe(0);
+    const dismissed = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'dismissed.md'), 'utf-8');
+    expect(dismissed).toContain('## S-001: use pnpm not npm');
+  });
+});
+
 describe('Cerebrum core files are created if absent (Rule 4)', () => {
   it('accept targeting an absent core file (standing-authorities.md) creates it with the block', async () => {
     const root = makeProject('core-create', {

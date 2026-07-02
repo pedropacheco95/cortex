@@ -14,6 +14,8 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 
 - `loops.rule-decay` / `loops.atlas-staleness` / `loops.onboarding-drift` / `loops.spec-drift` — the four curation reviewers: retirement/re-verify/refresh/drift candidates with evidence, each writing only its own always-write pulse report.
 
+- `loops.skill-suggest` — weekly did-things miner sharing distil's corpus: repeated workflows become draft SKILL.md proposals targeting new skill files, accepted through the pulse gate.
+
 _Planned (not yet written):_
 
 - The thirteen Cortex loops and their composition properties

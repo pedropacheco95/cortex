@@ -12,6 +12,8 @@ The self-maintenance process: two loops, Hygiene (fast, mostly deterministic, da
 
 - `pulse.hygiene` — the daily deterministic sweep: orphan branches, PR staleness (gh-optional), anatomy drift, cerebrum dead refs, spec orphans, aged TODOs → `pulse/hygiene-report.md` (always-write); drop-off detection deferred to the agentic layer.
 
+- `pulse.distil` — weekly said-things miner: deterministic collect/propose bookends around an agentic pattern judgment; threshold + covered + dismissed filters; single-S-namespace proposals with session provenance.
+
 _Planned (not yet written):_
 
 - Hygiene: orphan branches, stale PRs, drop-offs, anatomy drift, cerebrum dead refs, spec orphans, and aged TODOs → `pulse/hygiene-report.md`

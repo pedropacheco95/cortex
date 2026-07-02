@@ -61,3 +61,4 @@ governs:
 ## Notes
 
 - Signal (d) is a heuristic hint, labelled as such in the report — never an error.
+- **Future work (noted, not this round):** an `_index.md` goes stale the moment its directory gains a file; this loop catches that monthly, which suits cerebrum churn. A PostWrite-hook enhancement could catch it at write time — candidate for §16.2 step 28 or v1.x.

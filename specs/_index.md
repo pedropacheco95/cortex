@@ -34,6 +34,8 @@ Current edges (`A → depends on B`):
 - `pulse.hygiene` → `core-cli.init`, `schema.validator`, `anatomy.scanner`
 - `loops.rule-decay` / `loops.atlas-staleness` / `loops.onboarding-drift` → `core-cli.init`, `schema.validator`
 - `loops.spec-drift` → `core-cli.init`, `schema.validator`, `anatomy.scanner`
+- `pulse.distil` → `loops.session-reading`, `pulse.review-cli`, `core-cli.init`
+- `loops.skill-suggest` → `loops.session-reading`, `pulse.review-cli`, `pulse.distil`
 
 ## Build Order
 
@@ -50,4 +52,5 @@ Following the design doc's §16.2 implementation order:
 9. `loops.session-reading` — implemented
 10. `loops.writer-verifier` — implemented
 11. `pulse.hygiene`, `loops.rule-decay`, `loops.atlas-staleness`, `loops.onboarding-drift`, `loops.spec-drift` — implemented
-12. _(next: distil + skill-suggest, then bug-triage, specflow-lint/verify scheduling, test-runner last — specs to be written)_
+12. `pulse.distil`, `loops.skill-suggest` — implemented
+13. _(next: bug-triage + specflow-lint/verify scheduling as one three-loop round; then **anatomy-refresh fast/deep — prioritized: the fast tier is the load-bearing loop for anatomy freshness, since drift is the default state on active projects between scans (hygiene caught it this round; the fast loop should own it)**; test-runner last, on its harness)_
