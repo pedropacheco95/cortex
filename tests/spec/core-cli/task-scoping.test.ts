@@ -165,11 +165,13 @@ describe('AC4: --partial recognises only its own project', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(otherRoot); cleanTmp(home); });
 
-  it("registered/preserved counts reflect only this project's tasks (8 written + 1 preserved = 9 packaged loops)", () => {
+  it("registered/preserved counts reflect only this project's tasks (11 written + 1 preserved = 12 packaged loops)", () => {
+    // Since specflow.cortex-awareness Rule 3 the packaged skills cover all
+    // twelve tasks, so --partial registers the full set.
     expect(result.exitCode).toBe(0);
-    expect(result.summary).toContain('Scheduled tasks (--partial): 8 written');
+    expect(result.summary).toContain('Scheduled tasks (--partial): 11 written');
     expect(result.summary).toContain('1 existing preserved');
-    expect(result.summary).toContain('9 loops registered');
+    expect(result.summary).toContain('12 loops registered');
   });
 
   it('the foreign entries and the unrelated user task are byte-untouched', () => {

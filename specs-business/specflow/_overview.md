@@ -10,6 +10,8 @@ Confidence that the product does what it should. The outcome is that every inten
 
 - **The developer knows the specs and their tests stay sound — without checking** — daily structural and owed-tests reports, deferrals distinguished from gaps.
 
+- **Spec work draws on everything the project already knows** — plans consult the map/rules/decisions first, generated tests enforce recorded conventions, problems land in the shared ledger.
+
 _Planned outcomes (not yet written):_
 
 - **Every intended behaviour written down** — what the product should do is captured, not assumed.

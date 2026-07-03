@@ -1,0 +1,128 @@
+{
+  "skill_name": "specflow-onboard-codebase",
+  "evals": [
+    {
+      "id": 1,
+      "name": "levelup-padel-full-onboarding",
+      "prompt": "Onboard this codebase under spec management. The project is at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/ — it has a Flask backend in levelup_backend/ and a React frontend in levelup_frontend/. Run Phases 1-2 (code scan + proposed spec generation, both trees and all folder overviews) and Phase 5 (tooling generation). Skip Phase 3 (human correction) — treat all proposed specs as approved. Skip Phase 6 (test generation). Generate the full developer spec tree under specs/, the business spec tree under specs-business/, an _overview.md in every folder of both trees, bidirectional links (implements / implemented_by), proposed-notes.md, link-map.md, CLAUDE.md, RULES.md, build-order.md, skills, and agents. Print the onboarding summary at the end.",
+      "expected_output": "Should produce BOTH trees: dev specs under specs/ covering auth, players, classes/scheduling, evaluations, messaging, exercises, notifications, dashboard, settings; AND business specs under specs-business/ that GROUP these into ~6-12 user-visible outcomes (e.g. 'Find and join a class', 'Track my progression', 'Coach my players'). Every folder in both trees has an _overview.md. Every dev spec has frontmatter `implements:` (a business spec id, or `[]` with the spec listed in the unmapped report). Every business spec has frontmatter `implemented_by:` with 2+ dev spec ids each (1:1 pairs are a smell). The final summary prints counts: dev specs, business specs, unmapped, folders missing _overview (must be 0), draft business specs.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "both-trees-exist",
+          "text": "Both `specs/` and `specs-business/` directories are created at the project root."
+        },
+        {
+          "id": "every-folder-has-overview",
+          "text": "Every directory under `specs/` and `specs-business/` (root, every domain, every capability) contains an `_overview.md` file. Zero folders are missing one."
+        },
+        {
+          "id": "dev-specs-have-implements-field",
+          "text": "Every dev spec in `specs/` has an `implements:` field in its frontmatter (either a business spec id or `[]`)."
+        },
+        {
+          "id": "business-specs-have-implemented-by",
+          "text": "Every business spec in `specs-business/` has an `implemented_by:` field listing one or more dev spec ids."
+        },
+        {
+          "id": "business-specs-grouped-not-mirrored",
+          "text": "Business spec count is materially smaller than dev spec count (synthesis, not 1:1 translation). At least 60% of business specs have 2+ entries in `implemented_by`."
+        },
+        {
+          "id": "bidirectional-links-consistent",
+          "text": "For every dev spec with `implements: <X>`, the business spec X's `implemented_by:` list contains that dev spec's id (no orphan links)."
+        },
+        {
+          "id": "unmapped-dev-specs-reported",
+          "text": "Any dev spec with `implements: []` is listed in the onboarding summary as unmapped, AND surfaced in proposed-notes.md under 'Unmapped Dev Specs' or in link-map.md."
+        },
+        {
+          "id": "draft-status-when-uncertain",
+          "text": "Business specs whose grouping was inferred with low confidence are marked `status: draft` and have an `OPEN:` note in their body explaining what needs human confirmation."
+        },
+        {
+          "id": "summary-report-printed",
+          "text": "The onboarding ends with a summary report printing: dev spec count, business spec count, unmapped dev spec count, folders-missing-overview count (which should be 0), draft business spec count."
+        },
+        {
+          "id": "overview-content-quality",
+          "text": "Folder `_overview.md` files contain three sections (or equivalent): what this group is, what it covers (with bulleted children), and why it's grouped this way. They are NOT just a list of file links."
+        },
+        {
+          "id": "link-map-generated",
+          "text": "A `link-map.md` file is generated at the project root showing the business→dev coverage table and the unmapped-dev list."
+        },
+        {
+          "id": "claude-md-mentions-both-trees",
+          "text": "The generated CLAUDE.md references both `specs/` and `specs-business/`, the bidirectional link convention, and the requirement to keep `_overview.md` files current."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "express-todo-small-app",
+      "prompt": "I have a small Express.js + MongoDB todo app at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-onboard-codebase-workspace/sample-apps/express-todo/. Onboard it under spec management. Run Phases 1-2 (both trees + all folder overviews) and Phase 5. Skip Phase 3 (treat all specs as approved) and Phase 6. Print the onboarding summary at the end.",
+      "expected_output": "Should produce a SMALL spec tree proportional to the app: ~5-15 dev specs (auth if present, todos CRUD, maybe categories) under specs/, AND ~2-4 business specs under specs-business/ ('Manage my todos', 'Sign in', etc.). Every folder of both trees has an _overview.md. Bidirectional links populated. Should NOT over-engineer with dozens of business specs for a tiny app. Express+MongoDB stack reflected in skills.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "both-trees-exist",
+          "text": "Both `specs/` and `specs-business/` exist."
+        },
+        {
+          "id": "proportional-business-tree",
+          "text": "Business spec count is between 2 and 6 — proportional to a small todo app, not over-engineered."
+        },
+        {
+          "id": "every-folder-has-overview",
+          "text": "Every folder in both trees has an `_overview.md`."
+        },
+        {
+          "id": "bidirectional-links-populated",
+          "text": "Every dev spec has `implements:` set (id or `[]`); every business spec has `implemented_by:` populated."
+        },
+        {
+          "id": "summary-counts-accurate",
+          "text": "The summary report prints accurate counts including 0 folders missing _overview.md."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "django-react-full-stack",
+      "prompt": "I have a Django + React project at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-onboard-codebase-workspace/sample-apps/django-react/. Onboard it under spec management. Run Phases 1-2 (both trees + folder overviews) and Phase 5. Skip Phase 3 and Phase 6. Print the onboarding summary at the end.",
+      "expected_output": "Detects both Django backend and React frontend. Dev specs cover Django models/views/serializers AND React components/routes. Business specs synthesise these by user-visible outcome (using the React route tree and top-level navigation as the skeleton, not the Django app structure). Every folder has _overview.md. proposed-notes.md flags any frontend/backend contract inconsistencies AND records the business-tree synthesis decisions with the evidence used.",
+      "files": [],
+      "assertions": [
+        {
+          "id": "both-trees-exist",
+          "text": "Both `specs/` and `specs-business/` exist."
+        },
+        {
+          "id": "business-tree-uses-frontend-skeleton",
+          "text": "Business specs are organised by user-visible outcomes (frontend route tree / menu items), NOT by Django app names. proposed-notes.md cites the frontend menu / route tree as the synthesis evidence."
+        },
+        {
+          "id": "every-folder-has-overview",
+          "text": "Every folder in both trees has an `_overview.md` and the overviews follow the three-section template (what / covers / why)."
+        },
+        {
+          "id": "bidirectional-links-populated",
+          "text": "Every dev spec has `implements:`; every business spec has `implemented_by:`."
+        },
+        {
+          "id": "synthesis-decisions-logged",
+          "text": "proposed-notes.md contains a 'Business-Tree Synthesis Decisions' section explaining the evidence used for each business spec grouping with confidence labels."
+        },
+        {
+          "id": "draft-status-for-uncertain-groupings",
+          "text": "Business specs with weak grouping evidence are marked `status: draft` with `OPEN:` notes."
+        },
+        {
+          "id": "summary-counts-accurate",
+          "text": "The summary report prints all required counts; folders missing _overview.md is 0."
+        }
+      ]
+    }
+  ]
+}

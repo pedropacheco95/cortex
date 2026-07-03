@@ -1,0 +1,66 @@
+{
+  "skill_name": "specflow-new-project",
+  "evals": [
+    {
+      "id": 1,
+      "name": "courttime-padel-booking-pwa",
+      "prompt": "I want to build a padel court booking app called CourtTime. It's a React + FastAPI app with PostgreSQL. Here's what it does:\n\n- Coaches manage courts and time slots\n- Players browse available slots and book courts\n- The system handles payments via Stripe\n- Players can invite other players to fill a court (padel is 4 players)\n- Notifications via email and push when bookings are confirmed, canceled, or a spot opens up\n- There's a rating system where players rate each other after matches\n\nDomains I see: Auth, Courts & Scheduling, Booking, Payments, Notifications, Player Profiles & Ratings.\n\nConstraints: Must be a PWA for mobile use. Must use Stripe for payments. Must support Portuguese and English.\n\nI've already decided on the stack: React + TypeScript + Vite frontend, FastAPI + SQLAlchemy backend, PostgreSQL, Redis for caching.\n\nGo ahead and generate the full spec tree, tooling, and build order. I approve this as the project brief — no more discovery needed.",
+      "expected_output": "Two parallel spec trees: specs-business/ with one business spec per outcome (~6-12 total), and specs/ with developer leaf specs for each domain. Every directory in BOTH trees has an _overview.md. Every dev leaf spec has frontmatter `implements:` pointing to a business spec. Every business spec has frontmatter `implemented_by:` listing dev specs that realise it. All bidirectional links resolve to actual files. Should include agents, skills, RULES.md, CLAUDE.md (mentioning the two-layer model), and a build-order.md that walks the business tree first then the dev tree.",
+      "files": [],
+      "assertions": [
+        {"text": "specs-business/ directory exists at the project root", "type": "filesystem"},
+        {"text": "specs/ directory exists at the project root", "type": "filesystem"},
+        {"text": "specs-business/_overview.md exists", "type": "filesystem"},
+        {"text": "specs/_overview.md exists", "type": "filesystem"},
+        {"text": "Every directory under specs-business/ contains _overview.md (or README.md)", "type": "structural"},
+        {"text": "Every directory under specs/ contains _overview.md (or README.md)", "type": "structural"},
+        {"text": "At least 5 business specs exist (.business.md files under specs-business/)", "type": "count"},
+        {"text": "At least 15 developer leaf specs exist (.spec.md files under specs/)", "type": "count"},
+        {"text": "Every developer leaf spec has YAML frontmatter with a non-empty `implements:` field", "type": "frontmatter"},
+        {"text": "Every business spec has YAML frontmatter with a non-empty `implemented_by:` field", "type": "frontmatter"},
+        {"text": "Every path listed in a dev spec's `implements:` resolves to an existing business spec file", "type": "link-resolution"},
+        {"text": "Every path listed in a business spec's `implemented_by:` resolves to an existing dev spec file", "type": "link-resolution"},
+        {"text": "Bidirectional link symmetry: for every dev->business link, the inverse business->dev link exists", "type": "link-symmetry"},
+        {"text": "build-order.md exists and references both specs-business/ and specs/", "type": "content"},
+        {"text": "CLAUDE.md exists and explains the two-layer model (mentions specs-business/ and specs/)", "type": "content"},
+        {"text": "No business spec contains schema/API artifacts (no markdown table headers like `| Field | Type |` and no `Given`/`When`/`Then` lines)", "type": "content"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "personal-finance-tracker-singleuser",
+      "prompt": "Build me a personal finance tracker. I want to track my income and expenses, categorize transactions, set monthly budgets per category, and see reports showing where my money goes. I'm thinking a simple web app — maybe Next.js? I don't have strong opinions on the backend, you decide. Just me using it, no multi-user needed. I want to be able to import transactions from CSV files from my bank. Go ahead and spec it out fully — generate all the files.",
+      "expected_output": "Single-user finance tracker with both spec trees. Business specs framed around outcomes like 'see where my money goes', 'stay on budget', 'import bank statements without manual entry'. Dev specs cover Accounts, Transactions, Categories, Budgets, Reports, Import. Every folder has _overview.md. Bidirectional links populated. Auth is minimal since it's single-user. Build order starts with data models.",
+      "files": [],
+      "assertions": [
+        {"text": "specs-business/ and specs/ both exist", "type": "filesystem"},
+        {"text": "Every directory in both trees has _overview.md (or README.md)", "type": "structural"},
+        {"text": "Number of business specs is meaningfully smaller than number of dev leaf specs (1:N grouping, not 1:1)", "type": "ratio"},
+        {"text": "Every dev leaf spec has populated `implements:` frontmatter", "type": "frontmatter"},
+        {"text": "Every business spec has populated `implemented_by:` frontmatter", "type": "frontmatter"},
+        {"text": "All `implements:` and `implemented_by:` paths resolve to existing files", "type": "link-resolution"},
+        {"text": "Bidirectional link symmetry holds across the project", "type": "link-symmetry"},
+        {"text": "Business specs avoid schemas/APIs/Given-When-Then (use journey language instead)", "type": "content"},
+        {"text": "build-order.md presents business tree first, then dev tree", "type": "content"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "csvkit-pro-cli-tool",
+      "prompt": "I need a CLI tool called csvkit-pro that processes CSV files and generates reports. Written in Python, uses Click for the CLI framework. Features:\n\n- Read CSV files (single or directory of CSVs)\n- Filter rows by column values (supports =, !=, >, <, contains, regex)\n- Aggregate: group by columns, compute sum/avg/count/min/max\n- Join: merge two CSVs on a shared column\n- Output: formatted table to terminal, CSV file, JSON file, or HTML report\n- Profile: analyze a CSV and report column types, null counts, unique values, distributions\n\nNo web frontend, no database, no auth. Just a CLI tool. Go ahead and generate the full spec tree.",
+      "expected_output": "CLI-shaped two-layer spec tree. No auth/frontend/database domains. Business specs frame outcomes for an analyst user ('quickly profile a new dataset', 'merge two related CSVs', 'export a styled report'). Dev specs cover input parsing, filter/aggregate/join processing, output formatters. Every folder has _overview.md. Bidirectional links populated and resolved.",
+      "files": [],
+      "assertions": [
+        {"text": "specs-business/ and specs/ both exist", "type": "filesystem"},
+        {"text": "Every directory in both trees has _overview.md (or README.md)", "type": "structural"},
+        {"text": "No web-app domains present (no auth/, no frontend/, no database/ at the top level)", "type": "structural"},
+        {"text": "Business specs frame analyst outcomes (mention CSV/data/report concepts in plain language)", "type": "content"},
+        {"text": "Every dev leaf spec has populated `implements:` frontmatter", "type": "frontmatter"},
+        {"text": "Every business spec has populated `implemented_by:` frontmatter", "type": "frontmatter"},
+        {"text": "All cross-tree links resolve to existing files", "type": "link-resolution"},
+        {"text": "Bidirectional link symmetry holds", "type": "link-symmetry"},
+        {"text": "Business specs avoid technical jargon (no `Click`, `argparse`, function signatures)", "type": "content"}
+      ]
+    }
+  ]
+}

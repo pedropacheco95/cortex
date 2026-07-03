@@ -6,7 +6,11 @@ The spec-and-test lineage absorbed into Cortex: the conventions of the two spec 
 
 ## What it covers
 
-_No specs written yet — this tree is scaffolded structure only. Planned coverage:_
+**Specs written:**
+
+- `specflow.cortex-awareness` — the three-tier awareness pass over all eleven specflow-* skills (deep: develop/tests/change-router; moderate: onboarding/ingest/new-project/spec-editor; light: viewer/lint/bugs incl. the §4.3 ledger correctness fix), shipped in the package so init installs the aware versions.
+
+_Planned (not yet written):_
 
 - The conventions of the two spec trees (`specs/` and `specs-business/`)
 - The four test layers: atomic, spec, journey, and scenario, with the `covers:` coverage constraint

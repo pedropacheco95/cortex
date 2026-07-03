@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-04-16T09:30:00Z",
+  "runner": "vitest",
+  "results": [
+    {"spec_id": "alpha.onboarding", "criterion": "Wizard advances on valid step", "status": "pass", "file": "tests/onboarding/wizard.test.ts", "duration_ms": 87},
+    {"spec_id": "alpha.onboarding", "criterion": "Wizard blocks ahead-skipping", "status": "pass", "file": "tests/onboarding/wizard.test.ts", "duration_ms": 54},
+    {"spec_id": "alpha.onboarding", "criterion": "Completion unlocks the app", "status": "fail", "file": "tests/onboarding/wizard.test.ts", "duration_ms": 103, "message": "expected /dashboard redirect, got /onboarding/step-3"},
+    {"spec_id": "alpha.billing", "criterion": "Add a seat mid-cycle", "status": "pass", "file": "tests/billing/seats.test.ts", "duration_ms": 124},
+    {"spec_id": "alpha.billing", "criterion": "Failed payment freezes writes", "status": "skip", "file": "tests/billing/freeze.test.ts"},
+    {"spec_id": "beta.minimal", "criterion": "Smoke", "status": "pass", "file": "tests/healthz.test.ts", "duration_ms": 4},
+    {"spec_id": "beta.huge", "criterion": "Basic text match", "status": "pass", "file": "tests/search/basic.test.ts", "duration_ms": 22},
+    {"spec_id": "beta.huge", "criterion": "Case-insensitive match", "status": "pass", "file": "tests/search/basic.test.ts", "duration_ms": 19},
+    {"spec_id": "beta.huge", "criterion": "Query too short", "status": "pass", "file": "tests/search/basic.test.ts", "duration_ms": 12},
+    {"spec_id": "beta.huge", "criterion": "Empty results", "status": "pass", "file": "tests/search/edge.test.ts", "duration_ms": 18},
+    {"spec_id": "beta.huge", "criterion": "Rate limiting", "status": "fail", "file": "tests/search/rate.test.ts", "duration_ms": 201, "message": "expected 429, got 200 (rate limiter disabled in test env)"}
+  ]
+}

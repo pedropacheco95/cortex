@@ -152,7 +152,7 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 
 - **Given** a fresh project and a package shipping the five loop skill bundles (installed by Rule 4 before the task check)
 - **When** `cortex init --partial --no-llm --yes` runs
-- **Then** exactly the tasks whose invoked skills are now present register, exit code 0
+- **Then** exactly the tasks whose invoked skills are now present register — with the full packaged-skill census (all task-invoked skills shipping), that is all twelve — exit code 0
 - **And** the `.cortex/` skeleton, anatomy, hooks, and CLAUDE.md block are all complete
 - **And** the summary names each skipped task with the missing skill it needs
 - _(Historical note: before any bundles shipped, this AC's premise was "zero loop skills → 0 tasks registered" — superseded when the loop bundles began shipping with the package.)_
