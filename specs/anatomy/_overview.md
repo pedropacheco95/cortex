@@ -10,10 +10,9 @@ The native code-structure scanner and its artefacts. `cortex scan` lists files, 
 
 - `anatomy.scanner` — The deterministic `cortex scan` pipeline: file listing (honouring `.gitignore` + config exclusions), token estimation (chars/4), tree-sitter structure/import parsing, SHA256 change detection, docstring-first purpose lines (LLM fallback delegated to the agentic refresh pass), spec cross-linking, and emitting `files.md`/`graph.json`/`layers.md`.
 
-_Planned coverage (not yet written):_
+- `anatomy.refresh-fast` / `anatomy.refresh-deep` — the mark-dirty-fast / refresh-deep pair: post-commit deterministic row+edge refresh (the load-bearing freshness loop), and the daily batched purpose-filler that init's inline pass invokes; both with atomic `last_seen` row writes.
 
-- The batched LLM purpose-line pass (agentic — the `cortex-loop-anatomy-refresh` deep tier that fills `needs_purpose_refresh` entries)
-- The fast/deep anatomy-refresh loops (post-commit + scheduled)
+_Planned coverage (not yet written):_ none — the domain is fully specced.
 
 ## Why it's grouped this way
 

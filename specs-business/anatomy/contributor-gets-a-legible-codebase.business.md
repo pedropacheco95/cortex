@@ -3,6 +3,8 @@ id: anatomy.contributor-gets-a-legible-codebase
 status: implemented
 implemented_by:
   - ../../specs/anatomy/scanner.spec.md
+  - ../../specs/anatomy/refresh-fast.spec.md
+  - ../../specs/anatomy/refresh-deep.spec.md
 ---
 
 # A contributor gets a codebase Claude can read without manual documentation

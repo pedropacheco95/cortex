@@ -552,7 +552,9 @@ function mergeSettings(root: string, preRead: boolean): string[] {
 // Rule 12 — git post-commit hook
 // ---------------------------------------------------------------------------
 
-const GIT_HOOK_INVOCATION = 'cortex anatomy-refresh-fast';
+/** The exact command the installed post-commit hook calls (Rule 12) — the
+ *  CLI's `anatomy-refresh-fast` branch must dispatch this exact string. */
+export const GIT_HOOK_INVOCATION = 'cortex anatomy-refresh-fast';
 const GIT_HOOK_SNIPPET = `\n# Cortex: fast deterministic anatomy refresh after each commit (never triggers the LLM subprocess)\n${GIT_HOOK_INVOCATION} >/dev/null 2>&1 || true\n`;
 
 function installGitHook(root: string): 'created' | 'appended' | 'already-installed' | 'skipped-no-git' {
@@ -694,7 +696,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
     purposeLine = 'Purpose pass: nothing to do — no files flagged needs_purpose_refresh.';
   } else {
     const prompt =
-      `Run the anatomy deep-refresh Skill (anatomy-refresh-deep) on this project: ` +
+      `Run the anatomy deep-refresh Skill (cortex-loop-anatomy-refresh, deep tier) on this project: ` +
       `for every row in .cortex/anatomy/files.md with needs_purpose_refresh: true, read the file, ` +
       `write a one-line purpose into the row, and set the flag to false. ` +
       `Keep the table format per cortex-schema.md section 4.1.`;

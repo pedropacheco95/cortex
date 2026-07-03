@@ -10,17 +10,23 @@
  * Rule 1 each), the two collect/judge/propose loops
  * `cortex pulse-distil [--collect|--propose <f>|--no-llm]` (spec pulse.distil,
  * Rule 1) and `cortex loop-skill-suggest [--propose <f>]`
- * (spec loops.skill-suggest, Rule 1), and the collect/judge/report loop
+ * (spec loops.skill-suggest, Rule 1), the collect/judge/report loop
  * `cortex loop-bug-triage [--collect|--report <f>|--no-llm]`
- * (spec loops.bug-triage, Rule 1).
+ * (spec loops.bug-triage, Rule 1), and the two anatomy refresh tiers:
+ * `cortex anatomy-refresh-fast` — the exact string the installed git
+ * post-commit hook calls (core-cli.init Rule 12 / GIT_HOOK_INVOCATION) —
+ * with `cortex loop-anatomy-refresh --fast` as its identical design-§15
+ * alias (spec anatomy.refresh-fast, Rule 1), and
+ * `cortex loop-anatomy-refresh --deep [--collect|--apply <f>|--no-llm]`
+ * (spec anatomy.refresh-deep, Rule 1).
  */
 import { init } from './init.js';
 
-/** Shared flag parsing for the collect/judge/propose-or-report loops. */
+/** Shared flag parsing for the collect/judge/propose-or-report-or-apply loops. */
 function parseLoopFlags(
   command: string,
   rest: string[],
-  fileFlag: '--propose' | '--report' = '--propose',
+  fileFlag: '--propose' | '--report' | '--apply' = '--propose',
   fileNoun = 'candidates',
 ): { collect: boolean; noLlm: boolean; file?: string; timeoutMs?: number } | null {
   const collect = rest.includes('--collect');
@@ -168,6 +174,39 @@ export async function run(argv: string[]): Promise<number> {
       return await runVerifyScheduled('.');
     } catch (err) {
       console.error(`cortex loop-specflow-verify: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex anatomy-refresh-fast` — the exact command the installed git
+  // post-commit hook calls (anatomy.refresh-fast Rule 1). Hook-safe: the
+  // runner degrades internally and always exits 0.
+  if (argv[0] === 'anatomy-refresh-fast') {
+    const { runRefreshFast } = await import('../anatomy/refresh-fast.js');
+    return await runRefreshFast('.');
+  }
+  // `cortex loop-anatomy-refresh --fast|--deep [...]` — the design-§15 form.
+  // --fast dispatches identically to `anatomy-refresh-fast`; --deep is the
+  // collect/judge/apply purpose-filler (anatomy.refresh-deep Rule 1).
+  if (argv[0] === 'loop-anatomy-refresh') {
+    const rest = argv.slice(1);
+    const fast = rest.includes('--fast');
+    const deep = rest.includes('--deep');
+    if (fast === deep) {
+      console.error('cortex loop-anatomy-refresh: exactly one of --fast or --deep is required.');
+      return 1;
+    }
+    if (fast) {
+      const { runRefreshFast } = await import('../anatomy/refresh-fast.js');
+      return await runRefreshFast('.');
+    }
+    const flags = parseLoopFlags('loop-anatomy-refresh', rest, '--apply', 'results');
+    if (flags === null) return 1;
+    try {
+      const { runRefreshDeep } = await import('../anatomy/refresh-deep.js');
+      const { file, ...restFlags } = flags;
+      return await runRefreshDeep('.', { ...restFlags, ...(file !== undefined ? { applyFile: file } : {}) });
+    } catch (err) {
+      console.error(`cortex loop-anatomy-refresh: ${(err as Error).message}`);
       return 1;
     }
   }

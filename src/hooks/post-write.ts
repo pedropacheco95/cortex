@@ -9,13 +9,13 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import matter from 'gray-matter';
 import {
   sanitizeCell,
   computeSha256,
   computeTokens,
   splitDataRowCells,
   emitFilesMdRow,
+  parseFilesMdTable,
   PLACEHOLDER_PURPOSE,
 } from '../anatomy/files-md.js';
 import { hasExcludedSegment, buildIgnoreFilter } from '../anatomy/exclude.js';
@@ -25,58 +25,6 @@ import type { HookRunResult, HookRunOptions } from './session-start.js';
 const HOOK_NAME = 'post-write';
 
 const SILENT: HookRunResult = { exitCode: 0, stdout: '' };
-
-interface ParsedTable {
-  /** Raw lines of the whole file (frontmatter included) — splice-in-place. */
-  lines: string[];
-  /** Index of the last table line (header, separator, or row). */
-  lastTableIdx: number;
-  /** Data-row line index per path cell. */
-  rowIdxByPath: Map<string, number>;
-}
-
-/**
- * Line-level parse of files.md. Returns null when the artefact is corrupt
- * (bad frontmatter, missing table, or malformed rows) — in that case the hook
- * must never write (Rule 7: corruption is a log, never a destroy).
- */
-function parseFilesMd(raw: string): ParsedTable | null {
-  let data: Record<string, unknown>;
-  try {
-    data = matter(raw).data as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-  if (data['kind'] !== 'anatomy-files') return null;
-
-  const lines = raw.split('\n');
-  const rowIdxByPath = new Map<string, number>();
-  let sawHeader = false;
-  let lastTableIdx = -1;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? '';
-    if (!line.trim().startsWith('|')) continue;
-    if (line.includes('---')) {
-      // frontmatter fences don't start with '|'; this is the table separator
-      lastTableIdx = i;
-      continue;
-    }
-    const cells = splitDataRowCells(line);
-    if (cells === null) {
-      // a '|' line that isn't a separator and isn't a data row → header
-      sawHeader = true;
-      lastTableIdx = i;
-      continue;
-    }
-    if (cells.length !== 7 || !cells[0]) return null; // truncated/malformed row
-    rowIdxByPath.set(cells[0], i);
-    lastTableIdx = i;
-  }
-
-  if (!sawHeader || lastTableIdx < 0) return null; // no recognisable table
-  return { lines, lastTableIdx, rowIdxByPath };
-}
 
 export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<HookRunResult> {
   try {
@@ -115,7 +63,7 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     }
 
     const raw = fs.readFileSync(filesMdPath, 'utf-8');
-    const table = parseFilesMd(raw);
+    const table = parseFilesMdTable(raw);
     if (table === null) {
       // Rule 7: corrupt artefact → never write, log, exit 0.
       appendHookError(
