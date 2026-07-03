@@ -55,6 +55,10 @@ export interface HarnessResult {
   diff: string;
   /** One entry per writer attempt, in order — full audit trail (Rule 9). */
   verdicts: HarnessVerdict[];
+  /** Each writer attempt's stdout, in order — consumer-facing audit only
+   *  (e.g. the test-runner's PR body "writer reasoning" field). NEVER fed to
+   *  the verifier: role independence (Rules 3 & 4) is about the prompts. */
+  writerOutputs: string[];
   /** For `unavailable`: names the condition (missing binary / authentication). */
   detail?: string;
   /** Audit extras: where the (now removed) workspace lived and which isolation
@@ -395,6 +399,7 @@ export async function runWriterVerifier(opts: HarnessOptions): Promise<HarnessRe
 
   const ws = createWorkspace(root);
   const verdicts: HarnessVerdict[] = [];
+  const writerOutputs: string[] = [];
   let iterations = 0;
   let diff = '';
 
@@ -403,6 +408,7 @@ export async function runWriterVerifier(opts: HarnessOptions): Promise<HarnessRe
     iterations,
     diff,
     verdicts,
+    writerOutputs,
     detail,
     workspacePath: ws.dir,
     isolation: ws.isolation,
@@ -427,6 +433,7 @@ export async function runWriterVerifier(opts: HarnessOptions): Promise<HarnessRe
 
       iterations++; // a writer attempt happened (Rule 6 ceiling counts these)
       retry = true;
+      writerOutputs.push(writer.stdout);
 
       if (writer.kind === 'timeout' || writer.kind === 'error') {
         // Rule 7: a crashed/hung role is a failed attempt; the loop continues.
@@ -475,6 +482,7 @@ export async function runWriterVerifier(opts: HarnessOptions): Promise<HarnessRe
           iterations,
           diff,
           verdicts,
+          writerOutputs,
           workspacePath: ws.dir,
           isolation: ws.isolation,
         };
@@ -490,6 +498,7 @@ export async function runWriterVerifier(opts: HarnessOptions): Promise<HarnessRe
       iterations,
       diff,
       verdicts,
+      writerOutputs,
       workspacePath: ws.dir,
       isolation: ws.isolation,
     };

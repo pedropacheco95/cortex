@@ -21,7 +21,7 @@ The writer/verifier harness is the safety mechanism required before any Cortex a
 
 - **READS:** the consumer-supplied brief (spec excerpts, failing-check output); the project tree (to seed the isolated workspace); `.cortex/cortex.config.json` (`harness.maxIterations`, default 3).
 - **WRITES:** an **isolated workspace only** — a git worktree when the project is a git repo, a temp copy otherwise. The main working tree is never mutated, pass or fail. Consumers receive a changeset and decide what to apply where, under their own specs.
-- **CREATES:** a structured `HarnessResult` in-process: `outcome` (`pass | fail | unavailable`), `iterations`, the final `diff`, and per-iteration `verdicts` (each: `pass|fail` + the verifier's reasoning text). No artefact is written by the harness itself.
+- **CREATES:** a structured `HarnessResult` in-process: `outcome` (`pass | fail | unavailable`), `iterations`, the final `diff`, per-iteration `verdicts` (each: `pass|fail` + the verifier's reasoning text), and `writerOutputs` (per-attempt writer stdout — consumer-facing audit, added for the test-runner's PR contract; never fed to the verifier). No artefact is written by the harness itself.
 
 ## Rules
 

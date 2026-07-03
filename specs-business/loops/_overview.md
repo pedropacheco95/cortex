@@ -14,6 +14,8 @@ Knowledge that compounds across autonomous runs. The outcome is that automated, 
 
 - **The knowledge layer proposes its own upkeep** — four reviewers on their own cadences; evidence-carrying proposals; the developer just decides.
 
+- **The developer wakes to fixed tests or precise explanations** — verified fix proposals with the full case attached, complete case files when attempts run out, no retry storms, no garbage filings.
+
 _Planned (not yet written):_
 
 - **Runs that remember** — each unattended run starts from what earlier ones discovered, not from scratch.

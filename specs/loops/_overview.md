@@ -19,6 +19,8 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 - `loops.bug-triage` — daily ledger triage: fill-only classification of unclassified open bugs, compare-and-report on classified ones (never overwrites a human's judgment).
 - `loops.lint-scheduled` / `loops.verify-scheduled` — the daily paper trail: validator-backed structural report and owed-tests coverage report (incl. the §8.2 covers-completeness check; deferrals distinguished).
 
+- `loops.test-runner` — the only code-writing loop: tiered runs, seven-type classification gate (unclassifiable → report-only), harness-verified fixes as branch + five-field PR, budget exhaustion → ledger case file that suppresses retries until resolved.
+
 _Planned (not yet written):_
 
 - The thirteen Cortex loops and their composition properties

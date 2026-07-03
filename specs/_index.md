@@ -43,6 +43,7 @@ Current edges (`A → depends on B`):
 - `hooks.pre-read-writeback` → `core-cli.init`, `anatomy.scanner`
 - `hooks.post-read` → `core-cli.init`, `anatomy.scanner`, `hooks.pre-read-writeback`
 - `core-cli.task-scoping` → `core-cli.init`
+- `loops.test-runner` → `loops.writer-verifier`, `loops.bug-triage`, `schema.validator`, `core-cli.init`
 
 ## Build Order
 
@@ -64,4 +65,5 @@ Following the design doc's §16.2 implementation order:
 14. `anatomy.refresh-fast`, `anatomy.refresh-deep` — implemented
 15. `hooks.pre-read-writeback`, `hooks.post-read` — implemented (design §16.2 step 27)
 16. `core-cli.task-scoping` — implemented (multi-project blocker cleared)
-17. _(next: bug-triage + specflow-lint/verify scheduling as one three-loop round; then **anatomy-refresh fast/deep — prioritized: the fast tier is the load-bearing loop for anatomy freshness, since drift is the default state on active projects between scans (hygiene caught it this round; the fast loop should own it)**; test-runner last, on its harness)_
+17. `loops.test-runner` — implemented (design §16.2 step 28 — all thirteen loops live)
+18. _(next: bug-triage + specflow-lint/verify scheduling as one three-loop round; then **anatomy-refresh fast/deep — prioritized: the fast tier is the load-bearing loop for anatomy freshness, since drift is the default state on active projects between scans (hygiene caught it this round; the fast loop should own it)**; test-runner last, on its harness)_

@@ -19,9 +19,12 @@
  * with `cortex loop-anatomy-refresh --fast` as its identical design-§15
  * alias (spec anatomy.refresh-fast, Rule 1), and
  * `cortex loop-anatomy-refresh --deep [--collect|--apply <f>|--no-llm]`
- * (spec anatomy.refresh-deep, Rule 1), plus `cortex tasks rename` — the
- * one-time legacy→scoped scheduled-task migration (core-cli.task-scoping
- * Rule 4).
+ * (spec anatomy.refresh-deep, Rule 1), the code-writing test-runner loop
+ * `cortex loop-test-runner [--tier ...|--trigger ...|--collect|`
+ * `--fix-stage <f>|--no-llm]` with its design-§15 manual alias
+ * `cortex test-run` (spec loops.test-runner, Rule 1), plus
+ * `cortex tasks rename` — the one-time legacy→scoped scheduled-task
+ * migration (core-cli.task-scoping Rule 4).
  */
 import { init } from './init.js';
 
@@ -210,6 +213,26 @@ export async function run(argv: string[]): Promise<number> {
       return await runRefreshDeep('.', { ...restFlags, ...(file !== undefined ? { applyFile: file } : {}) });
     } catch (err) {
       console.error(`cortex loop-anatomy-refresh: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex loop-test-runner [--tier ...|--trigger ...|--collect|--fix-stage <f>|--no-llm]`
+  // — the code-writing loop (loops.test-runner Rule 1). `cortex test-run` is
+  // the manual alias (design §15): identical flags, default trigger `manual`.
+  if (argv[0] === 'loop-test-runner' || argv[0] === 'test-run') {
+    const command = argv[0];
+    try {
+      const { parseTestRunnerFlags, runTestRunner } = await import('../loops/test-runner.js');
+      const flags = parseTestRunnerFlags(command, argv.slice(1), command === 'test-run' ? 'manual' : 'scheduled');
+      if (flags === null) return 1;
+      const { fixStageFile, timeoutMs, ...rest } = flags;
+      return await runTestRunner('.', {
+        ...rest,
+        ...(fixStageFile !== undefined ? { fixStageFile } : {}),
+        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      });
+    } catch (err) {
+      console.error(`cortex ${command}: ${(err as Error).message}`);
       return 1;
     }
   }

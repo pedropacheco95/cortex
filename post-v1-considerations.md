@@ -17,3 +17,7 @@ reconciliation pass.
 - **Scenario `covers:` deferral convention** — verify-scheduled distinguishes journey
   deferrals but scenario-coverage gaps have no deferral mechanism; all 16 business specs
   show as scenario-uncovered until scenario specs exist (test-runner round may absorb this).
+- **Orphaned scheduled-task detection (v1.1 candidate, Pedro).** The task-scoping migration
+  moved 11 tasks where the plan expected 8 — accumulation from earlier re-inits. A
+  hygiene-adjacent check could catch this class autonomously: "scheduled tasks matching
+  Cortex naming that don't correspond to loops in the plan."
