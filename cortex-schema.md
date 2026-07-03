@@ -600,6 +600,22 @@ flow, which is governed by its own spec.)
 
 **Validated by** `check.loop-md` (only if present): contains the propose-don't-mutate clause and a `Stop condition:` line.
 
+### 9.1 Desktop scheduled-task naming (project scoping)
+
+`~/.claude/scheduled-tasks/` is one global namespace per user, so every Cortex-managed task name MUST be project-scoped:
+
+```
+<project-slug>-<short-hash>-<canonical-task-name>
+```
+
+- **`project-slug`** — the project root's folder name, slugged: lowercased; every character outside `[a-z0-9-]` replaced with `-`; consecutive `-` collapsed; leading/trailing `-` trimmed; empty result → `project`.
+- **`short-hash`** — the first 6 hex chars of SHA256 of the project root's absolute path (resolved, no trailing slash). The slug alone collides across same-named folders (`~/work/api` vs `~/personal/api`); the hash guarantees uniqueness; the slug preserves at-a-glance scannability in the Desktop UI.
+- **`canonical-task-name`** — the task's full identity, applying to every Cortex-managed task regardless of lineage: `cortex-pulse-hygiene`, `cortex-pulse-distil`, `cortex-loop-skill-suggest`, `cortex-loop-anatomy-refresh-deep`, `cortex-loop-rule-decay`, `cortex-loop-atlas-staleness`, `cortex-loop-onboarding-drift`, `cortex-loop-spec-drift`, `specflow-lint`, `specflow-verify`, `cortex-loop-test-runner`, `cortex-loop-bug-triage`.
+
+Example: a project at `/Users/me/dev/api` registers `api-a3f2b1-cortex-pulse-hygiene`, `api-a3f2b1-specflow-lint`, ….
+
+**The task name is registration identity only** — the SKILL.md frontmatter `name:` carries the scoped name, but the prompt body invokes the *underlying skill* by its real name (`cortex-pulse-hygiene`, `specflow-lint`, …). Tooling recognises its own project's tasks by the `<slug>-<hash>-` prefix plus a canonical suffix, and ignores every other project's.
+
 ---
 
 ## 10. Schema versioning policy

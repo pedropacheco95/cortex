@@ -10,6 +10,8 @@ A fast, predictable command-line tool. The outcome is that a developer sets Cort
 
 - **A developer sets up Cortex on a project in one command** — one command, minutes of waiting, a complete day-1 knowledge layer, a summary naming every change, and nothing existing destroyed.
 
+- **A developer runs Cortex on every project without collisions** — scoped, scannable task names; each project sees only its own; one-command migration for legacy names.
+
 _Planned outcomes (not yet written):_
 
 - **Everyday operations that just work** — common actions complete fast and behave the same way every time.

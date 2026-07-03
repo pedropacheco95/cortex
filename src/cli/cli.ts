@@ -19,7 +19,9 @@
  * with `cortex loop-anatomy-refresh --fast` as its identical design-§15
  * alias (spec anatomy.refresh-fast, Rule 1), and
  * `cortex loop-anatomy-refresh --deep [--collect|--apply <f>|--no-llm]`
- * (spec anatomy.refresh-deep, Rule 1).
+ * (spec anatomy.refresh-deep, Rule 1), plus `cortex tasks rename` — the
+ * one-time legacy→scoped scheduled-task migration (core-cli.task-scoping
+ * Rule 4).
  */
 import { init } from './init.js';
 
@@ -244,6 +246,21 @@ export async function run(argv: string[]): Promise<number> {
       console.error(`cortex constellation: ${(err as Error).message}`);
       return 1;
     }
+  }
+
+  // `cortex tasks rename` — move legacy-named scheduled tasks in
+  // ~/.claude/scheduled-tasks/ to this project's §9.1 scoped names
+  // (core-cli.task-scoping Rule 4; idempotent, exit 0).
+  if (argv[0] === 'tasks') {
+    if (argv[1] === 'rename') {
+      const { tasksRename } = await import('./task-scoping.js');
+      const os = await import('os');
+      const result = tasksRename(os.homedir(), process.cwd());
+      console.log(result.output);
+      return result.exitCode;
+    }
+    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename`.');
+    return 1;
   }
 
   // Otherwise argv is everything after `cortex init`.

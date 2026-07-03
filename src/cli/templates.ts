@@ -347,9 +347,15 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
   },
 ];
 
-export function scheduledTaskSkillMd(task: ScheduledTask): string {
+/**
+ * SKILL.md for one scheduled task. `scopedName` is the §9.1 project-scoped
+ * registration identity (`<slug>-<hash>-<canonical>`, core-cli.task-scoping
+ * Rule 2) and lands ONLY in the frontmatter `name:`; the prompt body is
+ * unchanged and invokes the underlying skill by its real name.
+ */
+export function scheduledTaskSkillMd(task: ScheduledTask, scopedName: string): string {
   return `---
-name: ${task.name}
+name: ${scopedName}
 description: ${JSON.stringify(task.description)}
 ---
 

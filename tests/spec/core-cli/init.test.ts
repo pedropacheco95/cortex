@@ -23,6 +23,7 @@ import {
   seedProjectSkills,
 } from '../../fixtures/init-harness.js';
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
+import { CANONICAL_TASK_NAMES, scopedTaskName, isOwnScopedTask } from '../../../src/cli/task-scoping.js';
 
 const TEST_TIMEOUT = 60_000;
 const DARWIN = { platform: 'darwin' as const };
@@ -556,35 +557,42 @@ describe('AC13: existing specs/ content is byte-identical after init', () => {
 // ---------------------------------------------------------------------------
 describe('AC14: twelve scheduled task definitions written to the stubbed home', () => {
   let root: string;
-  let root2: string;
   let home: string;
   beforeAll(async () => {
     root = makeTmpDir('ac14-proj');
-    root2 = makeTmpDir('ac14-proj2');
     home = makeTmpDir('ac14-home');
     await init(root, { noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
-  afterAll(() => { cleanTmp(root); cleanTmp(root2); cleanTmp(home); });
+  afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('~/.claude/scheduled-tasks contains twelve dirs, each with name+description frontmatter', () => {
+  it("~/.claude/scheduled-tasks contains twelve dirs under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
     expect(dirs).toHaveLength(12);
+    const expected = SCHEDULED_TASKS
+      .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t.name]!))
+      .sort();
+    expect(dirs.sort()).toEqual(expected);
     for (const dir of dirs) {
+      expect(isOwnScopedTask(root, dir), dir).toBe(true);
       const skillPath = path.join(base, dir, 'SKILL.md');
       expect(fs.existsSync(skillPath), `missing ${skillPath}`).toBe(true);
       const data = matter(fs.readFileSync(skillPath, 'utf-8')).data;
-      expect(data['name']).toBe(dir);
+      expect(data['name']).toBe(dir); // frontmatter name: = the scoped registration identity
       expect(typeof data['description']).toBe('string');
       expect((data['description'] as string).length).toBeGreaterThan(0);
     }
   });
 
   it('re-running without --force leaves user-modified task files untouched', async () => {
-    const hygienePath = path.join(home, '.claude', 'scheduled-tasks', 'hygiene', 'SKILL.md');
-    const userEdit = '---\nname: hygiene\ndescription: USER EDITED\n---\n\nmy custom prompt\n';
+    const scopedHygiene = scopedTaskName(root, CANONICAL_TASK_NAMES['hygiene']!);
+    const hygienePath = path.join(home, '.claude', 'scheduled-tasks', scopedHygiene, 'SKILL.md');
+    const userEdit = `---\nname: ${scopedHygiene}\ndescription: USER EDITED\n---\n\nmy custom prompt\n`;
     fs.writeFileSync(hygienePath, userEdit);
-    const result = await init(root2, { noLlm: true, home, ...DARWIN }); // fresh project, same home, no force
+    // Same project re-run (fresh .cortex/ so preflight admits it), same home, no --force:
+    // the existing scoped task files are recognised as this project's and preserved.
+    fs.rmSync(path.join(root, '.cortex'), { recursive: true, force: true });
+    const result = await init(root, { noLlm: true, home, ...DARWIN });
     expect(result.exitCode).toBe(0);
     expect(fs.readFileSync(hygienePath, 'utf-8')).toBe(userEdit);
     expect(result.summary).toMatch(/12 existing preserved|preserved/);
@@ -609,10 +617,13 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('~/.claude/scheduled-tasks gains exactly the eight packaged loop tasks and exit code is 0', () => {
+  it('~/.claude/scheduled-tasks gains exactly the eight packaged loop tasks (scoped names, §9.1) and exit code is 0', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.readdirSync(base).sort()).toEqual(PACKAGED_LOOP_TASKS);
+    const expected = PACKAGED_LOOP_TASKS
+      .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t]!))
+      .sort();
+    expect(fs.readdirSync(base).sort()).toEqual(expected);
   });
 
   it('.cortex/ skeleton, anatomy, hooks, and CLAUDE.md block are all complete', () => {
@@ -655,14 +666,15 @@ describe('AC16: --partial with some skills present → only those tasks, skips n
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('exactly the tasks whose invoked skills are present are written (seeded specflow pair + packaged loops)', () => {
+  it('exactly the tasks whose invoked skills are present are written under scoped names (seeded specflow pair + packaged loops)', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.readdirSync(base).sort()).toEqual(
-      [...PACKAGED_LOOP_TASKS, 'specflow-lint', 'specflow-verify'].sort(),
-    );
-    expect(fs.existsSync(path.join(base, 'specflow-lint', 'SKILL.md'))).toBe(true);
-    expect(fs.existsSync(path.join(base, 'specflow-verify', 'SKILL.md'))).toBe(true);
+    const expected = [...PACKAGED_LOOP_TASKS, 'specflow-lint', 'specflow-verify']
+      .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t]!))
+      .sort();
+    expect(fs.readdirSync(base).sort()).toEqual(expected);
+    expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-lint'), 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-verify'), 'SKILL.md'))).toBe(true);
     expect(result.summary).toContain('10 loops registered');
   });
 

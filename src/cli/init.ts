@@ -31,6 +31,8 @@ import {
   CEREBRUM_DECISIONS_TEMPLATE,
   pulseDismissedTemplate,
 } from './templates.js';
+// Schema §9.1 project scoping for the Rule 13 task writer (core-cli.task-scoping).
+import { CANONICAL_TASK_NAMES, scopedTaskName } from './task-scoping.js';
 
 export interface InitOptions {
   force?: boolean;
@@ -632,13 +634,18 @@ function writeScheduledTasks(home: string, force: boolean, root: string, partial
       // Default mode: register regardless, but the summary warns about the gap.
       lacking.push({ task: task.name, missingSkills });
     }
-    const skillPath = path.join(baseDir, task.name, 'SKILL.md');
+    // §9.1 project-scoped registration identity (core-cli.task-scoping Rules
+    // 2-3): exists/preserve/overwrite keys on THIS project's scoped path only,
+    // so other projects' tasks and non-Cortex entries are never counted,
+    // listed, overwritten, or skipped-with-notice.
+    const scoped = scopedTaskName(root, CANONICAL_TASK_NAMES[task.name] ?? task.name);
+    const skillPath = path.join(baseDir, scoped, 'SKILL.md');
     if (fs.existsSync(skillPath) && !force) {
       preserved++;
       continue;
     }
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
-    fs.writeFileSync(skillPath, scheduledTaskSkillMd(task), 'utf-8');
+    fs.writeFileSync(skillPath, scheduledTaskSkillMd(task, scoped), 'utf-8');
     written++;
   }
   return { written, preserved, skipped, lacking };

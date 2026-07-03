@@ -10,6 +10,8 @@ The deterministic Node.js CLI binary surface — every `cortex` command — with
 
 - `core-cli.init` — the day-1 bootstrap: `.cortex/` skeleton + config, anatomy scan, inline agentic purpose pass (subprocess boundary), preferences draft, spec-tree scaffolding, legacy `bugs.md` migration, CLAUDE.md managed block, hooks + git hook + twelve Desktop scheduled tasks, self-validation, summary.
 
+- `core-cli.task-scoping` — project-scoped scheduled-task names (schema §9.1: slug + path-hash + canonical), project-scoped recognition in init/--partial, and the `cortex tasks rename` legacy migration.
+
 _Planned coverage (not yet written):_
 
 - `cortex scan` — incremental scanning plus `--full` (CLI wrapper over `anatomy.scanner`)

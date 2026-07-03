@@ -10,6 +10,7 @@ import * as path from 'path';
 import matter from 'gray-matter';
 import { init } from '../../../src/cli/init.js';
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
+import { CANONICAL_TASK_NAMES, scopedTaskName, isOwnScopedTask } from '../../../src/cli/task-scoping.js';
 import {
   makeTmpDir,
   cleanTmp,
@@ -358,25 +359,33 @@ describe('Rule 12: git hook skipped with a notice when not a git repo', () => {
 // ---------------------------------------------------------------------------
 // Rule 13 — the twelve task names, exactly
 // ---------------------------------------------------------------------------
-describe('Rule 13: the twelve scheduled task names are exactly the design set', () => {
-  it('writes exactly the twelve named tasks and overwrites only with --force', async () => {
+describe('Rule 13: the twelve scheduled task names are exactly the design set, project-scoped (§9.1)', () => {
+  it("writes exactly the twelve scoped names; --force overwrites only THIS project's entries", async () => {
     const root = makeTmpDir('tasks-proj');
     const root2 = makeTmpDir('tasks-proj2');
     const home = makeTmpDir('tasks-home');
     try {
       await init(root, { noLlm: true, home, ...DARWIN });
       const base = path.join(home, '.claude', 'scheduled-tasks');
-      const expected = [
-        'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene',
-        'onboarding-drift', 'rule-decay', 'skill-suggest', 'spec-drift',
-        'specflow-lint', 'specflow-verify', 'test-runner',
-      ];
+      // The twelve canonical task names, each under this project's <slug>-<hash>- prefix.
+      const expected = SCHEDULED_TASKS
+        .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t.name]!))
+        .sort();
       expect(fs.readdirSync(base).sort()).toEqual(expected);
+      for (const dir of fs.readdirSync(base)) {
+        expect(isOwnScopedTask(root, dir), dir).toBe(true);
+      }
 
-      // user-modified file is overwritten only with --force
-      const target = path.join(base, 'distil', 'SKILL.md');
-      fs.writeFileSync(target, '---\nname: distil\ndescription: EDITED\n---\n');
+      // Another project's --force init never touches this project's task
+      // (task-scoping Rule 3: recognition is project-scoped)…
+      const scopedDistil = scopedTaskName(root, CANONICAL_TASK_NAMES['distil']!);
+      const target = path.join(base, scopedDistil, 'SKILL.md');
+      fs.writeFileSync(target, `---\nname: ${scopedDistil}\ndescription: EDITED\n---\n`);
       await init(root2, { noLlm: true, force: true, home, ...DARWIN });
+      expect(fs.readFileSync(target, 'utf-8')).toContain('EDITED');
+
+      // …while this project's own re-init overwrites it only with --force.
+      await init(root, { noLlm: true, force: true, home, ...DARWIN });
       expect(fs.readFileSync(target, 'utf-8')).not.toContain('EDITED');
     } finally {
       cleanTmp(root); cleanTmp(root2); cleanTmp(home);
