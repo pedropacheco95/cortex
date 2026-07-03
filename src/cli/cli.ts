@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Thin argv wrapper for `cortex init` (spec core-cli.init), the
  * `cortex hook <name>` dispatch (specs hooks.*, Rule 1),

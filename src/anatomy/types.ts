@@ -26,3 +26,4 @@ export interface ScanOptions {
   full?: boolean;
   forbiddenLLMHook?: () => void;
 }
+// hook-fire probe 1783074091
