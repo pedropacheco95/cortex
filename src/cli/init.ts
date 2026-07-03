@@ -11,6 +11,7 @@ import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 import * as readline from 'readline/promises';
 import { scan } from '../anatomy/scan.js';
+import { splitDataRowCells } from '../anatomy/files-md.js';
 import { validate } from '../schema/validate.js';
 // Rule 6 auth-failure detection, shared with the writer/verifier harness.
 import { AUTH_FAILURE_PATTERN } from './claude-auth.js';
@@ -233,13 +234,14 @@ function countFlagged(root: string): { total: number; flagged: number } {
   let flagged = 0;
   if (!fs.existsSync(filesPath)) return { total, flagged };
   for (const line of fs.readFileSync(filesPath, 'utf-8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith('|')) continue;
-    const cells = trimmed.split('|').map((c) => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
-    const last = cells[cells.length - 1];
-    if (last !== 'true' && last !== 'false') continue; // header / separator rows
+    const cells = splitDataRowCells(line);
+    if (cells === null || cells.length < 7) continue;
+    // Column 7 is needs_purpose_refresh (§4.1) — the last cell is now
+    // purpose_source, so the flag is addressed positionally.
+    const flag = cells[6];
+    if (flag !== 'true' && flag !== 'false') continue; // header / separator rows
     total++;
-    if (last === 'true') flagged++;
+    if (flag === 'true') flagged++;
   }
   return { total, flagged };
 }
@@ -507,7 +509,12 @@ function cortexHookEntries(preRead: boolean): HookEntry[] {
     { event: 'PreToolUse', matcher: 'Write|Edit', command: 'cortex hook pre-write' },
     { event: 'PostToolUse', matcher: 'Write|Edit', command: 'cortex hook post-write' },
   ];
-  if (preRead) entries.push({ event: 'PreToolUse', matcher: 'Read', command: 'cortex hook pre-read' });
+  // The Read pair registers and unregisters together under the one
+  // hooks.preRead flag (schema §5, §10.1 — default true).
+  if (preRead) {
+    entries.push({ event: 'PreToolUse', matcher: 'Read', command: 'cortex hook pre-read' });
+    entries.push({ event: 'PostToolUse', matcher: 'Read', command: 'cortex hook post-read' });
+  }
   return entries;
 }
 
@@ -674,7 +681,8 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   // Rule 3 — skeleton.
   writeSkeleton(absRoot, force, nowIso);
   const config = readConfig(absRoot);
-  const preRead = ((config['hooks'] as Record<string, unknown> | undefined)?.['preRead']) === true;
+  // hooks.preRead defaults TRUE (§10.1) — only an explicit false opts out.
+  const preRead = ((config['hooks'] as Record<string, unknown> | undefined)?.['preRead']) !== false;
 
   // Rule 4 — skills install.
   const skills = await installSkills(absRoot, yes || force);
@@ -773,7 +781,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
     `Skills installed: ${skills.installed}${skills.preserved > 0 ? ` (${skills.preserved} existing bundle(s) preserved)` : ''}`,
   );
   lines.push(`Preferences drafted: .cortex/cerebrum/preferences.md (${prefs.facts.length} fact(s); draft — review before accepting)`);
-  lines.push(`Hooks registered in .claude/settings.json: ${registeredHooks.join(', ')}${preRead ? '' : ' (PreRead off per cortex.config.json)'}`);
+  lines.push(`Hooks registered in .claude/settings.json: ${registeredHooks.join(', ')}${preRead ? '' : ' (Read pair off per cortex.config.json hooks.preRead)'}`);
   switch (gitHookState) {
     case 'skipped-no-git':
       lines.push('Git hook: skipped — not a git repository.');

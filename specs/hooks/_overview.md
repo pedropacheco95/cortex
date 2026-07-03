@@ -14,9 +14,10 @@ Claude Code hooks plus the git post-commit hook — runtime reinforcement at dec
 
 All three share: `cortex hook <name>` command signature as the ownership marker in `.claude/settings.json`, exit-0-always failure model, degradation logged to `pulse/hook-errors.md`, atomic + spec test layers only (journey deferred to v1.1 pending the test-runner loop).
 
+- `hooks.pre-read-writeback` / `hooks.post-read` — the refine-during-use pair (opt-out via `hooks.preRead`): anatomy summary + conditional writeback invitation before a read; silent transcript sweep and `purpose_source: read-time` capture after.
+
 _Planned coverage (not yet written):_
 
-- `PreToolUse` Read — optional, opt-in summary injection (design §16.2 step 29)
 - The git post-commit hook — anatomy-refresh-fast (belongs to the loops build phase)
 
 ## Why it's grouped this way

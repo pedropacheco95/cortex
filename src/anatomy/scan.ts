@@ -14,6 +14,10 @@ import {
   FILES_MD_TABLE_HEADER,
   FILES_MD_TABLE_SEP,
   PLACEHOLDER_PURPOSE,
+  NO_PURPOSE_SOURCE,
+  PURPOSE_SOURCE_DOCSTRING,
+  PURPOSE_SOURCE_SCANNER_LLM,
+  purposeSourceCell,
 } from './files-md.js';
 import { hasExcludedSegment, buildIgnoreFilter } from './exclude.js';
 import { compile } from '../constellation/compile.js';
@@ -24,6 +28,8 @@ interface CachedEntry {
   lastSeen: string;
   sha256: string;
   needsPurposeRefresh: boolean;
+  /** `purpose_source` cell; `-` for legacy 7-column (pre-provenance) rows. */
+  purposeSource: string;
 }
 
 function computeLayer(relPath: string): string {
@@ -58,8 +64,9 @@ function parseCachedFiles(filesContent: string): Map<string, CachedEntry> {
     const sha256 = cols[3] ?? '';
     const lastSeen = cols[4] ?? '';
     const needsPurposeRefresh = (cols[6] ?? '') === 'true';
+    const purposeSource = purposeSourceCell(cols);
 
-    cache.set(pathCell, { purpose, lastSeen, sha256, needsPurposeRefresh });
+    cache.set(pathCell, { purpose, lastSeen, sha256, needsPurposeRefresh, purposeSource });
   }
 
   return cache;
@@ -228,13 +235,21 @@ export async function scan(root: string, opts?: ScanOptions): Promise<ScanResult
     let purpose: string;
     let needsPurposeRefresh: boolean;
     let lastSeen: string;
+    let purposeSource: string;
 
     const cached = cache.get(relPath);
     if (!full && cached && cached.sha256 === sha256) {
-      // Cache hit: retain cached purpose/lastSeen/needsPurposeRefresh
+      // Cache hit: retain cached purpose/lastSeen/needsPurposeRefresh/purpose_source
       purpose = cached.purpose;
       needsPurposeRefresh = cached.needsPurposeRefresh;
       lastSeen = cached.lastSeen;
+      purposeSource = cached.purposeSource;
+      // §4.1 migration clause: a cached row carrying a real purpose but no
+      // provenance (`-`/absent) is backfilled `scanner-llm` on scan — the
+      // accurate default for anything produced before provenance tracking.
+      if (purposeSource === NO_PURPOSE_SOURCE && purpose !== '' && purpose !== PLACEHOLDER_PURPOSE) {
+        purposeSource = PURPOSE_SOURCE_SCANNER_LLM;
+      }
     } else {
       // Cache miss or full scan: derive purpose from extraction
       lastSeen = nowIso;
@@ -244,9 +259,11 @@ export async function scan(root: string, opts?: ScanOptions): Promise<ScanResult
           : extracted.purpose;
         purpose = sanitizeCell(raw);
         needsPurposeRefresh = false;
+        purposeSource = PURPOSE_SOURCE_DOCSTRING;
       } else {
         purpose = PLACEHOLDER_PURPOSE;
         needsPurposeRefresh = true;
+        purposeSource = NO_PURPOSE_SOURCE;
       }
     }
 
@@ -261,6 +278,7 @@ export async function scan(root: string, opts?: ScanOptions): Promise<ScanResult
       imports,
       layer,
       lastSeen,
+      purposeSource,
     });
   }
 
@@ -326,6 +344,7 @@ export async function scan(root: string, opts?: ScanOptions): Promise<ScanResult
       lastSeen: sanitizeCell(f.lastSeen),
       specLinksCell: f.specLinks.length > 0 ? sanitizeCell(f.specLinks.join(' ')) : '-',
       needsPurposeRefresh: f.needsPurposeRefresh,
+      purposeSource: sanitizeCell(f.purposeSource) || NO_PURPOSE_SOURCE,
     }),
   );
 

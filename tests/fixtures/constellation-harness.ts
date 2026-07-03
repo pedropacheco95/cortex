@@ -12,7 +12,7 @@ export { makeTmpDir, cleanTmp, makeCortexProject, writeRule, writeFilesMd } from
 
 /** One well-formed files.md data row (schema §4.1 column order). */
 export function filesRow(relPath: string, tokens: number, specLinks = '-'): string {
-  return `| ${relPath} | Fixture purpose for ${relPath}. | ${tokens} | ${'a'.repeat(64)} | 2026-06-30T14:00:00.000Z | ${specLinks} | false |`;
+  return `| ${relPath} | Fixture purpose for ${relPath}. | ${tokens} | ${'a'.repeat(64)} | 2026-06-30T14:00:00.000Z | ${specLinks} | false | scanner-llm |`;
 }
 
 /** layers.md: an H2 per layer with `- path` bullets (schema §4.1). */

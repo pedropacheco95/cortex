@@ -8,11 +8,13 @@ export const SCHEMA_VERSION = '1.0';
 
 export const PRESENT_MODULES = 'anatomy, cerebrum, atlas, pulse';
 
-/** Schema §10.1 defaults, verbatim. */
+/** Schema §10.1 defaults, verbatim. `hooks.preRead` governs the Read pair
+ *  (PreRead + PostRead) and defaults TRUE; init writes it explicitly on fresh
+ *  projects so the config self-documents (§10.1). */
 export const CONFIG_DEFAULTS: Record<string, unknown> = {
   schemaVersion: SCHEMA_VERSION,
   anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
-  hooks: { preRead: false },
+  hooks: { preRead: true },
   pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
   harness: { maxIterations: 3 },
   loop: { enabled: false },
@@ -55,7 +57,7 @@ frontmatter cross-references (paths and bare IDs) to trace any claim to its sour
 estimate the cost of reading it — before opening unfamiliar files.
 
 **What's here:**
-- \`files.md\` — one row per indexed file: purpose, tokens, sha256, spec links, needs_purpose_refresh.
+- \`files.md\` — one row per indexed file: purpose, tokens, sha256, spec links, needs_purpose_refresh, purpose_source.
 - \`graph.json\` — import/export edges between files.
 - \`layers.md\` — architectural-layer assignments.
 

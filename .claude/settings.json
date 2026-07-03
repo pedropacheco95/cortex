@@ -19,6 +19,15 @@
             "command": "cortex hook pre-write"
           }
         ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cortex hook pre-read"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -28,6 +37,15 @@
           {
             "type": "command",
             "command": "cortex hook post-write"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cortex hook post-read"
           }
         ]
       }

@@ -192,18 +192,19 @@ Two views of the same decision: atlas has the narrative ("On 12 April the team d
 
 ---
 
-## 5. Hooks: three core, one optional
+## 5. Hooks: four core
 
 Hooks are **reinforcement**, not the primary scaffolding mechanism. CLAUDE.md and `_index.md` prompts (see §6 below) are what actually direct Claude into Cortex. Hooks fire at decision points to inject just-in-time context that prompts alone can't anticipate.
 
-All hooks are pure Node.js file I/O. No network. **Warn-never-block.** All four are registered in the project's `.claude/settings.json` by `cortex init`.
+All hooks are pure Node.js file I/O. No network. **Warn-never-block.** All five are registered in the project's `.claude/settings.json` by `cortex init`.
 
 | Hook | Fires on | What it does | Status |
 |---|---|---|---|
 | `SessionStart` | New Claude Code session | Injects a minimal pointer: "Cortex is active. See `.cortex/_index.md` for what's available." That's it. No top-N lists, no ranked content. | Core |
 | `PreToolUse` (Write/Edit) | Before any write or edit | Checks `cerebrum/rules/` for rules matching path or content pattern. Warns if the proposed write violates a rule. Includes rule source (bug triage, decision) in the warning. | Core |
 | `PostToolUse` (Write/Edit) | After a successful write | Updates `anatomy/files.md` for the changed file (re-estimates tokens, refreshes purpose if structure changed). | Core |
-| `PreToolUse` (Read) | Before any file read | Optional. Looks up `anatomy/files.md` for the target path; if found, injects purpose + token estimate + governing specs + applicable rules. Warns on duplicate reads within a session. | Optional |
+| `PreToolUse` (Read) | Before any file read | Looks up `anatomy/files.md` for the target path; if found, injects purpose + token estimate + governing specs + applicable rules, plus a one-line writeback instruction: if the purpose is wrong or stale, emit a `<cortex:purpose>` tag. Warns on duplicate reads within a session. | Core (opt-out) |
+| `PostToolUse` (Read) | After a file read | Silent. Sweeps the session transcript for unapplied `<cortex:purpose>` tags and refines the corresponding anatomy purposes (`purpose_source: read-time`). The capture half of refine-during-use. | Core (opt-out, paired with PreRead) |
 
 ### 5.1 Why SessionStart is minimal
 
@@ -214,7 +215,7 @@ The earlier design proposed injecting "top 5 active specs, top 5 most-recently-v
 
 The minimal version primes Claude with the *existence and location* of Cortex, not its contents. Contents come from grepping `_index.md` files on demand, from PreWrite warnings on actual writes, and from skills actively reading Cortex as part of their workflow.
 
-### 5.2 Why PreToolUse on Read is optional
+### 5.2 Why the Read pair is opt-out (previously: PreRead optional)
 
 This is OpenWolf's signature mechanism — inject a one-line summary before each read so Claude can skip the full read when the summary suffices. It's real and it works: OpenWolf measures ~65% token reduction on bare Claude CLI usage. But:
 
@@ -222,7 +223,7 @@ This is OpenWolf's signature mechanism — inject a one-line summary before each
 - In a SpecFlow-driven workflow, Claude already reads with intent (per-spec, per-ticket context), so the redundant-reads failure mode is much smaller.
 - The hook fires unconditionally and cannot distinguish "exploring blindly" from "reading deliberately," producing noise in the latter case.
 
-Recommendation: ship it as opt-in via `cortex.config.json`. Off by default. Turn it on for projects with large codebases where exploratory reading dominates; leave off where every read is already scoped by a spec.
+The original opt-in recommendation weighed PreRead as a token-saving device only. It is now half of a read-time refinement mechanism: reading is the highest-signal moment for anatomy — Claude is already forming an understanding of the file — and the three maintenance tiers (§7.2) never use that moment. PreRead injects and invites correction; PostRead captures it. That flips the cost/benefit: the pair ships **on by default**, disabled via `cortex.config.json` for users who want to skip the writeback token cost.
 
 ### 5.3 Why PreWrite is the high-value hook
 
@@ -312,7 +313,7 @@ This reverses an earlier decision in this doc's history. The reasoning is in §7
 1. **List files.** Glob the project root, respect `.gitignore` and `cortex.config.json` exclusions.
 2. **Estimate tokens per file.** Character count divided by ~4. Fast, deterministic, accurate to within ~15%.
 3. **Parse structure.** Tree-sitter (Node bindings, one dependency) extracts top-level definitions — functions, classes, exports — and imports per file. Single language per file inferred from extension.
-4. **Resolve one-line purpose (deterministically).** Core derives each file's purpose from its own doc comment — a JSDoc block, a Python module docstring, a Rust `//!`/`///` comment, or a Go leading comment — when present. Files without a usable doc comment are marked `needs_purpose_refresh: true` and left for the LLM pass, which Core never runs. That batched LLM pass for the flagged files (~20–30 at a time, SHA256-cached so unchanged files never re-run) is performed by the agentic `cortex-loop-anatomy-refresh` deep-tier Skill (§11.4). The Skill runs inline as part of `cortex init` (so day-1 anatomy is complete), and thereafter on its scheduled cadence; `cortex scan` itself never invokes the Skill — it only produces the flags. This keeps Core deterministic and LLM-free (§3.1) while still delivering complete purposes: the mark-dirty-fast / refresh-deep pattern (§11.4) applied to purpose lines.
+4. **Resolve one-line purpose (deterministically).** Core derives each file's purpose from its own doc comment — a JSDoc block, a Python module docstring, a Rust `//!`/`///` comment, or a Go leading comment — when present. Files without a usable doc comment are marked `needs_purpose_refresh: true` and left for the LLM pass, which Core never runs. That batched LLM pass for the flagged files (~20–30 at a time, SHA256-cached so unchanged files never re-run) is performed by the agentic `cortex-loop-anatomy-refresh` deep-tier Skill (§11.4). The Skill runs inline as part of `cortex init` (so day-1 anatomy is complete), and thereafter on its scheduled cadence; `cortex scan` itself never invokes the Skill — it only produces the flags. This keeps Core deterministic and LLM-free (§3.1) while still delivering complete purposes. Purpose freshness is a **four-tier mechanism**: **mark-dirty-fast** (post-commit), **bulk-fill-on-schedule** (the deep loop), **inline-on-init** (day-1 completeness), and **refine-during-use** (the PreRead/PostRead cycle, §5) — the fourth capturing understanding at the highest-signal moment, when Claude is already reading the file.
 5. **Cross-link specs.** If `specs/_index.md` is present, match file paths against spec frontmatter `governs:` fields. Populate `spec_links:` per file.
 6. **Emit `.cortex/anatomy/`.** Per the schema — `files.md`, `graph.json` (imports/exports only), `layers.md` (architectural layer inference based on directory structure + heuristic).
 
@@ -711,6 +712,7 @@ What Cortex provides to any loop (its own or user-written):
 - **Write discipline** (frontmatter conventions, schema validator) so loops produce artefacts that compose with everything else.
 - **A propose-don't-mutate convention** for autonomous writes — `.cortex/pulse/` is the queue for human review.
 - **Examples** — the thirteen shipped loops show the pattern, so users can write their own with confidence.
+- **Compounding during normal use** — read-time purpose capture (§5's Read pair) refines anatomy every time a session reads a file: ordinary work improves the memory every subsequent loop and session starts from, with no scheduled run involved.
 
 Cortex serves interactive sessions *and* loops with the same machinery. The doc earlier (§2) named this as one of the two convictions Cortex rests on; this section is its operational consequence.
 
@@ -940,7 +942,7 @@ Locked scope. Everything else deferred.
 
 **Cortex Core (Node.js, global install via npm):**
 - CLI: `cortex init`, `cortex scan` (incremental and `--full`), `cortex status`, `cortex constellation`, `cortex test-run`, plus per-loop invocations: `cortex pulse-hygiene`, `cortex pulse-distil`, `cortex loop-anatomy-refresh` (with `--fast`/`--deep`), `cortex loop-rule-decay`, `cortex loop-atlas-staleness`, `cortex loop-onboarding-drift`, `cortex loop-spec-drift`, `cortex loop-test-coverage`, `cortex loop-test-runner`, `cortex loop-skill-suggest`. Plus the pulse review CLI: `cortex pulse-accept <id>`, `cortex pulse-reject <id>`, `cortex pulse-list`.
-- Hooks: `SessionStart`, `PreToolUse` (Write/Edit), `PostToolUse` (Write/Edit). `PreToolUse` (Read) optional, opt-in via config.
+- Hooks: `SessionStart`, `PreToolUse` (Write/Edit), `PostToolUse` (Write/Edit), and the Read pair — `PreToolUse` (Read) + `PostToolUse` (Read) — on by default, opt-out via config.
 - Git post-commit hook for `cortex-loop-anatomy-refresh-fast`.
 - Constellation compiler producing `.cortex/constellation.json`.
 - Constellation renderer (local Node server + Cytoscape SPA).
@@ -1039,11 +1041,11 @@ Sequenced to build shared infrastructure before the loops that depend on it. Spe
 24. `specflow-verify` (daily Desktop scheduled task — invokes existing skill).
 25. `cortex-loop-spec-drift` (daily Desktop scheduled task).
 26. `cortex-loop-bug-triage` (daily Desktop scheduled task — invokes `specflow-bugs`).
-27. `cortex-loop-test-runner` (the heaviest; daily/weekly Desktop scheduled task; uses the writer/verifier harness from step 11; ships last).
+27. Read-time purpose capture: PreRead promoted to opt-out core + new PostRead writeback hook (§5), `purpose_source` provenance (schema §4.1).
+28. `cortex-loop-test-runner` (the heaviest; daily/weekly Desktop scheduled task; uses the writer/verifier harness from step 11; ships last).
 
 **Final touches:**
-28. Cortex-awareness updates to all 11 SpecFlow skills (each reads anatomy, cerebrum, atlas as appropriate; deepest reads in `specflow-develop`, `specflow-tests`, `specflow-change-router`).
-29. Optional `PreRead` hook (gated behind config flag).
+29. Cortex-awareness updates to all 11 SpecFlow skills (each reads anatomy, cerebrum, atlas as appropriate; deepest reads in `specflow-develop`, `specflow-tests`, `specflow-change-router`).
 
 Each piece is a 1-3 day implementation, except the test-runner which is closer to 5-7 days because of the writer/verifier design and the PR-generation pipeline. Verifiable on a real project before the next begins. Catches schema mistakes early, when they're cheap to fix.
 

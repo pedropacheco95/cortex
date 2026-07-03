@@ -8,7 +8,7 @@
     "enhancement": "none"
   },
   "hooks": {
-    "preRead": false
+    "preRead": true
   },
   "pulse": {
     "distilThresholdN": 3,

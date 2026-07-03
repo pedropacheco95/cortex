@@ -11,12 +11,40 @@ import * as crypto from 'crypto';
 import matter from 'gray-matter';
 
 export const FILES_MD_TABLE_HEADER =
-  '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh |';
+  '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |';
 export const FILES_MD_TABLE_SEP =
-  '|------|---------|--------|--------|-----------|------------|-----------------------|';
+  '|------|---------|--------|--------|-----------|------------|-----------------------|----------------|';
+
+/** The row contract's column count (schema §4.1, provenance round). */
+export const FILES_MD_COLUMNS = 8;
+/** Pre-provenance rows (no `purpose_source`) — tolerated on read, backfilled by the scanner (§4.1 migration clause). */
+export const LEGACY_FILES_MD_COLUMNS = 7;
+
+/**
+ * `purpose_source` values (§4.1). Trust ordering:
+ * `read-time` > `docstring` > `scanner-llm` — an automated writer MUST NOT
+ * replace a purpose with one from a lower-trust source unless the file's
+ * content changed (`needs_purpose_refresh: true` resets the contest).
+ */
+export const PURPOSE_SOURCE_READ_TIME = 'read-time';
+export const PURPOSE_SOURCE_DOCSTRING = 'docstring';
+export const PURPOSE_SOURCE_SCANNER_LLM = 'scanner-llm';
+/** Empty-state value while the purpose is a placeholder (or pre-provenance). */
+export const NO_PURPOSE_SOURCE = '-';
 
 /** Placeholder purpose the scanner uses for rows awaiting the deep pass. */
 export const PLACEHOLDER_PURPOSE = '(needs purpose)';
+
+/** A parsed data row is well-shaped iff it has 8 columns (or legacy 7). */
+export function isDataRowShape(cells: string[]): boolean {
+  return cells.length === FILES_MD_COLUMNS || cells.length === LEGACY_FILES_MD_COLUMNS;
+}
+
+/** The `purpose_source` cell of a parsed row; `-` for legacy 7-column rows. */
+export function purposeSourceCell(cells: string[]): string {
+  const cell = cells[7];
+  return cell !== undefined && cell !== '' ? cell : NO_PURPOSE_SOURCE;
+}
 
 /** Cell sanitiser: no pipes, no newlines, no `---` runs (would read as a separator). */
 export function sanitizeCell(s: string): string {
@@ -38,7 +66,7 @@ export function computeTokens(content: string): number {
 }
 
 /**
- * Split a files.md line into its 7 (or however many) trimmed cells.
+ * Split a files.md line into its 8 (or however many) trimmed cells.
  * Returns null for non-table lines, the separator row, and the header row.
  */
 export function splitDataRowCells(line: string): string[] | null {
@@ -64,11 +92,13 @@ export interface FilesMdRowFields {
   /** Already-sanitised spec_links cell (space-separated IDs, or `-`). */
   specLinksCell: string;
   needsPurposeRefresh: boolean;
+  /** Already-sanitised purpose_source cell (`docstring | scanner-llm | read-time`, or `-`). */
+  purposeSource: string;
 }
 
 /** Emit one table row in the exact scanner format (schema §4.1 column order). */
 export function emitFilesMdRow(f: FilesMdRowFields): string {
-  return `| ${f.path} | ${f.purpose} | ${f.tokens} | ${f.sha256} | ${f.lastSeen} | ${f.specLinksCell} | ${String(f.needsPurposeRefresh)} |`;
+  return `| ${f.path} | ${f.purpose} | ${f.tokens} | ${f.sha256} | ${f.lastSeen} | ${f.specLinksCell} | ${String(f.needsPurposeRefresh)} | ${f.purposeSource} |`;
 }
 
 export interface ParsedFilesMdTable {
@@ -116,7 +146,7 @@ export function parseFilesMdTable(raw: string): ParsedFilesMdTable | null {
       lastTableIdx = i;
       continue;
     }
-    if (cells.length !== 7 || !cells[0]) return null; // truncated/malformed row
+    if (!isDataRowShape(cells) || !cells[0]) return null; // truncated/malformed row (legacy 7-col tolerated per §4.1 migration)
     rowIdxByPath.set(cells[0], i);
     lastTableIdx = i;
   }

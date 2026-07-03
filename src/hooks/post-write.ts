@@ -16,7 +16,10 @@ import {
   splitDataRowCells,
   emitFilesMdRow,
   parseFilesMdTable,
+  isDataRowShape,
+  purposeSourceCell,
   PLACEHOLDER_PURPOSE,
+  NO_PURPOSE_SOURCE,
 } from '../anatomy/files-md.js';
 import { hasExcludedSegment, buildIgnoreFilter } from '../anatomy/exclude.js';
 import { appendHookError } from './errors.js';
@@ -83,11 +86,12 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
 
     if (rowIdx !== undefined) {
       const cells = splitDataRowCells(table.lines[rowIdx] ?? '');
-      if (cells === null || cells.length !== 7) return SILENT; // defensive; parse guaranteed 7
+      if (cells === null || !isDataRowShape(cells)) return SILENT; // defensive; parse guaranteed shape
       // Rule 4: unchanged hash → the row stays byte-identical (flag + last_seen included).
       if (cells[3] === sha256) return SILENT;
-      // Rule 3: fast tier — recompute cheap fields, keep purpose + spec_links,
-      // flag the purpose stale. No re-derivation here.
+      // Rule 3: fast tier — recompute cheap fields, keep purpose + spec_links
+      // + purpose_source (provenance follows the purpose), flag the purpose
+      // stale. No re-derivation here.
       nextLines = [...table.lines];
       nextLines[rowIdx] = emitFilesMdRow({
         path: cells[0] ?? '',
@@ -97,9 +101,11 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
         lastSeen: sanitizeCell(lastSeen),
         specLinksCell: cells[5] || '-',
         needsPurposeRefresh: true,
+        purposeSource: purposeSourceCell(cells),
       });
     } else {
-      // Rule 5: new file → append with placeholder purpose, scanner conventions.
+      // Rule 5: new file → append with placeholder purpose, scanner conventions
+      // (purpose_source `-` while the purpose is a placeholder, §4.1).
       const newRow = emitFilesMdRow({
         path: sanitizeCell(relPath),
         purpose: PLACEHOLDER_PURPOSE,
@@ -108,6 +114,7 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
         lastSeen: sanitizeCell(lastSeen),
         specLinksCell: '-',
         needsPurposeRefresh: true,
+        purposeSource: NO_PURPOSE_SOURCE,
       });
       nextLines = [...table.lines];
       nextLines.splice(table.lastTableIdx + 1, 0, newRow);

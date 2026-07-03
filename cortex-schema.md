@@ -172,7 +172,9 @@ A frontmatter header plus one table row per indexed file. `files.md` is regenera
 
 **Header frontmatter — required:** `kind: anatomy-files` (string const), `last_full_scan` (iso-datetime). **Optional:** `file_count` (int).
 
-**Per-file row columns (in order):** `path` (project-relative), `purpose` (one line), `tokens` (int estimate), `sha256` (content hash, change detection), `last_seen` (iso-datetime), `spec_links` (space-separated dev-spec IDs, or `-`), `needs_purpose_refresh` (`true`/`false`).
+**Per-file row columns (in order):** `path` (project-relative), `purpose` (one line), `tokens` (int estimate), `sha256` (content hash, change detection), `last_seen` (iso-datetime), `spec_links` (space-separated dev-spec IDs, or `-`), `needs_purpose_refresh` (`true`/`false`), `purpose_source` (`docstring | scanner-llm | read-time`, or `-` while the purpose is a placeholder). `purpose_source` is required whenever `purpose` is populated. **Trust ordering: `read-time` > `docstring` > `scanner-llm`** — an automated writer MUST NOT replace a purpose with one from a lower-trust source unless the file's content changed (`needs_purpose_refresh: true` resets the contest).
+
+**Migration:** rows carrying a real purpose but no `purpose_source` are backfilled `scanner-llm` on the next scan — the accurate default for anything produced before provenance tracking.
 
 ```markdown
 ---
@@ -181,13 +183,13 @@ last_full_scan: 2026-06-30T14:00:00Z
 file_count: 3
 ---
 
-| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh |
-|------|---------|--------|--------|-----------|------------|-----------------------|
-| src/cli/init.ts | Bootstraps a project: scan, hooks, scaffolding. | 1820 | 9f2c… | 2026-06-30T14:00:00Z | core-cli.init | false |
-| src/schema/validate.ts | Validates an artefact tree against the schema. | 2440 | a1b3… | 2026-06-30T14:00:00Z | schema.validator | false |
+| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |
+|------|---------|--------|--------|-----------|------------|---------------------------------------|
+| src/cli/init.ts | Bootstraps a project: scan, hooks, scaffolding. | 1820 | 9f2c… | 2026-06-30T14:00:00Z | core-cli.init | false | docstring |
+| src/schema/validate.ts | Validates an artefact tree against the schema. | 2440 | a1b3… | 2026-06-30T14:00:00Z | schema.validator | false | scanner-llm |
 ```
 
-**Validated by** `check.anatomy-files`: header present; every row has all 7 columns; `tokens` int; `sha256` 64-hex; timestamps ISO; each `spec_links` ID resolves (§6).
+**Validated by** `check.anatomy-files`: header present; every row has all 8 columns; `tokens` int; `sha256` 64-hex; timestamps ISO; each `spec_links` ID resolves (§6).
 
 `graph.json`: `{ "nodes": ["path", …], "edges": [{ "from": "path", "to": "path", "kind": "import"|"export" }] }`. **Validated by** `check.anatomy-graph` (valid JSON; node paths exist on disk → missing = `warning`). `layers.md`: free markdown with an H2 per layer listing member paths; advisory, `warning`-only checks.
 
@@ -397,7 +399,8 @@ From design §5, §6.3, §9.3. All hooks are pure Node file I/O, **warn-never-bl
 | `SessionStart` | new session | Pointer block (below) | <100 tok |
 | `PreToolUse` (Write/Edit) | before a write | One warning per matching rule (below) | ~0 avg |
 | `PostToolUse` (Write/Edit) | after a write | **Nothing to context.** Side effect only: update the file's `anatomy/files.md` row (`tokens`, `sha256`, `last_seen`) and set `needs_purpose_refresh: true`. | n/a |
-| `PreToolUse` (Read) | before a read | Summary block (below). Opt-in via `cortex.config.json`. | <50 tok |
+| `PreToolUse` (Read) | before a read | Summary block (below), incl. the writeback instruction. On by default; opt-out via `cortex.config.json`. | <75 tok |
+| `PostToolUse` (Read) | after a read | **Nothing to context.** Sweeps the transcript for unapplied `<cortex:purpose>` tags and applies them to anatomy (`purpose_source: read-time`). Paired with PreRead under one flag. | n/a |
 
 **SessionStart payload:**
 ```
@@ -417,12 +420,16 @@ No matching rule → no output (the zero-overhead common case).
 **PreToolUse (Read) summary** — emitted only if the target path has a row in `anatomy/files.md`:
 ```
 {{PATH}}: {{PURPOSE}} (~{{TOKENS}} tok). Specs: {{SPEC_LINKS}}. Rules: {{APPLICABLE_RULE_IDS}}.
+If this purpose is wrong or stale after reading, emit: <cortex:purpose file="{{PATH}}">corrected one-line purpose</cortex:purpose>
 {{#if already-read-this-session}}(already read this session){{/if}}
 ```
+The writeback instruction line is included only when the row's `purpose_source` is not already `read-time` (a witnessed correction shouldn't invite constant re-litigating). Budget <75 tokens with the instruction, <50 without.
 
-**Envelope (pinned to the Claude Code hooks API, verified 2026-07-02).** All Cortex hooks communicate via **exit 0 + stdout JSON**: SessionStart emits `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": …}}`; the PreWrite warning emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "additionalContext": …}}`; PostWrite emits nothing (empty stdout). No Cortex hook ever exits 2, exits non-zero, or emits `deny`/`ask` — warn-never-block is enforced by the envelope itself. Hook-internal errors degrade (operation proceeds) and append to `pulse/hook-errors.md` (§4.5). Registration entries use the command signature `cortex hook <name>` — that prefix is the **ownership marker** (the JSON transposition of §8's CLAUDE.md marker idiom); tooling manages only entries carrying it.
+**PostToolUse (Read) — the capture half.** Always silent (exit 0, empty stdout — the PostWrite envelope discipline). Reads `transcript_path` from stdin, sweeps recent assistant messages for `<cortex:purpose file="...">...</cortex:purpose>` tags not yet applied, validates (path has a row, single line, sanitized, ≤120 chars — a writeback-specific ceiling, not an anatomy-wide purpose limit), and updates the row: purpose + `purpose_source: read-time` + `last_seen`, atomically. Applied-tag memory `pulse/.readback-applied` (hash per applied tag) is **transient and per-session** — it only prevents redundant re-application within a session; re-application across sessions is idempotent and harmless, so the file needs no persistence guarantee. Registered and removed together with PreRead: one config flag governs the pair.
 
-**Validated by** `check.hook-config`: the hook entries `cortex init` writes to `.claude/settings.json` match the registered hooks; the PreRead entry is present iff `cortex.config.json` `hooks.preRead` is true. The payload *text* is the hooks' contract with Claude, asserted by the hook specs' tests, not by the validator.
+**Envelope (pinned to the Claude Code hooks API, verified 2026-07-02).** All Cortex hooks communicate via **exit 0 + stdout JSON**: SessionStart emits `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": …}}`; the PreWrite warning emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "additionalContext": …}}`; PostWrite and PostRead emit nothing (empty stdout). No Cortex hook ever exits 2, exits non-zero, or emits `deny`/`ask` — warn-never-block is enforced by the envelope itself. Hook-internal errors degrade (operation proceeds) and append to `pulse/hook-errors.md` (§4.5). Registration entries use the command signature `cortex hook <name>` — that prefix is the **ownership marker** (the JSON transposition of §8's CLAUDE.md marker idiom); tooling manages only entries carrying it.
+
+**Validated by** `check.hook-config`: the hook entries `cortex init` writes to `.claude/settings.json` match the registered hooks; the Read-pair entries (PreRead + PostRead, together) are present iff `cortex.config.json` `hooks.preRead` is true — which is the default. The payload *text* is the hooks' contract with Claude, asserted by the hook specs' tests, not by the validator.
 
 ---
 
@@ -605,14 +612,14 @@ flow, which is governed by its own spec.)
 {
   "schemaVersion": "1.0",
   "anatomy": { "exclude": ["dist/**", "node_modules/**"], "enhancement": "none" },
-  "hooks": { "preRead": false },
+  "hooks": { "preRead": true },
   "pulse": { "distilThresholdN": 3, "dismissedWindowDays": 90, "hygieneFreshnessHours": 48 },
   "harness": { "maxIterations": 3 },
   "loop": { "enabled": false }
 }
 ```
 
-**Required:** `schemaVersion` (string `MAJOR.MINOR`). All other keys optional with the defaults shown. **Validated by** `check.config`: valid JSON; `schemaVersion` present and parseable; unknown keys → `warning`.
+**Required:** `schemaVersion` (string `MAJOR.MINOR`). All other keys optional with the defaults shown. `hooks.preRead` governs the **Read pair** (PreRead + PostRead) as one opt-out flag; `cortex init` writes it explicitly on fresh projects so the config self-documents. **Validated by** `check.config`: valid JSON; `schemaVersion` present and parseable; unknown keys → `warning`.
 
 ### 10.2 Version semantics (semver-lite, MAJOR.MINOR)
 
@@ -646,6 +653,7 @@ The mechanical check set (one row ⇒ one implementable check). Grouped by the d
 | `check.overview-present` / `check.overview-shape` | every spec-tree dir has a well-formed `_overview.md` | §2.2, §7.3 | error / warning |
 | `check.id-matches-path` | spec ID equals its path | §2.2 | error |
 | `check.anatomy-files` / `check.anatomy-graph` | anatomy artefact shapes | §4.1 | error / warning |
+| `check.anatomy-purpose-source` | rows with a populated purpose carry `purpose_source` (pre-provenance rows grandfathered until touched) | §4.1 | warning |
 | `check.rule` | rule frontmatter + `check` predicate | §4.2 | error |
 | `check.bug` | bug frontmatter + taxonomy | §4.3 | error |
 | `check.atlas` | atlas artefact frontmatter | §4.4 | error |

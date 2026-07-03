@@ -20,7 +20,10 @@ import {
   splitDataRowCells,
   emitFilesMdRow,
   parseFilesMdTable,
+  isDataRowShape,
+  purposeSourceCell,
   PLACEHOLDER_PURPOSE,
+  NO_PURPOSE_SOURCE,
 } from './files-md.js';
 import { hasExcludedSegment, buildIgnoreFilter } from './exclude.js';
 import { appendHookError } from '../hooks/errors.js';
@@ -213,10 +216,12 @@ export async function runRefreshFast(root = '.', opts: RefreshFastOptions = {}):
 
       if (idx !== undefined && !deletedRowIdx.has(idx)) {
         const cells = splitDataRowCells(lines[idx] ?? '');
-        if (cells === null || cells.length !== 7) continue; // defensive; parse guaranteed 7
+        if (cells === null || !isDataRowShape(cells)) continue; // defensive; parse guaranteed shape
         if (cells[3] !== sha256) {
           // Rule 3 + Rule 4 (atomic row write): tokens, sha256, flag, and
           // last_seen land in the ONE re-emitted row — never last_seen alone.
+          // purpose_source carried unchanged (§4.1): provenance follows the
+          // purpose, and the fast tier never touches the purpose.
           lines[idx] = emitFilesMdRow({
             path: cells[0] ?? '',
             purpose: cells[1] ?? '',
@@ -225,6 +230,7 @@ export async function runRefreshFast(root = '.', opts: RefreshFastOptions = {}):
             lastSeen: sanitizeCell(nowIso),
             specLinksCell: cells[5] || '-',
             needsPurposeRefresh: true,
+            purposeSource: purposeSourceCell(cells),
           });
           refreshed++;
         }
@@ -240,6 +246,7 @@ export async function runRefreshFast(root = '.', opts: RefreshFastOptions = {}):
             lastSeen: sanitizeCell(nowIso),
             specLinksCell: '-',
             needsPurposeRefresh: true,
+            purposeSource: NO_PURPOSE_SOURCE,
           }),
         );
         addedPaths.push(rel);

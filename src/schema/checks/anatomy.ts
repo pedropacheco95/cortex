@@ -3,6 +3,12 @@ import * as path from 'path';
 import matter from 'gray-matter';
 import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
+import {
+  FILES_MD_COLUMNS,
+  LEGACY_FILES_MD_COLUMNS,
+  NO_PURPOSE_SOURCE,
+  PLACEHOLDER_PURPOSE,
+} from '../../anatomy/files-md.js';
 
 export function checkAnatomyFiles(root: string, index: ProjectIndex): Violation[] {
   const violations: Violation[] = [];
@@ -34,19 +40,22 @@ export function checkAnatomyFiles(root: string, index: ProjectIndex): Violation[
     });
   }
 
-  // Check table rows: each must have 7 columns
+  // Check table rows: each must have all 8 columns (§4.1). Legacy 7-column
+  // pre-provenance rows are tolerated (grandfathered — they surface as a
+  // check.anatomy-purpose-source WARNING below, never an error, until the
+  // next scan backfills them per the §4.1 migration clause).
   const lines = parsed.content.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? '';
     if (line.trim().startsWith('|')) {
       const cols = line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
-      if (cols.length !== 7 && !line.includes('---')) {
+      if (cols.length !== FILES_MD_COLUMNS && cols.length !== LEGACY_FILES_MD_COLUMNS && !line.includes('---')) {
         violations.push({
           severity: 'error',
           check: 'check.anatomy-files',
           clause: '§4.1',
           location: { path: filesPath, line: i + 1 },
-          message: `Table row has ${cols.length} columns, expected 7`,
+          message: `Table row has ${cols.length} columns, expected ${FILES_MD_COLUMNS}`,
         });
       }
       // Check sha256 (column index 3, 0-based after filtering) per schema §4.1
@@ -62,6 +71,52 @@ export function checkAnatomyFiles(root: string, index: ProjectIndex): Violation[
           });
         }
       }
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * `check.anatomy-purpose-source` (§4.1, Appendix A): a row with a populated
+ * (non-placeholder) purpose must carry a `purpose_source`. Pre-provenance rows
+ * (legacy 7-column, or `-` in the cell) are grandfathered: WARNING only, never
+ * an error — the next scan backfills them `scanner-llm` (§4.1 migration).
+ */
+export function checkAnatomyPurposeSource(root: string): Violation[] {
+  const violations: Violation[] = [];
+  const filesPath = path.join(root, '.cortex', 'anatomy', 'files.md');
+
+  if (!fs.existsSync(filesPath)) return violations;
+
+  let content: string;
+  try {
+    content = matter(fs.readFileSync(filesPath, 'utf-8')).content;
+  } catch {
+    return violations; // unparseable artefact is check.anatomy-files' business
+  }
+
+  const lines = content.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    if (!line.trim().startsWith('|') || line.includes('---')) continue;
+    const cols = line
+      .split('|')
+      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
+      .map((c) => c.trim());
+    if (cols.length !== FILES_MD_COLUMNS && cols.length !== LEGACY_FILES_MD_COLUMNS) continue; // shape is check.anatomy-files' business
+    if (cols[0] === 'path' || !cols[0]) continue; // header row
+    const purpose = cols[1] ?? '';
+    const populated = purpose !== '' && purpose !== PLACEHOLDER_PURPOSE;
+    const source = cols[7] ?? '';
+    if (populated && (source === '' || source === NO_PURPOSE_SOURCE)) {
+      violations.push({
+        severity: 'warning',
+        check: 'check.anatomy-purpose-source',
+        clause: '§4.1',
+        location: { path: filesPath, line: i + 1 },
+        message: `Row for "${cols[0]}" has a populated purpose but no purpose_source (pre-provenance row — the next scan backfills scanner-llm)`,
+      });
     }
   }
 

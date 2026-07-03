@@ -10,6 +10,8 @@ An always-current map of the code. The outcome is that a developer, or their AI 
 
 - **A codebase Claude can read without manual documentation** — point Cortex at the code and get a per-file map (purpose, size, governing specs) that stays current on its own, with descriptions generated only where the code doesn't already explain itself.
 
+- **The map improves during normal work** — reading a file invites a correction only when the map's belief is wrong; corrections are captured silently and outrank bulk-generated descriptions.
+
 _Planned outcomes (not yet written):_
 
 - **Visible connections** — see how pieces relate and depend on one another, instead of inferring it by hand.

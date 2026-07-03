@@ -32,8 +32,8 @@ function sha(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
 }
 
-function row(p: string, purpose: string, contentSha: string, flagged = false, specLinks = '-'): string {
-  return `| ${p} | ${purpose} | 10 | ${contentSha} | ${OLD_SEEN} | ${specLinks} | ${flagged} |`;
+function row(p: string, purpose: string, contentSha: string, flagged = false, specLinks = '-', purposeSource = 'scanner-llm'): string {
+  return `| ${p} | ${purpose} | 10 | ${contentSha} | ${OLD_SEEN} | ${specLinks} | ${flagged} | ${purposeSource} |`;
 }
 
 function stdinFor(root: string, filePath: string, toolName = 'Write'): Record<string, unknown> {
@@ -216,8 +216,8 @@ describe('missing substrate is silence, corruption is a log (Rule 7)', () => {
     fs.writeFileSync(path.join(root, 'src', 'a.ts'), 'x');
     const corrupt =
       '---\nkind: anatomy-files\nlast_full_scan: 2026-06-30T14:00:00.000Z\n---\n\n' +
-      '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh |\n' +
-      '|------|---------|--------|--------|-----------|------------|-----------------------|\n' +
+      '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |\n' +
+      '|------|---------|--------|--------|-----------|------------|-----------------------|----------------|\n' +
       '| src/a.ts | truncated row | 12 | abc\n'; // truncated: 4 cells, no closing pipes
     const p = filesMdPath(root);
     fs.mkdirSync(path.dirname(p), { recursive: true });

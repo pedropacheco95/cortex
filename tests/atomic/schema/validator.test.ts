@@ -267,9 +267,9 @@ kind: anatomy-files
 last_full_scan: "2024-01-01T00:00:00Z"
 ---
 
-| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh |
-|------|---------|--------|--------|-----------|------------|-----------------------|
-| src/foo.ts | Does foo. | 200 | BADHASH | 2024-01-01T00:00:00Z | - | false |
+| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |
+|------|---------|--------|--------|-----------|------------|-----------------------|----------------|
+| src/foo.ts | Does foo. | 200 | BADHASH | 2024-01-01T00:00:00Z | - | false | scanner-llm |
 `);
     const report = await validate(tmpDir);
     const v = report.violations.find((v) => v.check === 'check.anatomy-files');

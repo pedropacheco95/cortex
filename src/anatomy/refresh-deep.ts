@@ -20,6 +20,10 @@ import {
   splitDataRowCells,
   emitFilesMdRow,
   parseFilesMdTable,
+  isDataRowShape,
+  purposeSourceCell,
+  PURPOSE_SOURCE_READ_TIME,
+  PURPOSE_SOURCE_SCANNER_LLM,
 } from './files-md.js';
 import { AUTH_FAILURE_PATTERN } from '../cli/claude-auth.js';
 import { parseCandidatesFromOutput } from '../pulse/distil.js';
@@ -96,7 +100,7 @@ export function collectPurposeWorklist(root: string, now: Date = new Date()): Co
     }
     for (const [rowPath, idx] of table.rowIdxByPath) {
       const cells = splitDataRowCells(table.lines[idx] ?? '');
-      if (cells === null || cells.length !== 7) continue;
+      if (cells === null || !isDataRowShape(cells)) continue;
       if (cells[6] !== 'true') continue; // only flagged rows enter the worklist
       let content: string;
       try {
@@ -207,15 +211,25 @@ export function applyPurposeResults(root: string, rawResults: unknown[], now: Da
       continue;
     }
     const cells = splitDataRowCells(lines[idx] ?? '');
-    if (cells === null || cells.length !== 7) {
+    if (cells === null || !isDataRowShape(cells)) {
       out.skipped++;
+      continue;
+    }
+    // Trust ordering (§4.1): `read-time` sits above this writer's
+    // `scanner-llm`, so a witnessed purpose is NEVER overwritten by apply
+    // unless the file's content changed (needs_purpose_refresh: true resets
+    // the contest). Subsumed by the flag guard below, but pinned explicitly —
+    // this is the cross-tier regression clause asserted by hooks.post-read.
+    if (purposeSourceCell(cells) === PURPOSE_SOURCE_READ_TIME && cells[6] !== 'true') {
+      out.deferred++;
       continue;
     }
     if (cells[6] !== 'true' || cells[3] !== collectTime) {
       out.deferred++; // changed mid-flight (or already filled) → flag state kept for the next cycle
       continue;
     }
-    // Atomic row write: purpose + flag false + last_seen in ONE emitted row.
+    // Atomic row write: purpose + flag false + last_seen + provenance in ONE
+    // emitted row. Applied purposes carry `purpose_source: scanner-llm`.
     lines[idx] = emitFilesMdRow({
       path: cells[0] ?? '',
       purpose: result.purpose,
@@ -224,6 +238,7 @@ export function applyPurposeResults(root: string, rawResults: unknown[], now: Da
       lastSeen: nowIso,
       specLinksCell: cells[5] || '-',
       needsPurposeRefresh: false,
+      purposeSource: PURPOSE_SOURCE_SCANNER_LLM,
     });
     written.add(pathCell);
     out.applied++;

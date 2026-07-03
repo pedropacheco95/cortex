@@ -40,6 +40,8 @@ Current edges (`A → depends on B`):
 - `loops.lint-scheduled` / `loops.verify-scheduled` → `schema.validator`, `core-cli.init`
 - `anatomy.refresh-fast` → `anatomy.scanner`, `core-cli.init`
 - `anatomy.refresh-deep` → `anatomy.scanner`, `anatomy.refresh-fast`, `core-cli.init`
+- `hooks.pre-read-writeback` → `core-cli.init`, `anatomy.scanner`
+- `hooks.post-read` → `core-cli.init`, `anatomy.scanner`, `hooks.pre-read-writeback`
 
 ## Build Order
 
@@ -59,4 +61,5 @@ Following the design doc's §16.2 implementation order:
 12. `pulse.distil`, `loops.skill-suggest` — implemented
 13. `loops.bug-triage`, `loops.lint-scheduled`, `loops.verify-scheduled` — implemented
 14. `anatomy.refresh-fast`, `anatomy.refresh-deep` — implemented
-15. _(next: bug-triage + specflow-lint/verify scheduling as one three-loop round; then **anatomy-refresh fast/deep — prioritized: the fast tier is the load-bearing loop for anatomy freshness, since drift is the default state on active projects between scans (hygiene caught it this round; the fast loop should own it)**; test-runner last, on its harness)_
+15. `hooks.pre-read-writeback`, `hooks.post-read` — implemented (design §16.2 step 27)
+16. _(next: bug-triage + specflow-lint/verify scheduling as one three-loop round; then **anatomy-refresh fast/deep — prioritized: the fast tier is the load-bearing loop for anatomy freshness, since drift is the default state on active projects between scans (hygiene caught it this round; the fast loop should own it)**; test-runner last, on its harness)_

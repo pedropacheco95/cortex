@@ -54,8 +54,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const HEADER = '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh |';
-const SEP = '|------|---------|--------|--------|-----------|------------|-----------------------|';
+const HEADER = '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |';
+const SEP = '|------|---------|--------|--------|-----------|------------|-----------------------|----------------|';
 
 function makeFlaggedProject(label: string, files: { rel: string; content: string; flagged: boolean }[]): string {
   const root = tmp(label);
@@ -65,7 +65,7 @@ function makeFlaggedProject(label: string, files: { rel: string; content: string
     fs.mkdirSync(path.dirname(path.join(root, f.rel)), { recursive: true });
     fs.writeFileSync(path.join(root, f.rel), f.content);
     rows.push(
-      `| ${f.rel} | ${f.flagged ? '(needs purpose)' : 'Existing purpose.'} | ${computeTokens(f.content)} | ${computeSha256(f.content)} | 2026-06-30T14:00:00.000Z | - | ${f.flagged} |`,
+      `| ${f.rel} | ${f.flagged ? '(needs purpose)' : 'Existing purpose.'} | ${computeTokens(f.content)} | ${computeSha256(f.content)} | 2026-06-30T14:00:00.000Z | - | ${f.flagged} | ${f.flagged ? '-' : 'scanner-llm'} |`,
     );
   }
   const anatomyDir = path.join(root, '.cortex', 'anatomy');

@@ -161,8 +161,10 @@ describe('cortex hook dispatch matches the init-registered command names', () =>
       const result = await runHook(name, stdinJson({ cwd: root, tool_input: {} }));
       expect(result.exitCode).toBe(0);
     }
-    // pre-read is registered only when hooks.preRead=true and is a v-next hook:
+    // pre-read is implemented but self-gates on hooks.preRead (false in this
+    // fixture's config) → silent; post-read is silent without a files.md:
     expect(await runHook('pre-read', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
+    expect(await runHook('post-read', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
     expect(await runHook('nonsense', 'not even json')).toEqual({ exitCode: 0, stdout: '' });
   });
 

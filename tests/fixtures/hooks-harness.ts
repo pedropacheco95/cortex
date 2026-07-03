@@ -64,8 +64,8 @@ export function writeRule(root: string, filename: string, frontmatter: string, b
 export function writeFilesMd(root: string, rows: string[], lastFullScan = '2026-06-30T14:00:00.000Z'): string {
   const p = path.join(root, '.cortex', 'anatomy', 'files.md');
   fs.mkdirSync(path.dirname(p), { recursive: true });
-  const header = '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh |';
-  const sep = '|------|---------|--------|--------|-----------|------------|-----------------------|';
+  const header = '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |';
+  const sep = '|------|---------|--------|--------|-----------|------------|-----------------------|----------------|';
   fs.writeFileSync(
     p,
     `---\nkind: anatomy-files\nlast_full_scan: ${lastFullScan}\nfile_count: ${rows.length}\n---\n\n` +
@@ -83,10 +83,12 @@ export interface FilesMdRow {
   lastSeen: string;
   specLinks: string;
   flagged: boolean;
+  /** purpose_source cell (§4.1); '-' when the row is legacy 7-column. */
+  purposeSource: string;
   raw: string;
 }
 
-/** Parse files.md data rows for assertions. */
+/** Parse files.md data rows for assertions (8-column, legacy 7 tolerated). */
 export function readFilesMdRows(root: string): FilesMdRow[] {
   const p = path.join(root, '.cortex', 'anatomy', 'files.md');
   if (!fs.existsSync(p)) return [];
@@ -97,7 +99,7 @@ export function readFilesMdRows(root: string): FilesMdRow[] {
       .split('|')
       .filter((_, i, arr) => i > 0 && i < arr.length - 1)
       .map((c) => c.trim());
-    if (cells.length !== 7 || cells[0] === 'path' || !cells[0]) continue;
+    if ((cells.length !== 8 && cells.length !== 7) || cells[0] === 'path' || !cells[0]) continue;
     rows.push({
       path: cells[0] ?? '',
       purpose: cells[1] ?? '',
@@ -106,6 +108,7 @@ export function readFilesMdRows(root: string): FilesMdRow[] {
       lastSeen: cells[4] ?? '',
       specLinks: cells[5] ?? '',
       flagged: cells[6] === 'true',
+      purposeSource: cells[7] || '-',
       raw: line,
     });
   }

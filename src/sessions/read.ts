@@ -142,7 +142,16 @@ export function readSessionFile(filePath: string): SessionReadResult {
   } catch {
     return { entries: [], skipped: 0 };
   }
+  return parseSessionJsonl(raw);
+}
 
+/**
+ * The pure string half of {@link readSessionFile}: tolerant JSONL parse of
+ * already-read transcript content (Rule 3 semantics, no fs). Shared with
+ * hooks.post-read, which reads a bounded transcript *tail* rather than a
+ * whole file.
+ */
+export function parseSessionJsonl(raw: string): SessionReadResult {
   const entries: SessionEntry[] = [];
   let skipped = 0;
   for (const line of raw.split('\n')) {

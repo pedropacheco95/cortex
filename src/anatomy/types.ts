@@ -9,6 +9,8 @@ export interface ScannedFile {
   imports: string[];
   layer: string;
   lastSeen: string;
+  /** `purpose_source` provenance cell (`docstring | scanner-llm | read-time`, or `-`). */
+  purposeSource: string;
 }
 
 export interface ScanResult {

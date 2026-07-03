@@ -149,12 +149,12 @@ export function filesMdContent(rows: Array<{ path: string; specLinks?: string }>
     '',
     '# Files',
     '',
-    '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh |',
-    '|------|---------|--------|--------|-----------|------------|-----------------------|',
+    '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |',
+    '|------|---------|--------|--------|-----------|------------|-----------------------|----------------|',
   ];
   for (const r of rows) {
     lines.push(
-      `| ${r.path} | test purpose | 10 | abc123 | 2026-01-01T00:00:00Z | ${r.specLinks ?? '-'} | false |`,
+      `| ${r.path} | test purpose | 10 | abc123 | 2026-01-01T00:00:00Z | ${r.specLinks ?? '-'} | false | scanner-llm |`,
     );
   }
   lines.push('');

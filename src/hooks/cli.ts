@@ -4,7 +4,8 @@
  *
  * The <name> strings align exactly with the registrations `cortex init`
  * writes to .claude/settings.json (`cortex hook session-start`,
- * `cortex hook pre-write`, `cortex hook post-write`) so check.hook-config
+ * `cortex hook pre-write`, `cortex hook post-write`, and the Read pair
+ * `cortex hook pre-read` / `cortex hook post-read`) so check.hook-config
  * holds end-to-end. Reads the Claude Code hook stdin JSON, runs the hook,
  * writes its stdout, and returns its exit code — which is always 0
  * (warn-never-block, RULES.md rule 6).
@@ -12,6 +13,8 @@
 import { run as sessionStart } from './session-start.js';
 import { run as preWrite } from './pre-write.js';
 import { run as postWrite } from './post-write.js';
+import { run as preRead } from './pre-read.js';
+import { run as postRead } from './post-read.js';
 import type { HookRunResult } from './session-start.js';
 
 export async function runHook(name: string, stdinRaw: string): Promise<HookRunResult> {
@@ -30,8 +33,12 @@ export async function runHook(name: string, stdinRaw: string): Promise<HookRunRe
       return preWrite(stdinJson);
     case 'post-write':
       return postWrite(stdinJson);
+    case 'pre-read':
+      return preRead(stdinJson);
+    case 'post-read':
+      return postRead(stdinJson);
     default:
-      // Unknown / not-yet-implemented hook names (e.g. pre-read) stay silent:
+      // Unknown / not-yet-implemented hook names stay silent:
       // a registered command must never fail the user's session.
       return { exitCode: 0, stdout: '' };
   }

@@ -122,7 +122,9 @@ describe('Rule 3: skeleton', () => {
     expect(config).toEqual({
       schemaVersion: '1.0',
       anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
-      hooks: { preRead: false },
+      // preRead defaults TRUE and is written explicitly (§10.1: the Read pair
+      // is on by default; the config self-documents).
+      hooks: { preRead: true },
       pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
       harness: { maxIterations: 3 },
       loop: { enabled: false },
@@ -292,8 +294,9 @@ describe('Rule 11: settings.json deep-merge', () => {
       // pre-existing PreToolUse entry preserved, cortex entry appended
       expect(JSON.stringify(merged.hooks.PreToolUse)).toContain('my-guard');
       expect(JSON.stringify(merged.hooks.PreToolUse)).toContain('cortex hook pre-write');
-      // preRead is false by default → no pre-read hook entry
-      expect(JSON.stringify(merged.hooks)).not.toContain('cortex hook pre-read');
+      // preRead is TRUE by default → the Read pair is registered together
+      expect(JSON.stringify(merged.hooks.PreToolUse)).toContain('cortex hook pre-read');
+      expect(JSON.stringify(merged.hooks.PostToolUse)).toContain('cortex hook post-read');
     } finally {
       cleanTmp(root); cleanTmp(home);
     }

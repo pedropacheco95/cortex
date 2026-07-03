@@ -5,7 +5,7 @@ import { buildIndex } from './index-build.js';
 import { checkConfig } from './checks/config.js';
 import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout.js';
 import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatchesPath } from './checks/specs.js';
-import { checkAnatomyFiles, checkAnatomyGraph } from './checks/anatomy.js';
+import { checkAnatomyFiles, checkAnatomyGraph, checkAnatomyPurposeSource } from './checks/anatomy.js';
 import { checkRules, checkBugs } from './checks/cerebrum.js';
 import { checkAtlas } from './checks/atlas.js';
 import { checkPulse } from './checks/pulse.js';
@@ -88,6 +88,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   // Anatomy checks
   allViolations.push(...checkAnatomyFiles(root, index));
   allViolations.push(...checkAnatomyGraph(root));
+  allViolations.push(...checkAnatomyPurposeSource(root));
 
   // Cerebrum checks
   allViolations.push(...checkRules(root, index));
