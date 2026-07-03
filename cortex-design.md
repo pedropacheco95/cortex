@@ -42,6 +42,8 @@ SpecFlow (now part of Cortex — see §8) operates two spec trees: `specs/` for 
 
 The earlier three-way framing (missing spec / wrong spec / wrong skill) was a simplification of this. The seven-type taxonomy is what Cortex uses going forward, with `cerebrum/bugs/` (the unified bug ledger — see §4) storing entries classified by type.
 
+The taxonomy also became v1's automation gate, which the original framing didn't anticipate: both the daily bug-triage loop and the test-runner classify against exactly these seven, and both carry an explicit "not one of the seven" escape — an unclassifiable failure (flaky run, infrastructure) is reported, never force-fitted and never filed. If a real missing category emerges (infrastructure-failure is the likely candidate), that is a schema change to the taxonomy, not a per-loop workaround.
+
 Bugs do not get "promoted to rules" as a category. A bug triage produces a spec change (types 1-6, in the appropriate spec or tree) or a test/skill fix (type 7). The cerebrum holds rules and conventions that are themselves specs; bugs are upstream of those rules, captured in `cerebrum/bugs/` because they're observations about how the project should behave but currently doesn't.
 
 **The other conviction: Cortex serves both interactive sessions and autonomous loops.** A single Claude Code session benefits from Cortex — answers get grounded in real artefacts, conventions get enforced, decisions remain traceable. But loops (schedule-triggered, event-driven, or otherwise autonomous Claude Code invocations that run without a human in the room) cannot work well *without* a persistence layer. Every loop run starts cold; without Cortex, every run re-derives conventions, repeats corrections, and drifts. With Cortex, loops compound: each run builds on what previous runs learned and what the user curated.
@@ -155,6 +157,7 @@ cerebrum/
 ├── preferences.md       ← project conventions (stack, formatting, frameworks)
 ├── environment.md       ← operational identity (SSH alias, Chrome profile, etc.)
 ├── do-not-repeat.md     ← summary index of rules that prevent recurring mistake patterns
+├── standing-authorities.md ← default decisions the assistant holds without asking (granted, scoped, revisable)
 ├── decisions.md         ← ADRs in spec format
 ├── bugs/                ← the unified bug ledger (replaces SpecFlow's bugs.md)
 │   ├── _index.md
@@ -165,6 +168,8 @@ cerebrum/
 ```
 
 `environment.md` holds *pointers* (SSH alias names, Chrome profile names, account identifiers) — never secrets. Atlas holds the *why*; cerebrum/environment holds the *what Claude needs every session*.
+
+`standing-authorities.md` emerged during the build as a first-class cerebrum artefact: the granted decision boundaries an autonomous or semi-autonomous session operates within — which permissions are standing, which always require asking. It is curated exactly like rules: human-granted, never self-expanded.
 
 **`cerebrum/bugs/` is the unified bug ledger.** Each bug is a markdown file with frontmatter carrying its `type:` (one of the seven SpecFlow types — see §2), `severity:`, `status:` (open / triaged / resolved), `affects:` (spec IDs, file paths, or rule IDs), `proposed_fix:`, and a body with diagnostic evidence. This replaces SpecFlow's previous `bugs.md` flat file with one-file-per-bug for better composition with the citation graph and constellation. The bug ledger is colocated with cerebrum because bugs are observations about how the project should behave but currently doesn't — adjacent to rules, but distinct (rules are accepted constraints; bugs are pending problems).
 
@@ -228,6 +233,8 @@ The original opt-in recommendation weighed PreRead as a token-saving device only
 ### 5.3 Why PreWrite is the high-value hook
 
 This is where Cortex earns its keep. The PreWrite hook is the only one that **prevents a class of error** rather than observing or summarising. A cerebrum rule that catches a snake_case violation before the write lands is worth more than any amount of session priming or read-time observability. This hook is non-negotiable in v1.
+
+Dogfooding sharpened the mechanism in round one (ledger B-001): a rule carrying an evaluable `check:` predicate warns only when the predicate actually fires on the proposed content — a conforming write to a governed path stays silent — while a rule with no evaluable predicate warns on path match, the correct conservatism when content can't be checked mechanically. This split is what keeps "silence is the normal case" true; the contract lives in schema §4.2's consumption note.
 
 Fewer hooks than OpenWolf's six. SpecFlow handles Stop and other lifecycle events through its own skills.
 
@@ -308,16 +315,16 @@ This reverses an earlier decision in this doc's history. The reasoning is in §7
 
 ### 7.2 What the native scanner does
 
-`cortex scan` (called by `cortex init` on first run and re-invoked manually or via git hook on subsequent runs):
+`cortex scan` (called by `cortex init` on first run and re-invoked manually thereafter; the git post-commit hook runs the *fast refresh tier* (§11.4), not a full scan). A completed scan also recompiles `.cortex/constellation.json` (§12.8), so the map refreshes whenever anatomy does:
 
 1. **List files.** Glob the project root, respect `.gitignore` and `cortex.config.json` exclusions.
 2. **Estimate tokens per file.** Character count divided by ~4. Fast, deterministic, accurate to within ~15%.
-3. **Parse structure.** Tree-sitter (Node bindings, one dependency) extracts top-level definitions — functions, classes, exports — and imports per file. Single language per file inferred from extension.
-4. **Resolve one-line purpose (deterministically).** Core derives each file's purpose from its own doc comment — a JSDoc block, a Python module docstring, a Rust `//!`/`///` comment, or a Go leading comment — when present. Files without a usable doc comment are marked `needs_purpose_refresh: true` and left for the LLM pass, which Core never runs. That batched LLM pass for the flagged files (~20–30 at a time, SHA256-cached so unchanged files never re-run) is performed by the agentic `cortex-loop-anatomy-refresh` deep-tier Skill (§11.4). The Skill runs inline as part of `cortex init` (so day-1 anatomy is complete), and thereafter on its scheduled cadence; `cortex scan` itself never invokes the Skill — it only produces the flags. This keeps Core deterministic and LLM-free (§3.1) while still delivering complete purposes. Purpose freshness is a **four-tier mechanism**: **mark-dirty-fast** (post-commit), **bulk-fill-on-schedule** (the deep loop), **inline-on-init** (day-1 completeness), and **refine-during-use** (the PreRead/PostRead cycle, §5) — the fourth capturing understanding at the highest-signal moment, when Claude is already reading the file.
+3. **Parse structure.** Tree-sitter — shipped as WASM (`web-tree-sitter` + prebuilt grammars; no native compilation on install) — extracts top-level definitions — functions, classes, exports — and imports per file. Single language per file inferred from extension; v1 grammars: TS/TSX/JS, Python, Rust, Go. Files without a grammar are still listed and token-estimated.
+4. **Resolve one-line purpose (deterministically).** Core derives each file's purpose from its own doc comment — a JSDoc block, a Python module docstring, a Rust `//!`/`///` comment, or a Go leading comment — when present. Files without a usable doc comment are marked `needs_purpose_refresh: true` and left for the LLM pass, which Core never runs. That batched LLM pass for the flagged files (~20–30 at a time, SHA256-cached so unchanged files never re-run) is performed by the agentic `cortex-loop-anatomy-refresh` deep-tier Skill (§11.4). The Skill runs inline as part of `cortex init` (so day-1 anatomy is complete), and thereafter on its scheduled cadence; `cortex scan` itself never invokes the Skill — it only produces the flags. This keeps Core deterministic and LLM-free (§3.1) while still delivering complete purposes. Purpose freshness is a **four-tier mechanism**: **mark-dirty-fast** (post-commit), **bulk-fill-on-schedule** (the deep loop), **inline-on-init** (day-1 completeness), and **refine-during-use** (the PreRead/PostRead cycle, §5) — the fourth capturing understanding at the highest-signal moment, when Claude is already reading the file. Two coordination rules keep the four tiers from fighting: **provenance trust ordering** — `purpose_source: read-time > docstring > scanner-llm` (schema §4.1); an automated tier never replaces a higher-trust purpose unless the file's content changed — and **atomic row writes** — every tier writes `last_seen` together with any other fields it touches, never separately, so hygiene and spec-drift never observe a half-updated row.
 5. **Cross-link specs.** If `specs/_index.md` is present, match file paths against spec frontmatter `governs:` fields. Populate `spec_links:` per file.
-6. **Emit `.cortex/anatomy/`.** Per the schema — `files.md`, `graph.json` (imports/exports only), `layers.md` (architectural layer inference based on directory structure + heuristic).
+6. **Emit `.cortex/anatomy/`.** Per the schema (now including `purpose_source` provenance, §4.1) — `files.md`, `graph.json` (imports/exports only), `layers.md` (architectural layer inference based on directory structure + heuristic).
 
-The scanner is pure Node.js. One npm dependency for tree-sitter; everything else is standard library. It produces what Cortex actually needs and nothing more.
+The scanner is pure Node.js with a small set of focused dependencies (WASM tree-sitter + grammars, frontmatter/glob parsing) — no native compilation, no second language runtime, no LLM SDKs anywhere in Core (rule R-001 enforces this at write time). It produces what Cortex actually needs and nothing more.
 
 ### 7.3 What the scanner deliberately does not do
 
@@ -469,20 +476,20 @@ SpecFlow currently produces a substantial set of markdown outputs during its wor
 
 - `bugs.md` (old, flat file at project root) → `.cortex/cerebrum/bugs/B-NNN-*.md` (new, one file per bug, frontmatter-classified against the seven-type taxonomy). The bug ledger becomes the unified store; `specflow-bugs` and the `cortex-loop-bug-triage` loop both write here.
 
-**Migrated to `.cortex/pulse/` (transient process outputs):**
+**Re-homed to `.cortex/pulse/` (transient process outputs) — as shipped, this migration is at the *instruction level*: the Cortex-aware skills write to the new homes natively, so new runs never produce the legacy files. Pre-existing legacy files on old projects are not auto-moved (see the migration-step note below):**
 
-- `gaps.md` → `.cortex/pulse/gaps.md` (produced by `specflow-develop`, reviewed and dismissed like other pulse outputs).
-- `tests/verification-report.md` → `.cortex/pulse/verification-report.md` (produced by `specflow-tests` and the `specflow-verify` scheduled loop).
-- `proposed-notes.md` → `.cortex/pulse/proposed-notes.md` (adversarial investigation judgments from onboarding).
-- `corrections.md` → `.cortex/pulse/corrections.md` (human-applied corrections during onboarding; cleared when onboarding completes successfully).
+- `gaps.md` → `.cortex/pulse/gaps.md` (produced by `specflow-develop`, reviewed and dismissed like other pulse outputs). *Redirected in the awareness pass ✓*
+- `tests/verification-report.md` → `.cortex/pulse/verification-report.md` (produced by `specflow-tests` and the `specflow-verify` scheduled loop). *Redirected in the awareness pass ✓*
+- `proposed-notes.md` → `.cortex/pulse/proposed-notes.md` (adversarial investigation judgments from onboarding). *As shipped: redirected on the deep-onboard path; single-pass `specflow-onboard-codebase` still names the root home — tracked as ledger B-004.*
+- `corrections.md` → `.cortex/pulse/corrections.md` (human-applied corrections during onboarding; cleared when onboarding completes successfully). *Same B-004 status as proposed-notes.*
 - `onboarding-scratch/atoms/` → `.cortex/pulse/onboarding-scratch/atoms/` (atom extraction records from Phase 1 of onboarding).
-- `onboarding-scratch/pass-{a,b,c}/` → `.cortex/pulse/onboarding-scratch/pass-{a,b,c}/` (raw outputs from deep-onboard's three-pass execution; retained for audit trail).
-- `deep-onboard-report.md` → `.cortex/pulse/deep-onboard-report.md` (summary of three-pass convergence and disagreement resolutions).
+- `onboarding-scratch/pass-{a,b,c}/` → `.cortex/pulse/onboarding-scratch/pass-{a,b,c}/` (raw outputs from deep-onboard's three-pass execution; retained for audit trail). *Redirected in the awareness pass ✓*
+- `deep-onboard-report.md` → `.cortex/pulse/deep-onboard-report.md` (summary of three-pass convergence and disagreement resolutions). *Redirected in the awareness pass ✓*
 
 **Preserved at project root (existing files that already serve a different audience):**
 
 - `CLAUDE.md` — gains a Cortex section but otherwise stays where it is (Claude Code reads it from project root).
-- `RULES.md` — 10-20 hard project constraints from onboarding. Lives at the project root because it's an audience artefact (humans reading the project), distinct from `.cortex/cerebrum/rules/` (machine-readable rule files used by Claude during writes). The two are related but not the same: `RULES.md` is a human-readable summary; `cerebrum/rules/` are individually-addressable, frontmatter-tagged rules with optional `check:` predicates. `cortex init` cross-references between them.
+- `RULES.md` — 10-20 hard project constraints from onboarding. Lives at the project root because it's an audience artefact (humans reading the project), distinct from `.cortex/cerebrum/rules/` (machine-readable rule files used by Claude during writes). The two are related but not the same: `RULES.md` is a human-readable summary; `cerebrum/rules/` are individually-addressable, frontmatter-tagged rules with optional `check:` predicates. As shipped, the cross-reference is authored, not automated: seed rules cite `RULES.md` in their `source:` frontmatter; `cortex init` performs no automatic cross-referencing (an init-level linker is a possible v1.x nicety, not currently planned).
 - `build-order.md` — phased remediation plan produced during onboarding. Stays at project root; it's a working document the human consults, not a Cortex-owned artefact.
 - `implicit-behaviors.md` — undocumented behaviours flagged during onboarding. Stays at project root.
 - `dead-features.md` — deprecated code flagged during onboarding. Stays at project root.
@@ -490,7 +497,7 @@ SpecFlow currently produces a substantial set of markdown outputs during its wor
 
 Moving the cerebrum and pulse artefacts into the Cortex layout means they participate in the citation graph (referenceable by spec ID, rule ID, file path) and benefit from pulse's review/dismiss workflow. The project-root files stay where SpecFlow already writes them — they're either human-audience documents or have established cross-references from other tools.
 
-A migration step in `cortex init` handles existing projects: if any of the migratable files exist at the project root (or in `onboarding-scratch/`), they get moved to their new locations with a deprecation marker at the old path pointing at the new location. The marker stays in place until the next major Cortex version.
+As shipped, `cortex init`'s migration step handles exactly one artefact: a legacy root `bugs.md` is split into `.cortex/cerebrum/bugs/B-NNN-*.md` per the schema, with a deprecation marker left at the old path until the next major version. The other legacy files are handled by the instruction-level redirects above — new runs never produce them — but init does not move pre-existing copies; extending init's migration to the full list is a recorded post-v1 consideration.
 
 ### 8.6 Standalone mode is no longer relevant
 
@@ -731,47 +738,49 @@ This consistency matters because it means a user writing their own loops can cop
 
 All in v1, listed by what they maintain.
 
+Two conventions all thirteen share as shipped: **always-write** — every loop overwrites its output file on every run with a fresh timestamp and explicit "nothing this cycle" empty states (schema §4.5), so the pulse directory is self-documenting; and **gate interaction** — distil and skill-suggest emit §4.5 proposal sections through the pulse review CLI (`pulse-list`/`accept`/`reject`, single S-namespace); the curation and verification loops emit human-readable reports (wiring their proposals through the gate needs an edit-typed proposal mechanism — a recorded post-v1 consideration); the anatomy loops maintain machine-owned regenerable state directly and propose nothing.
+
 **Pulse loops (already detailed in §10):**
 
-1. **`cortex-pulse-hygiene`** — daily hygiene scan. Orphan branches, stale PRs, mid-conversation drop-offs, anatomy drift, cerebrum dead references, spec orphans, aged TODOs. Output: `pulse/hygiene-report.md`. Trigger: Desktop scheduled task (daily). Findings are surfaced into Claude Code sessions via the SessionStart hook, which reads (does not re-run) the existing report.
+1. **`cortex-pulse-hygiene`** — daily hygiene scan. Orphan branches, stale PRs (via `gh` when available, skipped-with-notice otherwise), anatomy drift, cerebrum dead references, spec orphans, aged TODOs — all deterministic, via `cortex pulse-hygiene`. The one designed LLM check, mid-conversation drop-off detection, is deferred to the skill layer in v1; the report footer states it. Output: `pulse/hygiene-report.md`. Trigger: Desktop scheduled task (daily). Findings are surfaced into Claude Code sessions via the SessionStart hook, which reads (does not re-run) the existing report.
 
-2. **`cortex-pulse-distil`** — weekly session pattern extraction for cerebrum content. User preferences, environment settings, recurring corrections. Output: `pulse/suggestions.md`. Trigger: Desktop scheduled task (weekly).
+2. **`cortex-pulse-distil`** — weekly session pattern extraction for cerebrum content. User preferences, environment settings, recurring corrections. Output: `pulse/suggestions.md`. Trigger: Desktop scheduled task (weekly). As shipped: deterministic bookends (`--collect` gathers this project's transcripts since the last run; `--propose` applies the threshold/already-covered/dismissed filters and writes §4.5 proposal sections with session provenance); the pattern judgment runs in-session for the scheduled skill (no nested subprocesses) or as a headless subprocess for the manual CLI. Pending proposals keep their S-ids across runs.
 
 **Anatomy-maintenance loops:**
 
-3. **`cortex-loop-anatomy-refresh-fast`** — runs on every git commit, async, deterministic only. Re-estimates tokens for changed files, updates import/export edges via tree-sitter, marks affected files as `needs_purpose_refresh: true`. Zero LLM calls. Sub-second. Backgrounded so commits aren't blocked. Trigger: git post-commit hook (not a Claude Code scheduled task; this one is pure CLI invoked from git).
+3. **`cortex-loop-anatomy-refresh-fast`** — runs on every git commit, async, deterministic only. Re-estimates tokens for changed files, updates import/export edges via tree-sitter, marks affected files as `needs_purpose_refresh: true`. Zero LLM calls. Sub-second. Backgrounded so commits aren't blocked. Trigger: git post-commit hook (not a Claude Code scheduled task; this one is pure CLI invoked from git). As shipped, additionally: deleted files lose their row and edges; every row write carries `last_seen` atomically with the other touched fields (the hygiene/spec-drift coordination rule, §7.2); invocable as both `cortex anatomy-refresh-fast` (the installed hook's command) and `cortex loop-anatomy-refresh --fast`.
 
-4. **`cortex-loop-anatomy-refresh-deep`** — runs daily at a quiet hour. Picks up everything marked `needs_purpose_refresh: true` from the fast pass, batches ~20 files at a time, runs the LLM purpose-line pass, clears the flag. One pass per day regardless of commit volume. Trigger: Desktop scheduled task (daily).
+4. **`cortex-loop-anatomy-refresh-deep`** — runs daily at a quiet hour. Picks up everything marked `needs_purpose_refresh: true` from the fast pass, batches ~25 files with head excerpts, runs the LLM purpose-line pass, clears the flag. One pass per day regardless of commit volume. Trigger: Desktop scheduled task (daily). As shipped, additionally: a mid-flight hash guard defers any file that changed after collect (keeps its flag for the next cycle); applied purposes land as `purpose_source: scanner-llm` and never overwrite a `read-time` purpose on unchanged content (§4.1 trust ordering); the same Skill is what `cortex init` runs inline for day-1 completeness.
 
 The two-tier split (fast/deterministic vs deep/batched) is the pattern that prevents commit-time LLM cost. It generalises beyond anatomy and is worth recognising as a Cortex idiom: **mark dirty fast, refresh deep on a schedule.**
 
 **Curation loops:**
 
-5. **`cortex-loop-rule-decay`** — weekly. For each cerebrum rule, checks: do the files it governs still exist? Does its source still exist? Has the rule been violated recently without correction (suggesting obsolescence)? Surfaces candidates for retirement. Output: `pulse/rule-candidates.md`. Trigger: Desktop scheduled task (weekly).
+5. **`cortex-loop-rule-decay`** — weekly. For each cerebrum rule, checks: do the files it governs still exist? Does its source still exist? Has the rule been violated recently without correction (suggesting obsolescence)? — *this third signal is deferred: it needs hook-warning telemetry that v1 does not record; the shipped signals are dead `governs`, dead `source`, and age-plus-dead-governs, with the deferral stated in the report footer.* Surfaces candidates for retirement. Output: `pulse/rule-candidates.md`. Trigger: Desktop scheduled task (weekly).
 
-6. **`cortex-loop-atlas-staleness`** — monthly. Decisions older than N months that the codebase still cites get flagged for re-verification. Sources older than N months not referenced by any rule or spec get flagged for archival. Output: `pulse/atlas-review.md`. Trigger: Desktop scheduled task (monthly).
+6. **`cortex-loop-atlas-staleness`** — monthly. Decisions older than N months (shipped default: 180 days, stated in the footer) that the codebase still cites get flagged for re-verification. Sources older than N months not referenced by any rule or spec get flagged for archival; dead atlas cross-references are a third shipped finding class. Output: `pulse/atlas-review.md`. Trigger: Desktop scheduled task (monthly).
 
-7. **`cortex-loop-onboarding-drift`** — monthly. Re-reads CLAUDE.md's Cortex section and each `_index.md` against the current schema. Proposes updates where the schema has evolved or where new patterns warrant surfacing at session start. Output: `pulse/scaffolding-review.md`. Trigger: Desktop scheduled task (monthly).
+7. **`cortex-loop-onboarding-drift`** — monthly. Re-reads CLAUDE.md's Cortex section and each `_index.md` against the current schema. Proposes updates where the schema has evolved or where new patterns warrant surfacing at session start. Output: `pulse/scaffolding-review.md`. Trigger: Desktop scheduled task (monthly). As shipped, the checks reuse the validator's index/CLAUDE-block logic rather than reimplementing (managed-block version vs schemaVersion, §7.1 heading shape, 300-token budget, plus a template-identical-in-grown-directory heuristic, labelled as a hint).
 
 **Verification loops (SpecFlow lineage):**
 
-These two loops scheduled-fire existing SpecFlow skills. They aren't new skills — they're cron-driven invocations of `specflow-lint` and `specflow-tests`.
+These two shipped as exactly what they claimed: scheduling wrappers, not new implementations — cadence plus paper trail around existing checking. Each gained a thin deterministic CLI (`cortex loop-specflow-lint` / `loop-specflow-verify`) so the daily dated report exists even without an agentic session; the judgment stays in the interactive skills.
 
-8. **`specflow-lint` (scheduled)** — daily. Runs the existing `specflow-lint` skill to check spec-tree health: orphan specs (no `implements:` or no `implemented_by:`), broken cross-references, missing `_overview.md` files, scenarios without complete `covers:` lists. Output: `pulse/lint-report.md`. Trigger: Desktop scheduled task (daily). Cheap, mostly deterministic.
+8. **`specflow-lint` (scheduled)** — daily. Runs the existing `specflow-lint` skill to check spec-tree health: orphan specs (no `implements:` or no `implemented_by:`), broken cross-references, missing `_overview.md` files. (Covers-list completeness belongs to `specflow-verify`, per schema Decision 4.) Output: `pulse/lint-report.md`. Trigger: Desktop scheduled task (daily). Cheap, mostly deterministic.
 
-9. **`specflow-verify` (scheduled)** — daily. Runs the verification portion of `specflow-tests`: confirms tests exist for every dev spec at the atomic and spec layers, every business spec at the journey layer, and every business spec appears in at least one scenario. Detects drift between spec and test artefacts. Output: `pulse/verification-report.md`. Trigger: Desktop scheduled task (daily).
+9. **`specflow-verify` (scheduled)** — daily. Runs the verification portion of `specflow-tests`: confirms tests exist for every dev spec at the atomic and spec layers, every business spec at the journey layer, and every business spec appears in at least one scenario. Detects drift between spec and test artefacts. Output: `pulse/verification-report.md`. Trigger: Desktop scheduled task (daily). As shipped it mechanically owns the §8.2 covers-completeness constraint, and distinguishes declared deferrals (spec-Notes convention) from genuine gaps.
 
-10. **`cortex-loop-spec-drift`** — daily. For each spec, finds the anatomy files it governs. Checks whether those files have changed substantively since the spec was last updated. Flags suspect specs where the spec is wrong, the implementation has regressed, or new ACs are needed. Output: `pulse/spec-drift.md`. Trigger: Desktop scheduled task (daily). Complements `specflow-lint` (structural integrity) and `specflow-verify` (test coverage) by detecting *content* drift.
+10. **`cortex-loop-spec-drift`** — daily. For each spec, finds the anatomy files it governs. Checks whether those files have changed substantively since the spec was last updated. Flags suspect specs where the spec is wrong, the implementation has regressed, or new ACs are needed. Output: `pulse/spec-drift.md`. Trigger: Desktop scheduled task (daily). As shipped: git last-commit date comparison with a 14-day grace window (stated in the footer); each suspect lists both dates and the three readings. Complements `specflow-lint` (structural integrity) and `specflow-verify` (test coverage) by detecting *content* drift.
 
-11. **`cortex-loop-test-runner`** — the heaviest loop. Runs daily for atomic + spec tiers (mocked, fast); weekly for journey (real infrastructure); on-demand for scenario (full sandbox). On failure: invokes `specflow-bugs` to classify against the seven-type taxonomy. Produces a branch and PR per fixable category. Surfaces unfixable failures to `pulse/test-failures.md`. Uses sub-agent writer/verifier split: one agent proposes the fix, a separate agent grades whether the fix is correct against the spec. This is the only Cortex loop that writes to *code*, not just `.cortex/pulse/` — and the writer/verifier split is what makes that safe. Trigger: Desktop scheduled task (daily for atomic+spec; weekly for journey), with manual `cortex test-run` override.
+11. **`cortex-loop-test-runner`** — the heaviest loop. Runs daily for atomic + spec tiers (mocked, fast); weekly for journey (real infrastructure); on-demand for scenario (full sandbox). On failure: classifies via the `specflow-bugs` seven-type discipline — a result of "not one of the seven" (flaky, infra) is reported and nothing else happens: no bug filed, no fix attempted. Classifiable failures run the writer/verifier harness; a verified fix lands on a `cortex/test-fix-*` branch (built in a worktree — the checked-out tree is never touched) with a PR whose body always carries five fields: the failing spec, the traced criterion, the writer's reasoning, the verifier's verdict, and the trigger context. Budget exhaustion (default 3 iterations) files a ledger case-file with the last diff and the full verdict history — and that entry's open status IS the retry suppression: the failure is not re-attempted until a human resolves it. Reports to `pulse/test-failures.md`. This is the only Cortex loop that writes to *code* — and the writer/verifier split plus the branch boundary is what makes that safe. Trigger: Desktop scheduled task (daily for atomic+spec; weekly for journey), with manual `cortex test-run` override.
 
 **Skill-suggestion loops:**
 
-12. **`cortex-loop-skill-suggest`** — weekly, shares distil's session-reading pass. Where distil mines for cerebrum content (things the user *said*), skill-suggest mines for repeated *workflows* (things Claude *did* more than once that should be encapsulated as a reusable skill). Output: `pulse/skill-suggestions.md` with proposed `SKILL.md` drafts. User accepts → skill gets created in the appropriate skill directory (specflow-, cortex-, or project-local). Trigger: Desktop scheduled task (weekly).
+12. **`cortex-loop-skill-suggest`** — weekly, shares distil's session-reading pass. Where distil mines for cerebrum content (things the user *said*), skill-suggest mines for repeated *workflows* (things Claude *did* more than once that should be encapsulated as a reusable skill). Output: `pulse/skill-suggestions.md` with proposed `SKILL.md` drafts. User accepts via the pulse gate → the skill file is created at the proposal's target path (new files only — accept never overwrites an existing skill); the drafting judgment picks project-local by default, and the human can edit the target before accepting. Trigger: Desktop scheduled task (weekly).
 
 This is the loop that turns *use* into *infrastructure*. Every accepted skill suggestion means the next time that pattern arises, Claude invokes the skill directly instead of re-deriving the workflow. Pure compounding.
 
-13. **`cortex-loop-bug-triage`** — daily. Reads `cerebrum/bugs/` for bugs with `status: open` and runs `specflow-bugs` to classify each against the seven-type taxonomy. Updates the bug entry's frontmatter with `type:` and `proposed_fix:`. For bugs that imply spec changes (types 1-6), surfaces a triage summary to `pulse/bug-triage.md` so the user can review and apply. For test issues (type 7), routes to test fix workflow. Trigger: Desktop scheduled task (daily). This makes the bug ledger active rather than passive.
+13. **`cortex-loop-bug-triage`** — daily. Reads `cerebrum/bugs/` for bugs with `status: open` and runs `specflow-bugs` to classify each against the seven-type taxonomy. Fills the bug entry's absent classification frontmatter (`type:`, `severity:`, `proposed_fix:`) — fill-only, never overwriting a human's values; for already-classified entries it re-derives independently and reports divergence, both readings side by side, in `pulse/bug-triage.md` (calibration signal in both directions). Type-7 routing to a test-fix workflow did not ship in v1 — the test-runner discovers test failures on its own cadence; wiring triage's type-7s into it is a recorded post-v1 consideration. Trigger: Desktop scheduled task (daily). This makes the bug ledger active rather than passive.
 
 ### 11.5 The shared mechanism
 
@@ -1006,54 +1015,53 @@ Roughly 15 CLI commands. Three core hooks plus one optional, plus the git post-c
 
 **Phase 3 — Implementation, one spec at a time, in dependency order.** Each piece reviewed before the next begins.
 
-### 16.2 Implementation order
+### 16.2 Implementation order (as shipped)
 
-Sequenced to build shared infrastructure before the loops that depend on it. SpecFlow's 11 skills already exist and run — the work for them in Cortex v1 is the Cortex-awareness update pass (step 26), not net-new implementation.
+Sequenced to build shared infrastructure before the loops that depend on it. SpecFlow's 11 skills already existed and ran — their v1 work was the Cortex-awareness pass (step 30), not net-new implementation. **All thirty steps below shipped; annotations record what each became in the running system where it differs from the plan.** Actual ship order occasionally diverged from the numbering — the five curation loops (17, 20–22, 25) shipped before the anatomy-refresh pair (15–16), which was deliberately re-prioritised as the load-bearing freshness mechanism; the SpecFlow-shaped loops (23, 24, 26) shipped after read-time capture (27) rather than before. The numbering is preserved as the dependency order it always was.
 
 **Foundation:**
-1. Schema validator (verifies any `.cortex/`, `specs/`, `specs-business/`, `tests/` against `cortex-schema.md`).
-2. CLAUDE.md and `_index.md` prompt templates (defined in schema, validated by validator).
-3. Native anatomy scanner (file listing, token estimate, tree-sitter parse, LLM purpose pass).
-4. `cortex init` (runs the scanner, writes CLAUDE.md, writes `_index.md` templates, registers hooks, writes Desktop scheduled task SKILL.md files, scaffolds spec trees if absent).
-5. The three core hooks (`SessionStart`, `PreWrite`, `PostWrite`).
-6. Constellation compiler.
-7. Constellation renderer.
-8. `cortex-ingest` skill (non-spec atlas sources — call transcripts, RFPs).
+1. Schema validator — as planned; 24-check catalogue (schema Appendix A), `ValidationReport` per §6.1, exposed as `cortex validate` (grown in step 8's round for the agentic layer).
+2. CLAUDE.md and `_index.md` prompt templates — shipped inside step 4's round (`src/cli/templates.ts`), not standalone; validated by `check.index-shape`/`check.claude-md`.
+3. Native anatomy scanner — as planned, with one architectural correction locked at spec time: Core never runs the LLM purpose pass (§3.1 wins); docstring-first extraction is deterministic, everything else is flagged `needs_purpose_refresh` for the deep tier. tree-sitter shipped as WASM (`web-tree-sitter` + prebuilt grammars: TS/TSX/JS/Python/Rust/Go).
+4. `cortex init` — as planned plus two grown capabilities: `--partial` (registers only tasks whose skills are present — how Cortex bootstrapped itself while its own loops were unbuilt) and exit code 3 ("complete but unauthenticated") distinguishing auth failure from degradation in the inline purpose pass.
+5. The core hooks — shipped as the planned three (`SessionStart`, `PreWrite`, `PostWrite`), grew to five in step 27. PreWrite's enforcement split (predicate-bearing rules warn only when the predicate fires; predicateless warn on path match) emerged during first-round dogfooding as ledger B-001 (type: wrong-rule) — Rule 4 as written treated path-match alone as sufficient, contradicting the "warn on relevant case" business rule. Fixed in the same round the constellation compiler shipped. See §5.
+6. Constellation compiler — as planned; citation-graph edges only (imports deliberately excluded per §12.7), `_index.md`/`_overview.md` files are scaffolding, not nodes.
+7. Constellation renderer — as planned structurally; the three view presets became five server-side lenses (§12.5), each a testable contract.
+8. `cortex-ingest` skill — as planned; first shipped agentic bundle, activated init's skills-install path; the `cortex validate` CLI rode along as the agentic layer's first shared command.
 
 **Shared loop infrastructure (built once, used by every loop):**
-9. Pulse review CLI: `cortex pulse-list`, `cortex pulse-accept <id>`, `cortex pulse-reject <id>`, dismissed-suggestions memory with 90-day default window.
-10. Session-reading layer (locates and reads Claude Code session transcripts; used by distil and skill-suggest).
-11. Writer/verifier sub-agent harness (used by test-runner; available to user-written loops).
-12. Desktop scheduled task SKILL.md writer (creates `~/.claude/scheduled-tasks/<task-name>/SKILL.md` entries).
-13. Git post-commit hook for anatomy-refresh-fast.
-14. Bug ledger migration: convert SpecFlow's existing `bugs.md` to `.cortex/cerebrum/bugs/` one-file-per-bug layout.
+9. Pulse review CLI — as planned, then grown in the distil round into the single gate for ALL proposal sections: one global S-namespace (counter file), discovery across every `pulse/*.md`, provenance-mandatory sections, target roots covering cerebrum plus new-skill files (schema §4.5).
+10. Session-reading layer — as planned; resolved design question 9 empirically (global storage, project-slug directories, JSONL) — distil and skill-suggest stayed in v1.
+11. Writer/verifier harness — as planned plus two hardenings: crash-recovery sweep for orphaned worktrees (ledger B-002) and `writerOutputs` audit capture (needed by the test-runner's PR contract; never fed to the verifier — independence intact).
+12. Desktop scheduled task SKILL.md writer — shipped inside step 4's round; made project-scoped by step 28.
+13. Git post-commit hook — installed by step 4; its command (`cortex anatomy-refresh-fast`) shipped with step 15; the global `cortex` binary gap (hook silently no-oping) was found and fixed in that round.
+14. Bug ledger migration — shipped inside step 4 (init Rule 9); the awareness pass (step 30) completed the other §8.5 migrations at the skill-instruction level.
 
-**The thirteen loops, in priority order:**
-15. `cortex-loop-anatomy-refresh-fast` (deterministic, post-commit, sub-second).
-16. `cortex-loop-anatomy-refresh-deep` (daily Desktop scheduled task; LLM batch).
-17. `cortex-pulse-hygiene` (daily Desktop scheduled task) + SessionStart hook integration (reads existing report, no re-run).
-18. `cortex-pulse-distil` (weekly Desktop scheduled task; session-reading layer consumer).
-19. `cortex-loop-skill-suggest` (weekly Desktop scheduled task; shares distil's session pass).
-20. `cortex-loop-rule-decay` (weekly Desktop scheduled task).
-21. `cortex-loop-atlas-staleness` (monthly Desktop scheduled task).
-22. `cortex-loop-onboarding-drift` (monthly Desktop scheduled task).
-23. `specflow-lint` (daily Desktop scheduled task — invokes existing skill).
-24. `specflow-verify` (daily Desktop scheduled task — invokes existing skill).
-25. `cortex-loop-spec-drift` (daily Desktop scheduled task).
-26. `cortex-loop-bug-triage` (daily Desktop scheduled task — invokes `specflow-bugs`).
-27. Read-time purpose capture: PreRead promoted to opt-out core + new PostRead writeback hook (§5), `purpose_source` provenance (schema §4.1).
-28. `cortex-loop-test-runner` (the heaviest; daily/weekly Desktop scheduled task; uses the writer/verifier harness from step 11; ships last).
+**The thirteen loops, in dependency order:**
+15. `cortex-loop-anatomy-refresh-fast` — as planned (commit-scoped rows + edges, atomic `last_seen` writes as the hygiene-coordination pin); deliberately re-prioritised ahead of its numbered position: the load-bearing freshness loop.
+16. `cortex-loop-anatomy-refresh-deep` — as planned; also the Skill init's inline pass invokes, closing the day-1 complete-purposes promise end-to-end.
+17. `cortex-pulse-hygiene` — deterministic checks shipped; the one designed LLM check (mid-conversation drop-off detection) deferred to the skill layer, stated in the report footer. SessionStart integration as planned (reads, never re-runs).
+18. `cortex-pulse-distil` — as planned, with the deterministic-bookends shape that became the loop idiom: Core collects and proposes; judgment runs in-session for scheduled skills (no nested subprocesses) or headless for the manual CLI.
+19. `cortex-loop-skill-suggest` — as planned; shares distil's corpus; accepted proposals create new skill files through the pulse gate.
+20. `cortex-loop-rule-decay` — as planned minus the "violated recently" signal (needs violation telemetry that doesn't exist yet; documented in the report footer).
+21. `cortex-loop-atlas-staleness` — as planned.
+22. `cortex-loop-onboarding-drift` — as planned, reusing the validator's index checks rather than reimplementing.
+23. `specflow-lint` (scheduled) — shipped as a scheduling wrapper plus a thin deterministic CLI over the validator, NOT a new implementation — worth naming: the "loop" is cadence plus paper trail; the judgment stays in the interactive skill.
+24. `specflow-verify` (scheduled) — same wrapper shape; this is where the §8.2 covers-completeness constraint is mechanically owned (schema Decision 4), with declared deferrals distinguished from genuine gaps.
+25. `cortex-loop-spec-drift` — as planned; git-date comparison with a 14-day grace window.
+26. `cortex-loop-bug-triage` — as planned with one reconciliation the design forced: §11.4 said "update the bug's frontmatter", §11.3 forbids cerebrum writes. Resolution: fill-only on absent classification fields, never overwrite, divergence surfaced in the report. This is the second loop granted an exception to §11.3's cerebrum-write prohibition (the first being test-runner's PR path), with the same "narrow, principled, reported" discipline governing both.
+27. Read-time purpose capture — **grown step, first-class.** PreRead promoted from "optional, ship last" to core opt-out, plus the new PostRead writeback hook and `purpose_source` provenance (schema §4.1). **Decision and rationale:** the original plan treated PreRead purely as a token-saving device (hence optional); reading turned out to be the highest-signal moment for anatomy — Claude is already forming an understanding — so the old "optional PreRead" final-touch step was merged into this one as the injection half of refine-during-use, and the fourth freshness tier (§7.2) was born. The old step 29 was deleted, not deferred.
+28. Scheduled-task project scoping — **grown step, first-class.** `~/.claude/scheduled-tasks/` is one namespace per user; the second project to adopt Cortex would have collided with the first. `<project-slug>-<path-hash6>-<canonical-task-name>` naming (schema §9.1), project-scoped recognition in init/`--partial`, and the `cortex tasks rename` migration. Surfaced as a real blocker the day multi-project adoption became imminent; fixed before it, not after.
+29. `cortex-loop-test-runner` — as planned on the harness, with three contracts locked at spec time: budget exhaustion files a ledger case-file whose open status IS the retry suppression; every PR carries the five-field context body; classification defers entirely to the seven-type taxonomy, with not-one-of-the-seven reported and never force-fitted.
 
 **Final touches:**
-29. Cortex-awareness updates to all 11 SpecFlow skills (each reads anatomy, cerebrum, atlas as appropriate; deepest reads in `specflow-develop`, `specflow-tests`, `specflow-change-router`).
+30. Cortex-awareness pass over all 11 SpecFlow skills — as planned, at three calibrated depths (deep: develop/tests/change-router; moderate: the onboarding/ingest/authoring set; light: viewer/lint/bugs), plus the §8.5 output-home migrations at the instruction level and packaging of all eleven bundles — completing §13 step 4's "all 22 skills".
 
-Each piece is a 1-3 day implementation, except the test-runner which is closer to 5-7 days because of the writer/verifier design and the PR-generation pipeline. Verifiable on a real project before the next begins. Catches schema mistakes early, when they're cheap to fix.
+**As-shipped retrospective.** Original estimate: closer to two months than two weeks. Actual: roughly a dozen review-gated rounds over 2026-06-30 → 2026-07-03. Built spec-first with agent implementation under human review, with the spec-per-piece discipline (§16.3) intact throughout: every step was specced, implemented, independently verified, and dogfooded on this repository before the next began. Three defects were caught by the system's own mechanisms during the build and resolved through the ledger (B-001–B-003) — the dogfooding thesis (§16.4) held.
 
-The build is genuinely large. Realistic estimate: a few weeks of disciplined work for the foundation and shared infrastructure, then 1-2 days per loop for the simpler ones and 5-7 for the test-runner. Total: closer to two months than two weeks. The pragmatic answer when this feels slow: ship in waves to your own usage, not as a public release. v1.0 internal means "everything in the implementation order is built and working on your own projects." That's the milestone that matters.
+The step list captures the shipped code; it does not capture the encoded discipline. Over the course of the build, `.cortex/cerebrum/` accumulated substrate that wasn't in the original §16.2 — `standing-authorities.md`, preferences for coordinated-change sequencing, always-write empty-state conventions, the ride-along threshold refinement, the extraction-shared-source-of-truth preference. These emerged from patterns that repeated across rounds and were captured so future work inherits them rather than re-deriving. They belong in cerebrum (already there) and in this doc's discussion of process (§16.3 or the reconciliation-pass write-up). Item (6) of the reconciliation covers them explicitly.
 
-Each piece is a 1-3 day implementation, except the test-runner which is closer to 5-7 days because of the writer/verifier design and the PR-generation pipeline. Verifiable on a real project before the next begins. Catches schema mistakes early, when they're cheap to fix.
-
-The build is genuinely large. Realistic estimate: a few weeks of disciplined work for the foundation and shared infrastructure, then 1-2 days per loop for the simpler ones and 5-7 for the test-runner. Total: closer to two months than two weeks. The pragmatic answer when this feels slow: ship in waves to your own usage, not as a public release. v1.0 internal means "everything in the implementation order is built and working on your own projects." That's the milestone that matters.
+"v1.0 internal means everything in the implementation order is built and working on your own projects" — reached 2026-07-03.
 
 ### 16.3 What is explicitly not the build process
 
@@ -1061,53 +1069,55 @@ The build is genuinely large. Realistic estimate: a few weeks of disciplined wor
 
 **Yes:** slower, spec-per-piece, review-each-step. Produces a Cortex the author actually owns and understands.
 
+A process preference that earned its place during the build (encoded in `cerebrum/preferences.md`): coordinated writer+parser+schema changes ship as an explicitly sequenced set — schema first, then parser, then writer, then a round-trip regression — never in parallel. Half-shipped coordinated changes break existing artefacts silently; the fence-grammar fix (B-003) was the first exercise.
+
 ### 16.4 Dogfooding
 
 Cortex is built using SpecFlow on itself. If SpecFlow can't be used to build Cortex, that's a signal SpecFlow needs work before it can be used on serious projects. The build process is also a SpecFlow validation.
 
 ---
 
-## 17. Open questions for review
+## 17. Open questions from the design review — dispositions
 
-Decisions in this document that warrant explicit confirmation before drafting the schema:
+These nineteen questions were posed before the schema was drafted. All were answered during the build — most by explicit decision at a review gate, several by the running system settling them empirically. Recorded here with rationale; none remain open in v1 except the two explicitly moved to `post-v1-considerations.md`.
 
-1. **Cytoscape vs D3 vs another renderer** for the constellation. Cytoscape recommended for native compound-node support.
+1. **Renderer choice** — RESOLVED: Cytoscape, as recommended; compound nodes carried the hierarchy with zero custom layout code (§12.8).
 
-2. **Constellation Level 0 (galaxy view)** — defer to v1.1 or include in v1? Currently deferred.
+2. **Constellation Level 0 (galaxy view)** — DEFERRED TO v1.1, unchanged from the lean. The Level-1 default proved sufficient for v1's audiences.
 
-3. **`cortex init` modifying the project's `.claude/settings.json`** — acceptable footprint or should hooks live somewhere else? Currently treated as acceptable because it's the standard Claude Code hook mechanism.
+3. **init modifying `.claude/settings.json`** — RESOLVED: acceptable. Shipped with merge-never-clobber discipline (unrelated keys preserved, `check.hook-config` validates the result); no footprint complaints in practice.
 
-4. **Whether `.cortex/cerebrum/` is gitignored by default.** Currently proposed as committable. Decided per-project otherwise. Includes `cerebrum/bugs/` — the bug ledger may or may not be sensitive depending on project.
+4. **Cerebrum gitignored by default?** — RESOLVED: committable (schema Decision 1 — §14's split won over §13's blanket ignore). The Cortex repo itself commits its cerebrum, including the bug ledger.
 
-5. **CLAUDE.md as primary scaffolding.** The new design makes CLAUDE.md the primary entry point for Claude into Cortex. This means `cortex init` modifies CLAUDE.md, which is more invasive than the original "just add `.cortex/` to gitignore" footprint. Acceptable? The alternative is shipping Cortex as much less useful — but the footprint is real.
+5. **CLAUDE.md as primary scaffolding** — RESOLVED: acceptable and load-bearing. The managed marker block (`<!-- cortex:start -->…<!-- cortex:end -->`) made the footprint idempotent and reversible, which defused the invasiveness concern.
 
-6. **PreRead hook default state.** Currently opt-in (off by default) because the savings depend on undisciplined sessions. Confirm — or switch to on-by-default with a config flag to disable?
+6. **PreRead default state** — RESOLVED, then SUPERSEDED: the question assumed PreRead was a token-saving device. Read-time capture (§16.2 step 27) reframed it as half of refine-during-use; the pair ships **on by default**, opt-out via `hooks.preRead`.
 
-7. **`_index.md` token budget.** The schema will fix a target (~300 tokens per index). Confirm whether this is binding or advisory.
+7. **`_index.md` token budget: binding or advisory?** — RESOLVED: advisory-with-teeth. `check.index-shape` emits a warning (never an error) over 300 tokens; the onboarding-drift loop re-surfaces persistent violations monthly.
 
-8. **Native scanner LLM purpose-line cost.** Each `cortex scan` does a batched LLM pass over changed files for one-line purposes. On a fresh init of a 200-file project that's ~10-15 batched calls. Acceptable? Alternative: derive purpose lines from docstrings/headers when present, fall back to LLM only for files without docs.
+8. **Scanner LLM purpose-line cost** — RESOLVED: the proposed alternative won outright. Docstring-first extraction is deterministic Core; the LLM pass touches only files without usable doc comments, and only when changed (§7.2 step 4).
 
-9. **Claude Code session transcript access.** Distil and skill-suggest depend on programmatically reading session history. Location, format, and stability need verification. If session access is ephemeral or hard, both drop from v1 (see §10.7).
+9. **Session transcript access** — RESOLVED EMPIRICALLY: case two — global storage at `~/.claude/projects/<slug>/<session-id>.jsonl`. Distil and skill-suggest stayed in v1; the session-reading layer is deliberately tolerant of format drift (§10.7).
 
-10. **Pulse distil threshold (N occurrences).** Default N=3 before a pattern surfaces as a suggestion. Conservative enough to avoid noise, low enough to catch real patterns. Confirm or tune.
+10. **Distil threshold N=3** — CONFIRMED: shipped as `pulse.distilThresholdN` (config, default 3). No tuning pressure observed yet.
 
-11. **Scheduled task cadence metadata location.** The SKILL.md format is verified (`name`, `description`, prompt body). What's *not* yet verified is where cadence (daily/weekly/etc.) and configuration (model, permission mode, working folder, worktree toggle) live on disk. Two hypotheses: (a) sibling file in the same `<task-name>/` directory, (b) Desktop app's internal config not file-based. Quick UI-driven test would resolve this. If (a), `cortex init` writes both files. If (b), `cortex init` writes the SKILL.md and the user confirms cadence in the Desktop UI on first open.
+11. **Scheduled task cadence metadata location** — RESOLVED BY DECISION, residual unverified: v1 takes the conservative path (write SKILL.md; cadence confirmed in the Desktop UI on first open). Hypothesis (a) — a sibling config file — was never UI-tested; if it proves true, a MINOR schema addition covers it.
 
-12. **Rejection memory window.** Dismissed suggestions are not re-proposed for 90 days by default. Confirm — and whether the user can reset this with `cortex pulse-reset-dismissed`.
+12. **Rejection memory window** — CONFIRMED: 90 days, `pulse.dismissedWindowDays`. `cortex pulse-reset-dismissed` did not ship; resetting is a manual edit of `dismissed.md` (acceptable at current volumes; a command remains a v1.x nicety).
 
-13. **Test-runner PR authorship.** When `cortex-loop-test-runner` produces a PR with a proposed fix, who is the PR author — the user, a bot account, the user with co-authored-by trailer? Affects how the PR appears in GitHub/GitLab and how review notifications fire.
+13. **Test-runner PR authorship** — RESOLVED: the user's own `gh` auth, with the PR body stating its automated origin. No bot account, no co-author trailer; the five-field body carries the provenance that matters (§11.4 item 11).
 
-14. **Test-runner fix budget.** How many iterations does the writer/verifier sub-agent pair get before giving up and surfacing the failure to `pulse/test-failures.md`? Default proposed: 3. Higher numbers risk wasted LLM cost on unfixable failures.
+14. **Test-runner fix budget** — CONFIRMED: default 3, shipped as first-class config (`harness.maxIterations`) with per-invocation override precedence — a property of the harness, not the test-runner, so every future code-mutating loop inherits it.
 
-15. **Anatomy-refresh-fast scope.** Currently fires on every commit. Should it skip commits that only change `.md`, `.json`, or other config files? Or run on all commits and let the deterministic checks be cheap enough that it doesn't matter?
+15. **Anatomy-refresh-fast scope** — RESOLVED: runs on all commits. The deterministic checks proved cheap enough that skip-lists weren't worth their complexity; `.gitignore`/`anatomy.exclude` filtering applies as everywhere else.
 
-16. **Skill-suggest output target directory.** When a skill suggestion is accepted, where does the new `SKILL.md` go — `specflow-*` namespace, `cortex-*` namespace, or a project-local skills dir? Probably the user chooses at accept time, but the default needs deciding.
+16. **Skill-suggest output target** — RESOLVED: the proposal's own `Target:` names the destination (project-local by default, chosen by the drafting judgment); the human can edit the target before accepting. New files only — accept never overwrites a skill.
 
-17. **Loop concurrency.** Multiple Desktop scheduled tasks could conceivably fire simultaneously. Do they need a lock file to prevent races? Default: each loop acquires a lock on its specific output file in `.cortex/pulse/`. Different loops running in parallel is fine; the same loop running twice is not.
+17. **Loop concurrency** — MOVED TO POST-V1: no lock files shipped. The always-write convention makes a same-loop double-fire last-writer-wins on a transient report — accepted risk at v1 scale, recorded in `post-v1-considerations.md`.
 
-18. **`update_scheduled_task` adoption.** Claude Code's MCP tool lets a running task modify its own schedule. Should any v1 Cortex loops use this for self-adapting cadence (e.g. distil increasing frequency when accept rate is high)? Currently no v1 loop uses it; v1.x candidate.
+18. **`update_scheduled_task` self-adapting cadence** — MOVED TO POST-V1, unchanged: no v1 loop uses it; recorded as the v1.x candidate it always was.
 
-19. **`cortex-loop-bug-triage` interactivity.** Bug triage currently runs autonomously (classifies and surfaces to `pulse/bug-triage.md`). For type 1-6 bugs that propose spec changes, should the loop produce a draft spec change for review, or only surface the classification and let the user run `specflow-spec-editor` themselves? Currently the latter — keeps the loop conservative.
+19. **Bug-triage interactivity** — RESOLVED: the conservative path, made precise by the fill-only reconciliation (§11.4 item 13): classify-and-report, absent fields filled, human judgment never overwritten, no draft spec changes produced by the loop.
 
 ---
 

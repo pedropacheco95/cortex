@@ -21,3 +21,19 @@ reconciliation pass.
   moved 11 tasks where the plan expected 8 — accumulation from earlier re-inits. A
   hygiene-adjacent check could catch this class autonomously: "scheduled tasks matching
   Cortex naming that don't correspond to loops in the plan."
+- **Bug-triage type-7 → test-runner wiring.** Triage classifies test-defect bugs but does
+  not hand them to the test-runner; the runner discovers failures on its own cadence. A
+  direct routing (triaged type-7 → targeted runner invocation) is a v1.x candidate.
+- **Design-doc drift loop (Pedro, reconciliation round).** A loop that catches
+  design-doc-vs-schema-vs-code inconsistency — exactly what the manual reconciliation pass
+  does — onboarding-drift's bigger sibling. v1.x candidate.
+- **Extend init's migration step to the full §8.5 list.** As shipped it migrates only the
+  legacy root `bugs.md`; pre-existing `gaps.md`/`verification-report.md`/onboarding scratch
+  files on old projects are not auto-moved (new runs no longer produce them).
+- **Loop concurrency locking (design §17 item 17).** No lock files shipped; a same-loop
+  double-fire is last-writer-wins on a transient always-write report — accepted risk at
+  v1 scale. Revisit if Desktop scheduling produces real collisions.
+- **`update_scheduled_task` self-adapting cadence (design §17 item 18)** — e.g. distil
+  increasing frequency when accept rate is high. v1.x candidate, unchanged.
+- **`cortex pulse-reset-dismissed` (design §17 item 12)** — a command to reset the
+  dismissal memory; manual `dismissed.md` editing suffices at current volumes.
