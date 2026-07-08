@@ -3,6 +3,7 @@ id: constellation.stakeholder-navigates-the-project-map
 status: implemented
 implemented_by:
   - ../../specs/constellation/renderer.spec.md
+  - ../../specs/constellation/insight-preset.spec.md
 ---
 
 # A stakeholder opens the project map and finds their way around it

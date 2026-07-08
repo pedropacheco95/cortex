@@ -2,11 +2,16 @@
  * The constellation single page (spec constellation.renderer Rule 8; design
  * §12.3, §12.6-§12.8). One static HTML string: a Cytoscape container using
  * COMPOUND NODES for the group hierarchy (no D3, no hand-rolled layout), a
- * preset switcher naming exactly the five locked presets, and the coverage
- * counters. The browser does no graph computation — it renders what
- * `/api/constellation` returns. Restraint is the credibility (§12.7): minimal
- * chrome, no animation flourishes. Visual behaviour beyond this skeleton is
- * deliberately unpinned (journey tier, deferred).
+ * preset switcher naming exactly the six presets (five v1 lenses plus the v2
+ * serve-time `insight` overlay — spec constellation.insight-preset, schema
+ * §4.9), and the coverage counters. The browser does no graph computation — it
+ * renders what `/api/constellation` returns; for `preset=insight` that payload
+ * additionally carries an `overlay` block (inferred edges + cluster regions)
+ * which this page styles with the SAME Cytoscape layer (dashed edges via
+ * `edge[inferred]`, background regions via compound `node[region]`) — no new
+ * renderer. Restraint is the credibility (§12.7): minimal chrome, no animation
+ * flourishes. Visual behaviour beyond this skeleton is deliberately unpinned
+ * (journey tier, deferred).
  */
 
 export const SPA_HTML = `<!doctype html>
@@ -38,6 +43,7 @@ export const SPA_HTML = `<!doctype html>
     <button data-preset="knowledge-only" aria-pressed="false">knowledge-only</button>
     <button data-preset="orphans" aria-pressed="false">orphans</button>
     <button data-preset="domain" aria-pressed="false">domain</button>
+    <button data-preset="insight" aria-pressed="false">insight</button>
     <input id="domain-input" placeholder="domain, e.g. schema" hidden>
   </nav>
 </header>
@@ -65,10 +71,31 @@ export const SPA_HTML = `<!doctype html>
   }
 
   /** Constellation JSON -> Cytoscape elements. Compound nodes carry the group
-   *  hierarchy: top group > child group > node (design 12.8). */
+   *  hierarchy: top group > child group > node (design 12.8). When an insight
+   *  overlay is present (preset=insight), inferred edges are added as dashed
+   *  (data.inferred) and tag clusters become compound background regions:
+   *  each cluster is a parent node (data.region) and its members reparent into
+   *  it — the same Cytoscape compound mechanism, no new renderer (§4.9). A node
+   *  claimed by more than one cluster joins the first (clusters are id-sorted,
+   *  so this is deterministic). Curated edges are untouched — solid. */
   function toElements(map) {
     var elements = [];
     var parents = {};
+    var overlay = map.overlay || null;
+
+    // Concept regions win the compound parent slot for their members (visual
+    // lens detail, deliberately unpinned — journey tier).
+    var memberRegion = {};
+    if (overlay) {
+      overlay.clusters.forEach(function (c) {
+        parents[c.id] = true;
+        elements.push({ data: { id: c.id, label: c.label, region: true } });
+        c.members.forEach(function (m) {
+          if (memberRegion[m] === undefined) memberRegion[m] = c.id;
+        });
+      });
+    }
+
     map.groups.forEach(function (g) {
       parents[g.id] = true;
       elements.push({ data: { id: g.id, label: g.label } });
@@ -78,15 +105,24 @@ export const SPA_HTML = `<!doctype html>
       });
     });
     map.nodes.forEach(function (n) {
-      if (n.group && !parents[n.group]) { // tolerate an undeclared group id
-        parents[n.group] = true;
-        elements.push({ data: { id: n.group, label: n.group } });
+      var parent = memberRegion[n.id] !== undefined ? memberRegion[n.id] : n.group;
+      if (parent && !parents[parent]) { // tolerate an undeclared group id
+        parents[parent] = true;
+        elements.push({ data: { id: parent, label: parent } });
       }
-      elements.push({ data: { id: n.id, label: n.label, parent: n.group, module: n.module } });
+      elements.push({ data: { id: n.id, label: n.label, parent: parent, module: n.module } });
     });
     map.edges.forEach(function (e, i) {
       elements.push({ data: { id: 'e' + i, source: e.from, target: e.to, kind: e.kind } });
     });
+    if (overlay) {
+      overlay.inferredEdges.forEach(function (e, i) {
+        elements.push({ data: {
+          id: 'i' + i, source: e.from, target: e.to, kind: e.kind,
+          inferred: true, confidence: e.confidence
+        } });
+      });
+    }
     return elements;
   }
 
@@ -99,7 +135,15 @@ export const SPA_HTML = `<!doctype html>
       style: [
         { selector: 'node', style: { label: 'data(label)', 'font-size': 9, 'background-color': '#8ea2b5' } },
         { selector: ':parent', style: { shape: 'round-rectangle', 'background-opacity': 0.08, 'border-color': '#b8c0c8', 'font-size': 11 } },
-        { selector: 'edge', style: { width: 1, 'line-color': '#c3ccd4', 'curve-style': 'straight' } }
+        // Cluster background regions (compound parents, preset=insight): a
+        // subordinate tinted fill behind their member nodes (§4.9).
+        { selector: 'node[?region]', style: { shape: 'round-rectangle', 'background-color': '#6f8fb0', 'background-opacity': 0.10, 'border-style': 'dashed', 'border-color': '#6f8fb0', 'font-size': 11 } },
+        { selector: 'edge', style: { width: 1, 'line-color': '#c3ccd4', 'curve-style': 'straight' } },
+        // Inferred overlay edges (preset=insight): DASHED and subordinate to
+        // solid curated edges; opacity leans on confidence (§4.9, a renderer
+        // detail — not the contract).
+        { selector: 'edge[?inferred]', style: { 'line-style': 'dashed', 'line-color': '#a7b4c2', 'opacity': 0.7 } },
+        { selector: 'edge[inferred][confidence = "low"]', style: { 'opacity': 0.45 } }
       ]
     });
   }

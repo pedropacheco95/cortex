@@ -16,6 +16,9 @@ import { createRequire } from 'module';
 import type { AddressInfo } from 'net';
 import type { Constellation, ConstellationNode } from './compile.js';
 import { SPA_HTML } from './spa.js';
+import { composeInsightOverlay } from './insight-overlay.js';
+import { parseGraph, parseClusters } from '../insight/formats.js';
+import type { InsightGraph, ClustersFile } from '../insight/formats.js';
 
 /** The locked preset set (renderer Rule 6) — exactly five, never extended ad hoc. */
 export const PRESET_NAMES = ['default', 'anatomy-only', 'knowledge-only', 'orphans', 'domain'] as const;
@@ -131,6 +134,31 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
   res.end(typeof body === 'string' ? body : JSON.stringify(body, null, 2) + '\n');
 }
 
+/**
+ * Read the ungated insight overlay for the `insight` preset ONLY (Rule 2, 6):
+ * `insight/map/graph.json` + `clusters.json`, at request time. Strictly
+ * read-only — never invokes the refresh loop or the compiler; a stale/missing
+ * or unparseable file yields `null` (an honest empty overlay, never a rebuild,
+ * never an error). Reuses the insight.formats parsers (Entities: READS).
+ */
+function readInsightOverlay(root: string): { graph: InsightGraph | null; clusters: ClustersFile | null } {
+  const mapDir = path.join(root, '.cortex', 'insight', 'map');
+  const readParsed = <T>(file: string, parse: (raw: string) => { ok: boolean; value?: T }): T | null => {
+    let raw: string;
+    try {
+      raw = fs.readFileSync(path.join(mapDir, file), 'utf-8');
+    } catch {
+      return null; // absent → empty overlay (Rule 2)
+    }
+    const result = parse(raw);
+    return result.ok && result.value ? result.value : null; // unparseable → empty (tolerant, Rule 6)
+  };
+  return {
+    graph: readParsed('graph.json', parseGraph),
+    clusters: readParsed('clusters.json', parseClusters),
+  };
+}
+
 function handleApi(root: string, url: URL, res: http.ServerResponse): void {
   const mapPath = path.join(root, '.cortex', 'constellation.json');
   // Re-read per request so a fresh scan is visible on reload (Entities: READS).
@@ -154,6 +182,21 @@ function handleApi(root: string, url: URL, res: http.ServerResponse): void {
   }
   const preset = url.searchParams.get('preset') ?? 'default';
   const domain = url.searchParams.get('domain') ?? undefined;
+
+  // The sixth preset (spec constellation.insight-preset, schema §4.9): the
+  // curated graph plus a serve-time inferred overlay. Composed here — never
+  // compiled into constellation.json — over the FULL curated node set (a join,
+  // not a merge). The five v1 presets are byte-unchanged (they never reach the
+  // overlay path); `default` stays curated-only (Rule 5).
+  if (preset === 'insight') {
+    const { graph, clusters } = readInsightOverlay(root);
+    const withOverlay = composeInsightOverlay(constellation, graph, clusters);
+    // Deterministic at the contract (Rule 7): a pure function of the curated
+    // bytes + the insight bytes; overlay edges/clusters are sorted stably.
+    sendJson(res, 200, JSON.stringify(withOverlay, null, 2) + '\n');
+    return;
+  }
+
   const result = applyPreset(constellation, preset, domain);
   if (!result.ok) {
     sendJson(res, result.status, { error: result.error });

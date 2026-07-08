@@ -155,17 +155,20 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
     TEST_TIMEOUT,
   );
 
-  it('GET / returns HTML with the Cytoscape container and a switcher naming exactly the five presets', async () => {
+  it('GET / returns HTML with the Cytoscape container and a switcher naming the six presets', async () => {
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     const html = await res.text();
     expect(html).toContain('id="cy"'); // the Cytoscape container element
     expect(html).toContain('id="presets"');
+    // The five v1 filtering lenses …
     for (const name of PRESET_NAMES) {
       expect(html).toContain(`data-preset="${name}"`);
     }
-    expect(html.match(/data-preset="/g)).toHaveLength(5); // exactly five, no extras
+    // … plus the v2 serve-time insight overlay (spec constellation.insight-preset).
+    expect(html).toContain('data-preset="insight"');
+    expect(html.match(/data-preset="/g)).toHaveLength(6); // exactly six, no extras
   });
 
   it('serves the cytoscape bundle locally from node_modules (no CDN — offline)', async () => {
