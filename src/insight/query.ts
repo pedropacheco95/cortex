@@ -1,91 +1,36 @@
 /**
- * Insight query/traversal engine (spec insight.cli; cortex-schema.md §4.10.5).
- * The pure, deterministic core behind the four `cortex insight` commands:
- * lexical `query`, verbatim `get`, graph `neighbors`, and `list`. Reads only
- * `insight/map/` (prose `.md` + the three `.json`), returns structured results,
- * and never calls `process.exit` — the CLI layer (insight/cli.ts) owns I/O and
- * exit codes. Deterministic Core (R-001): no LLM at query time, no network, no
- * ranking, no embeddings; a miss is an honest empty result. All ordering is
- * stable (sorted by id/name) so the CLI's `--json` is byte-stable.
+ * Insight v3 query engine (spec insight.cli; cortex-schema.md §4.10.8) — the
+ * pure, deterministic core behind the three `cortex insight` subcommands:
+ * `file <path>`, `concept <name>`, `element <query>`. Supersedes the v2
+ * query/get/neighbors/list engine entirely (design §5.6, §8.3).
+ *
+ * Reads the v3 shapes owned by insight.storage-format: per-file entries under
+ * `anatomy/` or `scopes/<scope>/anatomy/` (entry.ts), `concepts/` files
+ * (global and scope-local), `graph.json` (top-level and scope-local), and
+ * `scope-registry.yaml`. The scoped-vs-flat difference is resolved HERE — the
+ * CLI and its callers never see it (schema §4.10.1, design §5.8).
+ *
+ * Deterministic Core (RULES 3): no LLM at query time, no network, no ranking;
+ * a miss is an explicit not-found result, never a crash and never a silently
+ * empty success. All ordering is stable so the CLI's `--json` is byte-stable.
+ * Never calls `process.exit` — the CLI layer (insight/cli.ts) owns I/O and
+ * exit codes. Reads only `.cortex/insight/`; writes nothing.
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import matter from 'gray-matter';
 import {
-  parseGraph,
-  parseTags,
-  parseClusters,
-  EDGE_KINDS,
-  type GraphEdge,
-  type EdgeKind,
-} from './formats.js';
-
-/** Max characters of a prose-section snippet in a query hit (whitespace-collapsed). */
-export const SNIPPET_MAX = 200;
-
-// ---------------------------------------------------------------------------
-// Result shapes (structured; the CLI renders these to a table or `--json`).
-// ---------------------------------------------------------------------------
-
-export interface ProseSectionHit {
-  /** `map/`-relative prose file name, e.g. `setup.md`. */
-  file: string;
-  /** The H2 heading text (without `## `), or null for a file's preamble. */
-  heading: string | null;
-  /** Whitespace-collapsed section body, truncated to SNIPPET_MAX. */
-  snippet: string;
-}
-
-export interface NodeHit {
-  id: string;
-  /** The node's concept tags (sorted) — the tags.json labels that matched. */
-  tags: string[];
-}
-
-export interface ClusterHit {
-  id: string;
-  label: string;
-}
-
-export interface QueryResult {
-  topic: string;
-  sections: ProseSectionHit[];
-  nodes: NodeHit[];
-  clusters: ClusterHit[];
-}
-
-export interface GetResult {
-  found: boolean;
-  /** `map/`-relative name requested. */
-  name: string;
-  /** Verbatim file bytes, present iff found. */
-  bytes?: Buffer;
-  /** Reason when not found (unknown name or a path that escapes map/). */
-  error?: string;
-}
-
-export interface NeighborsResult {
-  found: boolean;
-  node: string;
-  kind: EdgeKind | null;
-  depth: number;
-  /** Edges walked to reach the subgraph (sorted by from,to,kind). */
-  edges: GraphEdge[];
-  /** Distinct reached node ids, excluding the start node (sorted). */
-  nodes: string[];
-  /** Reason when the node id is unknown. */
-  error?: string;
-}
-
-export interface ListResult {
-  files: string[];
-  clusters: ClusterHit[];
-}
+  parseGraphV3,
+  parseScopeRegistry,
+  type GraphEdgeV3,
+  type InsightGraphV3,
+  type ScopeRegistry,
+} from './storage.js';
+import { parseEntry, ENTRY_SECTIONS, type InsightEntry } from './entry.js';
 
 /**
- * Raised when a present `map/` JSON artefact is malformed (invalid JSON or fails
- * its §4.10.2 shape guard). The CLI surfaces this as exit 1. An *absent* artefact
- * is NOT malformed — it is an honest empty module (the scaffolded, live-repo shape).
+ * Raised when a present insight artefact is malformed (invalid JSON/YAML or a
+ * failed §4.10 shape guard). The CLI surfaces this as exit 1. An *absent*
+ * artefact is NOT malformed — it is an honest miss or an empty module.
  */
 export class InsightArtefactError extends Error {
   constructor(
@@ -98,246 +43,450 @@ export class InsightArtefactError extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// map/ readers. A missing file → the empty structure; a present-but-malformed
-// file → InsightArtefactError.
+// Module location + layout resolution (§4.10.1). The query layer hides the
+// scoped/flat difference from every caller.
 // ---------------------------------------------------------------------------
 
-function readRawIfPresent(mapDir: string, name: string): string | null {
-  const p = path.join(mapDir, name);
-  if (!fs.existsSync(p)) return null;
-  return fs.readFileSync(p, 'utf-8');
+export interface InsightLocation {
+  /** Absolute path of `.cortex/insight/`. */
+  insightDir: string;
+  /** True when `scope-registry.yaml` is present (scoped layout). */
+  scoped: boolean;
+  /** Parsed registry when scoped. */
+  registry?: ScopeRegistry;
 }
 
-function loadGraph(mapDir: string): ReturnType<typeof parseGraph>['value'] | null {
-  const raw = readRawIfPresent(mapDir, 'graph.json');
-  if (raw === null) return null;
-  const result = parseGraph(raw);
-  if (!result.ok || !result.value) throw new InsightArtefactError('graph.json', result.errors ?? ['invalid']);
-  return result.value;
-}
-
-function loadTags(mapDir: string): ReturnType<typeof parseTags>['value'] | null {
-  const raw = readRawIfPresent(mapDir, 'tags.json');
-  if (raw === null) return null;
-  const result = parseTags(raw);
-  if (!result.ok || !result.value) throw new InsightArtefactError('tags.json', result.errors ?? ['invalid']);
-  return result.value;
-}
-
-function loadClusters(mapDir: string): ReturnType<typeof parseClusters>['value'] | null {
-  const raw = readRawIfPresent(mapDir, 'clusters.json');
-  if (raw === null) return null;
-  const result = parseClusters(raw);
-  if (!result.ok || !result.value) throw new InsightArtefactError('clusters.json', result.errors ?? ['invalid']);
-  return result.value;
-}
-
-/** Sorted list of `map/*.md` prose file basenames. */
-function proseFiles(mapDir: string): string[] {
-  let names: string[];
-  try {
-    names = fs.readdirSync(mapDir);
-  } catch {
-    return [];
+/** Locate `.cortex/insight/` under `root`; null when the module is absent. */
+export function locateInsight(root: string): InsightLocation | null {
+  const insightDir = path.join(root, '.cortex', 'insight');
+  if (!fs.existsSync(insightDir) || !fs.statSync(insightDir).isDirectory()) return null;
+  const registryPath = path.join(insightDir, 'scope-registry.yaml');
+  if (!fs.existsSync(registryPath)) return { insightDir, scoped: false };
+  const parsed = parseScopeRegistry(fs.readFileSync(registryPath, 'utf-8'));
+  if (!parsed.ok || !parsed.value) {
+    throw new InsightArtefactError('scope-registry.yaml', parsed.errors ?? ['invalid']);
   }
-  return names.filter((n) => n.endsWith('.md')).sort();
+  return { insightDir, scoped: true, registry: parsed.value };
+}
+
+/** Declared scope ids, sorted for deterministic iteration. */
+function scopeIds(loc: InsightLocation): string[] {
+  return loc.registry ? Object.keys(loc.registry.scopes).sort() : [];
+}
+
+/** Normalize a project-relative source path (forward slashes, no leading ./). */
+function normalizeSourcePath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+}
+
+/**
+ * The scope owning a source path — the longest registry `path` prefix match
+ * (§4.10.3), or null when no scope owns it (top-level content).
+ */
+export function owningScope(loc: InsightLocation, sourcePath: string): string | null {
+  if (!loc.registry) return null;
+  const normalized = normalizeSourcePath(sourcePath);
+  let best: string | null = null;
+  let bestLen = -1;
+  for (const id of scopeIds(loc)) {
+    const scopePath = normalizeSourcePath(loc.registry.scopes[id]!.path);
+    if (normalized === scopePath || normalized.startsWith(scopePath + '/')) {
+      if (scopePath.length > bestLen) {
+        best = id;
+        bestLen = scopePath.length;
+      }
+    }
+  }
+  return best;
 }
 
 // ---------------------------------------------------------------------------
-// Prose sectioning (H2-delimited). Frontmatter is stripped; content before the
-// first H2 is a preamble section with a null heading.
+// Graph loading — top-level plus every scope-local graph, unified (§4.10.8
+// Rule 4: concept/element queries merge scope-local with cross-scope).
 // ---------------------------------------------------------------------------
 
-interface Section {
-  heading: string | null;
-  body: string;
+function loadGraphAt(insightDir: string, relFile: string): InsightGraphV3 | null {
+  const p = path.join(insightDir, relFile);
+  if (!fs.existsSync(p)) return null;
+  const parsed = parseGraphV3(fs.readFileSync(p, 'utf-8'));
+  if (!parsed.ok || !parsed.value) throw new InsightArtefactError(relFile, parsed.errors ?? ['invalid']);
+  return parsed.value;
 }
+
+interface UnifiedGraph {
+  /** node id → node, first writer wins (top-level, then scopes sorted). */
+  nodes: Map<string, { id: string; kind: string; label: string }>;
+  /** edge id → edge, deduplicated across graphs. */
+  edges: Map<string, GraphEdgeV3>;
+}
+
+/** Merge the top-level graph with every scope-local graph (all optional). */
+export function loadUnifiedGraph(loc: InsightLocation): UnifiedGraph {
+  const files: string[] = ['graph.json'];
+  for (const id of scopeIds(loc)) files.push(path.join('scopes', id, 'graph.json'));
+  const nodes = new Map<string, { id: string; kind: string; label: string }>();
+  const edges = new Map<string, GraphEdgeV3>();
+  for (const file of files) {
+    const graph = loadGraphAt(loc.insightDir, file);
+    if (!graph) continue;
+    for (const n of graph.nodes) if (!nodes.has(n.id)) nodes.set(n.id, n);
+    for (const e of graph.edges) if (!edges.has(e.id)) edges.set(e.id, e);
+  }
+  return { nodes, edges };
+}
+
+// ---------------------------------------------------------------------------
+// Section splitting — H2-delimited entry bodies (§4.10.2 section contract).
+// ---------------------------------------------------------------------------
 
 const H2_RE = /^##\s+(.+?)\s*$/;
 
-function splitSections(content: string): Section[] {
-  const lines = content.split('\n');
-  const sections: Section[] = [];
-  let heading: string | null = null;
-  let body: string[] = [];
+/** Split a markdown body into `## `-titled sections (title → trimmed content). */
+export function sectionContents(body: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  let current: string | null = null;
+  let buf: string[] = [];
   const flush = (): void => {
-    if (heading !== null || body.some((l) => l.trim() !== '')) {
-      sections.push({ heading, body: body.join('\n') });
-    }
+    if (current !== null) out[current] = buf.join('\n').trim();
   };
-  for (const line of lines) {
+  for (const line of body.split('\n')) {
     const m = line.match(H2_RE);
     if (m) {
       flush();
-      heading = (m[1] ?? '').trim();
-      body = [];
-    } else {
-      body.push(line);
+      current = (m[1] ?? '').trim();
+      buf = [];
+    } else if (current !== null) {
+      buf.push(line);
     }
   }
   flush();
-  return sections;
+  return out;
 }
 
-function snippetOf(body: string): string {
-  const collapsed = body.replace(/\s+/g, ' ').trim();
-  return collapsed.length > SNIPPET_MAX ? collapsed.slice(0, SNIPPET_MAX) + '…' : collapsed;
+/** The entry's sections in the §4.10.2 canonical order (only those present). */
+function orderedSections(body: string): Record<string, string> {
+  const raw = sectionContents(body);
+  const ordered: Record<string, string> = {};
+  for (const title of ENTRY_SECTIONS) {
+    if (raw[title] !== undefined) ordered[title] = raw[title];
+  }
+  // Preserve any non-canonical extras after the canonical ones, sorted.
+  for (const title of Object.keys(raw).sort()) {
+    if (ordered[title] === undefined) ordered[title] = raw[title]!;
+  }
+  return ordered;
 }
 
 // ---------------------------------------------------------------------------
-// query — lexical, grouped, case-insensitive; no LLM, no ranking, no embeddings.
+// `file <path>` (§4.10.8; insight.cli Rule 1).
 // ---------------------------------------------------------------------------
 
-export function queryInsight(mapDir: string, topic: string): QueryResult {
-  const needle = topic.toLowerCase();
+export interface FileQueryResult {
+  found: boolean;
+  /** Normalized project-relative source path queried. */
+  path: string;
+  /** True when `.cortex/insight/` does not exist at all (Rule 8). */
+  noInsight?: boolean;
+  /** insight/-relative path of the entry file, when found. */
+  entryFile?: string;
+  /** Owning scope id, or null for top-level/flat content. */
+  scope?: string | null;
+  entry?: InsightEntry;
+  /** Section title → content, canonical §4.10.2 order. */
+  sections?: Record<string, string>;
+  error?: string;
+}
 
-  // 1) Prose sections: match against the file name, the H2 heading, or the body.
-  const sections: ProseSectionHit[] = [];
-  for (const file of proseFiles(mapDir)) {
-    const raw = readRawIfPresent(mapDir, file);
-    if (raw === null) continue;
-    const content = matter(raw).content;
-    const fileMatches = file.toLowerCase().includes(needle);
-    for (const section of splitSections(content)) {
-      const headingText = section.heading ?? '';
-      const matches =
-        fileMatches ||
-        headingText.toLowerCase().includes(needle) ||
-        section.body.toLowerCase().includes(needle);
-      if (matches) {
-        sections.push({ file, heading: section.heading, snippet: snippetOf(section.body) });
+/** Candidate insight-relative entry paths for a source path, in priority order:
+ *  owning scope, top-level `anatomy/`, then every other scope (sorted). */
+function entryCandidates(loc: InsightLocation, sourcePath: string): Array<{ rel: string; scope: string | null }> {
+  const rel = `anatomy/${sourcePath}.md`;
+  const candidates: Array<{ rel: string; scope: string | null }> = [];
+  const owner = owningScope(loc, sourcePath);
+  if (owner !== null) candidates.push({ rel: path.join('scopes', owner, rel), scope: owner });
+  candidates.push({ rel, scope: null });
+  for (const id of scopeIds(loc)) {
+    if (id !== owner) candidates.push({ rel: path.join('scopes', id, rel), scope: id });
+  }
+  return candidates;
+}
+
+export function fileQuery(root: string, sourcePath: string): FileQueryResult {
+  const queried = normalizeSourcePath(sourcePath);
+  const loc = locateInsight(root);
+  if (!loc) {
+    return { found: false, path: queried, noInsight: true, error: 'no insight data for this project (.cortex/insight/ does not exist — extraction has not run)' };
+  }
+  for (const candidate of entryCandidates(loc, queried)) {
+    const abs = path.join(loc.insightDir, candidate.rel);
+    if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) continue;
+    const parsed = parseEntry(fs.readFileSync(abs, 'utf-8'));
+    if (!parsed.ok || !parsed.value) throw new InsightArtefactError(candidate.rel, parsed.errors ?? ['invalid']);
+    return {
+      found: true,
+      path: queried,
+      entryFile: candidate.rel,
+      scope: candidate.scope,
+      entry: parsed.value,
+      sections: orderedSections(parsed.value.body),
+    };
+  }
+  return { found: false, path: queried, error: `no insight entry for ${queried}` };
+}
+
+// ---------------------------------------------------------------------------
+// `concept <name>` (§4.10.8; insight.cli Rule 2).
+// ---------------------------------------------------------------------------
+
+/** Concept-name slug (concept ids are `concept:<slug>`, §4.10.6). */
+export function conceptSlug(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, '-');
+}
+
+export interface ConceptFileTouch {
+  /** Project-relative source path of a file touching the concept. */
+  path: string;
+  /** The graph node the edge came from (`file:…` or `element:…`). */
+  node: string;
+  edge_type: string;
+  evidence: string;
+}
+
+export interface RelatedConcept {
+  slug: string;
+  edge_type: string;
+  evidence: string;
+}
+
+export interface ConceptQueryResult {
+  found: boolean;
+  name: string;
+  slug: string;
+  noInsight?: boolean;
+  /** Where the concept doc came from: 'global', a scope id, or null (graph-only). */
+  source?: string | null;
+  /** insight/-relative path of the concept doc, when one exists. */
+  docFile?: string;
+  /** The concept doc's markdown content (frontmatter, if any, included). */
+  doc?: string;
+  /** Files touching the concept via graph edges, sorted by path. */
+  files?: ConceptFileTouch[];
+  /** Concept-to-concept edges, sorted by slug. */
+  related?: RelatedConcept[];
+  error?: string;
+}
+
+/** The source-file path behind a `file:` or `element:` node id, or null. */
+function nodeFilePath(nodeId: string): string | null {
+  if (nodeId.startsWith('file:')) return nodeId.slice('file:'.length);
+  if (nodeId.startsWith('element:')) {
+    const rest = nodeId.slice('element:'.length);
+    const hash = rest.indexOf('#');
+    return hash >= 0 ? rest.slice(0, hash) : rest;
+  }
+  return null;
+}
+
+export function conceptQuery(root: string, name: string): ConceptQueryResult {
+  const slug = conceptSlug(name);
+  const loc = locateInsight(root);
+  if (!loc) {
+    return { found: false, name, slug, noInsight: true, error: 'no insight data for this project (.cortex/insight/ does not exist — extraction has not run)' };
+  }
+
+  // Doc: global concepts/ first, then scope-local (sorted scope order).
+  let docFile: string | undefined;
+  let source: string | null | undefined;
+  const globalDoc = path.join('concepts', `${slug}.md`);
+  if (fs.existsSync(path.join(loc.insightDir, globalDoc))) {
+    docFile = globalDoc;
+    source = 'global';
+  } else {
+    for (const id of scopeIds(loc)) {
+      const scoped = path.join('scopes', id, 'concepts', `${slug}.md`);
+      if (fs.existsSync(path.join(loc.insightDir, scoped))) {
+        docFile = scoped;
+        source = id;
+        break;
       }
     }
   }
-  sections.sort((a, b) => a.file.localeCompare(b.file) || (a.heading ?? '').localeCompare(b.heading ?? ''));
+  const doc = docFile !== undefined ? fs.readFileSync(path.join(loc.insightDir, docFile), 'utf-8') : undefined;
 
-  // 2) Nodes: match against any of a node's tags (tags.json).
-  const nodes: NodeHit[] = [];
-  const tagsFile = loadTags(mapDir);
-  if (tagsFile) {
-    for (const [id, tags] of Object.entries(tagsFile.tags)) {
-      if (tags.some((t) => t.toLowerCase().includes(needle))) {
-        nodes.push({ id, tags: [...tags].sort() });
+  // Graph: edges touching `concept:<slug>` across the unified graph set.
+  const conceptId = `concept:${slug}`;
+  const graph = loadUnifiedGraph(loc);
+  const filesByPath = new Map<string, ConceptFileTouch>();
+  const relatedBySlug = new Map<string, RelatedConcept>();
+  for (const e of [...graph.edges.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
+    const touches = e.source === conceptId || e.target === conceptId;
+    if (!touches) continue;
+    const other = e.source === conceptId ? e.target : e.source;
+    if (other.startsWith('concept:')) {
+      const otherSlug = other.slice('concept:'.length);
+      if (!relatedBySlug.has(otherSlug)) {
+        relatedBySlug.set(otherSlug, { slug: otherSlug, edge_type: e.edge_type, evidence: e.evidence });
+      }
+    } else {
+      const filePath = nodeFilePath(other);
+      if (filePath !== null && !filesByPath.has(filePath)) {
+        filesByPath.set(filePath, { path: filePath, node: other, edge_type: e.edge_type, evidence: e.evidence });
       }
     }
   }
-  nodes.sort((a, b) => a.id.localeCompare(b.id));
 
-  // 3) Clusters: match against the cluster label (or its id slug).
-  const clusters: ClusterHit[] = [];
-  const clustersFile = loadClusters(mapDir);
-  if (clustersFile) {
-    for (const c of clustersFile.clusters) {
-      if (c.label.toLowerCase().includes(needle) || c.id.toLowerCase().includes(needle)) {
-        clusters.push({ id: c.id, label: c.label });
-      }
+  const hasNode = graph.nodes.has(conceptId);
+  const found = docFile !== undefined || hasNode || filesByPath.size > 0 || relatedBySlug.size > 0;
+  if (!found) {
+    return { found: false, name, slug, error: `no such concept: ${slug} (no concept doc and no concept:${slug} graph node)` };
+  }
+  return {
+    found: true,
+    name,
+    slug,
+    source: source ?? null,
+    ...(docFile !== undefined ? { docFile } : {}),
+    ...(doc !== undefined ? { doc } : {}),
+    files: [...filesByPath.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    related: [...relatedBySlug.values()].sort((a, b) => a.slug.localeCompare(b.slug)),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// `element <query>` (§4.10.8; insight.cli Rule 3). Query forms: plain `name`
+// or `path#name`. Matched against `element:` graph nodes; the rich detail
+// comes from the owning file entry's `## Main players` section.
+// ---------------------------------------------------------------------------
+
+export interface ElementConnection {
+  edge_type: string;
+  /** The other endpoint's node id. */
+  other: string;
+  /** 'out' when the element is the edge source, 'in' when the target. */
+  direction: 'out' | 'in';
+  confidence: string;
+  evidence: string;
+}
+
+export interface ElementMatch {
+  /** The `element:<relpath>#<name>` node id. */
+  node: string;
+  name: string;
+  /** Project-relative source path the element lives in. */
+  file: string;
+  /** True when the owning file entry names it under `## Main players`. */
+  rich: boolean;
+  /** The Main-players bullet (description incl. line range), when rich. */
+  description?: string;
+  /** Edges touching the element node, sorted by edge id. */
+  connections: ElementConnection[];
+  /** The owning entry's `## Query pointers` content, when rich and present. */
+  pointers?: string;
+}
+
+export interface ElementQueryResult {
+  found: boolean;
+  query: string;
+  noInsight?: boolean;
+  matches?: ElementMatch[];
+  error?: string;
+}
+
+/** Parse `## Main players` bullets into name → bullet text (incl. wrapped
+ *  continuation lines). Bullet names are the first `backticked` token. */
+export function mainPlayers(section: string): Map<string, string> {
+  const players = new Map<string, string>();
+  let currentName: string | null = null;
+  let buf: string[] = [];
+  const flush = (): void => {
+    if (currentName !== null && !players.has(currentName)) {
+      players.set(currentName, buf.join('\n').trim());
+    }
+  };
+  for (const line of section.split('\n')) {
+    const bullet = /^[-*]\s+(.*)$/.exec(line);
+    if (bullet) {
+      flush();
+      const name = /`([^`]+)`/.exec(bullet[1] ?? '');
+      currentName = name?.[1] ?? null;
+      buf = [line];
+    } else if (currentName !== null && /^\s+\S/.test(line)) {
+      buf.push(line);
+    } else {
+      flush();
+      currentName = null;
+      buf = [];
     }
   }
-  clusters.sort((a, b) => a.id.localeCompare(b.id));
-
-  return { topic, sections, nodes, clusters };
+  flush();
+  return players;
 }
 
-// ---------------------------------------------------------------------------
-// get — verbatim bytes of a map/-relative file, refusing any path that escapes.
-// ---------------------------------------------------------------------------
-
-export function getFile(mapDir: string, name: string): GetResult {
-  const mapRoot = path.resolve(mapDir);
-  const resolved = path.resolve(mapRoot, name);
-  const rel = path.relative(mapRoot, resolved);
-  // Reject absolute names and any traversal outside map/.
-  if (path.isAbsolute(name) || rel === '' || rel.startsWith('..') || rel.split(path.sep).includes('..')) {
-    return { found: false, name, error: `refusing a path outside insight/map/: ${name}` };
+export function elementQuery(root: string, query: string): ElementQueryResult {
+  const loc = locateInsight(root);
+  if (!loc) {
+    return { found: false, query, noInsight: true, error: 'no insight data for this project (.cortex/insight/ does not exist — extraction has not run)' };
   }
-  if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
-    return { found: false, name, error: `no such file in insight/map/: ${name}` };
+
+  // Parse the query form: `path#name` or plain `name`.
+  const hash = query.indexOf('#');
+  const wantedPath = hash >= 0 ? normalizeSourcePath(query.slice(0, hash)) : null;
+  const wantedName = hash >= 0 ? query.slice(hash + 1) : query;
+
+  const graph = loadUnifiedGraph(loc);
+  const matchedIds: string[] = [];
+  for (const id of [...graph.nodes.keys()].sort()) {
+    if (!id.startsWith('element:')) continue;
+    const rest = id.slice('element:'.length);
+    const sep = rest.indexOf('#');
+    if (sep < 0) continue;
+    const filePath = rest.slice(0, sep);
+    const elementName = rest.slice(sep + 1);
+    if (elementName !== wantedName) continue;
+    if (wantedPath !== null && filePath !== wantedPath) continue;
+    matchedIds.push(id);
   }
-  return { found: true, name, bytes: fs.readFileSync(resolved) };
-}
 
-// ---------------------------------------------------------------------------
-// neighbors — BFS over graph.json edges (undirected: a concept edge relates its
-// endpoints symmetrically). `kind` filters to one closed edge kind; `depth`
-// bounds the walk. Unknown node id → not-found; no matching edges → node alone.
-// ---------------------------------------------------------------------------
+  if (matchedIds.length === 0) {
+    return { found: false, query, error: `no element matching "${query}" in the insight graph` };
+  }
 
-export function neighbors(
-  mapDir: string,
-  nodeId: string,
-  opts: { kind?: EdgeKind; depth?: number } = {},
-): NeighborsResult {
-  const depth = opts.depth ?? 1;
-  const kind = opts.kind ?? null;
-  const graph = loadGraph(mapDir);
-
-  const empty = (found: boolean, error?: string): NeighborsResult => ({
-    found,
-    node: nodeId,
-    kind,
-    depth,
-    edges: [],
-    nodes: [],
-    ...(error !== undefined ? { error } : {}),
+  const sortedEdges = [...graph.edges.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const matches: ElementMatch[] = matchedIds.map((node) => {
+    const filePath = nodeFilePath(node) ?? '';
+    const name = node.slice(node.indexOf('#') + 1);
+    const connections: ElementConnection[] = [];
+    for (const e of sortedEdges) {
+      if (e.source === node) {
+        connections.push({ edge_type: e.edge_type, other: e.target, direction: 'out', confidence: e.confidence, evidence: e.evidence });
+      } else if (e.target === node) {
+        connections.push({ edge_type: e.edge_type, other: e.source, direction: 'in', confidence: e.confidence, evidence: e.evidence });
+      }
+    }
+    // Rich detail: the owning file entry's Main-players bullet, when present.
+    const entryResult = fileQuery(root, filePath);
+    let description: string | undefined;
+    let pointers: string | undefined;
+    if (entryResult.found && entryResult.sections) {
+      const playersSection = entryResult.sections['Main players'];
+      if (playersSection !== undefined) {
+        description = mainPlayers(playersSection).get(name);
+      }
+      if (description !== undefined) {
+        pointers = entryResult.sections['Query pointers'];
+      }
+    }
+    const rich = description !== undefined;
+    return {
+      node,
+      name,
+      file: filePath,
+      rich,
+      ...(description !== undefined ? { description } : {}),
+      connections,
+      ...(pointers !== undefined ? { pointers } : {}),
+    };
   });
 
-  if (!graph) return empty(false, `unknown node id (no graph.json): ${nodeId}`);
-
-  // Known ids: declared nodes plus any edge endpoint (tolerant, §4.10.2).
-  const known = new Set<string>();
-  for (const n of graph.nodes) known.add(n.id);
-  for (const e of graph.edges) {
-    known.add(e.from);
-    known.add(e.to);
-  }
-  if (!known.has(nodeId)) return empty(false, `unknown node id: ${nodeId}`);
-
-  // BFS to `depth`, treating each edge as undirected.
-  const visited = new Set<string>([nodeId]);
-  const walked = new Map<string, GraphEdge>();
-  const edgeKey = (e: GraphEdge): string => `${e.from} ${e.to} ${e.kind}`;
-  let frontier = [nodeId];
-  for (let d = 0; d < depth && frontier.length > 0; d++) {
-    const next: string[] = [];
-    for (const current of frontier) {
-      for (const e of graph.edges) {
-        if (kind !== null && e.kind !== kind) continue;
-        let other: string | null = null;
-        if (e.from === current) other = e.to;
-        else if (e.to === current) other = e.from;
-        if (other === null) continue;
-        walked.set(edgeKey(e), e);
-        if (!visited.has(other)) {
-          visited.add(other);
-          next.push(other);
-        }
-      }
-    }
-    frontier = next;
-  }
-
-  const reached = [...visited].filter((id) => id !== nodeId).sort((a, b) => a.localeCompare(b));
-  const edges = [...walked.values()].sort(
-    (a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to) || a.kind.localeCompare(b.kind),
-  );
-  return { found: true, node: nodeId, kind, depth, edges, nodes: reached };
+  return { found: true, query, matches };
 }
-
-// ---------------------------------------------------------------------------
-// list — every prose file and every cluster.
-// ---------------------------------------------------------------------------
-
-export function listInsight(mapDir: string): ListResult {
-  const files = proseFiles(mapDir);
-  const clustersFile = loadClusters(mapDir);
-  const clusters: ClusterHit[] = clustersFile
-    ? clustersFile.clusters
-        .map((c) => ({ id: c.id, label: c.label }))
-        .sort((a, b) => a.id.localeCompare(b.id))
-    : [];
-  return { files, clusters };
-}
-
-/** Re-export so the CLI can validate `--kind` against the closed enum. */
-export { EDGE_KINDS };
-export type { EdgeKind };

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "3.0",
+  "generated": "2026-07-07T14:05:00Z",
+  "built_at_commit": "9f2c1ab",
+  "nodes": [
+    {
+      "id": "element:src/util/log.ts#log",
+      "kind": "element",
+      "label": "log"
+    },
+    {
+      "id": "file:src/util/log.ts",
+      "kind": "file",
+      "label": "log.ts"
+    }
+  ],
+  "edges": []
+}

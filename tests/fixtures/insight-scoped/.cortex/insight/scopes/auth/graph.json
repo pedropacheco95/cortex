@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "3.0",
+  "generated": "2026-07-07T14:05:00Z",
+  "built_at_commit": "9f2c1ab",
+  "nodes": [
+    {
+      "id": "concept:session-rotation",
+      "kind": "concept",
+      "label": "session rotation"
+    },
+    {
+      "id": "element:src/auth/session.ts#validateToken",
+      "kind": "element",
+      "label": "validateToken"
+    },
+    {
+      "id": "file:src/auth/session.ts",
+      "kind": "file",
+      "label": "session.ts"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:implements-concept:file:src/auth/session.ts->concept:session-rotation",
+      "source": "file:src/auth/session.ts",
+      "target": "concept:session-rotation",
+      "edge_type": "implements-concept",
+      "confidence": "stated",
+      "evidence": "session.ts owns the refresh flow that rotates a session token near expiry",
+      "confirmed_at_commit": "9f2c1ab"
+    }
+  ]
+}

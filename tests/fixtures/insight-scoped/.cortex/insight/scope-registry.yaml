@@ -1,0 +1,12 @@
+schemaVersion: "3.0"
+built_at_commit: 9f2c1ab
+scopes:
+  auth:
+    path: src/auth
+    depends_on:
+      - util
+  util:
+    path: src/util
+    depends_on: []
+    shared_by:
+      - auth

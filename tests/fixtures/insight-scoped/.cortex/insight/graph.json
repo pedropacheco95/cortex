@@ -14,16 +14,6 @@
       "label": "authorization"
     },
     {
-      "id": "element:src/auth/session.ts#validateToken",
-      "kind": "element",
-      "label": "validateToken"
-    },
-    {
-      "id": "element:src/util/log.ts#log",
-      "kind": "element",
-      "label": "log"
-    },
-    {
       "id": "file:src/auth/session.ts",
       "kind": "file",
       "label": "session.ts"
@@ -41,7 +31,7 @@
       "target": "element:src/util/log.ts#log",
       "edge_type": "calls",
       "confidence": "structural",
-      "evidence": "L1 tree-sitter parse: validateToken calls log on every auth decision",
+      "evidence": "L1 tree-sitter parse: validateToken calls log on every auth decision (cross-scope)",
       "confirmed_at_commit": "9f2c1ab"
     },
     {
@@ -68,7 +58,7 @@
       "target": "file:src/util/log.ts",
       "edge_type": "imports",
       "confidence": "structural",
-      "evidence": "L1 tree-sitter parse: session.ts imports log from src/util/log.ts",
+      "evidence": "L1 tree-sitter parse: session.ts imports log from src/util/log.ts (cross-scope)",
       "confirmed_at_commit": "9f2c1ab"
     }
   ]
