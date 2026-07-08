@@ -11,7 +11,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { pulseDismissedTemplate } from '../cli/templates.js';
-import { openingFence, closesFence, headingLinesOutsideFences } from './fences.js';
+import { openingFence, closesFence, headingLinesOutsideFences, type FenceOpen } from './fences.js';
+import {
+  DEFAULT_SUGGESTION_TYPE,
+  isSuggestionType,
+  permittedRoots,
+  permittedRootsLabel,
+  type SuggestionType,
+} from './types.js';
+import { planPromotion } from './promote.js';
 
 const DEFAULT_DISMISSED_WINDOW_DAYS = 90;
 
@@ -27,14 +35,25 @@ const CEREBRUM_CORE_FILES = new Set([
 
 type Status = 'pending' | 'accepted' | 'rejected';
 
+/** The payload operation shape parsed from a section (§4.5.2). */
+type PayloadKind = 'addition' | 'file' | 'edit';
+
 interface Suggestion {
   id: string;
   title: string;
+  /** `**Type:**` value (§4.5.1); absent → rule-candidate (v1-era tolerance). */
+  type: SuggestionType;
   /** `**Source:**` provenance line (§4.5 mandatory field; shown by pulse-list). */
   source: string | null;
   target: string | null;
-  /** Verbatim fenced-block content (no fences, no trailing newline). */
+  /** Which of the three payload shapes the section carries (null → malformed). */
+  payloadKind: PayloadKind | null;
+  /** Verbatim fenced-block content for addition/file (no fences, no trailing newline). */
   block: string | null;
+  /** Edit payload — the `current:` block to match byte-exact (§4.5.2). */
+  current: string | null;
+  /** Edit payload — the `replacement:` block. */
+  replacement: string | null;
   status: Status;
   headingLine: number;
   /** Exclusive end (index of the next `## ` heading, or lines.length). */
@@ -44,10 +63,53 @@ interface Suggestion {
 }
 
 const HEADING_RE = /^##\s+(S-\d{3,})\s*:?\s*(.*)$/;
+const TYPE_RE = /^\*\*Type:\*\*\s*(.*)$/;
 const SOURCE_RE = /^\*\*Source:\*\*\s*(.*)$/;
 const TARGET_RE = /^\*\*Target:\*\*\s*(.*)$/;
 const STATUS_RE = /^\*\*Status:\*\*\s*(.*)$/;
-const PROPOSED_RE = /^\*\*Proposed addition:\*\*/;
+const PROPOSED_ADDITION_RE = /^\*\*Proposed addition:\*\*/;
+const PROPOSED_FILE_RE = /^\*\*Proposed file:\*\*/;
+const PROPOSED_EDIT_RE = /^\*\*Proposed edit:\*\*/;
+const CURRENT_LABEL_RE = /^\s*current:\s*$/;
+const REPLACEMENT_LABEL_RE = /^\s*replacement:\s*$/;
+
+/**
+ * Extract the first fenced block at/after `fromIdx` within `[fromIdx, endLine)`,
+ * honouring the §4.5 longer-fence grammar (B-003): the block closes only on a
+ * fence of the same character and at least the opening length, so shorter inner
+ * fences round-trip byte-exact. Returns the body (no fences) and the closing
+ * line index, or null when no complete block is present.
+ */
+function extractFencedBlock(
+  lines: string[],
+  fromIdx: number,
+  endLine: number,
+): { block: string; closeIdx: number } | null {
+  let openIdx = -1;
+  let open: FenceOpen | null = null;
+  for (let j = fromIdx; j < endLine; j++) {
+    const cand = lines[j];
+    if (cand === undefined) continue;
+    open = openingFence(cand);
+    if (open !== null) {
+      openIdx = j;
+      break;
+    }
+  }
+  if (openIdx < 0 || open === null) return null;
+  const body: string[] = [];
+  let closeIdx = -1;
+  for (let j = openIdx + 1; j < endLine; j++) {
+    const cand = lines[j];
+    if (cand !== undefined && closesFence(cand, open)) {
+      closeIdx = j;
+      break;
+    }
+    body.push(cand ?? '');
+  }
+  if (closeIdx < 0) return null;
+  return { block: body.join('\n'), closeIdx };
+}
 
 /**
  * Split `## S-NNN` section content out of a markdown file's lines.
@@ -71,16 +133,31 @@ export function parseSuggestions(lines: string[]): Suggestion[] {
     const id = match[1] as string;
     const title = (match[2] ?? '').trim();
 
+    let type: SuggestionType = DEFAULT_SUGGESTION_TYPE;
+    let typeSeen = false;
     let source: string | null = null;
     let target: string | null = null;
     let targetLine: number | null = null;
     let status: Status = 'pending';
     let statusLine: number | null = null;
+    let payloadKind: PayloadKind | null = null;
     let block: string | null = null;
+    let current: string | null = null;
+    let replacement: string | null = null;
+    let payloadCount = 0;
 
     for (let i = headingLine + 1; i < endLine; i++) {
       const line = lines[i];
       if (line === undefined) continue;
+
+      const typeMatch = line.match(TYPE_RE);
+      if (typeMatch && !typeSeen) {
+        typeSeen = true;
+        const value = (typeMatch[1] ?? '').trim();
+        // Unknown value stays the tolerant default (validator errors on it, §4.5.1).
+        if (isSuggestionType(value)) type = value;
+        continue;
+      }
 
       const srcMatch = line.match(SOURCE_RE);
       if (srcMatch && source === null) {
@@ -103,44 +180,81 @@ export function parseSuggestions(lines: string[]): Suggestion[] {
         continue;
       }
 
-      if (PROPOSED_RE.test(line) && block === null) {
-        // Scan forward (within the section) for the opening fence.
-        let openIdx = -1;
-        let open: ReturnType<typeof openingFence> = null;
-        for (let j = i; j < endLine; j++) {
-          const cand = lines[j];
-          if (cand === undefined) continue;
-          open = openingFence(cand);
-          if (open !== null) {
-            openIdx = j;
-            break;
-          }
-        }
-        if (openIdx >= 0 && open !== null) {
-          // §4.5 fence grammar (B-003): close ONLY on a fence of the same
-          // character and at least the opening length — shorter inner fences
-          // are payload, extracted byte-exact.
-          const body: string[] = [];
-          let closeIdx = -1;
-          for (let j = openIdx + 1; j < endLine; j++) {
-            const cand = lines[j];
-            if (cand !== undefined && closesFence(cand, open)) {
-              closeIdx = j;
-              break;
+      // Payload shapes (§4.5.2): exactly one per section. A second marker outside
+      // the first payload's fence makes the section ambiguous → malformed.
+      const isAddition = PROPOSED_ADDITION_RE.test(line);
+      const isFile = PROPOSED_FILE_RE.test(line);
+      const isEdit = PROPOSED_EDIT_RE.test(line);
+      if (isAddition || isFile || isEdit) {
+        payloadCount++;
+        if (payloadKind === null) {
+          if (isEdit) {
+            // Edit payload: a `current:` fenced block then a `replacement:` one.
+            let ci = -1;
+            for (let j = i + 1; j < endLine; j++) {
+              if (CURRENT_LABEL_RE.test(lines[j] ?? '')) {
+                ci = j;
+                break;
+              }
             }
-            body.push(cand ?? '');
-          }
-          if (closeIdx >= 0) {
-            block = body.join('\n');
-            // Skip past the payload so its lines are never mistaken for
-            // section field lines (Target/Status inside a payload is payload).
-            i = closeIdx;
+            if (ci >= 0) {
+              const cur = extractFencedBlock(lines, ci + 1, endLine);
+              if (cur !== null) {
+                let ri = -1;
+                for (let j = cur.closeIdx + 1; j < endLine; j++) {
+                  if (REPLACEMENT_LABEL_RE.test(lines[j] ?? '')) {
+                    ri = j;
+                    break;
+                  }
+                }
+                if (ri >= 0) {
+                  const rep = extractFencedBlock(lines, ri + 1, endLine);
+                  if (rep !== null) {
+                    current = cur.block;
+                    replacement = rep.block;
+                    payloadKind = 'edit';
+                    i = rep.closeIdx; // skip past both blocks
+                  }
+                }
+              }
+            }
+          } else {
+            const extracted = extractFencedBlock(lines, i, endLine);
+            if (extracted !== null) {
+              block = extracted.block;
+              payloadKind = isAddition ? 'addition' : 'file';
+              i = extracted.closeIdx; // skip past the payload
+            }
           }
         }
+        continue;
       }
     }
 
-    suggestions.push({ id, title, source, target, block, status, headingLine, endLine, targetLine, statusLine });
+    // >1 payload shape is malformed (§4.5.2 "exactly one"): drop to null.
+    if (payloadCount > 1) {
+      payloadKind = null;
+      block = null;
+      current = null;
+      replacement = null;
+    }
+
+    suggestions.push({
+      id,
+      title,
+      type,
+      source,
+      target,
+      payloadKind,
+      block,
+      current,
+      replacement,
+      status,
+      headingLine,
+      endLine,
+      targetLine,
+      statusLine,
+    });
   }
   return suggestions;
 }
@@ -237,14 +351,33 @@ function readDismissedWindowDays(root: string): number {
   return DEFAULT_DISMISSED_WINDOW_DAYS;
 }
 
-/** True iff `target` (project-relative) resolves strictly inside `.cortex/cerebrum/`. */
-function isInsideCerebrum(root: string, target: string): boolean {
-  if (path.isAbsolute(target)) return false;
-  const cerebrumRoot = path.resolve(root, '.cortex', 'cerebrum');
-  const resolved = path.resolve(root, target);
-  const rel = path.relative(cerebrumRoot, resolved);
+/** True iff `resolved` sits strictly inside directory `baseAbs` (no `..` escape). */
+function isInsideDir(baseAbs: string, resolved: string): boolean {
+  const rel = path.relative(baseAbs, resolved);
   if (rel === '') return false; // the directory itself is not a writable target
   return !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+/**
+ * Runtime target guard (Rule 2/§4.5.1): resolve `target` and require it to land
+ * inside one of the permitted roots FOR ITS TYPE — the fs-resolution counterpart
+ * of the validator's string `isTargetPermitted`, off the same `permittedRoots`
+ * table, so `..` escapes are caught (a path may pass the string prefix yet
+ * resolve out of the subtree).
+ */
+function targetResolvesSafely(root: string, type: SuggestionType, target: string): boolean {
+  if (path.isAbsolute(target)) return false;
+  const resolved = path.resolve(root, target);
+  for (const spec of permittedRoots(type)) {
+    if (spec.kind === 'dir') {
+      if (isInsideDir(path.resolve(root, spec.prefix), resolved)) return true;
+    } else if (spec.kind === 'file') {
+      if (resolved === path.resolve(root, spec.path)) return true;
+    } else if (spec.kind === 'skill') {
+      if (skillTargetName(root, target) !== null) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -282,13 +415,37 @@ function appendBlock(existing: string, block: string): string {
   return existing.replace(/\n+$/, '') + '\n\n' + block;
 }
 
+/** Count byte-exact, non-overlapping occurrences of `needle` in `hay` (§4.5.2 edit). */
+function countOccurrences(hay: string, needle: string): number {
+  if (needle === '') return 0;
+  let count = 0;
+  let idx = hay.indexOf(needle);
+  while (idx !== -1) {
+    count++;
+    idx = hay.indexOf(needle, idx + needle.length);
+  }
+  return count;
+}
+
 function printSuggestion(s: Suggestion): void {
   console.log(`${s.id}: ${s.title}`);
+  console.log(`  Type: ${s.type}`);
   if (s.source !== null) console.log(`  Source: ${s.source}`);
   console.log(`  Target: ${s.target}`);
-  console.log('  Proposed addition:');
-  for (const line of (s.block ?? '').split('\n')) console.log(`    ${line}`);
+  if (s.payloadKind === 'edit') {
+    console.log('  Proposed edit (current → replacement):');
+    for (const line of (s.current ?? '').split('\n')) console.log(`    - ${line}`);
+    for (const line of (s.replacement ?? '').split('\n')) console.log(`    + ${line}`);
+  } else {
+    console.log(s.payloadKind === 'file' ? '  Proposed file:' : '  Proposed addition:');
+    for (const line of (s.block ?? '').split('\n')) console.log(`    ${line}`);
+  }
   console.log('');
+}
+
+/** A section is applicable only with a target and a well-formed payload. */
+function hasPayload(s: Suggestion): boolean {
+  return s.payloadKind !== null;
 }
 
 export async function pulseCli(command: string, argv: string[], root = '.'): Promise<number> {
@@ -312,8 +469,8 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
 
     let printed = 0;
     for (const s of suggestions) {
-      if (s.target === null || s.block === null) {
-        console.error(`Skipping malformed suggestion ${s.id}: missing Target or proposed block.`);
+      if (s.target === null || !hasPayload(s)) {
+        console.error(`Skipping malformed suggestion ${s.id}: missing Target or proposed payload.`);
         continue;
       }
       if (s.status === 'accepted' || s.status === 'rejected') continue;
@@ -361,48 +518,132 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
       console.error(`${id} was rejected; a decision reversal is a manual edit, not a CLI action.`);
       return 1;
     }
-    // Malformed addressed entry (Rule 7): cannot apply without a target and block.
-    if (suggestion.target === null || suggestion.block === null) {
-      console.error(`Suggestion ${id} is malformed (missing Target or proposed block); cannot accept.`);
+    // Malformed addressed entry (Rule 7): cannot apply without a target + payload.
+    if (suggestion.target === null || !hasPayload(suggestion)) {
+      console.error(`Suggestion ${id} is malformed (missing Target or proposed payload); cannot accept.`);
       return 1;
     }
-    // Target roots (Rule 4): inside .cortex/cerebrum/ or a NEW .claude/skills/<name>/SKILL.md.
-    const skillName = skillTargetName(root, suggestion.target);
-    if (!isInsideCerebrum(root, suggestion.target) && skillName === null) {
+    const target = suggestion.target;
+    const targetAbs = path.resolve(root, target);
+
+    // --- Skill path (shape-based, type-agnostic — preserves v1 tolerance for
+    //     legacy untyped skill suggestions). A skill target is always a create;
+    //     accept never overwrites an existing skill (§4.5.1). ---
+    const skillName = skillTargetName(root, target);
+    if (skillName !== null) {
+      if (fs.existsSync(targetAbs)) {
+        console.error(`Refusing existing skill file (accept never overwrites a skill): ${target}`);
+        return 1;
+      }
+      if (suggestion.block === null) {
+        console.error(`Suggestion ${id} targets a skill but carries no create payload; cannot accept.`);
+        return 1;
+      }
+      const nextSource = annotateStatus(sourceLines, suggestion, 'accepted').join('\n');
+      fs.mkdirSync(path.dirname(targetAbs), { recursive: true });
+      fs.writeFileSync(targetAbs, suggestion.block, 'utf-8');
+      fs.writeFileSync(suggestion.file, nextSource, 'utf-8');
+      console.log(`Accepted ${id}: created ${target}.`);
+      return 0;
+    }
+
+    // --- Type-permitted target root (§4.5.1), resolved for `..`-escape safety. ---
+    if (!targetResolvesSafely(root, suggestion.type, target)) {
       console.error(
-        `Refusing target outside .cortex/cerebrum/ (or a new .claude/skills/<name>/SKILL.md): ${suggestion.target}`,
+        `Refusing target outside the permitted root for type "${suggestion.type}" (${permittedRootsLabel(suggestion.type)}): ${target}`,
       );
       return 1;
     }
-    const targetAbs = path.resolve(root, suggestion.target);
-    if (skillName !== null) {
-      // Rule 4: accept never overwrites a skill — an existing target is refused.
-      if (fs.existsSync(targetAbs)) {
-        console.error(`Refusing existing skill file (accept never overwrites a skill): ${suggestion.target}`);
+
+    // Compute EVERYTHING before the first write (Rule 6: transactional accept).
+    const exists = fs.existsSync(targetAbs);
+    const existing = exists ? fs.readFileSync(targetAbs, 'utf-8') : '';
+
+    // Clobber / existence gates per payload shape (§4.5.2).
+    if (suggestion.payloadKind === 'file') {
+      if (exists) {
+        console.error(`Refusing to overwrite existing file (create): ${target}. Nothing changed.`);
         return 1;
       }
-    } else {
+    } else if (suggestion.payloadKind === 'addition') {
+      // Append requires the target to exist, except a cerebrum core file (created).
       const cerebrumRoot = path.resolve(root, '.cortex', 'cerebrum');
       const relFromCerebrum = path.relative(cerebrumRoot, targetAbs);
       const isCore = CEREBRUM_CORE_FILES.has(relFromCerebrum);
-      if (!fs.existsSync(targetAbs) && !isCore) {
-        console.error(`Target file does not exist: ${suggestion.target}`);
+      if (!exists && !isCore) {
+        console.error(`Target file does not exist: ${target}`);
+        return 1;
+      }
+    } else if (suggestion.payloadKind === 'edit') {
+      if (!exists) {
+        console.error(`Target file does not exist: ${target}`);
         return 1;
       }
     }
 
-    // Compute everything before touching disk (Rule 7: never half-applied).
-    const existing = fs.existsSync(targetAbs) ? fs.readFileSync(targetAbs, 'utf-8') : '';
-    const nextTarget = appendBlock(existing, suggestion.block);
+    // Compute the landed target content per shape. For an edit, validate the
+    // byte-exact single-occurrence match BEFORE deciding to write (§4.5.2).
+    let nextTarget: string;
+    let opWord: string;
+    if (suggestion.payloadKind === 'edit') {
+      const current = suggestion.current ?? '';
+      const replacement = suggestion.replacement ?? '';
+      const occurrences = countOccurrences(existing, current);
+      if (occurrences === 0) {
+        console.error(
+          `Refusing edit ${id}: the current: block does not match ${target} byte-exact (the target drifted). Nothing changed.`,
+        );
+        return 1;
+      }
+      if (occurrences > 1) {
+        console.error(
+          `Refusing edit ${id}: the current: block matches ${occurrences} occurrences in ${target} (ambiguous). Nothing changed.`,
+        );
+        return 1;
+      }
+      const at = existing.indexOf(current);
+      nextTarget = existing.slice(0, at) + replacement + existing.slice(at + current.length);
+      opWord = 'edited';
+    } else {
+      // addition | file (block guaranteed non-null when payloadKind is set).
+      const block = suggestion.block ?? '';
+      nextTarget = suggestion.payloadKind === 'file' ? block : appendBlock(existing, block);
+      opWord = suggestion.payloadKind === 'file' ? 'created' : 'appended to';
+    }
+
+    // Promotion side-effects (§4.10.4): the gated write carries a `source:`
+    // back-reference; the insight original is marked promoted (never deleted).
+    // A missing insight source is a transactional refusal (nothing written).
+    let insightWrite: { abs: string; content: string } | null = null;
+    if (suggestion.type === 'promotion') {
+      const plan = planPromotion({
+        root,
+        suggestionId: id,
+        targetRel: target,
+        isCreate: suggestion.payloadKind === 'file',
+        block: suggestion.block ?? '',
+        existingTarget: existing,
+        sourceField: suggestion.source,
+      });
+      if (!plan.ok) {
+        console.error(`Refusing ${plan.error}`);
+        return 1;
+      }
+      nextTarget = plan.landedContent;
+      insightWrite = { abs: plan.insightAbs, content: plan.nextInsight };
+    }
+
     const nextSource = annotateStatus(sourceLines, suggestion, 'accepted').join('\n');
 
+    // All computed — now write the (small) blast radius (Rule 7).
     fs.mkdirSync(path.dirname(targetAbs), { recursive: true });
     fs.writeFileSync(targetAbs, nextTarget, 'utf-8');
+    if (insightWrite !== null) fs.writeFileSync(insightWrite.abs, insightWrite.content, 'utf-8');
     fs.writeFileSync(suggestion.file, nextSource, 'utf-8');
     console.log(
-      skillName !== null
-        ? `Accepted ${id}: created ${suggestion.target}.`
-        : `Accepted ${id}: appended to ${suggestion.target}.`,
+      insightWrite !== null
+        ? `Accepted ${id}: promoted to ${target}, marked the insight original.`
+        : `Accepted ${id}: ${opWord} ${target}.`,
     );
     return 0;
   }
@@ -417,8 +658,8 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
     return 1;
   }
   // Malformed addressed entry (Rules 1 & 7): reported, never half-applied.
-  if (suggestion.target === null || suggestion.block === null) {
-    console.error(`Suggestion ${id} is malformed (missing Target or proposed block); cannot reject.`);
+  if (suggestion.target === null || !hasPayload(suggestion)) {
+    console.error(`Suggestion ${id} is malformed (missing Target or proposed payload); cannot reject.`);
     return 1;
   }
 
