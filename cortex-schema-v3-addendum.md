@@ -1,3 +1,5 @@
+> **Folded into `cortex-schema.md` at build-order-v3 step 1 — see git history for the fold-in commit.** This file remains as the historical record of the v3.0 delta; it is not further modified.
+
 # Cortex Schema — v3.0 Addendum (the §10.1 clauses, drafted as contract text)
 
 **Addendum version:** `3.0` (the deltas). **Target contract:** `cortex-schema.md` v2.0.
