@@ -1,8 +1,8 @@
 ---
 name: specflow-onboard-codebase
 description: >
-  Reverse-engineer a two-layer spec tree (developer specs in specs/ plus business specs in
-  specs-business/, with _overview.md in every folder of both trees) from an existing codebase.
+  Reverse-engineer a two-layer spec tree (developer specs in .specflow/specs/ plus business specs in
+  .specflow/specs-business/, with _overview.md in every folder of both trees) from an existing codebase.
   Uses bottom-up atom extraction with delegated agents for deep code investigation,
   relationship graphing for deterministic domain discovery, adversarial investigation before
   any bug classification, and a verification pass against the completed specs. Use this skill
@@ -20,10 +20,10 @@ Turn an existing codebase into a spec-managed project. Read code, extract what t
 
 Two parallel spec trees, bidirectionally linked, plus folder overviews:
 
-- `specs/` — developer specs with entity references (READS/WRITES), rules, Given/When/Then
+- `.specflow/specs/` — developer specs with entity references (READS/WRITES), rules, Given/When/Then
   criteria. Specs reference entities by name but do not define schemas — the model/migration
   is the single source of truth for field definitions.
-- `specs-business/` — business specs with outcomes, journeys, business rules, success
+- `.specflow/specs-business/` — business specs with outcomes, journeys, business rules, success
   metrics. Organized in domain subfolders. Filenames are journey-oriented, starting with the
   persona (`user-fills-dynamic-form.business.md`, not `form-submission.business.md`).
 - `_overview.md` in every folder of both trees
@@ -171,7 +171,7 @@ Deterministic rules:
 - **Granularity:** One leaf spec per endpoint (backend), per route (frontend), or per
   component with its own significant state management. Workers and jobs are one spec each.
 - **Dependency direction:** The spec that references another spec's entity depends on it.
-- **File naming:** `specs/{domain}/{capability}/{leaf}.spec.md`
+- **File naming:** `.specflow/specs/{domain}/{capability}/{leaf}.spec.md`
 - **Dev spec file names use the leaf name**, not generic `spec.md`.
 
 **Entity references in specs:** Every dev spec has an Entities section listing which
@@ -213,7 +213,7 @@ coherent journeys from the atom graph.
 persona: `user-fills-dynamic-form.business.md`, `coach-manages-schedule.business.md`.
 This forces the author to think from the user's perspective.
 
-**Directory structure:** `specs-business/{domain}/{outcome}.business.md` with `_overview.md`
+**Directory structure:** `.specflow/specs-business/{domain}/{outcome}.business.md` with `_overview.md`
 in every domain folder. Business specs are NOT flat at root — they are organized in domain
 subfolders.
 
@@ -354,7 +354,7 @@ project-root/
 ├── .claude/
 │   ├── skills/{name}/SKILL.md
 │   └── agents/{name}.md
-├── specs/
+├── .specflow/specs/
 │   ├── _overview.md
 │   ├── _index.md
 │   └── {domain}/
@@ -362,7 +362,7 @@ project-root/
 │       └── {capability}/
 │           ├── _overview.md
 │           └── {leaf}.spec.md
-└── specs-business/
+└── .specflow/specs-business/
     ├── _overview.md
     └── {domain}/
         ├── _overview.md

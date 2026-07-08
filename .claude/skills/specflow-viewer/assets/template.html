@@ -1258,7 +1258,7 @@ function renderSpec(spec) {
     sections.push(`<div class="spec-section"><h2>Notes</h2>${notes}${openQs}</div>`);
   }
 
-  const sourcePrefix = spec.tree === "business" ? "specs-business/" : "specs/";
+  const sourcePrefix = spec.tree === "business" ? ".specflow/specs-business/" : ".specflow/specs/";
   return `
     <div class="spec-header">
       <div class="breadcrumb">${breadcrumb}</div>

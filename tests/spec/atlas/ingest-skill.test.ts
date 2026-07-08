@@ -118,7 +118,7 @@ describe('cortex validate command works', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       fs.cpSync(VALID_FIXTURE, dir, { recursive: true });
-      const specPath = path.join(dir, 'specs', 'schema', 'validator.spec.md');
+      const specPath = path.join(dir, '.specflow', 'specs', 'schema', 'validator.spec.md');
       const broken = fs
         .readFileSync(specPath, 'utf-8')
         .replace(

@@ -226,9 +226,9 @@ describe('check (e): spec/anatomy orphans', () => {
   it('flags a dev spec whose governs matches nothing; governed and governs-less specs are silent', async () => {
     const root = tmp('spec-orphans');
     writeAt(root, 'src/app.ts', 'export {};\n');
-    writeAt(root, 'specs/a/orphan.spec.md', specMd('a.orphan', ['src/nothing/**/*.ts']));
-    writeAt(root, 'specs/a/governed.spec.md', specMd('a.governed', ['src/**/*.ts']));
-    writeAt(root, 'specs/a/nogoverns.spec.md', specMd('a.nogoverns'));
+    writeAt(root, '.specflow/specs/a/orphan.spec.md', specMd('a.orphan', ['src/nothing/**/*.ts']));
+    writeAt(root, '.specflow/specs/a/governed.spec.md', specMd('a.governed', ['src/**/*.ts']));
+    writeAt(root, '.specflow/specs/a/nogoverns.spec.md', specMd('a.nogoverns'));
     const section = await checkSpecOrphans(root);
     expect(section.findings).toHaveLength(1);
     expect(section.findings[0]).toContain('a.orphan');

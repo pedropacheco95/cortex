@@ -1,10 +1,10 @@
 # Developer Spec File Schema
 
-Every developer-spec node is a markdown file under `specs/`. The schema varies slightly
+Every developer-spec node is a markdown file under `.specflow/specs/`. The schema varies slightly
 by level (domain, capability, leaf), but all share the same structure. Only leaf specs
 are directly implementable.
 
-For business-facing specs (under `specs-business/`), see `business-spec-template.md`.
+For business-facing specs (under `.specflow/specs-business/`), see `business-spec-template.md`.
 For folder overview docs (`_overview.md` in every directory), see `folder-overview-template.md`.
 
 ## Frontmatter (all developer specs)
@@ -156,4 +156,4 @@ depends_on:
    different behaviors, split it.
 8. **Rules are numbered.** This makes them easy to reference in code comments and tests.
 9. **Every leaf has `implements:` set.** A leaf with no business-spec parent is a smell.
-10. **File naming:** `specs/{domain}/{capability}/{leaf}.spec.md` — no subfolder per leaf.
+10. **File naming:** `.specflow/specs/{domain}/{capability}/{leaf}.spec.md` — no subfolder per leaf.

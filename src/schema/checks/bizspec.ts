@@ -1,14 +1,14 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import matter from 'gray-matter';
 import fg from 'fast-glob';
 import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
 import { resolveRelativePath } from '../index-build.js';
+import { businessRoot } from '../../paths.js';
 
 export async function checkBizSpecs(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
-  const bizDir = path.join(root, 'specs-business');
+  const bizDir = businessRoot(root);
 
   if (!fs.existsSync(bizDir)) return violations;
 
@@ -71,7 +71,7 @@ export async function checkBizSpecs(root: string, index: ProjectIndex): Promise<
  */
 export async function checkBusinessStatus(root: string): Promise<Violation[]> {
   const violations: Violation[] = [];
-  const bizDir = path.join(root, 'specs-business');
+  const bizDir = businessRoot(root);
 
   if (!fs.existsSync(bizDir)) return violations;
 

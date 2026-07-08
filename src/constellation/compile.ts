@@ -18,6 +18,7 @@ import fg from 'fast-glob';
 import matter from 'gray-matter';
 import picomatch from 'picomatch';
 import { splitDataRowCells } from '../anatomy/files-md.js';
+import { specsRoot, businessRoot, SPECS_GLOB, BUSINESS_GLOB } from '../paths.js';
 
 export interface ConstellationGroupChild {
   id: string;
@@ -330,12 +331,12 @@ export async function compile(root: string): Promise<Constellation> {
   const bizSpecs: SpecArtefact[] = [];
   const specDomains = new Set<string>();
 
-  const devFiles = await fg('specs/**/*.spec.md', { cwd: absRoot, absolute: true });
+  const devFiles = await fg(SPECS_GLOB, { cwd: absRoot, absolute: true });
   for (const file of devFiles.sort()) {
     const data = readFrontmatter(file);
     const id = data?.['id'];
     if (!data || typeof id !== 'string' || !id) continue;
-    const rel = path.relative(path.join(absRoot, 'specs'), file).replace(/\\/g, '/');
+    const rel = path.relative(specsRoot(absRoot), file).replace(/\\/g, '/');
     const domain = rel.includes('/') ? (rel.split('/')[0] as string) : '(root)';
     const nodeId = `spec:${id}`;
     if (addNode({ id: nodeId, module: 'spec-dev', label: id, group: `specs:${domain}`, ref: id }, file)) {
@@ -344,12 +345,12 @@ export async function compile(root: string): Promise<Constellation> {
     }
   }
 
-  const bizFiles = await fg('specs-business/**/*.business.md', { cwd: absRoot, absolute: true });
+  const bizFiles = await fg(BUSINESS_GLOB, { cwd: absRoot, absolute: true });
   for (const file of bizFiles.sort()) {
     const data = readFrontmatter(file);
     const id = data?.['id'];
     if (!data || typeof id !== 'string' || !id) continue;
-    const rel = path.relative(path.join(absRoot, 'specs-business'), file).replace(/\\/g, '/');
+    const rel = path.relative(businessRoot(absRoot), file).replace(/\\/g, '/');
     const domain = rel.includes('/') ? (rel.split('/')[0] as string) : '(root)';
     const nodeId = `business:${id}`;
     if (addNode({ id: nodeId, module: 'spec-business', label: id, group: `specs:${domain}`, ref: id }, file)) {

@@ -1,6 +1,6 @@
 ---
 name: specflow-viewer
-description: Generate a polished, self-contained HTML page (`specs.html`) for browsing a Specflow project's two-layer spec tree — both the developer specs under `specs/` and the high-level business specs under `specs-business/`, plus the per-folder `_overview.md` docs that explain each group, all parsed and rendered as a client-facing site with a Business⇄Developer toggle, sidebar tree (folders surface their first-sentence summary as a subtitle, click a folder to read its overview), search across spec content AND folder overviews, cross-link sections (Implements / Implemented by) between the two layers, an "Unmapped" badge on dev specs missing an `implements:` link to a business spec, acceptance-criteria cards, dependency chips, and an optional test-status overlay. Use this skill PROACTIVELY whenever the user wants to show, present, export, publish, share, or hand off Specflow specs in a browsable format — including phrasings like "generate the spec viewer", "build the spec page", "make the HTML specs", "render the spec tree", "export specs as HTML", "spec browser", "spec dashboard", "show the business specs", "show the stakeholder view", "client-facing specs", "show the folder overviews", "where are the unmapped specs", "show the business/dev split", or any request to surface the mapping between business outcomes and developer implementation. Also trigger whenever the user mentions showing specs to a client, stakeholder, partner, PM, designer, or other non-developer audience in a Specflow project, or when they want to render `_overview.md` group descriptions in a browsable form. If the user mentions specs AND any of {show, present, export, publish, share, render, browse, deliver, ship, hand off, business specs, stakeholder view, folder overview, mapping, unmapped, coverage}, reach for this skill rather than writing custom HTML by hand.
+description: Generate a polished, self-contained HTML page (`specs.html`) for browsing a Specflow project's two-layer spec tree — both the developer specs under `.specflow/specs/` and the high-level business specs under `.specflow/specs-business/`, plus the per-folder `_overview.md` docs that explain each group, all parsed and rendered as a client-facing site with a Business⇄Developer toggle, sidebar tree (folders surface their first-sentence summary as a subtitle, click a folder to read its overview), search across spec content AND folder overviews, cross-link sections (Implements / Implemented by) between the two layers, an "Unmapped" badge on dev specs missing an `implements:` link to a business spec, acceptance-criteria cards, dependency chips, and an optional test-status overlay. Use this skill PROACTIVELY whenever the user wants to show, present, export, publish, share, or hand off Specflow specs in a browsable format — including phrasings like "generate the spec viewer", "build the spec page", "make the HTML specs", "render the spec tree", "export specs as HTML", "spec browser", "spec dashboard", "show the business specs", "show the stakeholder view", "client-facing specs", "show the folder overviews", "where are the unmapped specs", "show the business/dev split", or any request to surface the mapping between business outcomes and developer implementation. Also trigger whenever the user mentions showing specs to a client, stakeholder, partner, PM, designer, or other non-developer audience in a Specflow project, or when they want to render `_overview.md` group descriptions in a browsable form. If the user mentions specs AND any of {show, present, export, publish, share, render, browse, deliver, ship, hand off, business specs, stakeholder view, folder overview, mapping, unmapped, coverage}, reach for this skill rather than writing custom HTML by hand.
 ---
 
 # specflow-viewer
@@ -33,7 +33,7 @@ Do NOT use for:
 
 A single file (default: `specs.html` at the project root). Opening it gives the user:
 
-1. **Business⇄Developer toggle** — a prominent header chip / segmented control switches between the two trees. Defaults to **Business** when both are present (clients are the larger audience for the rendered HTML); falls back to Developer if only `specs/` exists.
+1. **Business⇄Developer toggle** — a prominent header chip / segmented control switches between the two trees. Defaults to **Business** when both are present (clients are the larger audience for the rendered HTML); falls back to Developer if only `.specflow/specs/` exists.
 
 2. **Sidebar tree with folder nodes** — the entire directory hierarchy of the active tree is rendered as collapsible nodes:
    - Each **folder** (root, every domain, every capability, any sub-folder) is a clickable node. Clicking it loads that folder's `_overview.md` (preferred) or `README.md` in the right pane. Folders without an overview render a placeholder ("No overview written for this group yet — add `_overview.md`") so the gap is visible.
@@ -69,7 +69,7 @@ Design: light theme default with dark-mode toggle, Inter for UI, Source Serif 4 
 
 ## How to run it
 
-The skill's Python script walks `specs/` (and `specs-business/` if present), parses every Markdown file, and emits the HTML. From the project root:
+The skill's Python script walks `.specflow/specs/` (and `.specflow/specs-business/` if present), parses every Markdown file, and emits the HTML. From the project root:
 
 ```bash
 python3 <skill-path>/scripts/build_viewer.py
@@ -84,7 +84,7 @@ Common flags:
 --test-results <path>    # default: ./test-results.json if present
 --link-map <path>        # default: ./link-map.md if present
 --scenarios <path>       # default: ./tests/scenarios/specs if present
---title "My Project"     # overrides title pulled from specs/_index.md
+--title "My Project"     # overrides title pulled from .specflow/specs/_index.md
 ```
 
 After running, print a short summary covering: dev spec count + status breakdown, folder-overview coverage (`N/M written`), business spec count + status breakdown (or "not present"), unmapped dev-spec count, link-map status, test-results status, and warning count.
@@ -93,7 +93,7 @@ After running, print a short summary covering: dev spec count + status breakdown
 
 ```
 <project-root>/
-├── specs/                          # developer specs (always required)
+├── .specflow/specs/                          # developer specs (always required)
 │   ├── _index.md                   # project index, tooling manifest, domain tree
 │   ├── _overview.md                # root-level prose overview (sibling to _index.md)
 │   ├── <domain>/
@@ -102,7 +102,7 @@ After running, print a short summary covering: dev spec count + status breakdown
 │   │       ├── _overview.md        # capability-level overview
 │   │       └── <leaf>.spec.md      # leaf spec (frontmatter: implements: biz.x)
 │   └── ...
-├── specs-business/                 # business specs (OPTIONAL — surfaces stakeholder view)
+├── .specflow/specs-business/                 # business specs (OPTIONAL — surfaces stakeholder view)
 │   ├── _overview.md                # what the business spec tree is about
 │   ├── <domain>/
 │   │   ├── _overview.md
@@ -112,7 +112,7 @@ After running, print a short summary covering: dev spec count + status breakdown
 ├── test-results.json               # OPTIONAL — see test-results schema in references/
 └── tests/
     └── scenarios/
-        └── specs/                  # OPTIONAL — scenario spec markdown files for coverage
+        └── .specflow/specs/                  # OPTIONAL — scenario spec markdown files for coverage
 ```
 
 `_index.md` and `_overview.md` are distinct at the tree root: `_index.md` is the engineering manifest (tooling, domain tree, status counts) and is parsed for project metadata; `_overview.md` is the human-readable prose explaining what the tree contains. Both can coexist; the viewer renders them in different places (dashboard vs root-folder pane). The viewer never double-renders the same content.
@@ -173,7 +173,7 @@ See `references/spec-parsing.md` for the exact parser contract and edge cases.
 
 ## Folder overview format
 
-`_overview.md` (or `README.md`) in any directory under `specs/` or `specs-business/`:
+`_overview.md` (or `README.md`) in any directory under `.specflow/specs/` or `.specflow/specs-business/`:
 
 ```markdown
 # Authentication
@@ -229,8 +229,8 @@ Format: a fenced YAML block with a `mappings:` array, OR a Markdown table with `
 When the user triggers this skill:
 
 1. Confirm (or discover) the project root. Default: current working directory.
-2. Sanity-check that `specs/` exists. If not, tell the user and stop — don't invent specs.
-3. Detect `specs-business/`. If present, both trees are loaded and the viewer defaults to the Business toggle.
+2. Sanity-check that `.specflow/specs/` exists. If not, tell the user and stop — don't invent specs.
+3. Detect `.specflow/specs-business/`. If present, both trees are loaded and the viewer defaults to the Business toggle.
 4. Detect `link-map.md`. If present, fold its edges into the cross-link graph.
 5. Run the build script with sensible defaults; override only what the user asked for.
 6. Report back the summary lines (dev specs, business specs, overview coverage, unmapped count, link-map status, test results, warnings).
@@ -273,7 +273,7 @@ Keep the template valid HTML/CSS/JS so a dev can open it standalone during itera
 → Run `python3 scripts/build_viewer.py` from the project root. Report the summary.
 
 **Example 2** — User says: "I want to send the business specs to the partner before Friday."
-→ Same flow. The viewer defaults to Business when `specs-business/` exists, so the partner lands on the right view immediately. Note that the single file is what they send.
+→ Same flow. The viewer defaults to Business when `.specflow/specs-business/` exists, so the partner lands on the right view immediately. Note that the single file is what they send.
 
 **Example 3** — User says: "Show me which dev specs aren't mapped to a business outcome yet."
 → Same flow. The viewer surfaces an `Unmapped` badge in the sidebar and spec header for every leaf dev spec without an `implements:` entry; the dashboard's Spec Health panel rolls them up.

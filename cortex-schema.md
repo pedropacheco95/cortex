@@ -1,10 +1,12 @@
 # Cortex Schema — The Contract Between Core and Skills
 
-**Schema version:** `1.0`
-**Status:** Draft for review by Pedro.
-**Depends on:** `cortex-design.md` (the design doc). Where the two disagree, this document wins on file formats, frontmatter, cross-references, and versioning — that is its job. Where the design doc is silent or vague, this document **makes the decision** (see §0) rather than deferring.
+**Schema version:** `2.0`
+**Status:** v2.0 draft for review by Pedro. This file is the **living contract** and is revised in place at each version — the v1.0 text is preserved in git history. (Unlike the design documents, which are frozen records.)
+**Depends on:** `cortex-design.md` (the v1 design doc, frozen) and `cortex-v2-design.md` (the v2 design doc). Where design and schema disagree, this document wins on file formats, frontmatter, cross-references, and versioning — that is its job. Where the design docs are silent or vague, this document **makes the decision** (see §0) rather than deferring.
 
-This is the load-bearing artefact named in design §3.2. **Cortex Core implements it; Skills consume it; both reference it by version** (recorded in `.cortex/cortex.config.json`, §10). It is precise enough that the schema validator (`specs/schema/validator.spec.md`) can be implemented mechanically from it.
+**2.0 is a MAJOR bump** (§10.2): directories moved (`specs/`/`specs-business/` → `.specflow/`, §2.3) and the layout gained a new committed module (`insight/`, §1, §4.10). The §10.4 migration requirement is explicitly waived for the 1.0→2.0 transition (Decision 19).
+
+This is the load-bearing artefact named in design §3.2. **Cortex Core implements it; Skills consume it; both reference it by version** (recorded in `.cortex/cortex.config.json`, §10). It is precise enough that the schema validator (`.specflow/specs/schema/validator.spec.md`) can be implemented mechanically from it.
 
 Conventions used in this document:
 
@@ -16,9 +18,9 @@ Conventions used in this document:
 
 ## 0. Decisions made where the design doc was vague
 
-These were underspecified or contradictory in `cortex-design.md`. Each is now **locked** for schema v1.0. Override any of them and the dependent sections change.
+These were underspecified or contradictory in `cortex-design.md`. Each was **locked** at schema v1.0 and carries forward unchanged into 2.0 (the v2.0 additions are in §0.1). Override any of them and the dependent sections change.
 
-1. **Git policy: §14 wins over §13.2.** Design §13 step 2 says "append `.cortex/` to `.gitignore`"; §14 says cerebrum and atlas (minus sources) are committable. These contradict. **Decision:** `cortex init` gitignores the specific regenerable/sensitive/transient paths only — `.cortex/anatomy/`, `.cortex/atlas/sources/`, `.cortex/pulse/`, and `.cortex/constellation.json` (compiled, regenerable — §4.9) — never the whole `.cortex/`. `.cortex/cortex.config.json`, `.cortex/cerebrum/`, and `.cortex/atlas/` (minus `sources/`) are committed. (§1, §10)
+1. **Git policy: §14 wins over §13.2.** Design §13 step 2 says "append `.cortex/` to `.gitignore`"; §14 says cerebrum and atlas (minus sources) are committable. These contradict. **Decision:** `cortex init` gitignores the specific regenerable/sensitive/transient paths only — `.cortex/anatomy/`, `.cortex/atlas/sources/`, `.cortex/pulse/`, and `.cortex/constellation.json` (compiled, regenerable — §4.9) — never the whole `.cortex/`. `.cortex/cortex.config.json`, `.cortex/cerebrum/`, and `.cortex/atlas/` (minus `sources/`) are committed. (§1, §10) **v2.0 amendment:** `.cortex/insight/` is committed in full — including the machine-regenerated `map/*.json` — adding the fourth git-policy quadrant: machine-owned *and* committed (v2 design §3.3; diff-noise mitigations in §4.10.2). The gitignored set is unchanged.
 
 2. **One global spec-ID namespace; no tree prefix.** Design §8.2 shows `covers: [business.auth.secure-account-access]` (a `business.` prefix) while the business-spec template uses bare `id: auth.secure-account-access`. **Decision:** all spec IDs — dev and business — live in **one global namespace, are bare (no `business.`/`dev.` prefix), and MUST be globally unique.** `depends_on:` and `covers:` reference bare IDs. The `business.` prefix from §8.2 is dropped. (§4.6, §4.7, §6)
 
@@ -36,11 +38,31 @@ These were underspecified or contradictory in `cortex-design.md`. Each is now **
 
 9. **Timestamps are ISO-8601 UTC** with a trailing `Z` (e.g. `2026-06-30T14:00:00Z`). (everywhere)
 
-10. **Two index kinds, named distinctly.** `_index.md` = an **active prompt** (every `.cortex/` directory, plus `specs/_index.md` which is the dependency/build index). `_overview.md` = a **folder overview** (every directory in `specs/` and `specs-business/`). A directory never needs both except the `specs/` root, which has `_index.md` (engineering index) and its domains have `_overview.md`. (§2, §7)
+10. **Two index kinds, named distinctly.** `_index.md` = an **active prompt** (every `.cortex/` directory, plus `.specflow/specs/_index.md` which is the dependency/build index). `_overview.md` = a **folder overview** (every directory in `specs/` and `specs-business/`). A directory never needs both except the `specs/` root, which has `_index.md` (engineering index) and its domains have `_overview.md`. (§2, §7)
 
 11. **Every `*.spec.md` is treated as a leaf for the single-`implements:` rule.** The leaf-vs-aggregate distinction is not encoded in the path, so `check.dev-spec`/`check.xref-*` apply the "exactly one `implements:`" requirement to every dev spec file. Domain/capability aggregate specs that legitimately omit `implements:` are permitted per §4.6, but if `implements:` is present it MUST be single-valued. (surfaced from the validator build; enforced at §4.6, §6, Appendix A `check.dev-spec`)
 
 12. **A MAJOR schema-version mismatch short-circuits all other checks.** When `cortex.config.json` declares a MAJOR above (or below) the validator's supported MAJOR, the validator emits the single `check.config` error (§10.3) and runs no further checks — it does not validate against the wrong contract. (surfaced from the validator build; enforced at §10.3, Appendix A `check.config`)
+
+### 0.1 Decisions locked at v2.0
+
+Where `cortex-v2-design.md` left an open question that this contract must commit on, the recommended disposition (approved with the design doc) is adopted and **marked** here.
+
+13. **The loop-write invariant is restated: a loop never mutates gated content.** Cerebrum, atlas, `RULES.md`, and both spec trees change only through the human gate (`pulse-accept`) or under direct human review; machine-owned ungated state (anatomy, `insight/map/*.json`) is maintained directly by its designated owner loop; ungated observational content (`insight/map/*.md`, plus the one file-list line in `insight/_index.md`) is written directly by its designated producer, with provenance. This supersedes v1's "writes only to `.cortex/pulse/`" phrasing and retires its growing exception list (test-runner and bug-triage keep their narrow, reported exceptions per their specs). (v2 design §4.4, flags F1/F6; §4.10.3, §9)
+
+14. **Cluster ids are label-slugs with carry-over matching (OQ1 disposition).** `cluster:<label-slug>`; a full rebuild reuses an existing cluster's id and label when member-set Jaccard ≥ `insight.clusterCarryOverJaccard` (default 0.5; highest match wins, ties broken by id order). (§4.10.2)
+
+15. **"Stabilized" — promotion eligibility — is mechanical (OQ3 disposition):** ≥ `insight.promotionMinAgeDays` (default 14) in insight AND ≥ `insight.promotionMinObservations` (default 2) independent session observations — or one distil repetition detection (v2 design §6) — AND no correction since the last observation. (§4.10.4, §10.1)
+
+16. **Correction tracking is a bottom `## Corrections` log, and corrections rewrite prose in place (OQ6 + OQ7 dispositions).** The correcting writer rewrites the contradicted text in place and appends the log entry in the same write; frontmatter stays lean. (§4.10.1)
+
+17. **Inferred-edge confidence enum is `high | medium | low`** — deliberately not Decision 7's provenance enum: every inferred edge is INFERRED by definition; what varies is inference strength. (§4.10.2)
+
+18. **Suggestion sections are typed, and the pulse gate gains edit semantics.** `**Type:**` is required (absent → `rule-candidate` with a warning, v1-era tolerance); an **edit** payload shape (current content + replacement, match-byte-exact-or-refuse) joins append and create; `Target:` roots extend beyond cerebrum and new-skill paths to `.cortex/atlas/`, `.cortex/insight/map/`, and `RULES.md`, constrained per type. (§4.5; resolves v2 design flag F3)
+
+19. **The §10.4 migration is waived for 1.0→2.0 only.** No external users; the Cortex repo itself moves as part of the v2 build. The policy stands in full for every future MAJOR. (§10.4; v2 design flag F5)
+
+20. **Left open, with landing sites:** rationale-sidecar vs committed rationale text (OQ4 — revisit at insight-refresh spec time if diff noise proves real despite §4.10.2's carry-over rule); gaps-loop window semantics, watermark vs wall-clock (OQ5 — locked in the insight-gaps dev spec; this contract constrains only the outputs, not the window); root SpecFlow artefacts moving under `.specflow/` (OQ8 — a later MINOR/MAJOR; they stay at the project root in 2.0, §2.3).
 
 ---
 
@@ -85,27 +107,34 @@ These were underspecified or contradictory in `cortex-design.md`. Each is now **
 │   └── sources/                [gitignored]  raw materials (may be sensitive)
 │       ├── _index.md
 │       └── <slug>.<ext>
+├── insight/                    [committed]   ungated inferred/observed knowledge (§4.10)
+│   ├── _index.md                             active prompt (§7.4)
+│   └── map/                                  flat; carries NO _index.md of its own (§4.10.3)
+│       ├── <topic>.md                        prose observations — gaps loop + humans
+│       ├── graph.json                        inferred concept edges — refresh loop only
+│       ├── tags.json                         per-node tag sets — refresh loop only
+│       └── clusters.json                     cluster memberships — refresh loop only
 └── pulse/                      [gitignored]  transient loop outputs (§4.5)
     ├── _index.md
     ├── dismissed.md                          rejection memory (persists)
     └── *.md                                  reports, overwritten each run
 ```
 
-The two spec trees and the test tree live at the **project root**, not under `.cortex/` (design §3.3, Layer 0): `specs/`, `specs-business/`, `tests/`. They are covered in §2 and §3.
+The two spec trees live under **`.specflow/`** at the project root (v2 design §9); the test tree stays directly at the project root. Neither lives under `.cortex/` (design §3.3, Layer 0): `.specflow/specs/`, `.specflow/specs-business/`, `tests/`. They are covered in §2 and §3.
 
-**Validated by** `check.layout`: every directory listed above (when its module is present) exists and carries the required `_index.md`; `pulse/` and `anatomy/` contents beyond the fixed names are tolerated (transient/generated).
+**Validated by** `check.layout`: every directory listed above (when its module is present) exists and carries the required `_index.md` — with one deliberate exception: `insight/map/` carries **no** `_index.md` (the module index one level up fully describes it, and a second index would give the gaps loop two lists to keep in sync, §4.10.3); `pulse/` and `anatomy/` contents beyond the fixed names are tolerated (transient/generated); `insight/map/` contents are additionally constrained by `check.insight-ownership` (§4.10.3).
 
 ---
 
-## 2. `specs/` and `specs-business/` conventions
+## 2. `.specflow/specs/` and `.specflow/specs-business/` conventions
 
-From design §8.1. Both trees are three conceptual levels: **domain → capability → leaf**. Only **leaf** specs are implementable.
+From design §8.1; re-rooted under `.specflow/` at v2.0 (v2 design §9, §2.3 below). Both trees are three conceptual levels: **domain → capability → leaf**. Only **leaf** specs are implementable. `.specflow/` contains exactly the two trees — no wrapper docs of its own.
 
 ### 2.1 Layout
 
 ```
-specs/                              # developer specs (implementation contract)
-├── _index.md                       # ACTIVE PROMPT + dependency graph & build order (§7.4)
+.specflow/specs/                    # developer specs (implementation contract)
+├── _index.md                       # ACTIVE PROMPT + dependency graph & build order (§7.2)
 ├── _overview.md                    # folder overview of the whole dev tree
 └── <domain>/
     ├── _overview.md
@@ -114,7 +143,7 @@ specs/                              # developer specs (implementation contract)
     │   └── <leaf>.spec.md
     └── <leaf>.spec.md              # a leaf MAY sit directly under a domain (e.g. schema.validator)
 
-specs-business/                     # business specs (user-outcome layer)
+.specflow/specs-business/           # business specs (user-outcome layer)
 ├── _overview.md
 └── <domain>/
     ├── _overview.md
@@ -124,11 +153,21 @@ specs-business/                     # business specs (user-outcome layer)
 ### 2.2 Rules
 
 - Every directory in **both** trees MUST contain an `_overview.md` (design §6; folder-overview format in §7.3). **Validated by** `check.overview-present`.
-- `specs/` root additionally MUST contain `_index.md` (§7.4). **Validated by** `check.index-present`.
+- The `.specflow/specs/` root additionally MUST contain `_index.md` (§7.2). **Validated by** `check.index-present`.
 - Domain dirs: lowercase, hyphenated. Capability dirs: lowercase, hyphenated.
 - Dev leaf files: `<leaf>.spec.md`. Business files: `<persona-journey>.business.md`, the name starting with the persona doing the action (business-spec template).
-- **IDs follow the path.** `specs/auth/registration/email-signup.spec.md` → `auth.registration.email-signup`. A leaf directly under a domain → `<domain>.<leaf>` (e.g. `schema.validator`). **Validated by** `check.id-matches-path`.
+- **IDs follow the path within the tree.** `.specflow/specs/auth/registration/email-signup.spec.md` → `auth.registration.email-signup` — the `.specflow/specs/` tree root is stripped before deriving the ID, so IDs are unchanged by the v2.0 re-rooting. A leaf directly under a domain → `<domain>.<leaf>` (e.g. `schema.validator`). **Validated by** `check.id-matches-path`.
 - Capability folders with leaves are RECOMMENDED; a leaf directly under a domain is permitted when the domain has a single cohesive unit. No per-leaf subfolders.
+
+### 2.3 The v2.0 re-rooting (what changed, what didn't)
+
+Moved at 2.0: `specs/` → `.specflow/specs/`; `specs-business/` → `.specflow/specs-business/`. `tests/` deliberately stays at the project root — test runners, CI globs, and coverage tooling assume root-level test paths (v2 design §9.1). The root SpecFlow artefacts (`RULES.md`, `build-order.md`, `link-map.md`, `implicit-behaviors.md`, `dead-features.md`) also stay at the project root (Decision 20 / OQ8).
+
+**Invariant under the move:** spec IDs (path-derived within the tree, §2.2); every ID-form cross-reference (`depends_on`, `covers`, `governed_by`, `related_specs`, `spec_links`); the `implements:`/`implemented_by:` relative paths (both trees moved together, so the relative geometry between them is identical); and `governs:` globs (project-root-relative pointers at *source* files).
+
+**Changed:** every project-root-relative reference *to* the trees — validator, compiler, and loop discovery roots; the CLAUDE.md template (§8); skill instruction text. The mechanical path-constants rewrite across the specflow skills ships **in the reorganization round** (v2 design §9.4, flag-F4 resolution); the insight-query skill enrichment remains a separate follow-up pass.
+
+**Migration:** none ships for 1.0→2.0 (Decision 19; §10.4 waiver). For schema completeness: a re-rooting under the normal policy would ship a `cortex migrate` move plus deprecation markers at the old roots per §10.4.
 
 ---
 
@@ -159,6 +198,7 @@ tests/
 - The **schema validator** checks: scenario specs carry a well-formed `covers:` whose entries resolve (§4.8). **Validated by** `check.covers-resolves`.
 - The **coverage-completeness** constraint (every business spec appears in ≥1 scenario's `covers:`) is **out of schema scope** — owned by `specflow-verify` (Decision 4).
 - `verification-report.md` is written to `.cortex/pulse/`, **not** `tests/` (design §8.5).
+- `tests/` remains at the **project root** at v2.0 — deliberately not moved under `.specflow/` (§2.3).
 
 ---
 
@@ -195,7 +235,7 @@ file_count: 3
 
 ### 4.2 `cerebrum/rules/R-NNN-<slug>.md`
 
-**Required:** `id` (`R-NNN`), `title` (string), `source` (list<path> — atlas decisions and/or bug files justifying the rule), `governs` (list<glob> — anatomy/file paths the rule applies to). **Optional:** `related_specs` (list<id>), `confidence` (enum `STATED|EXTRACTED|INFERRED`, default `STATED`), `check` (the machine-checkable predicate, below), `status` (enum `active|retired`, default `active`).
+**Required:** `id` (`R-NNN`), `title` (string), `source` (list<path> — atlas decisions, bug files, and/or insight prose files justifying the rule; the insight form is the promotion lineage, §4.5 `promotion`), `governs` (list<glob> — anatomy/file paths the rule applies to). **Optional:** `related_specs` (list<id>), `confidence` (enum `STATED|EXTRACTED|INFERRED`, default `STATED`), `check` (the machine-checkable predicate, below), `status` (enum `active|retired`, default `active`).
 
 **`check` predicate** (optional; the testable subset of a rule):
 ```yaml
@@ -292,17 +332,49 @@ Transient; gitignored. Each loop output is markdown with a minimal header. **Alw
 
 **Suggestion entries — single S-namespace across all pulse artefacts.** `S-NNN` ids form **one global namespace** shared by every proposal-writing loop, allocated monotonically via the counter file `pulse/.suggestion-counter` (a plain integer; persists like `dismissed.md`; ids are never reused). Proposal sections may appear in **any** `pulse/*.md` loop report — the review CLI discovers them by scanning all of them; the id is a handle, not metadata, so users never need to know which loop proposed what. Each section carries provenance in its own field lines. A duplicate `S-NNN` across files is a hard error at review time.
 
-**Suggestion section shape:** one `## S-NNN: <title>` section per suggestion. Required field lines inside each section: `**Source:**` (provenance — the proposing loop plus its evidence pointer, e.g. session ids or the report that motivated it), `**Target:**` (a project-relative path that MUST lie inside `.cortex/cerebrum/` — or, for skill proposals, a **new** `.claude/skills/<name>/SKILL.md` path; existing skill files are never overwritable via accept) and `**Proposed addition:**` followed by a fenced block holding the exact text to apply.
+**Suggestion section shape:** one `## S-NNN: <title>` section per suggestion. Required field lines inside each section:
+
+- `**Type:**` — one of `rule-candidate | skill-proposal | promotion | gated-layer-update | user-directed-capture` (§4.5.1). Absent → treated as `rule-candidate` with a `warning` (v1-era tolerance; v1 reports carried no type). **Validated by** `check.pulse`.
+- `**Source:**` — provenance: the proposing loop plus its evidence pointer (session ids, or the report that motivated it). For `promotion`, MUST include the insight file being promoted.
+- `**Target:**` — a project-relative path whose permitted root depends on `**Type:**` (§4.5.1 table). Across all types the union of permitted roots is `.cortex/cerebrum/`, `.cortex/atlas/`, `.cortex/insight/map/`, `RULES.md`, and — for `skill-proposal` only — a **new** `.claude/skills/<name>/SKILL.md` path. Existing skill files are never overwritable via accept.
+- The **payload**, in one of three operation shapes (§4.5.2): `**Proposed addition:**` (append), `**Proposed edit:**` (replace an exact byte-range of the target), or `**Proposed file:**` (create a new file). Exactly one payload shape per section.
 
 **Fence grammar (nested payloads — resolves B-003).** A payload containing code fences MUST be wrapped in an outer fence **strictly longer** than any fence it contains (CommonMark longer-fence rule: four-plus backticks around a payload with triple-backtick fences). Writers inspect the payload and choose the outer length automatically; the parser honours the opening fence's length and closes only on a fence of at least that length. Accept round-trips the payload **byte-exact**, fences included.
 
-**Counter authority.** `pulse/.suggestion-counter` is the single authoritative id allocator: every loop that emits proposal sections MUST acquire ids from it (via the shared allocator) — never allocate locally, never reuse. Optional: `**Status:** pending | accepted | rejected` (absent = `pending`); free evidence lines (pattern, occurrences, source sessions, confidence) are unconstrained. The review CLI parses exactly these fields; accept appends the fenced block to the target verbatim.
+**Counter authority.** `pulse/.suggestion-counter` is the single authoritative id allocator: every loop that emits proposal sections MUST acquire ids from it (via the shared allocator) — never allocate locally, never reuse. Optional: `**Status:** pending | accepted | rejected` (absent = `pending`); free evidence lines (pattern, occurrences, source sessions, confidence) are unconstrained. The review CLI parses exactly these fields; accept applies the payload per its operation shape (§4.5.2).
+
+#### 4.5.1 Suggestion types (v2.0)
+
+The five types, their permitted `**Target:**` roots, their producers, and their accept semantics. A `**Target:**` outside the permitted root for its type is a `check.pulse` `error`.
+
+| `**Type:**` | Producer(s) | Permitted target root | Payload shape | On accept |
+|---|---|---|---|---|
+| `rule-candidate` | distil, rule-decay (v1) | `.cortex/cerebrum/` | append | append the block to the target (v1 behaviour, unchanged) |
+| `skill-proposal` | skill-suggest (v1) | new `.claude/skills/<name>/SKILL.md` | create | write the new skill file (never overwrite an existing one) |
+| `promotion` | insight-gaps | `.cortex/cerebrum/`, `.cortex/atlas/`, `RULES.md` | append **or** create | apply the payload to the gated target, inject a `source:` back to the insight file, then **mark the insight original promoted** (§4.10.4) — never delete it |
+| `gated-layer-update` | insight-gaps (signal 4-gated) | `.cortex/cerebrum/`, `.cortex/atlas/`, `RULES.md` | **edit** | replace the named byte-range in the target (§4.5.2); a correction to existing gated content is an edit, not an append |
+| `user-directed-capture` | insight-gaps (signal 5) | `.cortex/cerebrum/`, `.cortex/atlas/`, `.cortex/insight/map/`, `RULES.md` | append or create | apply to the target the user confirmed; the proposed `**Target:**` is the loop's best guess and is **human-editable before accept** (v2 design §5) |
+
+Notes: `promotion` and `gated-layer-update` never target `.cortex/insight/map/` (insight is ungated — its corrections are direct writes by the gaps loop, §4.10.4, not proposals). `user-directed-capture` is the only type that MAY target insight, because an explicit "remember this" deserves explicit confirmation of *where* it landed even when the landing is ungated.
+
+#### 4.5.2 Payload operation shapes (v2.0)
+
+Every suggestion carries exactly one of three payload shapes. All fenced blocks obey the longer-fence grammar above (byte-exact round-trip).
+
+- **`**Proposed addition:**`** (append) — a fenced block appended to the target verbatim. The target file MUST already exist. This is the v1 shape; unchanged.
+- **`**Proposed file:**`** (create) — a fenced block written as the full contents of a **new** file at `**Target:**`. Accept refuses if the target already exists (no clobber).
+- **`**Proposed edit:**`** (edit — new at v2.0) — resolves flag F3's append-only limitation. The section carries two fenced blocks, labelled by their opening line:
+  - a `current:` block — the exact text to be replaced, which accept locates in the target and which MUST match **byte-exact** (accept **refuses** and reports if it does not — the target drifted since the proposal was written);
+  - a `replacement:` block — the text to substitute for it.
+  Accept replaces the single located occurrence. A `current:` block that resolves to zero or >1 occurrences is a hard refusal (ambiguous or stale). The edit operation is what makes `gated-layer-update` (a correction to an existing rule/decision) expressible.
+
+Accept is **transactional per suggestion**: a refusal (byte-mismatch, clobber, ambiguous edit) applies nothing and leaves the suggestion `pending`.
 
 **`dismissed.md`** (`kind: pulse-dismissed`) holds one `## S-NNN` section per rejection with `**Dismissed:**` (iso-datetime) and `**Expires:**` (iso-datetime; default now + `pulse.dismissedWindowDays`, 90). `pulse-list` hides unexpired dismissed ids; expired ones may resurface.
 
 `hook-errors.md` (`kind: pulse-hook-errors`) is the hooks' degradation log (§5): hooks **append** one structured entry per internal error (hook name, file involved, failure, iso-datetime), capped at the most recent 100 entries. Unlike loop reports it is append-not-overwrite; like everything in `pulse/` it is transient and surfaced by hygiene.
 
-### 4.6 Developer specs — `specs/**/*.spec.md`
+### 4.6 Developer specs — `.specflow/specs/**/*.spec.md`
 
 From the dev-spec template. **Required (leaf):** `id` (matches path), `status` (enum `draft|implementing|implemented`), `implements` (exactly one `path` to a business spec). **Required (all):** `id`, `status`. **Optional:** `depends_on` (list<id> — dev-spec IDs), `governed_by` (list<id> — cerebrum rule IDs, design §8.4), `governs` (list<glob> — project files this spec governs; feeds anatomy `spec_links`, design §7.2 step 5. **Semantics are deliberately identical to the cerebrum-rule `governs` field (§4.2)** — same glob syntax, project-root-relative resolution, 0 on-disk matches → `warning`. The only divergence is optionality: required on rules because a rule without governed files is meaningless, optional on dev specs because a draft spec may legitimately precede the files it governs). **Domain/capability specs:** `implements` is optional; `depends_on` allowed on capability specs.
 
@@ -318,7 +390,7 @@ governed_by: []
 
 Body sections (design §8.1): Intent, Entities (READS/WRITES/CREATES — references only, never schema definitions), Rules (numbered), Acceptance Criteria (Given/When/Then, concrete values), Notes (OPEN: items). **Validated by** `check.dev-spec`: `id` matches path; `status` in enum; on leaves, `implements` present, single-valued, resolves, and is symmetric (§6); `depends_on` IDs resolve and form no cycle; `governed_by` IDs resolve; `governs` globs well-formed (on-disk resolution: `check.dev-spec-governs-resolves`, warning).
 
-### 4.7 Business specs — `specs-business/**/*.business.md`
+### 4.7 Business specs — `.specflow/specs-business/**/*.business.md`
 
 **Required:** `id` (`<domain>.<outcome-slug>`, bare, globally unique), `status` (enum `draft|implementing|implemented`), `implemented_by` (list<path> to dev specs). **Optional:** `depends_on` (list<id> — business-spec IDs).
 
@@ -358,7 +430,7 @@ The compiled citation graph the constellation renderer serves (design §12.8). E
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "generated": "2026-07-02T14:00:00Z",
   "groups": [
     { "id": "anatomy", "label": "Anatomy",
@@ -386,7 +458,105 @@ The compiled citation graph the constellation renderer serves (design §12.8). E
 
 **Determinism:** groups, nodes, and edges are sorted (stable order); two compilations of identical input are byte-identical except `generated`.
 
+**Insight preset (v2.0).** The renderer's view-preset set (design §12.5, five server-side lenses) gains a sixth, **`insight`**, specified here since the schema owns the constellation contract:
+
+- `constellation.json` stays **curated-only** — its shape and byte-determinism contract are unchanged, and it never contains inferred edges or clusters.
+- The `insight` preset composes the overlay at **serve time**: the `cortex constellation` server reads `insight/map/graph.json` and `clusters.json` directly, and only when the preset is requested. Nothing from insight is ever compiled into `constellation.json` (no second compilation to drift; the overlay is always as fresh as the last refresh run).
+- **Rendering rules:** inferred edges render **dashed** (visually subordinate to solid curated edges; edge weight/opacity MAY additionally encode `high|medium|low` confidence — a renderer detail, not a contract). Tag **clusters render as background colour regions** behind their member nodes (Cytoscape compound/parent styling — same library). The node set is unchanged: insight adds edges and groupings over the *same* nodes, which is why the shared node-id grammar (§4.10.2) makes this a join, not a merge.
+- **Default stays curated.** The insight preset is **opt-in per session, never the default** — preserving design §12.1's "proof of comprehension" framing (every edge in the default view is a human-gated claim; inferred edges are visibly second-class hypotheses).
+
 **Validated by** `check.constellation` (only when the file exists): valid JSON; all required top-level keys; node ids unique; every node `group` resolves to a declared group/child id; every edge endpoint resolves to an emitted node id; `module` in enum.
+
+### 4.10 The `insight/` module (v2.0)
+
+The ungated, queryable project-knowledge layer (v2 design §3). Committed in full (Decision 1 amendment). Two content types live side by side in the flat `insight/map/` directory, distinguished by extension: **prose** (`.md`, §4.10.1) and **inferred graph** (`.json`, §4.10.2). The whole module carries a trust contract distinct from the gated layers: **content here is unreviewed** — useful immediately, never having passed the human gate. It never carries write-time enforcement authority (only cerebrum does, design §5.3); a hook never injects it (v2 design §7.4).
+
+#### 4.10.1 Prose files — `insight/map/<topic>.md`
+
+Human-authored or written/updated by `cortex-loop-insight-gaps` (v2 design §5, signals 1–3 and 4-in-insight). Extensible: the gaps loop MAY create a new prose file when a new category surfaces, subject to the ownership and index-maintenance rules of §4.10.3.
+
+**Frontmatter — required:** `kind: insight-prose` (string const), `updated` (iso-datetime — the last write of any kind). **Optional:** `topic` (string; defaults to the filename stem), `related_specs` (list<id>). Frontmatter is deliberately lean (Decision 16): correction history lives in the body, not here.
+
+**Body structure:**
+- Free markdown organised under H2 headings by sub-topic.
+- Each entry appended by the gaps loop ends with a one-line **provenance trailer**: `_(observed <iso-date>, signal <n>, sessions: <id>, <id>)_`. Human-authored entries need no trailer.
+- A file MAY end with a single **`## Corrections`** log (§ below). It is the last H2 in the file when present.
+
+**The `## Corrections` change-log (Decisions 16 + OQ7 rewrite-in-place).** When the gaps loop processes a signal-4 correction whose target content lives in this file, it **rewrites the contradicted text in place** (so the file is currently-right — insight's whole value) **and, in the same write, appends one entry** to the `## Corrections` log preserving the audit trail:
+
+```markdown
+## Corrections
+
+- **<iso-date>** — _was:_ "<the original assertion, verbatim>" · _now:_ "<the correction>" ·
+  _why:_ <the user's words / context> · sessions: <id>, <id>
+```
+
+Rewrite-in-place is the most autonomous write in the system; the log is the non-negotiable counterweight. The `_was:_` text is the exact prior assertion (byte-exact where it fits one line; truncated with `…` and a pointer otherwise). **Validated by** `check.insight-prose`: `kind` const and `updated` present/ISO; if a `## Corrections` heading exists, every list item under it carries the `**<iso-date>**`, `_was:_`, and `_now:_ ` markers; at most one `## Corrections` heading per file.
+
+#### 4.10.2 Inferred graph files (refresh loop only)
+
+Written **only** by `cortex-loop-insight-refresh` (§11.4); never hand-edited (a hand edit is overwritten on the next rebuild). Three files, each a JSON object. **Node ids reuse the constellation node-id grammar** (§4.9: `anatomy:<relpath>`, `rule:R-NNN`, `bug:B-NNN`, `cerebrum:<file>`, `atlas:<artefact-id>`, `spec:<dev-id>`, `business:<business-id>`) — the refresh loop assembles its node set via the constellation compiler's node-emission path, so identity is shared and the §4.9 insight-preset overlay is a join, not a mapping.
+
+**`graph.json`** — inferred concept edges (distinct from `constellation.json`'s curated citation edges; the two never mix):
+```jsonc
+{
+  "schemaVersion": "2.0",
+  "generated": "<iso-datetime>",
+  "rebuild": "full" | "incremental",
+  "nodes": [ { "id": "<constellation-node-id>", "module": "<constellation module enum>", "label": "<string>" } ],
+  "edges": [
+    { "from": "<node-id>", "to": "<node-id>",
+      "kind": "semantically-related" | "same-cluster" | "mentions-same-entity",
+      "confidence": "high" | "medium" | "low",
+      "rationale": "<one line explaining the inference>" }
+  ]
+}
+```
+The `kind` enum is **closed** at 2.0 (extending it is a MINOR bump). `confidence` is `high|medium|low` (Decision 17). Every edge MUST carry a non-empty `rationale` — explainability is a module invariant (v2 design §3.4, "NO embeddings").
+
+**`tags.json`** — per-node structured concept labels:
+```jsonc
+{ "schemaVersion": "2.0", "generated": "<iso-datetime>",
+  "tags": { "<node-id>": ["authentication", "JWT", "session-management"] } }
+```
+Tags are what make query deterministic (§4.10.5): LLM judgment is spent once, at write time, turning meaning into labels.
+
+**`clusters.json`** — inferred domain clusters:
+```jsonc
+{ "schemaVersion": "2.0", "generated": "<iso-datetime>",
+  "clusters": [ { "id": "cluster:<label-slug>", "label": "Authentication",
+                  "members": ["<node-id>", "…"], "rationale": "<one line>" } ] }
+```
+**Cluster id stability (Decision 14 / OQ1):** `cluster:<label-slug>` where `<label-slug>` is the label lowercased and hyphenated. On a **full** rebuild, a newly-derived cluster reuses an existing cluster's id and label when the member-set **Jaccard similarity ≥ `insight.clusterCarryOverJaccard`** (default 0.5); highest match wins, ties broken by existing-id lexical order. This keeps cluster ids stable across rebuilds despite membership churn, so external references (a spec citing a cluster, a saved constellation view) survive.
+
+**Determinism + carry-over (git-noise mitigation, §3.3 of v2 design).** The three files serialize deterministically: nodes, edges (by `from`,`to`,`kind`), tags (by node id, tags sorted), and clusters (by id, members sorted) are stably ordered, and the only per-run-varying field is `generated`. On a full rebuild, when an edge/tag/cluster whose identity matches an existing entry is re-derived, the existing `rationale`/`confidence` text is **preserved verbatim** rather than regenerated — so only genuinely new or changed inferences produce diff lines. (If this proves insufficient, the OQ4 rationale-sidecar option is revisited at insight-refresh spec time — Decision 20.)
+
+**Validated by** `check.insight-graph`: each file is valid JSON with `schemaVersion` and `generated`; `graph.json` node ids unique and edge endpoints present in its own `nodes` (an endpoint absent from `nodes` → `warning`, tolerant like the constellation's dropped-ref handling); `kind` and `confidence` in their enums; every edge `rationale` non-empty; `tags.json` keys and `clusters.json` member ids are well-formed node ids; cluster ids match `cluster:<slug>` and are unique.
+
+#### 4.10.3 The coordination rule — non-overlapping write targets (named check)
+
+**The load-bearing coordination rule between the two insight loops: the refresh loop writes only `.json` in `insight/map/`; the gaps loop writes only `.md`.** The write-target sets are disjoint by file extension. Consequences: no lock file is needed between the two loops (v2 design §4.3); a human prose edit is safe (the gaps loop appends and reads-before-writing); a human JSON edit is not (the next refresh overwrites it).
+
+`insight/map/` carries **no `_index.md`** — the module `insight/_index.md` (§7.4) fully describes it, and a nested index would be a second file-list for the gaps loop to keep in sync. The gaps loop's one permitted write outside `map/` is the single file-list line in `insight/_index.md` when it creates a new prose file (Decision 13).
+
+**Validated by** `check.insight-ownership`: every file directly under `insight/map/` has extension `.md` or `.json`; the only permitted `.json` basenames are `graph.json`, `tags.json`, `clusters.json`; no `_index.md` exists under `map/`. (The rule is *also* enforced at write time inside each loop's `--apply`/`--propose` bookend, refusing out-of-lane paths — defence in depth, not schema-only.)
+
+#### 4.10.4 Promotion and the promoted marker
+
+When insight content stabilizes and is load-bearing, the gaps loop proposes its graduation into a gated layer via a `promotion` pulse suggestion (§4.5.1). **"Stabilized" is mechanical (Decision 15 / OQ3):** ≥ `insight.promotionMinAgeDays` (default 14) resident in insight, AND ≥ `insight.promotionMinObservations` (default 2) independent session observations — or one distil repetition detection (v2 design §6) — AND no correction logged since the last observation.
+
+On accept of a `promotion`, after the gated write lands (with its `source:` back-reference), the insight original is **marked promoted, not deleted**: the promoted entry gains a trailer `_(promoted <iso-date> → <gated-target-path> via S-NNN)_`. Deletion of the now-redundant insight copy is the human's call. Marking keeps accept auditable (append-plus-annotate) rather than destructive. **Validated by** `check.insight-prose` (the promoted trailer, when present, names an S-id and a path — `warning` if malformed).
+
+#### 4.10.5 Query surface (deterministic, no LLM at query time)
+
+Both Claude and humans query insight through the CLI (v2 design §7.1); all commands are deterministic Core and support `--json`:
+
+- `cortex insight query <topic>` — lexical search across prose files/sections, node tags, and cluster labels; grouped output.
+- `cortex insight get <file>` — returns a `map/`-relative file (prose or JSON) verbatim.
+- `cortex insight neighbors <node-id>` — graph traversal; `--kind <edge-kind>` filters, `--depth <n>` (default 1) bounds the walk; returns the subgraph with confidences and rationales.
+- `cortex insight list` — enumerates all insight files and graph clusters.
+
+Query is **not** a hook-injection mechanism (v2 design §7.4): insight is pull-only, invoked when the scaffolding (CLAUDE.md protocol, `insight/_index.md`, skill steps) says the question warrants it. The payload text of these commands is asserted by the insight dev specs' tests, not by the validator.
 
 ---
 
@@ -429,6 +599,8 @@ The writeback instruction line is included only when the row's `purpose_source` 
 
 **Envelope (pinned to the Claude Code hooks API, verified 2026-07-02).** All Cortex hooks communicate via **exit 0 + stdout JSON**: SessionStart emits `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": …}}`; the PreWrite warning emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "additionalContext": …}}`; PostWrite and PostRead emit nothing (empty stdout). No Cortex hook ever exits 2, exits non-zero, or emits `deny`/`ask` — warn-never-block is enforced by the envelope itself. Hook-internal errors degrade (operation proceeds) and append to `pulse/hook-errors.md` (§4.5). Registration entries use the command signature `cortex hook <name>` — that prefix is the **ownership marker** (the JSON transposition of §8's CLAUDE.md marker idiom); tooling manages only entries carrying it.
 
+**No insight hook (v2.0).** The insight module adds **no** hook and no field to any existing hook payload. Insight is pull-only via the CLI (§4.10.5); injecting unreviewed inferred content at SessionStart or PreRead would spend the trust budget on the layer with the weakest trust warrant, and the enforcement channel (PreWrite) reads cerebrum precisely because cerebrum is gated (v2 design §7.4). The hook table above is unchanged from v1.
+
 **Validated by** `check.hook-config`: the hook entries `cortex init` writes to `.claude/settings.json` match the registered hooks; the Read-pair entries (PreRead + PostRead, together) are present iff `cortex.config.json` `hooks.preRead` is true — which is the default. The payload *text* is the hooks' contract with Claude, asserted by the hook specs' tests, not by the validator.
 
 ---
@@ -448,7 +620,8 @@ The frontmatter cross-references form the citation graph Claude walks (design §
 | `depends_on` | business spec | business specs | list<id> | each resolves; no cycles |
 | `covers` | scenario spec | business specs | list<id> | each resolves |
 | `governed_by` | dev spec | rules | list<id> | each resolves |
-| `source` | rule | atlas decisions / bugs | list<path> | each resolves |
+| `source` | rule | atlas decisions / bugs / **insight prose** | list<path> | each resolves (insight form = promotion lineage, §4.5.1) |
+| `source` | atlas decision / `RULES.md` entry (promoted) | insight prose | path | resolves; written by `promotion` accept (§4.10.4) |
 | `governs` | rule | files | list<glob> | well-formed; 0 on-disk matches → `warning` |
 | `governs` | dev spec | files | list<glob> | identical to rule `governs` (intentional, §4.6); 0 on-disk matches → `warning` |
 | `related_specs` | rule / atlas | dev or business specs | list<id> | each resolves |
@@ -460,7 +633,7 @@ The frontmatter cross-references form the citation graph Claude walks (design §
 
 **Global validation rules:**
 
-1. **ID uniqueness** — every `id` across `specs/`, `specs-business/`, `cerebrum/rules/`, `cerebrum/bugs/`, and atlas is unique within its kind, and spec IDs (dev+business) are unique across **both** trees combined. Duplicate → `error`.
+1. **ID uniqueness** — every `id` across `.specflow/specs/`, `.specflow/specs-business/`, `cerebrum/rules/`, `cerebrum/bugs/`, and atlas is unique within its kind, and spec IDs (dev+business) are unique across **both** trees combined. Duplicate → `error`. (Insight node ids are *not* in this namespace — they are borrowed constellation ids, §4.10.2, and carry no uniqueness obligation of their own beyond within `graph.json`.)
 2. **`implements` is single-valued** — zero or >1 on a leaf → `error` (design §8.1: many-to-one is a decomposition smell).
 3. **Bidirectional symmetry** — `implements`↔`implemented_by` MUST agree in both directions. Asymmetry → `error` naming both files.
 4. **Resolution** — every path resolves to an existing file (relative to the referrer); every ID resolves in the global index. Unresolved → `error`.
@@ -472,15 +645,15 @@ The validator produces a `ValidationReport` — the structured result `validator
 
 ```json
 {
-  "schemaVersion": "1.0",
-  "target": "specs/",
+  "schemaVersion": "2.0",
+  "target": ".specflow/specs/",
   "conformant": false,
   "violations": [
     {
       "severity": "error",
       "check": "check.dev-spec",
       "clause": "§4.6",
-      "location": { "path": "specs/schema/validator.spec.md", "key": "implements" },
+      "location": { "path": ".specflow/specs/schema/validator.spec.md", "key": "implements" },
       "message": "implements must name exactly one business spec; found 2."
     }
   ],
@@ -535,13 +708,37 @@ the specs it touches.
 
 **Validated by** `check.index-shape`: `_index.md` present in every `.cortex/` directory; contains the `Read this when:` and `What's here:` headings; soft token-budget check → `warning` over 300.
 
-### 7.2 `specs/_index.md` — the engineering index
+### 7.2 `.specflow/specs/_index.md` — the engineering index
 
 The dev-tree root `_index.md` is BOTH an active prompt AND the dependency/build index. Required sections: a short `Read this when:` prompt, `## Domains` (list with one line each), `## Dependency Graph` (textual edges or a note), `## Build Order` (topological phases; see design §16.2). **Validated by** `check.specs-index`: present; has the three section headings.
 
 ### 7.3 `_overview.md` — folder overview (every dir in both spec trees)
 
 Format from the folder-overview template: `## What this is`, `## What it covers`, `## Why it's grouped this way`, optional `## Related groups`. Dev-tree tone may use IDs/paths; business-tree prose MUST NOT contain file paths or IDs except under `## Related groups`. **Validated by** `check.overview-shape`: the three required headings present; business-tree body path/ID scan → `warning`.
+
+### 7.4 `insight/_index.md` — the ungated-module active prompt (v2.0)
+
+`insight/_index.md` follows the §7.1 active-prompt shape (validated the same way by `check.index-shape`) with one module-specific requirement: because insight is the sole **ungated** module, its index MUST state the trust model — a `Read this when:` or navigation line that names insight as unreviewed and points at the CLI as the query surface. This is where Claude learns *how much to trust* what it finds, not just the file list. `insight/map/` itself carries no `_index.md` (§4.10.3); this one index describes both the prose and the inferred files.
+
+Filled template:
+```markdown
+# Insight — index
+
+**Read this when:** you need conceptual orientation — how things relate, what a
+domain cluster contains, or how setup/testing/deploy actually work here. Insight
+is ungated: useful immediately, not human-reviewed. For enforced rules, cerebrum.
+
+**What's here:**
+- `map/*.md` — observed project knowledge (setup, testing, deploy, conventions, …).
+- `map/graph.json`, `tags.json`, `clusters.json` — the inferred concept map. Query
+  via CLI; never hand-edit.
+
+**How to navigate:** `cortex insight query <topic>` first; `cortex insight
+neighbors <node-id>` to walk relations; `cortex insight list` to see everything.
+Treat claims here as unreviewed — trace load-bearing ones before relying on them.
+```
+
+**Validated by** `check.insight-index` (in addition to `check.index-shape`): the body names insight as ungated/unreviewed and references `cortex insight` — `warning` if the trust-model line is absent (the shape itself is the `check.index-shape` error).
 
 ---
 
@@ -558,14 +755,17 @@ Cortex is active on **{{PROJECT_NAME}}**. The knowledge layer lives in `.cortex/
 - `anatomy/` — per-file map (purpose, tokens, governing specs). What each file is.
 - `cerebrum/` — rules, decisions, preferences, and the bug ledger. The "why" and the "must".
 - `atlas/` — stakeholders, decisions (narrative), domain terms, source materials.
+- `insight/` — ungated inferred/observed knowledge: a concept map plus setup/testing/deploy notes. Query it via `cortex insight query <topic>`; treat it as unreviewed.
 
 **Protocol:** before working a task, read the relevant `_index.md` first — they are
 prompts that tell you what to read and when. For "why" questions, grep `cerebrum/` and
-`atlas/`. For unfamiliar terms, check `atlas/domain/`. Follow frontmatter
-cross-references (the citation graph) to trace any claim to its source.
+`atlas/`. For unfamiliar terms, check `atlas/domain/`. For "how does X hang together"
+or "how do we do Y here", run `cortex insight query` before grepping the code. Follow
+frontmatter cross-references (the citation graph) to trace any claim to its source.
 
-Specs are the source of truth: `specs-business/` (outcomes) and `specs/` (implementation),
-linked by `implements:`/`implemented_by:`. Don't let the trees drift.
+Specs are the source of truth: `.specflow/specs-business/` (outcomes) and
+`.specflow/specs/` (implementation), linked by `implements:`/`implemented_by:`. Don't
+let the trees drift.
 
 Modules present: {{PRESENT_MODULES}}. Schema: {{SCHEMA_VERSION}}.
 <!-- cortex:end -->
@@ -587,10 +787,12 @@ You are running as an autonomous loop on {{PROJECT_NAME}}. Cortex is your memory
 **Before acting:** read `.cortex/_index.md` and the `_index.md` of any module you'll
 touch. You start cold every run — Cortex is how you recover what prior runs learned.
 
-**Propose, don't mutate.** Write proposals to `.cortex/pulse/` only. Never edit
-`cerebrum/`, `anatomy/`, `atlas/`, or the spec trees directly. The user applies changes
-via `cortex pulse-accept <id>`. (The sole exception is the test-runner's writer/verifier
-flow, which is governed by its own spec.)
+**Never mutate gated content.** Cerebrum, atlas, `RULES.md`, and both spec trees change
+only through the human gate — write proposals to `.cortex/pulse/` and the user applies
+them via `cortex pulse-accept <id>`. You MAY maintain machine-owned ungated state directly
+only if you are its designated owner loop (anatomy, `insight/map/`). Everything else is a
+proposal. (The narrow, spec-governed exceptions are the test-runner's writer/verifier code
+path and bug-triage's fill-only classification.)
 
 **Conform to the schema.** Every artefact you write carries schema-valid frontmatter
 (schema {{SCHEMA_VERSION}}). Run the validator on anything you produce.
@@ -598,7 +800,7 @@ flow, which is governed by its own spec.)
 **Stop condition:** {{GOAL}}.
 ```
 
-**Validated by** `check.loop-md` (only if present): contains the propose-don't-mutate clause and a `Stop condition:` line.
+**Validated by** `check.loop-md` (only if present): contains the never-mutate-gated-content clause and a `Stop condition:` line.
 
 ### 9.1 Desktop scheduled-task naming (project scoping)
 
@@ -610,7 +812,7 @@ flow, which is governed by its own spec.)
 
 - **`project-slug`** — the project root's folder name, slugged: lowercased; every character outside `[a-z0-9-]` replaced with `-`; consecutive `-` collapsed; leading/trailing `-` trimmed; empty result → `project`.
 - **`short-hash`** — the first 6 hex chars of SHA256 of the project root's absolute path (resolved, no trailing slash). The slug alone collides across same-named folders (`~/work/api` vs `~/personal/api`); the hash guarantees uniqueness; the slug preserves at-a-glance scannability in the Desktop UI.
-- **`canonical-task-name`** — the task's full identity, applying to every Cortex-managed task regardless of lineage: `cortex-pulse-hygiene`, `cortex-pulse-distil`, `cortex-loop-skill-suggest`, `cortex-loop-anatomy-refresh-deep`, `cortex-loop-rule-decay`, `cortex-loop-atlas-staleness`, `cortex-loop-onboarding-drift`, `cortex-loop-spec-drift`, `specflow-lint`, `specflow-verify`, `cortex-loop-test-runner`, `cortex-loop-bug-triage`.
+- **`canonical-task-name`** — the task's full identity, applying to every Cortex-managed task regardless of lineage: `cortex-pulse-hygiene`, `cortex-pulse-distil`, `cortex-loop-skill-suggest`, `cortex-loop-anatomy-refresh-deep`, `cortex-loop-rule-decay`, `cortex-loop-atlas-staleness`, `cortex-loop-onboarding-drift`, `cortex-loop-spec-drift`, `specflow-lint`, `specflow-verify`, `cortex-loop-test-runner`, `cortex-loop-bug-triage`, and — new at v2.0 — `cortex-loop-insight-refresh`, `cortex-loop-insight-gaps`. Fourteen scheduled tasks total at 2.0 (the fifteenth loop, anatomy-refresh-fast, remains the git post-commit hook).
 
 Example: a project at `/Users/me/dev/api` registers `api-a3f2b1-cortex-pulse-hygiene`, `api-a3f2b1-specflow-lint`, ….
 
@@ -626,16 +828,17 @@ Example: a project at `/Users/me/dev/api` registers `api-a3f2b1-cortex-pulse-hyg
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "anatomy": { "exclude": ["dist/**", "node_modules/**"], "enhancement": "none" },
   "hooks": { "preRead": true },
   "pulse": { "distilThresholdN": 3, "dismissedWindowDays": 90, "hygieneFreshnessHours": 48 },
+  "insight": { "clusterCarryOverJaccard": 0.5, "promotionMinAgeDays": 14, "promotionMinObservations": 2 },
   "harness": { "maxIterations": 3 },
   "loop": { "enabled": false }
 }
 ```
 
-**Required:** `schemaVersion` (string `MAJOR.MINOR`). All other keys optional with the defaults shown. `hooks.preRead` governs the **Read pair** (PreRead + PostRead) as one opt-out flag; `cortex init` writes it explicitly on fresh projects so the config self-documents. **Validated by** `check.config`: valid JSON; `schemaVersion` present and parseable; unknown keys → `warning`.
+**Required:** `schemaVersion` (string `MAJOR.MINOR`). All other keys optional with the defaults shown. `hooks.preRead` governs the **Read pair** (PreRead + PostRead) as one opt-out flag; `cortex init` writes it explicitly on fresh projects so the config self-documents. The `insight` block (new at 2.0) tunes cluster-id carry-over (§4.10.2) and promotion eligibility (§4.10.4); all three keys are optional with the defaults shown. **Validated by** `check.config`: valid JSON; `schemaVersion` present and parseable; unknown keys → `warning`.
 
 ### 10.2 Version semantics (semver-lite, MAJOR.MINOR)
 
@@ -655,6 +858,8 @@ The validator declares a `supportedMajor` and `supportedMinor`. Reading `cortex.
 
 A MAJOR bump ships a migration that `cortex migrate` (or `cortex init` on an existing project) applies. Moved/renamed paths leave a **deprecation marker** at the old location pointing at the new one (design §8.5), retained until the next MAJOR. Migrations are deterministic Core operations — no LLM.
 
+**1.0→2.0 waiver (Decision 19 / v2 design flag F5).** This requirement is explicitly **waived for the 1.0→2.0 transition only**: there are no external users, and the Cortex repository itself moves `specs/`→`.specflow/specs/` (etc.) and gains `insight/` as part of the v2 build. No `cortex migrate` for 2.0 ships and no deprecation markers are left at the old `specs/` roots. The policy holds in full for every **future** MAJOR, once external users exist. (`cortex init` on a pre-2.0 project without the migration would treat the old trees as absent — acceptable because no such external project exists.)
+
 ---
 
 ## Appendix A — Validator check catalogue
@@ -663,17 +868,21 @@ The mechanical check set (one row ⇒ one implementable check). Grouped by the d
 
 | Check | Enforces | Clause | Severity on fail |
 |---|---|---|---|
-| `check.layout` | `.cortex/` directory layout | §1 | error |
-| `check.index-present` / `check.index-shape` | every `.cortex/` dir has a well-formed `_index.md` | §7.1 | error / warning |
-| `check.specs-index` | `specs/_index.md` shape | §7.2 | error |
+| `check.layout` | `.cortex/` directory layout (incl. `insight/`; `.specflow/`-rooted trees) | §1, §2.3 | error |
+| `check.index-present` / `check.index-shape` | every `.cortex/` dir (incl. `insight/`) has a well-formed `_index.md` | §7.1 | error / warning |
+| `check.insight-index` | `insight/_index.md` states the ungated trust model + names the CLI | §7.4 | warning |
+| `check.specs-index` | `.specflow/specs/_index.md` shape | §7.2 | error |
 | `check.overview-present` / `check.overview-shape` | every spec-tree dir has a well-formed `_overview.md` | §2.2, §7.3 | error / warning |
-| `check.id-matches-path` | spec ID equals its path | §2.2 | error |
+| `check.id-matches-path` | spec ID equals its path (tree root stripped, §2.2) | §2.2 | error |
 | `check.anatomy-files` / `check.anatomy-graph` | anatomy artefact shapes | §4.1 | error / warning |
 | `check.anatomy-purpose-source` | rows with a populated purpose carry `purpose_source` (pre-provenance rows grandfathered until touched) | §4.1 | warning |
 | `check.rule` | rule frontmatter + `check` predicate | §4.2 | error |
 | `check.bug` | bug frontmatter + taxonomy | §4.3 | error |
 | `check.atlas` | atlas artefact frontmatter | §4.4 | error |
-| `check.pulse` | pulse header presence | §4.5 | warning |
+| `check.pulse` | pulse header presence; suggestion `**Type:**` present + in enum; `**Target:**` root permitted for its type; exactly one payload shape | §4.5, §4.5.1, §4.5.2 | warning (header) / error (type/target/payload) |
+| `check.insight-prose` | `insight/map/*.md` frontmatter (`kind`, `updated`); `## Corrections` log entry shape; promoted-trailer shape | §4.10.1, §4.10.4 | error (frontmatter) / warning (log & trailer) |
+| `check.insight-graph` | `graph.json`/`tags.json`/`clusters.json` shapes: JSON valid, node-id grammar, `kind`/`confidence` enums, non-empty `rationale`, cluster-id form + uniqueness | §4.10.2 | error (edge endpoint absent from `nodes` → warning) |
+| `check.insight-ownership` | `insight/map/` holds only `.md` + the three named `.json`; no `_index.md` under `map/` (the loop write-lane rule) | §4.10.3 | error |
 | `check.dev-spec` | dev-spec frontmatter + links | §4.6 | error |
 | `check.rule-governs-resolves` | every glob in a rule's `governs` matches ≥1 real file | §4.2, §6 | warning |
 | `check.dev-spec-governs-resolves` | every glob in a dev spec's `governs` matches ≥1 real file | §4.6, §6 | warning |
@@ -688,8 +897,10 @@ The mechanical check set (one row ⇒ one implementable check). Grouped by the d
 | `check.claude-md` | managed CLAUDE.md block | §8 | error |
 | `check.loop-md` | `loop.md` clauses (if present) | §9 | warning |
 | `check.config` | `cortex.config.json` + version | §10 | error |
-| `check.constellation` | constellation.json shape, id uniqueness, group/edge resolution | §4.9 | error |
+| `check.constellation` | constellation.json shape, id uniqueness, group/edge resolution (stays curated-only; insight preset composes at serve time) | §4.9 | error |
+
+Check count: 24 at v1.0 → **28 at v2.0** (added `check.insight-index`, `check.insight-prose`, `check.insight-graph`, `check.insight-ownership`; `check.pulse` gained error-severity clauses for typed/targeted suggestions; several existing checks re-rooted for `.specflow/` without changing their IDs).
 
 ---
 
-**End of schema v1.0 draft.** Next: reconcile `specs/schema/validator.spec.md` against this contract (replace its OPEN notes with concrete clause references), then proceed to implementation under `/goal`.
+**End of schema v2.0 draft.** Changes from 1.0: the `insight/` module (§4.10) and its four checks; the typed pulse gate with edit-and-create payloads (§4.5.1–4.5.2); the `.specflow/` re-rooting (§2.3); the restated loop-write invariant (Decision 13, §9); the insight constellation preset (§4.9); config `insight` block (§10.1); and the §10.4 migration waiver (Decision 19). Next: reconcile `.specflow/specs/schema/validator.spec.md` against this contract (the four new checks + the re-rooted paths), then proceed to implementation under the v2 build order (v2 design §13).

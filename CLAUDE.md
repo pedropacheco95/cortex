@@ -96,7 +96,7 @@ pnpm test:scenario        # scenario layer (full sandbox)
 - Never ignore RULES.md.
 - Never use npm — use pnpm.
 
-<!-- cortex:start v1.0 -->
+<!-- cortex:start v2.0 -->
 ## Cortex
 
 Cortex is active on **cortex**. The knowledge layer lives in `.cortex/`:
@@ -110,8 +110,8 @@ prompts that tell you what to read and when. For "why" questions, grep `cerebrum
 `atlas/`. For unfamiliar terms, check `atlas/domain/`. Follow frontmatter
 cross-references (the citation graph) to trace any claim to its source.
 
-Specs are the source of truth: `specs-business/` (outcomes) and `specs/` (implementation),
+Specs are the source of truth: `.specflow/specs-business/` (outcomes) and `.specflow/specs/` (implementation),
 linked by `implements:`/`implemented_by:`. Don't let the trees drift.
 
-Modules present: anatomy, cerebrum, atlas, pulse. Schema: 1.0.
+Modules present: anatomy, cerebrum, atlas, pulse. Schema: 2.0.
 <!-- cortex:end -->

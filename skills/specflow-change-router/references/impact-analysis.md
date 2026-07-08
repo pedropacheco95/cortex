@@ -6,7 +6,7 @@ Impact in a two-layer Specflow project propagates through **four** channels. The
 
 Grep all dev spec files for the changed spec's ID in `depends_on`:
 ```
-grep -r "depends_on:.*changed.spec.id" specs/
+grep -r "depends_on:.*changed.spec.id" .specflow/specs/
 ```
 These dev specs explicitly depend on the changed spec. If the change alters an entity, API contract, or behavioral rule, dependents need review.
 
@@ -14,7 +14,7 @@ These dev specs explicitly depend on the changed spec. If the change alters an e
 
 If the change modifies an entity (adds/removes/changes a field), find all dev specs that reference that entity:
 ```
-grep -r "EntityName" specs/
+grep -r "EntityName" .specflow/specs/
 ```
 Any spec using the entity in Rules or Acceptance Criteria may be affected.
 
@@ -51,7 +51,7 @@ Independent of layer, ask: does the change alter what the **group** of specs is 
 - Whole new domain → root `_overview.md` AND the new domain's `_overview.md`.
 - Pure leaf-spec edit (rule/threshold/criterion inside one capability) → usually no overview impact.
 
-Check both `specs/<domain>/_overview.md` and `specs-business/<domain>/_overview.md`.
+Check both `.specflow/specs/<domain>/_overview.md` and `.specflow/specs-business/<domain>/_overview.md`.
 
 ## Risk levels
 

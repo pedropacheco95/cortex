@@ -5,10 +5,11 @@ import fg from 'fast-glob';
 import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
 import { resolveId, resolveRelativePath } from '../index-build.js';
+import { specsRoot, SPECS_GLOB, BUSINESS_GLOB } from '../../paths.js';
 
 export async function checkXrefSymmetry(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
-  const specsDir = path.join(root, 'specs');
+  const specsDir = specsRoot(root);
 
   if (!fs.existsSync(specsDir)) return violations;
 
@@ -73,8 +74,8 @@ export async function checkXrefUnique(root: string, index: ProjectIndex): Promis
 
   // Scan for duplicates by reading all spec files
   const allSpecFiles = [
-    ...await fg('specs/**/*.spec.md', { cwd: root, absolute: true }),
-    ...await fg('specs-business/**/*.business.md', { cwd: root, absolute: true }),
+    ...await fg(SPECS_GLOB, { cwd: root, absolute: true }),
+    ...await fg(BUSINESS_GLOB, { cwd: root, absolute: true }),
   ];
 
   const idToFiles = new Map<string, string[]>();
@@ -167,8 +168,8 @@ export async function checkXrefAcyclic(root: string, index: ProjectIndex): Promi
     }
   }
 
-  await checkTree('specs/**/*.spec.md');
-  await checkTree('specs-business/**/*.business.md');
+  await checkTree(SPECS_GLOB);
+  await checkTree(BUSINESS_GLOB);
 
   return violations;
 }

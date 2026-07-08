@@ -45,7 +45,7 @@ window that works independently and returns results when done.
 ```
 Agent tool call:
   prompt: "You have the specflow-onboard-codebase skill. Run the full 8-phase onboarding
-           against [scope]. Write ALL output — specs/, specs-business/, _overview.md files,
+           against [scope]. Write ALL output — .specflow/specs/, .specflow/specs-business/, _overview.md files,
            bug ledger files (cerebrum/bugs/B-NNN-*.md), proposed-notes.md,
            onboarding-scratch/atoms/ — to
            onboarding-scratch/pass-a/. Do not write anything outside that directory."
@@ -279,19 +279,19 @@ project-root/
 ├── onboarding-scratch/
 │   ├── atoms/
 │   ├── pass-a/                            # raw output, retained for reference
-│   │   ├── specs/
-│   │   ├── specs-business/
+│   │   ├── .specflow/specs/
+│   │   ├── .specflow/specs-business/
 │   │   ├── cerebrum/bugs/
 │   │   └── proposed-notes.md
 │   ├── pass-b/
 │   │   └── ...
 │   └── pass-c/
 │       └── ...
-├── specs/
+├── .specflow/specs/
 │   ├── _overview.md
 │   ├── _index.md
 │   └── {domain}/...
-└── specs-business/
+└── .specflow/specs-business/
     ├── _overview.md
     └── {domain}/...
 ```

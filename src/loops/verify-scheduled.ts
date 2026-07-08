@@ -23,6 +23,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import { writePulseReport } from './report.js';
+import { specsRoot, businessRoot } from '../paths.js';
 
 export const VERIFICATION_REPORT_FILE = 'verification-report.md';
 
@@ -117,7 +118,7 @@ function implementsValue(data: Record<string, unknown>): string | null {
 
 /** Dev LEAF specs (§2.1: a leaf is the implementable spec — it carries `implements:`). */
 export function scanDevLeaves(root: string): DevLeaf[] {
-  const specsDir = path.join(root, 'specs');
+  const specsDir = specsRoot(root);
   const leaves: DevLeaf[] = [];
   for (const abs of walkMd(specsDir, '.spec.md')) {
     let parsed: { data: Record<string, unknown>; content: string };
@@ -147,7 +148,7 @@ export function scanDevLeaves(root: string): DevLeaf[] {
 }
 
 export function scanBusinessSpecs(root: string): BusinessSpec[] {
-  const bizDir = path.join(root, 'specs-business');
+  const bizDir = businessRoot(root);
   const specs: BusinessSpec[] = [];
   for (const abs of walkMd(bizDir, '.business.md')) {
     let parsed: { data: Record<string, unknown>; content: string };

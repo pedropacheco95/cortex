@@ -46,7 +46,7 @@ function fullFixture(root: string): void {
     filesRow('src/schema/validate.ts', 120, 'schema.validator'),
     filesRow('src/schema/types.ts', 30),
     filesRow('src/cli/init.ts', 200),
-    filesRow('specs/_overview.md', 10), // scaffolding — never a node
+    filesRow('.specflow/specs/_overview.md', 10), // scaffolding — never a node
     filesRow('docs/_index.md', 5), // scaffolding — never a node
     filesRow('tests/scenario/specs/first-run.md', 40),
   ]);
@@ -187,7 +187,7 @@ describe('nodes: module-prefixed unique ids per surface (Rule 3)', () => {
     const root = tmp('scaffolding');
     fullFixture(root);
     const c = await compile(root);
-    expect(node(c, 'anatomy:specs/_overview.md')).toBeUndefined();
+    expect(node(c, 'anatomy:.specflow/specs/_overview.md')).toBeUndefined();
     expect(node(c, 'anatomy:docs/_index.md')).toBeUndefined();
   });
 

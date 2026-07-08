@@ -59,7 +59,7 @@ describe('loops.lint-scheduled integrated slice (through cortex CLI run())', () 
   it('dirty fixture: still exit 0 (the report is the product, not a CI gate), violations grouped by check', async () => {
     const root = tmp('dirty');
     copyDir(VALID_FIXTURE, root);
-    fs.rmSync(path.join(root, 'specs', 'schema', '_overview.md'));
+    fs.rmSync(path.join(root, '.specflow', 'specs', 'schema', '_overview.md'));
     process.chdir(root);
     expect(await run(['loop-specflow-lint'])).toBe(0);
     const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'lint-report.md'), 'utf-8');

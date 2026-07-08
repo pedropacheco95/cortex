@@ -11,8 +11,8 @@ Use this template when generating the project's CLAUDE.md. Adapt sections based 
 
 This project uses Specflow — specs are the source of truth, code is an artifact. There are **two parallel spec trees**:
 
-- `specs-business/` — high-level outcomes, user journeys, and success metrics for stakeholders. Each business spec is the contract with the client. **Read this first** when you want to understand *why* something exists.
-- `specs/` — developer-facing specs with schemas, APIs, dependency chains, and Given/When/Then acceptance criteria. Each leaf spec is the contract with the implementer. **Read this when you're about to write code.**
+- `.specflow/specs-business/` — high-level outcomes, user journeys, and success metrics for stakeholders. Each business spec is the contract with the client. **Read this first** when you want to understand *why* something exists.
+- `.specflow/specs/` — developer-facing specs with schemas, APIs, dependency chains, and Given/When/Then acceptance criteria. Each leaf spec is the contract with the implementer. **Read this when you're about to write code.**
 
 Every directory in both trees has an `_overview.md` explaining what it groups and why. Start there if you're new to a folder.
 
@@ -44,12 +44,12 @@ When implementing a developer spec, follow this exact sequence:
 ```
 [Adapt this to the actual project structure. Always include both spec trees.]
 project-root/
-├── specs-business/          # client-facing outcomes
+├── .specflow/specs-business/          # client-facing outcomes
 │   ├── _overview.md
 │   └── {domain}/
 │       ├── _overview.md
 │       └── {outcome}.business.md
-├── specs/                   # developer-facing specs
+├── .specflow/specs/                   # developer-facing specs
 │   ├── _overview.md
 │   ├── _index.md
 │   └── {domain}/{capability}/{leaf}.spec.md

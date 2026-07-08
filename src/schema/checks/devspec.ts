@@ -1,17 +1,17 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import matter from 'gray-matter';
 import fg from 'fast-glob';
 import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
 import { resolveId, resolveRelativePath } from '../index-build.js';
 import { globMatchesNothing } from './cerebrum.js';
+import { specsRoot } from '../../paths.js';
 
 const STATUS_ENUM = ['draft', 'implementing', 'implemented'] as const;
 
 export async function checkDevSpecs(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
-  const specsDir = path.join(root, 'specs');
+  const specsDir = specsRoot(root);
 
   if (!fs.existsSync(specsDir)) return violations;
 

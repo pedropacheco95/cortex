@@ -1,6 +1,6 @@
 # Folder Overview Template (`_overview.md`)
 
-Every directory inside `specs-business/` and `specs/` must contain an `_overview.md`. The leading underscore makes it sort to the top of the folder so anyone — Claude, a client browsing the tree, the spec viewer — sees it before the individual specs.
+Every directory inside `.specflow/specs-business/` and `.specflow/specs/` must contain an `_overview.md`. The leading underscore makes it sort to the top of the folder so anyone — Claude, a client browsing the tree, the spec viewer — sees it before the individual specs.
 
 `README.md` is acceptable only when a project already uses that convention; default to `_overview.md` for new projects.
 
@@ -16,11 +16,11 @@ Keep it short. 3-6 short paragraphs. A reader should know within 30 seconds whet
 
 ## Where overviews go
 
-For both `specs-business/` and `specs/`:
+For both `.specflow/specs-business/` and `.specflow/specs/`:
 
-- The tree root (`specs-business/_overview.md`, `specs/_overview.md`) — explains the whole tree.
-- Every domain folder (`specs/auth/_overview.md`) — explains the domain.
-- Every capability folder (`specs/auth/registration/_overview.md`) — explains the capability and lists its leaves.
+- The tree root (`.specflow/specs-business/_overview.md`, `.specflow/specs/_overview.md`) — explains the whole tree.
+- Every domain folder (`.specflow/specs/auth/_overview.md`) — explains the domain.
+- Every capability folder (`.specflow/specs/auth/registration/_overview.md`) — explains the capability and lists its leaves.
 - Any other sub-folder — same rule.
 
 ## Template
@@ -65,12 +65,12 @@ Don't generate overview text that is more abstract than the underlying specs —
 
 ## Tone differences between trees
 
-- **`specs-business/.../_overview.md`** is for non-technical readers. No file paths in the prose body, no spec IDs in the bullets — use the human-readable spec titles. Cross-links can still point to file paths under the "Related groups" section.
-- **`specs/.../_overview.md`** is for developers. Spec IDs are fine; file paths and dependency hints are welcome.
+- **`.specflow/specs-business/.../_overview.md`** is for non-technical readers. No file paths in the prose body, no spec IDs in the bullets — use the human-readable spec titles. Cross-links can still point to file paths under the "Related groups" section.
+- **`.specflow/specs/.../_overview.md`** is for developers. Spec IDs are fine; file paths and dependency hints are welcome.
 
 ## Examples
 
-### `specs/auth/_overview.md` (developer-tree domain folder)
+### `.specflow/specs/auth/_overview.md` (developer-tree domain folder)
 
 ```markdown
 # Auth — Overview
@@ -98,7 +98,7 @@ User profile data, preferences, and roles within a workspace belong to `user-pro
 - Profile data after sign-in: `../user-profiles/`
 ```
 
-### `specs-business/auth/_overview.md` (business-tree domain folder)
+### `.specflow/specs-business/auth/_overview.md` (business-tree domain folder)
 
 ```markdown
 # Auth — Overview

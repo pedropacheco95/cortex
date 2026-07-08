@@ -1,6 +1,6 @@
 # Business Spec Template (Onboarding)
 
-Business specs live in `specs-business/{domain}/{outcome}.business.md`, organized in
+Business specs live in `.specflow/specs-business/{domain}/{outcome}.business.md`, organized in
 domain subfolders with `_overview.md` in each folder. They describe outcomes a user can
 achieve and the journeys they walk to achieve them. They are the layer non-technical
 stakeholders read.
@@ -23,7 +23,7 @@ filename with a persona, the outcome may be too abstract or too technical.
 ## Directory structure
 
 ```
-specs-business/
+.specflow/specs-business/
 ├── _overview.md
 ├── booking/
 │   ├── _overview.md

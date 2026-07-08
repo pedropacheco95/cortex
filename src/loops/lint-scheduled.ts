@@ -12,11 +12,13 @@ import * as path from 'path';
 import { validate } from '../schema/validate.js';
 import type { Violation } from '../schema/types.js';
 import { writePulseReport } from './report.js';
+import { SPECS_REL, BUSINESS_REL } from '../paths.js';
 
 export const LINT_REPORT_FILE = 'lint-report.md';
 
-/** Spec Rule 2: the spec tree = these three roots. */
-const SPEC_TREE_PREFIXES = ['specs', 'specs-business', path.join('tests', 'scenario', 'specs')];
+/** Spec Rule 2: the spec tree = these three roots. `tests/scenario/specs/`
+ *  stays at the project root (§2.3); the two moved trees live under `.specflow/`. */
+const SPEC_TREE_PREFIXES = [SPECS_REL, BUSINESS_REL, path.join('tests', 'scenario', 'specs')];
 
 /** Project-relative form of a violation's location path. */
 export function violationRelPath(root: string, locationPath: string): string {
@@ -53,7 +55,7 @@ export async function runLintScheduled(root = '.', opts: LintRunOptions = {}): P
 
   if (specViolations.length === 0) {
     // Rule 3 — always-write: a conformant tree is a stated clean run.
-    lines.push('Spec tree structurally sound.', '', '0 error(s), 0 warning(s) across `specs/`, `specs-business/`, and `tests/scenario/specs/`.', '');
+    lines.push('Spec tree structurally sound.', '', '0 error(s), 0 warning(s) across `.specflow/specs/`, `.specflow/specs-business/`, and `tests/scenario/specs/`.', '');
   } else {
     // Rule 2: group by check, each with file, clause, and message.
     const byCheck = new Map<string, Violation[]>();
@@ -84,7 +86,7 @@ export async function runLintScheduled(root = '.', opts: LintRunOptions = {}): P
   lines.push(
     '---',
     '',
-    'Substance: the schema validator\'s spec-tree checks over `specs/`, `specs-business/`, and ' +
+    'Substance: the schema validator\'s spec-tree checks over `.specflow/specs/`, `.specflow/specs-business/`, and ' +
       '`tests/scenario/specs/`. Exit 0 clean or dirty — this report is the daily record; `cortex validate` is the ' +
       'CI gate. The interactive `specflow-lint` skill remains the deep path.',
   );

@@ -136,7 +136,7 @@ describe('check.anatomy-purpose-source: grandfathered/clean cases stay silent', 
 describe('check.anatomy-purpose-source: registered in validate', () => {
   it('a full validate run surfaces the warning (and it never flips conformant)', async () => {
     const root = tmp('ps-validate');
-    makeCortexProject(root);
+    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
     writeRawFilesMd(root, [
       HEADER8,
       SEP8,

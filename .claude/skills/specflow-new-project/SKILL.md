@@ -1,7 +1,7 @@
 ---
 name: specflow-new-project
 description: >
-  Generate a complete two-layer spec tree (business specs for stakeholders + developer specs for implementation), folder overview docs in every directory, tooling manifest, agents, skills, rules, and build order from a project description. Use this skill whenever the user wants to start a new project from scratch, describes a product idea, says things like "new project", "build me an app", "I want to create", "start a new", "specflow new", "start from scratch", "help me spec this out", "write specs for this", or presents any product concept that needs structured planning before implementation. Even if the user just describes what they want to build without explicitly asking for specs, this skill should trigger — the goal is to plan before coding. The output contains both `specs-business/` (stakeholder-facing outcomes and journeys) and `specs/` (developer-facing entity references, rules, acceptance criteria), bidirectionally linked, with an `_overview.md` in every folder of both trees.
+  Generate a complete two-layer spec tree (business specs for stakeholders + developer specs for implementation), folder overview docs in every directory, tooling manifest, agents, skills, rules, and build order from a project description. Use this skill whenever the user wants to start a new project from scratch, describes a product idea, says things like "new project", "build me an app", "I want to create", "start a new", "specflow new", "start from scratch", "help me spec this out", "write specs for this", or presents any product concept that needs structured planning before implementation. Even if the user just describes what they want to build without explicitly asking for specs, this skill should trigger — the goal is to plan before coding. The output contains both `.specflow/specs-business/` (stakeholder-facing outcomes and journeys) and `.specflow/specs/` (developer-facing entity references, rules, acceptance criteria), bidirectionally linked, with an `_overview.md` in every folder of both trees.
 ---
 
 # Specflow: New Project
@@ -16,8 +16,8 @@ Without specs, Claude Code tends to make ad-hoc architectural decisions, skip ed
 
 Every Specflow project produces two parallel spec trees:
 
-- **`specs-business/`** — high-level specs for non-technical stakeholders (clients, PMs, executives). Each business spec describes an outcome, a user journey, business rules, and success metrics. **No schemas, no APIs, no test-shaped acceptance criteria.** This is the contract with the client: what the product does and why.
-- **`specs/`** — developer-facing specs (the existing layer). Schemas, APIs, dependency chains, Given/When/Then acceptance criteria. This is the contract with the implementer: how the product is built.
+- **`.specflow/specs-business/`** — high-level specs for non-technical stakeholders (clients, PMs, executives). Each business spec describes an outcome, a user journey, business rules, and success metrics. **No schemas, no APIs, no test-shaped acceptance criteria.** This is the contract with the client: what the product does and why.
+- **`.specflow/specs/`** — developer-facing specs (the existing layer). Schemas, APIs, dependency chains, Given/When/Then acceptance criteria. This is the contract with the implementer: how the product is built.
 
 The two layers are **bidirectionally linked**:
 - Every developer leaf spec has frontmatter `implements:` pointing to exactly **one** business spec — the outcome it primarily serves. If a dev spec serves a secondary outcome, note it in the Notes section but keep `implements:` singular.
@@ -26,7 +26,7 @@ The two layers are **bidirectionally linked**:
 
 ## Folder overview docs
 
-Every directory in `specs-business/` and `specs/` (root, every domain folder, every capability folder, and any sub-folders) **must contain an `_overview.md` file**. The leading underscore makes it sort to the top of the folder so readers see it first. Each overview answers three questions in 3-6 short paragraphs:
+Every directory in `.specflow/specs-business/` and `.specflow/specs/` (root, every domain folder, every capability folder, and any sub-folders) **must contain an `_overview.md` file**. The leading underscore makes it sort to the top of the folder so readers see it first. Each overview answers three questions in 3-6 short paragraphs:
 
 1. **What this group of specs IS** — the kind of thing collected here.
 2. **What it COVERS** — the capabilities/outcomes inside, named explicitly.
@@ -42,9 +42,9 @@ When the project has a `.cortex/` directory:
   convention defaults** in Phases 1-2. Recorded stack choices, formatting conventions,
   and tooling preferences seed the recommendation; never contradict a recorded
   preference without flagging it to the user.
-- **Scaffold per the schema's tree conventions:** `specs/` and `specs-business/` live at
+- **Scaffold per the schema's tree conventions:** `.specflow/specs/` and `.specflow/specs-business/` live at
   the project root (cortex-schema §2), with `_overview.md` in every folder of both
-  trees and `specs/_index.md` as the engineering index — the layout the phases below
+  trees and `.specflow/specs/_index.md` as the engineering index — the layout the phases below
   produce.
 
 ## The Six Phases
@@ -191,9 +191,9 @@ Rules are hard constraints that apply project-wide. They go in RULES.md at the p
 - Justified (explain *why* the rule exists)
 - Few in number (10-20 max — too many rules get ignored)
 
-### Output: specs/_index.md
+### Output: .specflow/specs/_index.md
 
-Write the tooling manifest as `specs/_index.md` (this is distinct from `specs/_overview.md` — the manifest is the engineering index, the overview is the prose explanation):
+Write the tooling manifest as `.specflow/specs/_index.md` (this is distinct from `.specflow/specs/_overview.md` — the manifest is the engineering index, the overview is the prose explanation):
 
 ```markdown
 # [Project Name] — Tooling Manifest
@@ -233,7 +233,7 @@ Read `references/business-spec-template.md` for the exact format. Business specs
 - **Success Metrics** (measurable, but not necessarily technical)
 - An `implemented_by:` frontmatter list — fill this in *after* you generate the developer specs
 
-Domain folders inside `specs-business/` should mirror the domain folders inside `specs/` so a reader can move sideways between layers.
+Domain folders inside `.specflow/specs-business/` should mirror the domain folders inside `.specflow/specs/` so a reader can move sideways between layers.
 
 ### Then generate the developer tree
 
@@ -264,7 +264,7 @@ Key principles:
 
 ### Then write the folder overviews
 
-Once both trees exist, walk every directory in `specs-business/` and `specs/` (root, domain, capability, any sub-folders) and write `_overview.md`. Read `references/folder-overview-template.md` for the format. Derive the content from the project brief and the actual specs you placed in that folder — the overview should name the specs by ID and explain the boundary.
+Once both trees exist, walk every directory in `.specflow/specs-business/` and `.specflow/specs/` (root, domain, capability, any sub-folders) and write `_overview.md`. Read `references/folder-overview-template.md` for the format. Derive the content from the project brief and the actual specs you placed in that folder — the overview should name the specs by ID and explain the boundary.
 
 ### Then wire the bidirectional links
 
@@ -346,11 +346,11 @@ When multiple specs have no unresolved dependencies, prefer this order:
 
 ## Step 0: Approve the business contract
 
-Before any code is written, walk the client through `specs-business/` (start with `specs-business/_overview.md`, then each domain). Sign-off on outcomes and success metrics happens here. The developer tree below cannot be re-prioritised without a corresponding update to the business specs it implements.
+Before any code is written, walk the client through `.specflow/specs-business/` (start with `.specflow/specs-business/_overview.md`, then each domain). Sign-off on outcomes and success metrics happens here. The developer tree below cannot be re-prioritised without a corresponding update to the business specs it implements.
 
 ## Step 1: Approve the developer contract
 
-Read `specs/_overview.md` and walk each domain. The dev specs below are the topologically sorted implementation order; any change to scope must propagate back up to the business spec via the `implements:` link.
+Read `.specflow/specs/_overview.md` and walk each domain. The dev specs below are the topologically sorted implementation order; any change to scope must propagate back up to the business spec via the `implements:` link.
 
 ## Phase 1: Foundation
 
@@ -384,13 +384,13 @@ project-root/
 ├── .claude/
 │   ├── skills/{name}/SKILL.md
 │   └── agents/{name}.md
-├── specs-business/
+├── .specflow/specs-business/
 │   ├── _overview.md
 │   ├── {domain}/
 │   │   ├── _overview.md
 │   │   └── {outcome}.business.md
 │   └── ...
-└── specs/
+└── .specflow/specs/
     ├── _overview.md
     ├── _index.md
     ├── {domain}/
@@ -415,8 +415,8 @@ Read `references/claude-md-template.md` for the full template. The CLAUDE.md mus
 
 Before presenting the output to the user:
 - [ ] `project-brief.md` matches approved brief
-- [ ] `specs-business/` exists with at least one business spec per top-level outcome
-- [ ] `specs/` exists with all developer specs following the schema in `references/spec-schema.md`
+- [ ] `.specflow/specs-business/` exists with at least one business spec per top-level outcome
+- [ ] `.specflow/specs/` exists with all developer specs following the schema in `references/spec-schema.md`
 - [ ] **Every directory in both trees contains `_overview.md`** (root, domain, capability, sub-folders)
 - [ ] Every developer leaf spec has `implements:` populated with exactly one business spec path that resolves
 - [ ] Every business spec has `implemented_by:` populated and all paths resolve
@@ -426,7 +426,7 @@ Before presenting the output to the user:
 - [ ] `RULES.md` has justified, actionable rules
 - [ ] All agents have proper frontmatter (name, description, tools, model)
 - [ ] All skills have proper frontmatter (name, description)
-- [ ] `specs/_index.md` lists all domains and their spec counts
+- [ ] `.specflow/specs/_index.md` lists all domains and their spec counts
 - [ ] No OPEN: questions left unresolved (or user has acknowledged them)
 
 ---

@@ -304,7 +304,7 @@ const FAILURE: WorklistFailure = {
   testName: 'demo > asserts the rule',
   output: 'FAIL tests/atomic/demo/sample.test.ts\nAssertionError: nope',
   specId: 'demo.sample',
-  specFile: 'specs/demo/sample.spec.md',
+  specFile: '.specflow/specs/demo/sample.spec.md',
   criterion: 'Sample rule holds',
 };
 
@@ -437,24 +437,24 @@ describe('PR body assembly (five fields)', () => {
 // ---------------------------------------------------------------------------
 
 describe('spec and criterion tracing', () => {
-  it('traces via the §3 path convention: tests/<tier>/<rest>.test.ts → specs/<rest>.spec.md', () => {
+  it('traces via the §3 path convention: tests/<tier>/<rest>.test.ts → .specflow/specs/<rest>.spec.md', () => {
     const root = tmp('trace-path');
-    fs.mkdirSync(path.join(root, 'specs', 'demo'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.specflow', 'specs', 'demo'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, 'specs', 'demo', 'sample.spec.md'),
+      path.join(root, '.specflow', 'specs', 'demo', 'sample.spec.md'),
       '---\nid: demo.sample\nstatus: draft\n---\n\n# S\n',
       'utf-8',
     );
     const traced = traceSpec(root, 'tests/atomic/demo/sample.test.ts');
     expect(traced?.id).toBe('demo.sample');
-    expect(traced?.file).toBe(path.join('specs', 'demo', 'sample.spec.md'));
+    expect(traced?.file).toBe(path.join('.specflow', 'specs', 'demo', 'sample.spec.md'));
   });
 
   it('falls back to a governs-glob scan when the conventional path misses', () => {
     const root = tmp('trace-governs');
-    fs.mkdirSync(path.join(root, 'specs', 'other'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.specflow', 'specs', 'other'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, 'specs', 'other', 'thing.spec.md'),
+      path.join(root, '.specflow', 'specs', 'other', 'thing.spec.md'),
       '---\nid: other.thing\nstatus: draft\ngoverns:\n  - "tests/journey/**"\n---\n\n# S\n',
       'utf-8',
     );
@@ -463,7 +463,7 @@ describe('spec and criterion tracing', () => {
 
   it('returns null when neither convention nor governs hits', () => {
     const root = tmp('trace-none');
-    fs.mkdirSync(path.join(root, 'specs'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.specflow', 'specs'), { recursive: true });
     expect(traceSpec(root, 'tests/atomic/nowhere/y.test.ts')).toBeNull();
   });
 

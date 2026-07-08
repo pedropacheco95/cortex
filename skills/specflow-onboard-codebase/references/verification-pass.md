@@ -16,7 +16,7 @@ The human should receive specs that have been written, challenged (Phase 3), AND
 ## Agent delegation
 
 Spawn one verification agent per domain. Each agent receives:
-1. That domain's completed specs (all leaf specs under `specs/{domain}/`)
+1. That domain's completed specs (all leaf specs under `.specflow/specs/{domain}/`)
 2. The source files those specs describe (from the atom graph's file paths)
 3. Instructions to verify each spec point by point
 

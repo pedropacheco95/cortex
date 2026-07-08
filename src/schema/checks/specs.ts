@@ -2,10 +2,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import type { Violation } from '../types.js';
+import { specsRoot, businessRoot, specsIndexPath as specsIndexPathOf, SPECS_REL } from '../../paths.js';
 
 export function checkSpecsIndex(root: string): Violation[] {
   const violations: Violation[] = [];
-  const specsIndexPath = path.join(root, 'specs', '_index.md');
+  const specsIndexPath = specsIndexPathOf(root);
 
   if (!fs.existsSync(specsIndexPath)) {
     violations.push({
@@ -13,7 +14,7 @@ export function checkSpecsIndex(root: string): Violation[] {
       check: 'check.specs-index',
       clause: '§7.2',
       location: { path: specsIndexPath },
-      message: 'specs/_index.md is missing',
+      message: `${SPECS_REL}/_index.md is missing`,
     });
     return violations;
   }
@@ -27,7 +28,7 @@ export function checkSpecsIndex(root: string): Violation[] {
         check: 'check.specs-index',
         clause: '§7.2',
         location: { path: specsIndexPath },
-        message: `specs/_index.md missing required section "${heading}"`,
+        message: `${SPECS_REL}/_index.md missing required section "${heading}"`,
       });
     }
   }
@@ -59,8 +60,8 @@ export function checkOverviewPresent(root: string): Violation[] {
     }
   }
 
-  checkTree(path.join(root, 'specs'));
-  checkTree(path.join(root, 'specs-business'));
+  checkTree(specsRoot(root));
+  checkTree(businessRoot(root));
 
   return violations;
 }
@@ -113,8 +114,8 @@ export function checkOverviewShape(root: string): Violation[] {
     }
   }
 
-  walkTree(path.join(root, 'specs'), false);
-  walkTree(path.join(root, 'specs-business'), true);
+  walkTree(specsRoot(root), false);
+  walkTree(businessRoot(root), true);
 
   return violations;
 }
@@ -148,8 +149,8 @@ export function checkIdMatchesPath(root: string): Violation[] {
     }
   }
 
-  checkTree(path.join(root, 'specs'), '.spec.md', 'spec');
-  checkTree(path.join(root, 'specs-business'), '.business.md', 'business');
+  checkTree(specsRoot(root), '.spec.md', 'spec');
+  checkTree(businessRoot(root), '.business.md', 'business');
 
   return violations;
 }

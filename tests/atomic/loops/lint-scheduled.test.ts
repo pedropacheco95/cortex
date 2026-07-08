@@ -65,11 +65,11 @@ function violation(p: string): Violation {
 // ===========================================================================
 describe('Spec-tree relevance partition (Rule 2)', () => {
   const root = '/proj';
-  it('paths under specs/, specs-business/, and tests/scenario/specs/ are spec-tree-relevant', () => {
-    expect(isSpecTreeViolation(root, violation('/proj/specs/a/b.spec.md'))).toBe(true);
-    expect(isSpecTreeViolation(root, violation('/proj/specs-business/a/b.business.md'))).toBe(true);
+  it('paths under .specflow/specs/, .specflow/specs-business/, and tests/scenario/specs/ are spec-tree-relevant', () => {
+    expect(isSpecTreeViolation(root, violation('/proj/.specflow/specs/a/b.spec.md'))).toBe(true);
+    expect(isSpecTreeViolation(root, violation('/proj/.specflow/specs-business/a/b.business.md'))).toBe(true);
     expect(isSpecTreeViolation(root, violation('/proj/tests/scenario/specs/s.md'))).toBe(true);
-    expect(isSpecTreeViolation(root, violation('specs/_index.md'))).toBe(true);
+    expect(isSpecTreeViolation(root, violation('.specflow/specs/_index.md'))).toBe(true);
   });
   it('everything else is not (including tests/atomic and .cortex)', () => {
     expect(isSpecTreeViolation(root, violation('/proj/.cortex/anatomy/files.md'))).toBe(false);
@@ -78,8 +78,8 @@ describe('Spec-tree relevance partition (Rule 2)', () => {
     expect(isSpecTreeViolation(root, violation('/proj/CLAUDE.md'))).toBe(false);
   });
   it('violationRelPath keeps relative paths and relativises absolute ones', () => {
-    expect(violationRelPath('/proj', '/proj/specs/a.spec.md')).toBe('specs/a.spec.md');
-    expect(violationRelPath('/proj', 'specs/a.spec.md')).toBe('specs/a.spec.md');
+    expect(violationRelPath('/proj', '/proj/.specflow/specs/a.spec.md')).toBe('.specflow/specs/a.spec.md');
+    expect(violationRelPath('/proj', '.specflow/specs/a.spec.md')).toBe('.specflow/specs/a.spec.md');
   });
 });
 
@@ -105,7 +105,7 @@ describe('Violations grouped with location and clause', () => {
   it('a broken implements: and a missing _overview.md are grouped under their checks, each with file and clause, exit 0', async () => {
     const root = makeFixtureCopy('dirty');
     // Break the implements: link.
-    const specPath = path.join(root, 'specs', 'schema', 'validator.spec.md');
+    const specPath = path.join(root, '.specflow', 'specs', 'schema', 'validator.spec.md');
     fs.writeFileSync(
       specPath,
       fs.readFileSync(specPath, 'utf-8').replace(
@@ -115,13 +115,13 @@ describe('Violations grouped with location and clause', () => {
       'utf-8',
     );
     // Remove an overview.
-    fs.rmSync(path.join(root, 'specs', 'schema', '_overview.md'));
+    fs.rmSync(path.join(root, '.specflow', 'specs', 'schema', '_overview.md'));
 
     expect(await runLintScheduled(root)).toBe(0);
     const body = report(root);
     expect(body).toContain('## check.dev-spec');
     expect(body).toContain('## check.overview-present');
-    expect(body).toContain('`specs/schema/validator.spec.md`');
+    expect(body).toContain('`.specflow/specs/schema/validator.spec.md`');
     expect(body).toMatch(/does not resolve/);
     expect(body).toContain('§4.6');
     expect(body).toMatch(/missing _overview\.md/);

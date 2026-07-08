@@ -12,8 +12,8 @@ import { checkBusinessStatus } from '../../../src/schema/checks/bizspec.js';
 import { validate } from '../../../src/schema/validate.js';
 
 const VALID_FIXTURE = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex/tests/fixtures/valid');
-const BIZ_REL = path.join('specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
-const DEV_REL = path.join('specs', 'schema', 'validator.spec.md');
+const BIZ_REL = path.join('.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
+const DEV_REL = path.join('.specflow', 'specs', 'schema', 'validator.spec.md');
 
 let counter = 0;
 const dirs: string[] = [];
@@ -79,7 +79,7 @@ describe('check.business-status: partially-implemented implementers are silent',
     const root = makeFixtureCopy('partial');
     setStatus(root, DEV_REL, 'draft', 'implemented');
     // A second, still-draft implementer alongside the implemented one.
-    const secondDev = path.join(root, 'specs', 'schema', 'reporter.spec.md');
+    const secondDev = path.join(root, '.specflow', 'specs', 'schema', 'reporter.spec.md');
     fs.writeFileSync(
       secondDev,
       `---

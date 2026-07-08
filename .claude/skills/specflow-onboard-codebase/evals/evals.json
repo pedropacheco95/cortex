@@ -4,25 +4,25 @@
     {
       "id": 1,
       "name": "levelup-padel-full-onboarding",
-      "prompt": "Onboard this codebase under spec management. The project is at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/ — it has a Flask backend in levelup_backend/ and a React frontend in levelup_frontend/. Run Phases 1-2 (code scan + proposed spec generation, both trees and all folder overviews) and Phase 5 (tooling generation). Skip Phase 3 (human correction) — treat all proposed specs as approved. Skip Phase 6 (test generation). Generate the full developer spec tree under specs/, the business spec tree under specs-business/, an _overview.md in every folder of both trees, bidirectional links (implements / implemented_by), proposed-notes.md, link-map.md, CLAUDE.md, RULES.md, build-order.md, skills, and agents. Print the onboarding summary at the end.",
-      "expected_output": "Should produce BOTH trees: dev specs under specs/ covering auth, players, classes/scheduling, evaluations, messaging, exercises, notifications, dashboard, settings; AND business specs under specs-business/ that GROUP these into ~6-12 user-visible outcomes (e.g. 'Find and join a class', 'Track my progression', 'Coach my players'). Every folder in both trees has an _overview.md. Every dev spec has frontmatter `implements:` (a business spec id, or `[]` with the spec listed in the unmapped report). Every business spec has frontmatter `implemented_by:` with 2+ dev spec ids each (1:1 pairs are a smell). The final summary prints counts: dev specs, business specs, unmapped, folders missing _overview (must be 0), draft business specs.",
+      "prompt": "Onboard this codebase under spec management. The project is at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/ — it has a Flask backend in levelup_backend/ and a React frontend in levelup_frontend/. Run Phases 1-2 (code scan + proposed spec generation, both trees and all folder overviews) and Phase 5 (tooling generation). Skip Phase 3 (human correction) — treat all proposed specs as approved. Skip Phase 6 (test generation). Generate the full developer spec tree under .specflow/specs/, the business spec tree under .specflow/specs-business/, an _overview.md in every folder of both trees, bidirectional links (implements / implemented_by), proposed-notes.md, link-map.md, CLAUDE.md, RULES.md, build-order.md, skills, and agents. Print the onboarding summary at the end.",
+      "expected_output": "Should produce BOTH trees: dev specs under .specflow/specs/ covering auth, players, classes/scheduling, evaluations, messaging, exercises, notifications, dashboard, settings; AND business specs under .specflow/specs-business/ that GROUP these into ~6-12 user-visible outcomes (e.g. 'Find and join a class', 'Track my progression', 'Coach my players'). Every folder in both trees has an _overview.md. Every dev spec has frontmatter `implements:` (a business spec id, or `[]` with the spec listed in the unmapped report). Every business spec has frontmatter `implemented_by:` with 2+ dev spec ids each (1:1 pairs are a smell). The final summary prints counts: dev specs, business specs, unmapped, folders missing _overview (must be 0), draft business specs.",
       "files": [],
       "assertions": [
         {
           "id": "both-trees-exist",
-          "text": "Both `specs/` and `specs-business/` directories are created at the project root."
+          "text": "Both `.specflow/specs/` and `.specflow/specs-business/` directories are created at the project root."
         },
         {
           "id": "every-folder-has-overview",
-          "text": "Every directory under `specs/` and `specs-business/` (root, every domain, every capability) contains an `_overview.md` file. Zero folders are missing one."
+          "text": "Every directory under `.specflow/specs/` and `.specflow/specs-business/` (root, every domain, every capability) contains an `_overview.md` file. Zero folders are missing one."
         },
         {
           "id": "dev-specs-have-implements-field",
-          "text": "Every dev spec in `specs/` has an `implements:` field in its frontmatter (either a business spec id or `[]`)."
+          "text": "Every dev spec in `.specflow/specs/` has an `implements:` field in its frontmatter (either a business spec id or `[]`)."
         },
         {
           "id": "business-specs-have-implemented-by",
-          "text": "Every business spec in `specs-business/` has an `implemented_by:` field listing one or more dev spec ids."
+          "text": "Every business spec in `.specflow/specs-business/` has an `implemented_by:` field listing one or more dev spec ids."
         },
         {
           "id": "business-specs-grouped-not-mirrored",
@@ -54,7 +54,7 @@
         },
         {
           "id": "claude-md-mentions-both-trees",
-          "text": "The generated CLAUDE.md references both `specs/` and `specs-business/`, the bidirectional link convention, and the requirement to keep `_overview.md` files current."
+          "text": "The generated CLAUDE.md references both `.specflow/specs/` and `.specflow/specs-business/`, the bidirectional link convention, and the requirement to keep `_overview.md` files current."
         }
       ]
     },
@@ -62,12 +62,12 @@
       "id": 2,
       "name": "express-todo-small-app",
       "prompt": "I have a small Express.js + MongoDB todo app at /Users/pedropacheco1/Documents/Projetos/padel_app/levelup/.claude/skills/specflow-onboard-codebase-workspace/sample-apps/express-todo/. Onboard it under spec management. Run Phases 1-2 (both trees + all folder overviews) and Phase 5. Skip Phase 3 (treat all specs as approved) and Phase 6. Print the onboarding summary at the end.",
-      "expected_output": "Should produce a SMALL spec tree proportional to the app: ~5-15 dev specs (auth if present, todos CRUD, maybe categories) under specs/, AND ~2-4 business specs under specs-business/ ('Manage my todos', 'Sign in', etc.). Every folder of both trees has an _overview.md. Bidirectional links populated. Should NOT over-engineer with dozens of business specs for a tiny app. Express+MongoDB stack reflected in skills.",
+      "expected_output": "Should produce a SMALL spec tree proportional to the app: ~5-15 dev specs (auth if present, todos CRUD, maybe categories) under .specflow/specs/, AND ~2-4 business specs under .specflow/specs-business/ ('Manage my todos', 'Sign in', etc.). Every folder of both trees has an _overview.md. Bidirectional links populated. Should NOT over-engineer with dozens of business specs for a tiny app. Express+MongoDB stack reflected in skills.",
       "files": [],
       "assertions": [
         {
           "id": "both-trees-exist",
-          "text": "Both `specs/` and `specs-business/` exist."
+          "text": "Both `.specflow/specs/` and `.specflow/specs-business/` exist."
         },
         {
           "id": "proportional-business-tree",
@@ -96,7 +96,7 @@
       "assertions": [
         {
           "id": "both-trees-exist",
-          "text": "Both `specs/` and `specs-business/` exist."
+          "text": "Both `.specflow/specs/` and `.specflow/specs-business/` exist."
         },
         {
           "id": "business-tree-uses-frontend-skeleton",

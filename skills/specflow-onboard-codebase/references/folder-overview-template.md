@@ -1,6 +1,6 @@
 # Folder Overview Template (`_overview.md`)
 
-Every directory under `specs/` and `specs-business/` must contain an `_overview.md` (preferred filename — sorts to top of folder listings). Use `README.md` only if the host project already standardises on README. Pick one and stick with it across both trees.
+Every directory under `.specflow/specs/` and `.specflow/specs-business/` must contain an `_overview.md` (preferred filename — sorts to top of folder listings). Use `README.md` only if the host project already standardises on README. Pick one and stick with it across both trees.
 
 The overview answers three questions in plain language:
 
@@ -40,12 +40,12 @@ The overview's content shifts based on where in the tree it sits:
 
 | Folder | What | Covers | Why |
 |---|---|---|---|
-| `specs/_overview.md` | Root of the developer tree. | Lists every domain. | Why these domains divide the system the way they do. |
-| `specs/<domain>/_overview.md` | One technical domain. | Lists every capability under it. | What the domain owns, what it doesn't. |
-| `specs/<domain>/<capability>/_overview.md` | One capability. | Lists every leaf spec. | What the capability accomplishes end-to-end. |
-| `specs-business/_overview.md` | Root of the business tree. | Lists every business domain. | The product's high-level value-prop areas. |
-| `specs-business/<biz-domain>/_overview.md` | One business domain. | Lists every business capability. | The user-visible problem area this domain serves. |
-| `specs-business/<biz-domain>/<biz-capability>/_overview.md` | One business outcome. | Lists the leaf spec(s). Usually one. | The journey/outcome and which dev specs realise it. |
+| `.specflow/specs/_overview.md` | Root of the developer tree. | Lists every domain. | Why these domains divide the system the way they do. |
+| `.specflow/specs/<domain>/_overview.md` | One technical domain. | Lists every capability under it. | What the domain owns, what it doesn't. |
+| `.specflow/specs/<domain>/<capability>/_overview.md` | One capability. | Lists every leaf spec. | What the capability accomplishes end-to-end. |
+| `.specflow/specs-business/_overview.md` | Root of the business tree. | Lists every business domain. | The product's high-level value-prop areas. |
+| `.specflow/specs-business/<biz-domain>/_overview.md` | One business domain. | Lists every business capability. | The user-visible problem area this domain serves. |
+| `.specflow/specs-business/<biz-domain>/<biz-capability>/_overview.md` | One business outcome. | Lists the leaf spec(s). Usually one. | The journey/outcome and which dev specs realise it. |
 
 ## What NOT to put in an overview
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build a self-contained HTML viewer for a Specflow project's spec tree.
 
-Reads every spec.md under specs/ (developer specs) and, when present,
-specs-business/ (business specs). Also reads folder-overview docs
+Reads every spec.md under .specflow/specs/ (developer specs) and, when present,
+.specflow/specs-business/ (business specs). Also reads folder-overview docs
 (`_overview.md` preferred, `README.md` accepted) for every directory in
 both trees. Parses frontmatter + sections and injects everything into
 assets/template.html as a single-file artefact.
@@ -1253,7 +1253,7 @@ def main() -> int:
         print(f"  business folder overviews: {biz_overview_filled}/{len(biz_overviews)} written")
         print(f"  unmapped dev specs (no `implements:`): {unmapped}")
     else:
-        print(f"  business tree: not present (no specs-business/ directory)")
+        print(f"  business tree: not present (no .specflow/specs-business/ directory)")
     if link_map:
         print(f"  link-map.md: loaded ({len(link_map.get('mappings', []))} mappings)")
     else:

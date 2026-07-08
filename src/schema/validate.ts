@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { ValidationReport, Violation } from './types.js';
 import { buildIndex } from './index-build.js';
+import { SUPPORTED_VERSION } from './version.js';
 import { checkConfig } from './checks/config.js';
 import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout.js';
 import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatchesPath } from './checks/specs.js';
@@ -58,7 +59,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
     // Short-circuit: return only config violations
     const counts = countViolations(configResult.violations);
     return {
-      schemaVersion: '1.0',
+      schemaVersion: SUPPORTED_VERSION,
       target,
       conformant: counts.error === 0,
       violations: configResult.violations,
@@ -140,7 +141,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   const counts = countViolations(filteredViolations);
 
   return {
-    schemaVersion: '1.0',
+    schemaVersion: SUPPORTED_VERSION,
     target,
     conformant: counts.error === 0,
     violations: filteredViolations,

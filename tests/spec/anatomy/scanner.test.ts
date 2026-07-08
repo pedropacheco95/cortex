@@ -52,9 +52,9 @@ beforeAll(async () => {
   fs.writeFileSync(path.join(tmpRoot, '.gitignore'), 'dist/\n');
 
   // -------------------------------------------------------------------------
-  // specs/_index.md  (needed for spec cross-link resolution in scan)
+  // .specflow/specs/_index.md  (needed for spec cross-link resolution in scan)
   // -------------------------------------------------------------------------
-  const specsDir = path.join(tmpRoot, 'specs');
+  const specsDir = path.join(tmpRoot, '.specflow', 'specs');
   fs.mkdirSync(specsDir, { recursive: true });
   fs.writeFileSync(
     path.join(specsDir, '_index.md'),
@@ -76,7 +76,7 @@ beforeAll(async () => {
     ].join('\n'),
   );
 
-  // specs/app/_overview.md
+  // .specflow/specs/app/_overview.md
   const specsAppDir = path.join(specsDir, 'app');
   fs.mkdirSync(specsAppDir, { recursive: true });
   fs.writeFileSync(
@@ -85,9 +85,9 @@ beforeAll(async () => {
   );
 
   // -------------------------------------------------------------------------
-  // specs-business/app/
+  // .specflow/specs-business/app/
   // -------------------------------------------------------------------------
-  const bizDir = path.join(tmpRoot, 'specs-business', 'app');
+  const bizDir = path.join(tmpRoot, '.specflow', 'specs-business', 'app');
   fs.mkdirSync(bizDir, { recursive: true });
   fs.writeFileSync(
     path.join(bizDir, '_overview.md'),
@@ -110,7 +110,7 @@ beforeAll(async () => {
     ].join('\n'),
   );
 
-  // specs/app/a.spec.md — dev spec with governs
+  // .specflow/specs/app/a.spec.md — dev spec with governs
   fs.writeFileSync(
     path.join(specsAppDir, 'a.spec.md'),
     [

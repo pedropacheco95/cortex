@@ -278,7 +278,7 @@ tests/
 ├── spec/{domain}/{capability}/{leaf}.test.{ext}
 ├── journey/{business-domain}/{outcome}.test.{ext}
 ├── scenario/
-│   ├── specs/{scenario-name}.md
+│   ├── .specflow/specs/{scenario-name}.md
 │   └── {scenario-name}.test.{ext}
 └── docker-compose.test.yml
 ```

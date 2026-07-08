@@ -1,6 +1,6 @@
 # Business Spec Template
 
-Business specs live under `specs-business/` in domain subfolders. They describe
+Business specs live under `.specflow/specs-business/` in domain subfolders. They describe
 **outcomes and user journeys** in language a non-technical stakeholder (client, PM,
 executive) can read without confusion. They are the *contract with the client*.
 
@@ -14,7 +14,7 @@ executive) can read without confusion. They are the *contract with the client*.
   Translate to domain language.
 
 If the spec drifts into any of those, the content belongs in a developer spec under
-`specs/`, not here.
+`.specflow/specs/`, not here.
 
 ## Naming convention
 
@@ -29,11 +29,11 @@ filename with a persona, the outcome may be too abstract or too technical.
 
 ## Folder layout
 
-`specs-business/` organizes business specs in domain subfolders with `_overview.md` in
+`.specflow/specs-business/` organizes business specs in domain subfolders with `_overview.md` in
 every folder:
 
 ```
-specs-business/
+.specflow/specs-business/
 ├── _overview.md
 ├── auth/
 │   ├── _overview.md

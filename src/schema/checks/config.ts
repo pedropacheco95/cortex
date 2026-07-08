@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { Violation } from '../types.js';
+import { SUPPORTED_MAJOR, SUPPORTED_MINOR, SUPPORTED_VERSION } from '../version.js';
 
 export interface ConfigResult {
   violations: Violation[];
@@ -52,8 +53,6 @@ export function checkConfig(root: string): ConfigResult {
   const major = parseInt(majorStr ?? '0', 10);
   const minor = parseInt(minorStr ?? '0', 10);
 
-  const SUPPORTED_MAJOR = 1;
-
   if (major > SUPPORTED_MAJOR) {
     violations.push({
       severity: 'error',
@@ -76,14 +75,14 @@ export function checkConfig(root: string): ConfigResult {
     return { violations, config, majorOk: false };
   }
 
-  // major === 1
-  if (minor > 0) {
+  // major === SUPPORTED_MAJOR
+  if (minor > SUPPORTED_MINOR) {
     violations.push({
       severity: 'warning',
       check: 'check.config',
       clause: '§10',
       location: { path: configPath, key: 'schemaVersion' },
-      message: `Schema minor version ${minor} is newer than supported (1.0). Some features may not be validated.`,
+      message: `Schema minor version ${minor} is newer than supported (${SUPPORTED_VERSION}). Some features may not be validated.`,
     });
   }
 

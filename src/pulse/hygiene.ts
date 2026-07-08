@@ -22,6 +22,7 @@ import { splitDataRowCells } from '../anatomy/files-md.js';
 import { hasExcludedSegment, buildIgnoreFilter } from '../anatomy/exclude.js';
 import { gitExec, isGitRepo, gitLastCommitEpoch } from '../loops/git-info.js';
 import { writePulseReport } from '../loops/report.js';
+import { specsRoot, SPECS_GLOB } from '../paths.js';
 
 // Engineering-call constants (Rule 2) — stated in the report footer.
 export const ORPHAN_BRANCH_DAYS = 30;
@@ -232,11 +233,11 @@ export async function checkCerebrumDeadRefs(root: string): Promise<HygieneSectio
 
 export async function checkSpecOrphans(root: string): Promise<HygieneSection> {
   const title = 'Spec orphans';
-  const specsDir = path.join(root, 'specs');
+  const specsDir = specsRoot(root);
   if (!fs.existsSync(specsDir)) return { title, findings: [] };
 
   const findings: string[] = [];
-  const specFiles = (await fg('specs/**/*.spec.md', { cwd: root, absolute: false })).sort();
+  const specFiles = (await fg(SPECS_GLOB, { cwd: root, absolute: false })).sort();
   for (const rel of specFiles) {
     let data: Record<string, unknown> = {};
     try {

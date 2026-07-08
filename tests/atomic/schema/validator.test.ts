@@ -44,7 +44,7 @@ describe('AC2: leaf with two implements values → error at implements key', () 
   afterAll(() => cleanup(tmpDir));
 
   it('two implements values → exactly one error mentioning "exactly one"', async () => {
-    const specPath = path.join(tmpDir, 'specs', 'schema', 'validator.spec.md');
+    const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const content = fs.readFileSync(specPath, 'utf-8');
     const newContent = content.replace(
       'implements: ../../specs-business/schema/contributor-trusts-project-knowledge.business.md',
@@ -64,7 +64,7 @@ describe('AC3: broken implements path → error naming missing target', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('nonexistent implements path → error', async () => {
-    const specPath = path.join(tmpDir, 'specs', 'schema', 'validator.spec.md');
+    const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const content = fs.readFileSync(specPath, 'utf-8');
     const newContent = content.replace(
       'implements: ../../specs-business/schema/contributor-trusts-project-knowledge.business.md',
@@ -85,7 +85,7 @@ describe('AC4: asymmetric implements/implemented_by → error naming both files'
 
   it('business spec without matching implemented_by → xref-symmetry error', async () => {
     // Remove implemented_by from business spec
-    const bizPath = path.join(tmpDir, 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
+    const bizPath = path.join(tmpDir, '.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
     fs.writeFileSync(bizPath, `---
 id: schema.contributor-trusts-project-knowledge
 status: draft
@@ -109,7 +109,7 @@ describe('AC5: missing _overview.md → error check.overview-present', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('remove _overview.md from schema dir → error', async () => {
-    fs.unlinkSync(path.join(tmpDir, 'specs', 'schema', '_overview.md'));
+    fs.unlinkSync(path.join(tmpDir, '.specflow', 'specs', 'schema', '_overview.md'));
     const report = await validate(tmpDir);
     const v = report.violations.find((v) => v.check === 'check.overview-present');
     expect(v).toBeDefined();
@@ -123,7 +123,7 @@ describe('AC6: dev spec missing status → error check.dev-spec', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('spec without status → error mentioning "status"', async () => {
-    const specPath = path.join(tmpDir, 'specs', 'schema', 'validator.spec.md');
+    const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     fs.writeFileSync(specPath, `---
 id: schema.validator
 implements: ../../specs-business/schema/contributor-trusts-project-knowledge.business.md
@@ -155,7 +155,7 @@ describe('AC7: schemaVersion 99.0 → exactly one check.config error, no other v
 
 describe('AC8: single-file scope on valid spec → no false unresolved-xref errors', () => {
   it('file scope on validator.spec.md → no spurious xref errors', async () => {
-    const specPath = path.join(VALID_FIXTURE, 'specs', 'schema', 'validator.spec.md');
+    const specPath = path.join(VALID_FIXTURE, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const report = await validate(specPath, { scope: 'file', root: VALID_FIXTURE });
     const xrefViolations = report.violations.filter((v) => v.check === 'check.xref-resolve');
     expect(xrefViolations).toHaveLength(0);
@@ -298,7 +298,7 @@ describe('check.business-spec: Given/When/Then → warning fires', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('business spec with **Given** marker in body fires warning', async () => {
-    const bizPath = path.join(tmpDir, 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
+    const bizPath = path.join(tmpDir, '.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
     fs.writeFileSync(bizPath, `---
 id: schema.contributor-trusts-project-knowledge
 status: draft
@@ -317,7 +317,7 @@ implemented_by:
   });
 
   it('prose "When this works, …" does NOT fire (template-recommended phrasing)', async () => {
-    const bizPath = path.join(tmpDir, 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
+    const bizPath = path.join(tmpDir, '.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
     fs.writeFileSync(bizPath, `---
 id: schema.contributor-trusts-project-knowledge
 status: draft
@@ -362,7 +362,7 @@ describe('check.xref-unique: two specs with same ID → fires', () => {
 
   it('duplicate spec ID fires check.xref-unique', async () => {
     // Create a second spec dir with a spec that has the same ID
-    const schemaDir2 = path.join(tmpDir, 'specs', 'schema2');
+    const schemaDir2 = path.join(tmpDir, '.specflow', 'specs', 'schema2');
     fs.mkdirSync(schemaDir2, { recursive: true });
     fs.writeFileSync(path.join(schemaDir2, '_overview.md'), `## What this is\nDuplicate domain.\n## What it covers\nDuplication test.\n## Why it's grouped this way\nFor testing.`);
     fs.writeFileSync(path.join(schemaDir2, 'validator.spec.md'), `---
@@ -385,7 +385,7 @@ describe('check.xref-acyclic: dep cycle → fires', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('circular depends_on → fires check.xref-acyclic', async () => {
-    const schemaDir = path.join(tmpDir, 'specs', 'schema');
+    const schemaDir = path.join(tmpDir, '.specflow', 'specs', 'schema');
     // Modify validator.spec.md to depend on schema.other
     const validatorPath = path.join(schemaDir, 'validator.spec.md');
     fs.writeFileSync(validatorPath, `---
@@ -397,7 +397,7 @@ depends_on:
 ---
 `);
     // Create a second biz spec so other.spec.md's implements can resolve
-    const bizDir = path.join(tmpDir, 'specs-business', 'schema');
+    const bizDir = path.join(tmpDir, '.specflow', 'specs-business', 'schema');
     fs.writeFileSync(path.join(bizDir, 'other.business.md'), `---
 id: schema.other-biz
 status: draft
@@ -428,7 +428,7 @@ describe('check.hook-config: settings.json missing PreRead → fires', () => {
   it('config has preRead:true but settings.json has no PreRead hook', async () => {
     // Update config to enable preRead
     const configPath = path.join(tmpDir, '.cortex', 'cortex.config.json');
-    fs.writeFileSync(configPath, JSON.stringify({ schemaVersion: '1.0', hooks: { preRead: true }, loop: { enabled: false } }));
+    fs.writeFileSync(configPath, JSON.stringify({ schemaVersion: '2.0', hooks: { preRead: true }, loop: { enabled: false } }));
     // Create settings.json without PreRead hook
     const claudeDir = path.join(tmpDir, '.claude');
     fs.mkdirSync(claudeDir, { recursive: true });
@@ -481,13 +481,13 @@ describe('check.index-shape: _index.md missing What\'s here: → fires', () => {
   });
 });
 
-describe('check.specs-index: specs/_index.md missing ## Domains → fires', () => {
+describe('check.specs-index: .specflow/specs/_index.md missing ## Domains → fires', () => {
   let tmpDir: string;
   beforeAll(() => { tmpDir = makeTmpFixture('specs-index'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('specs/_index.md without ## Domains fires error', async () => {
-    const indexPath = path.join(tmpDir, 'specs', '_index.md');
+  it('.specflow/specs/_index.md without ## Domains fires error', async () => {
+    const indexPath = path.join(tmpDir, '.specflow', 'specs', '_index.md');
     fs.writeFileSync(indexPath, `# Specs — index\n\n**Read this when:** reading specs.\n\n## Dependency Graph\n\nNone.\n\n## Build Order\n\nPhase 1.\n`);
     const report = await validate(tmpDir);
     const v = report.violations.find((v) => v.check === 'check.specs-index' && v.message.includes('## Domains'));
@@ -501,7 +501,7 @@ describe('check.overview-shape: _overview.md missing heading → fires', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('_overview.md without ## What it covers fires warning', async () => {
-    const overviewPath = path.join(tmpDir, 'specs', 'schema', '_overview.md');
+    const overviewPath = path.join(tmpDir, '.specflow', 'specs', 'schema', '_overview.md');
     fs.writeFileSync(overviewPath, `## What this is\nSchema domain.\n\n## Why it's grouped this way\nGrouped for clarity.\n`);
     const report = await validate(tmpDir);
     const v = report.violations.find((v) => v.check === 'check.overview-shape' && v.message.includes('## What it covers'));
@@ -515,7 +515,7 @@ describe('check.id-matches-path: spec with wrong id → fires', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('spec with id not matching path fires error', async () => {
-    const specPath = path.join(tmpDir, 'specs', 'schema', 'validator.spec.md');
+    const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     fs.writeFileSync(specPath, `---
 id: schema.wrong-id
 status: draft
@@ -614,7 +614,7 @@ describe('check.rule-governs-resolves: rule glob with 0 matches → warning', ()
 id: R-001
 title: Governs nothing yet
 source:
-  - ../../../specs/schema/validator.spec.md
+  - ../../../.specflow/specs/schema/validator.spec.md
 governs:
   - "src/nonexistent/**/*.ts"
 ---
@@ -633,13 +633,13 @@ describe('check.dev-spec-governs-resolves: dev-spec governs glob', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('unmatched glob → warning; matching glob → no warning; still conformant', async () => {
-    const specPath = path.join(tmpDir, 'specs', 'schema', 'validator.spec.md');
+    const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const raw = fs.readFileSync(specPath, 'utf-8');
     fs.writeFileSync(specPath, raw.replace(
       'implements: ../../specs-business/schema/contributor-trusts-project-knowledge.business.md',
       `implements: ../../specs-business/schema/contributor-trusts-project-knowledge.business.md
 governs:
-  - "specs/**/*.spec.md"
+  - ".specflow/specs/**/*.spec.md"
   - "src/ghost/**/*.ts"`,
     ));
     const report = await validate(tmpDir);

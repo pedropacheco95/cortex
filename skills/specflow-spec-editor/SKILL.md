@@ -10,7 +10,7 @@ description: >
   plan that requires spec modification; an ingest manifest has approved changes to apply; the user
   says "update the spec", "add this criterion", "create a new spec", "change the rule", "add a
   business spec", "link these specs", "update the overview", "wire implements", "deprecate this
-  spec", "move this spec", or any instruction that means modifying files in specs/ or specs-business/.
+  spec", "move this spec", or any instruction that means modifying files in .specflow/specs/ or .specflow/specs-business/.
   If someone says "edit" or "change" and the target is a spec file, this skill applies. Always
   run the coherence check after modifications.
 ---
@@ -23,7 +23,7 @@ This skill executes spec changes. Every other Specflow skill either diagnoses, p
 routes — this one actually opens spec files, modifies them, and ensures the spec tree stays
 coherent afterward.
 
-**The editor is the only skill that writes to `specs/` and `specs-business/`.** Other skills
+**The editor is the only skill that writes to `.specflow/specs/` and `.specflow/specs-business/`.** Other skills
 read the spec tree; this one modifies it. This single point of mutation makes it possible to
 enforce consistency rules (coherence check, link integrity, overview freshness) in one place.
 
@@ -64,7 +64,7 @@ When the project has a `.cortex/` directory:
 **Steps:**
 
 1. **Determine the file path.** Follow the naming convention:
-   `specs/{domain}/{capability}/{leaf}/{leaf}.spec.md`
+   `.specflow/specs/{domain}/{capability}/{leaf}/{leaf}.spec.md`
    Create directories as needed.
 
 2. **Write the spec file.** Use the leaf spec template:
@@ -122,7 +122,7 @@ When the project has a `.cortex/` directory:
    domain's `_overview.md` to mention it. If it creates a new domain, create both the
    domain `_overview.md` and update the root `_overview.md`.
 
-6. **Update `specs/_index.md`.** Add the new spec to the domain listing and dependency graph.
+6. **Update `.specflow/specs/_index.md`.** Add the new spec to the domain listing and dependency graph.
 
 7. **Run coherence check.**
 
@@ -133,7 +133,7 @@ When the project has a `.cortex/` directory:
 **Steps:**
 
 1. **Determine the file path.**
-   `specs-business/{domain}/{outcome}.business.md`
+   `.specflow/specs-business/{domain}/{outcome}.business.md`
 
 2. **Write the spec file.** Use the business spec template:
 
@@ -242,7 +242,7 @@ need to reflect the change. Or when a spec's READS/WRITES/CREATES list is wrong.
 
 1. **Find every spec that references this entity.** Grep across the spec tree:
    ```bash
-   grep -r "{EntityName}" specs/ --include="*.spec.md"
+   grep -r "{EntityName}" .specflow/specs/ --include="*.spec.md"
    ```
 
 2. **Update entity references.** If an entity is renamed, update every READS/WRITES/CREATES
@@ -303,7 +303,7 @@ renamed, or regrouped.
   AND update the parent domain's `_overview.md` to mention the new capability.
 
 - **If a new domain was created:** Create `_overview.md` in the new domain folder AND
-  update the root `_overview.md` of the affected tree (`specs/` or `specs-business/`).
+  update the root `_overview.md` of the affected tree (`.specflow/specs/` or `.specflow/specs-business/`).
 
 - **If a spec was removed or deprecated:** Update the containing folder's `_overview.md`
   to remove or note the deprecation.

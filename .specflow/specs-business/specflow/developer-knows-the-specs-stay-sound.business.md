@@ -4,6 +4,7 @@ status: implemented
 implemented_by:
   - ../../specs/loops/lint-scheduled.spec.md
   - ../../specs/loops/verify-scheduled.spec.md
+  - ../../specs/specflow/reorg.spec.md
 ---
 
 # The developer knows the specs and their tests stay sound — without checking

@@ -51,8 +51,8 @@ const DEV = (notes: string[]) =>
 describe('loops.verify-scheduled integrated slice (through cortex CLI run())', () => {
   it('fully covered project: exit 0 and "All specs carry their owed tests." with the §4.5 header', async () => {
     const root = makeProject('clean');
-    writeAt(root, 'specs-business/a/out.business.md', BIZ);
-    writeAt(root, 'specs/a/b.spec.md', DEV([]));
+    writeAt(root, '.specflow/specs-business/a/out.business.md', BIZ);
+    writeAt(root, '.specflow/specs/a/b.spec.md', DEV([]));
     writeAt(root, 'tests/atomic/a/b.test.ts', '// t');
     writeAt(root, 'tests/spec/a/b.test.ts', '// t');
     writeAt(root, 'tests/journey/a/out.test.ts', '// t');
@@ -67,13 +67,13 @@ describe('loops.verify-scheduled integrated slice (through cortex CLI run())', (
 
   it('gaps + declared deferral: exit 0, gaps named, deferral under "Deferred by decision"', async () => {
     const root = makeProject('gaps');
-    writeAt(root, 'specs-business/a/out.business.md', BIZ);
-    writeAt(root, 'specs/a/b.spec.md', DEV(['', '## Notes', '', '- Journey-layer tests deferred to v1.1.']));
+    writeAt(root, '.specflow/specs-business/a/out.business.md', BIZ);
+    writeAt(root, '.specflow/specs/a/b.spec.md', DEV(['', '## Notes', '', '- Journey-layer tests deferred to v1.1.']));
     // No tests at all; a.out covered by no scenario, journey deferred by the dev spec's Notes.
     process.chdir(root);
     expect(await run(['loop-specflow-verify'])).toBe(0);
     const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'verification-report.md'), 'utf-8');
-    expect(report).toContain('`a.b` (`specs/a/b.spec.md`): missing `tests/atomic/a/b.test.ts`, `tests/spec/a/b.test.ts`');
+    expect(report).toContain('`a.b` (`.specflow/specs/a/b.spec.md`): missing `tests/atomic/a/b.test.ts`, `tests/spec/a/b.test.ts`');
     expect(report).toContain('absent from every scenario `covers:`');
     expect(report.split('## Deferred by decision')[1]).toContain('tests/journey/a/out.test.ts');
   }, TEST_TIMEOUT);

@@ -2,26 +2,26 @@
 
 This document captures the exact contract `build_viewer.py` uses to read Specflow spec files, plus the escape hatches when a file doesn't match perfectly. Refer to it when writing new specs, debugging a misrendered page, or extending the parser.
 
-The script handles **two parallel trees** — `specs/` (developer-facing) and `specs-business/` (high-level, stakeholder-facing) — plus a **folder overview doc** (`_overview.md` preferred, `README.md` accepted) in any directory of either tree, plus an optional **`link-map.md`** at the project root that the `specflow-onboard-codebase` skill emits.
+The script handles **two parallel trees** — `.specflow/specs/` (developer-facing) and `.specflow/specs-business/` (high-level, stakeholder-facing) — plus a **folder overview doc** (`_overview.md` preferred, `README.md` accepted) in any directory of either tree, plus an optional **`link-map.md`** at the project root that the `specflow-onboard-codebase` skill emits.
 
 ## File layout
 
-### Developer tree (`specs/`)
+### Developer tree (`.specflow/specs/`)
 
-- `specs/_index.md` — the **engineering manifest**. Title (`# ...`), first paragraph, and the first Markdown table appearing under a heading matching `/tooling manifest/i` are extracted. Everything else is kept as raw body and shown on the dashboard.
-- `specs/_overview.md` — OPTIONAL **prose overview** for the root of the developer tree. This is the document a non-developer would read to understand what the developer spec set is for. Distinct from `_index.md`: the index is the engineering map; the overview is the human-readable description. Both can coexist; the viewer renders them in separate places (dashboard vs root-folder pane) and never duplicates content.
-- `specs/{domain}/_overview.md` — folder overview for the domain. First sentence becomes the sidebar subtitle.
-- `specs/{domain}/_overview.md` — domain-level overview rendered as the folder's content pane.
-- `specs/{domain}/{capability}/_overview.md` — folder overview for the capability folder.
-- `specs/{domain}/{capability}/{leaf}.spec.md` — the **leaf spec**. Named after the leaf
-  (e.g., `specs/auth/login/email-signup.spec.md`). The parser matches any `*.spec.md` file
+- `.specflow/specs/_index.md` — the **engineering manifest**. Title (`# ...`), first paragraph, and the first Markdown table appearing under a heading matching `/tooling manifest/i` are extracted. Everything else is kept as raw body and shown on the dashboard.
+- `.specflow/specs/_overview.md` — OPTIONAL **prose overview** for the root of the developer tree. This is the document a non-developer would read to understand what the developer spec set is for. Distinct from `_index.md`: the index is the engineering map; the overview is the human-readable description. Both can coexist; the viewer renders them in separate places (dashboard vs root-folder pane) and never duplicates content.
+- `.specflow/specs/{domain}/_overview.md` — folder overview for the domain. First sentence becomes the sidebar subtitle.
+- `.specflow/specs/{domain}/_overview.md` — domain-level overview rendered as the folder's content pane.
+- `.specflow/specs/{domain}/{capability}/_overview.md` — folder overview for the capability folder.
+- `.specflow/specs/{domain}/{capability}/{leaf}.spec.md` — the **leaf spec**. Named after the leaf
+  (e.g., `.specflow/specs/auth/login/email-signup.spec.md`). The parser matches any `*.spec.md` file
   inside a capability directory.
 
-### Business tree (`specs-business/`)
+### Business tree (`.specflow/specs-business/`)
 
 Same layout as the developer tree, with one addition:
 
-- `specs-business/{domain}/{outcome}.business.md` — business specs in domain subfolders.
+- `.specflow/specs-business/{domain}/{outcome}.business.md` — business specs in domain subfolders.
   Filenames are persona-prefixed (e.g., `user-books-a-class.business.md`). The `.business.md`
   suffix marks the file as a leaf business spec. The parent folder is the business domain.
 
@@ -32,7 +32,7 @@ Same layout as the developer tree, with one addition:
 
 ## Folder overviews (`_overview.md`)
 
-Every directory under `specs/` and `specs-business/` is recorded as a folder node, whether or not it has an overview. If `_overview.md` exists it's used; if not, `README.md` is used; if neither exists, the folder is recorded with an empty body and the viewer renders a "no overview written for this group yet" placeholder so the gap is visible (the gap should be visible — that's how authors notice it needs writing).
+Every directory under `.specflow/specs/` and `.specflow/specs-business/` is recorded as a folder node, whether or not it has an overview. If `_overview.md` exists it's used; if not, `README.md` is used; if neither exists, the folder is recorded with an empty body and the viewer renders a "no overview written for this group yet" placeholder so the gap is visible (the gap should be visible — that's how authors notice it needs writing).
 
 `_overview.md` is preferred because the leading underscore sorts it to the top of most file listings (clients see it first when they open the folder) and it doesn't collide with a project's existing top-level `README.md`. `README.md` is accepted as a fallback for projects already using that convention.
 

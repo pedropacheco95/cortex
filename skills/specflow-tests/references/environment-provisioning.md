@@ -17,7 +17,7 @@ This is the analysis step — no files are created yet.
 
 ### What to scan
 
-1. **`specs/_index.md`** — the Stack section lists frameworks, languages, databases, and
+1. **`.specflow/specs/_index.md`** — the Stack section lists frameworks, languages, databases, and
    deployment targets. This is the primary source.
 2. **Existing infrastructure files** — `docker-compose.yml`, `Dockerfile`, `.env`, CI configs.
    If these exist, the test environment extends them rather than replacing them.
@@ -34,8 +34,8 @@ The agent produces a manifest (internal working document, not a deliverable) lis
 ```
 Infrastructure components:
   - [component]: [version] — [why needed]
-  - e.g., PostgreSQL 16 — primary data store per specs/_index.md
-  - e.g., Redis 7 — Celery broker per specs/_index.md
+  - e.g., PostgreSQL 16 — primary data store per .specflow/specs/_index.md
+  - e.g., Redis 7 — Celery broker per .specflow/specs/_index.md
 
 External service mocks:
   - [service]: [mock strategy]
@@ -336,7 +336,7 @@ The provisioning process is stack-aware. Here are the key decision points:
 
 | Decision | Depends on |
 |----------|-----------|
-| Base Docker images | Language and framework from specs/_index.md Stack section |
+| Base Docker images | Language and framework from .specflow/specs/_index.md Stack section |
 | Database service | Entity definitions in specs — relational vs document vs key-value |
 | Migration command | Framework's migration tool (Alembic, Prisma, Knex, Django, etc.) |
 | Test runner command | Test framework from project dependencies |

@@ -11,7 +11,7 @@ description: >
   does X happen", error messages, 500s, wrong data, missing responses, or any report where
   implemented behavior diverges from expected behavior. Also trigger when test runs produce
   failures that need classification — the skill handles both human-reported bugs and automated
-  test failure triage. If a specs/ directory exists and the user reports something broken, this
+  test failure triage. If a .specflow/specs/ directory exists and the user reports something broken, this
   skill runs first — it diagnoses before anyone touches code.
 ---
 
@@ -107,7 +107,7 @@ concrete — "login returns 500 instead of 401 on wrong password" not "login is 
 endpoint paths, or behavior keywords from the bug report:
 
 ```bash
-grep -r "login\|password\|auth" specs/ --include="*.spec.md"
+grep -r "login\|password\|auth" .specflow/specs/ --include="*.spec.md"
 ```
 
 If no spec covers this behavior → classify and stop (Type 4 or 5).
@@ -145,7 +145,7 @@ to do.
 ```markdown
 ### Change Plan
 
-**Spec to modify:** specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
+**Spec to modify:** .specflow/specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
 **Change type:** Add acceptance criterion
 
 **Add this criterion:**
@@ -167,7 +167,7 @@ to do.
 ```markdown
 ### Change Plan
 
-**Spec to modify:** specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
+**Spec to modify:** .specflow/specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
 **Change type:** Add rule + acceptance criterion(s)
 
 **Add this rule:**
@@ -192,7 +192,7 @@ N. [Rule text — e.g., "Correct password attempts during lockout are still reje
 ```markdown
 ### Change Plan
 
-**Spec to modify:** specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
+**Spec to modify:** .specflow/specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
 **Change type:** Correct existing rule + update criteria
 
 **Change rule N from:**
@@ -219,8 +219,8 @@ N. [Rule text — e.g., "Correct password attempts during lockout are still reje
 ```markdown
 ### Change Plan
 
-**New spec to create:** specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
-**Business spec it implements:** specs-business/{domain}/{outcome}.business.md
+**New spec to create:** .specflow/specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
+**Business spec it implements:** .specflow/specs-business/{domain}/{outcome}.business.md
 
 **Draft spec:**
 ---
@@ -246,7 +246,7 @@ implements: [business spec path]
 ```markdown
 ### Change Plan
 
-**New business spec to create:** specs-business/{domain}/{outcome}.business.md
+**New business spec to create:** .specflow/specs-business/{domain}/{outcome}.business.md
 **New dev spec(s) to create:** [list]
 
 **Draft business spec:**
@@ -272,8 +272,8 @@ implemented_by: [to be filled after dev specs exist]
 ```markdown
 ### Change Plan
 
-**Business spec:** specs-business/{domain}/{outcome}.business.md
-**Dev spec:** specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
+**Business spec:** .specflow/specs-business/{domain}/{outcome}.business.md
+**Dev spec:** .specflow/specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
 **Drift description:** [what the business spec says vs what the dev spec says]
 
 **Resolution (choose one, confirm with human):**
@@ -294,7 +294,7 @@ implemented_by: [to be filled after dev specs exist]
 ```markdown
 ### Change Plan
 
-**Spec:** specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
+**Spec:** .specflow/specs/{domain}/{capability}/{leaf}/{leaf}.spec.md
 **Criterion:** [criterion name]
 **Test file:** tests/{layer}/{domain}/{capability}/{leaf}/{leaf}.test.{ext}
 

@@ -67,7 +67,7 @@ describe('signal (b): a source no longer resolves', () => {
   it('sources resolving by bare ID (validator logic) are healthy', async () => {
     const root = tmp('id-source');
     writeAt(root, 'src/app.ts', 'export {};\n');
-    writeAt(root, 'specs/a/thing.spec.md', '---\nid: a.thing\n---\n\n# t\n');
+    writeAt(root, '.specflow/specs/a/thing.spec.md', '---\nid: a.thing\n---\n\n# t\n');
     writeAt(root, '.cortex/cerebrum/rules/R-104-id.md', ruleMd('R-104', { source: ['a.thing'], governs: ['src/**/*.ts'] }));
     const scan = await scanRuleDecay(root);
     expect(scan.candidates).toEqual([]);

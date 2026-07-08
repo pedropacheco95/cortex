@@ -1,7 +1,7 @@
 ---
 name: specflow-change-router
 description: >
-  Classify every incoming user request against the project's spec tree (developer specs in `specs/`, business specs in `specs-business/`, and `_overview.md` folder docs) and route it to the correct action before any work begins. This skill is the mandatory entry point for ALL user interactions in a Specflow-managed project (any project with a `specs/` directory, with or without a parallel `specs-business/`). PROACTIVELY use this skill whenever the user says anything in a project under spec management — bug reports, feature requests, behavior changes, stakeholder questions, "what does this group do?", outcome/journey/metric talk, or anything that might touch a developer spec, a business spec, or a folder overview. Also triggers on "add a feature", "fix this bug", "change this behavior", "what does X do", "what's the goal of X", "why do we have X", and on requests that may have drifted between business and developer layers (e.g., a dev change that invalidates the business description, or vice versa). If the project has specs, this skill runs first — no exceptions.
+  Classify every incoming user request against the project's spec tree (developer specs in `.specflow/specs/`, business specs in `.specflow/specs-business/`, and `_overview.md` folder docs) and route it to the correct action before any work begins. This skill is the mandatory entry point for ALL user interactions in a Specflow-managed project (any project with a `.specflow/specs/` directory, with or without a parallel `.specflow/specs-business/`). PROACTIVELY use this skill whenever the user says anything in a project under spec management — bug reports, feature requests, behavior changes, stakeholder questions, "what does this group do?", outcome/journey/metric talk, or anything that might touch a developer spec, a business spec, or a folder overview. Also triggers on "add a feature", "fix this bug", "change this behavior", "what does X do", "what's the goal of X", "why do we have X", and on requests that may have drifted between business and developer layers (e.g., a dev change that invalidates the business description, or vice versa). If the project has specs, this skill runs first — no exceptions.
 ---
 
 # Specflow: Change Router
@@ -16,29 +16,29 @@ A modern Specflow project has two parallel spec layers plus a folder-overview la
 
 | Layer | Lives in | Audience | Contains | Frontmatter link |
 |---|---|---|---|---|
-| **Business specs** | `specs-business/` | Stakeholders, PMs, clients | Outcomes, user journeys, business rules, success metrics, KPIs. No schema, no API, no Given/When/Then. | `implemented_by: [path, …]` (points down to dev specs) |
-| **Developer specs** | `specs/` | Engineers, AI builders | Entities, schemas, API contracts, rules, Given/When/Then acceptance criteria. | `implements: path` (points up to exactly one business spec) |
-| **Folder overviews** | `_overview.md` in every directory under `specs/` and `specs-business/` (root, every domain folder, every capability folder, sub-folders) | Anyone navigating the tree | What this group of specs IS, what it COVERS, WHY it exists as a group. No criteria, no rules — just orientation. | None |
+| **Business specs** | `.specflow/specs-business/` | Stakeholders, PMs, clients | Outcomes, user journeys, business rules, success metrics, KPIs. No schema, no API, no Given/When/Then. | `implemented_by: [path, …]` (points down to dev specs) |
+| **Developer specs** | `.specflow/specs/` | Engineers, AI builders | Entities, schemas, API contracts, rules, Given/When/Then acceptance criteria. | `implements: path` (points up to exactly one business spec) |
+| **Folder overviews** | `_overview.md` in every directory under `.specflow/specs/` and `.specflow/specs-business/` (root, every domain folder, every capability folder, sub-folders) | Anyone navigating the tree | What this group of specs IS, what it COVERS, WHY it exists as a group. No criteria, no rules — just orientation. | None |
 
-> **Filename note.** This skill uses `_overview.md` (underscore prefix sorts to the top of the folder) and `specs-business/` as the canonical names. Some projects may use `README.md` for overviews — accept those too. Some may use a different business-specs directory name (`business-specs/`, `specs/_business/`); check `specs/_index.md` for the configured location and substitute throughout.
+> **Filename note.** This skill uses `_overview.md` (underscore prefix sorts to the top of the folder) and `.specflow/specs-business/` as the canonical names. Some projects may use `README.md` for overviews — accept those too. Some may use a different business-specs directory name (`business-specs/`, `specs/_business/`); check `.specflow/specs/_index.md` for the configured location and substitute throughout.
 
 The two layers are joined by **bidirectional frontmatter links**:
 
 ```yaml
-# specs-business/booking/waitlist.md
+# .specflow/specs-business/booking/waitlist.md
 ---
 id: business.booking.waitlist
 implemented_by:
-  - specs/booking/waitlist/queue-join.md
-  - specs/booking/waitlist/notification.md
+  - .specflow/specs/booking/waitlist/queue-join.md
+  - .specflow/specs/booking/waitlist/notification.md
 ---
 ```
 
 ```yaml
-# specs/booking/waitlist/queue-join.md
+# .specflow/specs/booking/waitlist/queue-join.md
 ---
 id: booking.waitlist.queue-join
-implements: specs-business/booking/waitlist.md
+implements: .specflow/specs-business/booking/waitlist.md
 ---
 ```
 
@@ -63,9 +63,9 @@ When the project has a `.cortex/` directory, classification includes the knowled
 
 ## How to Use This Skill
 
-When a user says something in a project that has a `specs/` directory:
+When a user says something in a project that has a `.specflow/specs/` directory:
 
-1. **Read the spec tree shape** — Scan `specs/_index.md` (and `specs-business/_index.md` if present) for the domain list and dependency graph. Note which business-specs directory name the project uses and whether overviews are `_overview.md` or `README.md`.
+1. **Read the spec tree shape** — Scan `.specflow/specs/_index.md` (and `.specflow/specs-business/_index.md` if present) for the domain list and dependency graph. Note which business-specs directory name the project uses and whether overviews are `_overview.md` or `README.md`.
 2. **Classify the request along three axes** (see "Classification dimensions" below).
 3. **Output your classification** — Tell the user the category, which layer(s) it touches, which specs are relevant, whether any folder overview needs updating, whether mapping is missing, and what action you propose.
 4. **Get confirmation** — Wait for the user to approve before executing.
@@ -143,8 +143,8 @@ The user wants existing behavior to work differently. Nothing is broken — they
 
 **Action flow:**
 1. Determine the layer:
-   - **Business change** (outcome/metric/journey shifts) → start in `specs-business/`, then check `implemented_by:` dev specs to see whether they still satisfy the new business shape.
-   - **Dev change** (rule/threshold/criterion shifts) → start in `specs/`, then check `implements:` business spec to see whether the user-facing description is still accurate.
+   - **Business change** (outcome/metric/journey shifts) → start in `.specflow/specs-business/`, then check `implemented_by:` dev specs to see whether they still satisfy the new business shape.
+   - **Dev change** (rule/threshold/criterion shifts) → start in `.specflow/specs/`, then check `implements:` business spec to see whether the user-facing description is still accurate.
    - **Both** → write/update both layers, in the order the human prefers (usually business first).
 2. Read the affected spec(s) on the relevant layer(s).
 3. Show the current rules/criteria/outcomes; draft the proposed modification.
@@ -199,7 +199,7 @@ The user wants to understand, not change.
 **Action:**
 - For fuzzy/group-level questions → **read the relevant `_overview.md` first** and answer from there. Only dive into individual capability specs if the overview doesn't cover it (and if so, flag the overview as too thin — propose updating it).
 - For specific behavior questions → traverse to the relevant dev spec.
-- For outcome/business questions → start in `specs-business/`.
+- For outcome/business questions → start in `.specflow/specs-business/`.
 
 No spec changes unless you discover the overview itself is stale or missing.
 
@@ -251,12 +251,12 @@ A request touches a spec that has no counterpart link — a dev spec missing `im
 
 **Signals:**
 - You go to read the linked counterpart and the frontmatter field is absent or empty.
-- A capability exists in `specs/` but no business spec covers it.
-- A business outcome exists in `specs-business/` but no dev spec realizes it.
+- A capability exists in `.specflow/specs/` but no business spec covers it.
+- A business outcome exists in `.specflow/specs-business/` but no dev spec realizes it.
 
 **Action flow:**
 1. Flag the gap to the user before proceeding with the original request:
-   > "Before I make this change to `specs/booking/waitlist/queue-join.md`, I noticed it has no `implements:` link to a business spec. Either the business spec exists and the link is missing, or no business spec was ever written. Want me to (a) find and link it, (b) draft the missing business spec, or (c) proceed without mapping (mark as `unmapped: true`)?"
+   > "Before I make this change to `.specflow/specs/booking/waitlist/queue-join.md`, I noticed it has no `implements:` link to a business spec. Either the business spec exists and the link is missing, or no business spec was ever written. Want me to (a) find and link it, (b) draft the missing business spec, or (c) proceed without mapping (mark as `unmapped: true`)?"
 2. Resolve the mapping question first, then proceed with the original request.
 3. If the user chooses to proceed unmapped, record the choice in the spec frontmatter so future routing knows it's intentional.
 
@@ -270,7 +270,7 @@ A request touches a spec that has no counterpart link — a dev spec missing `im
 4. **After any spec change, run coherence check before building.** Coherence includes cross-layer link integrity (no broken `implements:` / `implemented_by:`) and overview freshness.
 5. **Spec changes propagate across layers.** When a dev spec changes, check the business counterpart. When a business spec changes, check all listed dev specs.
 6. **After spec changes are applied, trigger test generation for affected specs.** For single changes (one bug fix, one feature), generate tests immediately for the affected spec(s). For batch changes (ingest manifest), collect all affected spec IDs and trigger a single test generation sweep after the full batch is applied. Use specflow-tests for both cases.
-7. **Frame review requests in spec terms** — and name the layer: "I updated the dev spec `auth.login.lockout` (criterion 3) and the business spec `business.auth.account-protection` (success metric); the folder overview at `specs/auth/_overview.md` didn't need to change."
+7. **Frame review requests in spec terms** — and name the layer: "I updated the dev spec `auth.login.lockout` (criterion 3) and the business spec `business.auth.account-protection` (success metric); the folder overview at `.specflow/specs/auth/_overview.md` didn't need to change."
 
 ## Post-Change Test Trigger
 
@@ -301,7 +301,7 @@ When you respond to the user's request, structure your routing decision like thi
 **Specs touched:**
   - Business: <paths or "none">
   - Developer: <paths or "none">
-**Folder overview impact:** <"none" | "specs/<domain>/_overview.md needs to mention X">
+**Folder overview impact:** <"none" | ".specflow/specs/<domain>/_overview.md needs to mention X">
 **Mapping status:** <"linked" | "unmapped — propose drafting counterpart" | "drift detected between A and B">
 **Proposed action:** <one-paragraph plan>
 ```
@@ -312,7 +312,7 @@ For obvious cases (e.g., "fix this typo in the login error message"), be terse �
 
 You don't need to read every spec file for every request:
 
-1. **Always start with `specs/_index.md`** (and `specs-business/_index.md` if present). The index tells you the shape of both trees.
+1. **Always start with `.specflow/specs/_index.md`** (and `.specflow/specs-business/_index.md` if present). The index tells you the shape of both trees.
 2. **For high-level / group questions** — read the relevant `_overview.md` first.
 3. **For entity references** — grep across both trees for the entity name.
 4. **For behavior questions** — read the dev spec; consult the linked business spec only if outcome framing matters.

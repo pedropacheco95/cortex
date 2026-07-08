@@ -32,14 +32,14 @@ function writeArtefact(absPath: string, frontmatter: string, body: string): stri
   return absPath;
 }
 
-/** Dev spec at specs/<relPath> with raw frontmatter YAML lines. */
+/** Dev spec at .specflow/specs/<relPath> with raw frontmatter YAML lines. */
 export function writeDevSpec(root: string, relPath: string, frontmatter: string, body = '# Spec\n'): string {
-  return writeArtefact(path.join(root, 'specs', relPath), frontmatter, body);
+  return writeArtefact(path.join(root, '.specflow', 'specs', relPath), frontmatter, body);
 }
 
-/** Business spec at specs-business/<relPath> with raw frontmatter YAML lines. */
+/** Business spec at .specflow/specs-business/<relPath> with raw frontmatter YAML lines. */
 export function writeBizSpec(root: string, relPath: string, frontmatter: string, body = '# Outcome\n'): string {
-  return writeArtefact(path.join(root, 'specs-business', relPath), frontmatter, body);
+  return writeArtefact(path.join(root, '.specflow', 'specs-business', relPath), frontmatter, body);
 }
 
 /** Bug ledger entry at .cortex/cerebrum/bugs/<filename>. */

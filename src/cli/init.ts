@@ -33,6 +33,8 @@ import {
 } from './templates.js';
 // Schema §9.1 project scoping for the Rule 13 task writer (core-cli.task-scoping).
 import { CANONICAL_TASK_NAMES, scopedTaskName } from './task-scoping.js';
+// Schema §2.3 re-rooted spec trees (specflow.reorg).
+import { specsRoot, businessRoot, SPECS_REL, BUSINESS_REL } from '../paths.js';
 
 export interface InitOptions {
   force?: boolean;
@@ -345,8 +347,8 @@ ${facts.length > 0 ? facts.map((f) => `- ${f}`).join('\n') : '- (no stack facts 
 // ---------------------------------------------------------------------------
 
 function scaffoldSpecTrees(root: string): { specsScaffolded: boolean; businessScaffolded: boolean } {
-  const specsDir = path.join(root, 'specs');
-  const businessDir = path.join(root, 'specs-business');
+  const specsDir = specsRoot(root);
+  const businessDir = businessRoot(root);
   let specsScaffolded = false;
   let businessScaffolded = false;
 
@@ -830,10 +832,10 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   );
   if (specTrees.specsScaffolded || specTrees.businessScaffolded) {
     lines.push(
-      `Spec trees: scaffolded ${[specTrees.specsScaffolded ? 'specs/' : null, specTrees.businessScaffolded ? 'specs-business/' : null].filter(Boolean).join(' and ')} — recommended next step: run specflow-onboard-codebase to populate them (init never runs it automatically).`,
+      `Spec trees: scaffolded ${[specTrees.specsScaffolded ? `${SPECS_REL}/` : null, specTrees.businessScaffolded ? `${BUSINESS_REL}/` : null].filter(Boolean).join(' and ')} — recommended next step: run specflow-onboard-codebase to populate them (init never runs it automatically).`,
     );
   } else {
-    lines.push('Spec trees: existing specs/ and specs-business/ left untouched.');
+    lines.push(`Spec trees: existing ${SPECS_REL}/ and ${BUSINESS_REL}/ left untouched.`);
   }
   lines.push('Reminder: open the Claude Desktop app to confirm the scheduled task cadences.');
 

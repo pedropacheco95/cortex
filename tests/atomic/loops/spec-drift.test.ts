@@ -32,9 +32,9 @@ afterEach(() => {
 /** spec committed 30 days ago governing src/a.ts. */
 function seedSpecAndFile(root: string): void {
   gitInitRepo(root);
-  writeAt(root, 'specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
+  writeAt(root, '.specflow/specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
   writeAt(root, 'src/a.ts', 'export {};\n');
-  gitCommitPathsAt(root, ['specs/a/thing.spec.md', 'src/a.ts'], daysAgoIso(30));
+  gitCommitPathsAt(root, ['.specflow/specs/a/thing.spec.md', 'src/a.ts'], daysAgoIso(30));
 }
 
 describe('drift signal: governed file newer than spec + grace', () => {
@@ -68,8 +68,8 @@ describe('drift signal: governed file newer than spec + grace', () => {
     gitInitRepo(root);
     writeAt(root, 'src/a.ts', 'export {};\n');
     gitCommitPathsAt(root, ['src/a.ts'], daysAgoIso(60));
-    writeAt(root, 'specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
-    gitCommitPathsAt(root, ['specs/a/thing.spec.md'], daysAgoIso(5));
+    writeAt(root, '.specflow/specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
+    gitCommitPathsAt(root, ['.specflow/specs/a/thing.spec.md'], daysAgoIso(5));
 
     const scan = await scanSpecDrift(root);
     expect(scan.suspects).toEqual([]);
@@ -80,8 +80,8 @@ describe('Rule 3: skip and note handling', () => {
   it('an ungoverned spec (no governs, no spec_links) is skipped entirely', async () => {
     const root = tmp('ungoverned');
     gitInitRepo(root);
-    writeAt(root, 'specs/a/floaty.spec.md', specMd('a.floaty'));
-    gitCommitPathsAt(root, ['specs/a/floaty.spec.md'], daysAgoIso(30));
+    writeAt(root, '.specflow/specs/a/floaty.spec.md', specMd('a.floaty'));
+    gitCommitPathsAt(root, ['.specflow/specs/a/floaty.spec.md'], daysAgoIso(30));
 
     const scan = await scanSpecDrift(root);
     expect(scan.suspects).toEqual([]);
@@ -94,18 +94,18 @@ describe('Rule 3: skip and note handling', () => {
     gitInitRepo(root);
     writeAt(root, 'src/a.ts', 'export {};\n');
     gitCommitPathsAt(root, ['src/a.ts'], daysAgoIso(60));
-    writeAt(root, 'specs/a/new.spec.md', specMd('a.new', ['src/a.ts'])); // never committed
+    writeAt(root, '.specflow/specs/a/new.spec.md', specMd('a.new', ['src/a.ts'])); // never committed
 
     const scan = await scanSpecDrift(root);
     expect(scan.suspects).toEqual([]);
-    expect(scan.untracked).toEqual([{ specId: 'a.new', specFile: 'specs/a/new.spec.md' }]);
+    expect(scan.untracked).toEqual([{ specId: 'a.new', specFile: '.specflow/specs/a/new.spec.md' }]);
   });
 
   it('an untracked governed FILE has no date and is not compared', async () => {
     const root = tmp('untracked-file');
     gitInitRepo(root);
-    writeAt(root, 'specs/a/thing.spec.md', specMd('a.thing', ['src/**/*.ts']));
-    gitCommitPathsAt(root, ['specs/a/thing.spec.md'], daysAgoIso(30));
+    writeAt(root, '.specflow/specs/a/thing.spec.md', specMd('a.thing', ['src/**/*.ts']));
+    gitCommitPathsAt(root, ['.specflow/specs/a/thing.spec.md'], daysAgoIso(30));
     writeAt(root, 'src/never-committed.ts', 'export {};\n');
 
     const scan = await scanSpecDrift(root);
@@ -114,7 +114,7 @@ describe('Rule 3: skip and note handling', () => {
 
   it('a non-git project reports notARepo (Rule 3: no history to judge)', async () => {
     const root = tmp('norepo');
-    writeAt(root, 'specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
+    writeAt(root, '.specflow/specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
     const scan = await scanSpecDrift(root);
     expect(scan.notARepo).toBe(true);
     expect(scan.suspects).toEqual([]);
@@ -141,9 +141,9 @@ describe('anatomy spec_links as the reverse map', () => {
   it('a spec with no governs is still compared against files whose spec_links name it', async () => {
     const root = tmp('reverse-drift');
     gitInitRepo(root);
-    writeAt(root, 'specs/a/linked.spec.md', specMd('a.linked'));
+    writeAt(root, '.specflow/specs/a/linked.spec.md', specMd('a.linked'));
     writeAt(root, 'src/b.ts', 'export {};\n');
-    gitCommitPathsAt(root, ['specs/a/linked.spec.md', 'src/b.ts'], daysAgoIso(40));
+    gitCommitPathsAt(root, ['.specflow/specs/a/linked.spec.md', 'src/b.ts'], daysAgoIso(40));
     writeAt(root, 'src/b.ts', 'export const changed = true;\n');
     gitCommitPathsAt(root, ['src/b.ts'], daysAgoIso(10));
     writeAt(root, '.cortex/anatomy/files.md', filesMdContent([{ path: 'src/b.ts', specLinks: 'a.linked' }]));

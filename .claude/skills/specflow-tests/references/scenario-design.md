@@ -128,7 +128,7 @@ The agent proposes scenarios by reading the business spec tree and finding natur
 
 ### Step 1: Map the business spec landscape
 
-Read `specs-business/` and list every business spec with its ID, domain, and the dev specs it's `implemented_by`. This is the universe of outcomes to cover.
+Read `.specflow/specs-business/` and list every business spec with its ID, domain, and the dev specs it's `implemented_by`. This is the universe of outcomes to cover.
 
 ### Step 2: Identify natural entry points
 

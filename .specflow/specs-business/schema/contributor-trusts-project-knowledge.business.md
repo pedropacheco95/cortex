@@ -3,6 +3,7 @@ id: schema.contributor-trusts-project-knowledge
 status: implemented
 implemented_by:
   - ../../specs/schema/validator.spec.md
+  - ../../specs/schema/version-2.spec.md
 ---
 
 # A contributor can trust the project's knowledge is consistent

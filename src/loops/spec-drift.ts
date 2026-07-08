@@ -17,6 +17,7 @@ import matter from 'gray-matter';
 import { splitDataRowCells } from '../anatomy/files-md.js';
 import { gitLastCommitEpoch, isGitRepo } from './git-info.js';
 import { writePulseReport } from './report.js';
+import { SPECS_GLOB } from '../paths.js';
 
 /** Engineering-call constant (Rule 2 / Notes) — stated in the report footer. */
 export const SPEC_DRIFT_GRACE_DAYS = 14;
@@ -80,7 +81,7 @@ export async function scanSpecDrift(root: string): Promise<SpecDriftScan> {
   }
 
   const reverseMap = readSpecLinksReverseMap(root);
-  const specFiles = (await fg('specs/**/*.spec.md', { cwd: root })).sort();
+  const specFiles = (await fg(SPECS_GLOB, { cwd: root })).sort();
   const epochCache = new Map<string, number | null>();
   const epochOf = async (rel: string): Promise<number | null> => {
     if (!epochCache.has(rel)) epochCache.set(rel, await gitLastCommitEpoch(root, rel));

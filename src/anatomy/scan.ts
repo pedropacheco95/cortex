@@ -21,6 +21,7 @@ import {
 } from './files-md.js';
 import { hasExcludedSegment, buildIgnoreFilter } from './exclude.js';
 import { compile } from '../constellation/compile.js';
+import { specsIndexPath as specsIndexPathOf, SPECS_GLOB } from '../paths.js';
 import type { ScannedFile, ScanResult, ScanOptions } from './types.js';
 
 interface CachedEntry {
@@ -112,12 +113,12 @@ async function computeAllSpecLinks(
 ): Promise<Map<string, string[]>> {
   const result = new Map<string, string[]>(relPaths.map(p => [p, []]));
 
-  const specsIndexPath = path.join(root, 'specs', '_index.md');
+  const specsIndexPath = specsIndexPathOf(root);
   if (!fs.existsSync(specsIndexPath)) return result;
 
   let specFiles: string[];
   try {
-    specFiles = await fg(['specs/**/*.spec.md'], { cwd: root, dot: false });
+    specFiles = await fg([SPECS_GLOB], { cwd: root, dot: false });
   } catch {
     return result;
   }

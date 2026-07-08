@@ -52,7 +52,7 @@ Each gap entry is written to `.cortex/pulse/gaps.md` (design §8.5 — never a r
 ## GAP-001: Negative cardinality rejected
 
 **Severity:** NORMAL
-**Found during:** specs/cardinality/update-cardinality.spec.md
+**Found during:** .specflow/specs/cardinality/update-cardinality.spec.md
 **Spec level:** Spec (no criterion covers negative input)
 
 **What I saw:** The cardinality input accepts any integer. No spec rule or acceptance

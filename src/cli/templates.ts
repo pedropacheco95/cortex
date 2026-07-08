@@ -4,7 +4,7 @@
  * §7.2 specs index, §8 CLAUDE.md managed block, §10.1 config defaults.
  */
 
-export const SCHEMA_VERSION = '1.0';
+export const SCHEMA_VERSION = '2.0';
 
 export const PRESENT_MODULES = 'anatomy, cerebrum, atlas, pulse';
 
@@ -249,7 +249,7 @@ prompts that tell you what to read and when. For "why" questions, grep \`cerebru
 \`atlas/\`. For unfamiliar terms, check \`atlas/domain/\`. Follow frontmatter
 cross-references (the citation graph) to trace any claim to its source.
 
-Specs are the source of truth: \`specs-business/\` (outcomes) and \`specs/\` (implementation),
+Specs are the source of truth: \`.specflow/specs-business/\` (outcomes) and \`.specflow/specs/\` (implementation),
 linked by \`implements:\`/\`implemented_by:\`. Don't let the trees drift.
 
 Modules present: ${PRESENT_MODULES}. Schema: ${SCHEMA_VERSION}.
@@ -313,13 +313,13 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     name: 'onboarding-drift',
     description: 'Detect drift between the codebase and the onboarded spec tree; report to .cortex/pulse/.',
     requiredSkills: ['cortex-loop-onboarding-drift'],
-    body: 'Invoke the `cortex-loop-onboarding-drift` skill: compare `.cortex/anatomy/files.md` and the code against `specs/` — find files with no governing spec and specs whose governed files vanished. Write a drift report to `.cortex/pulse/` recommending onboarding updates.',
+    body: 'Invoke the `cortex-loop-onboarding-drift` skill: compare `.cortex/anatomy/files.md` and the code against `.specflow/specs/` — find files with no governing spec and specs whose governed files vanished. Write a drift report to `.cortex/pulse/` recommending onboarding updates.',
   },
   {
     name: 'spec-drift',
     description: 'Detect implementation drift from dev specs and dev/business contradiction; report to .cortex/pulse/.',
     requiredSkills: ['cortex-loop-spec-drift'],
-    body: 'Invoke the `cortex-loop-spec-drift` skill: for each implemented leaf spec in `specs/`, verify the code still satisfies its rules and that its business parent still describes the same outcome. Write a layer-drift report to `.cortex/pulse/` — classify findings per the seven-type bug taxonomy.',
+    body: 'Invoke the `cortex-loop-spec-drift` skill: for each implemented leaf spec in `.specflow/specs/`, verify the code still satisfies its rules and that its business parent still describes the same outcome. Write a layer-drift report to `.cortex/pulse/` — classify findings per the seven-type bug taxonomy.',
   },
   {
     name: 'specflow-lint',

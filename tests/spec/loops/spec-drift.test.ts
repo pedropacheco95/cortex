@@ -37,9 +37,9 @@ function makeDriftProject(label: string): string {
   const root = tmp(label);
   makeCortexProject(root);
   gitInitRepo(root);
-  writeAt(root, 'specs/a/drifted.spec.md', specMd('a.drifted', ['src/drifted.ts']));
+  writeAt(root, '.specflow/specs/a/drifted.spec.md', specMd('a.drifted', ['src/drifted.ts']));
   writeAt(root, 'src/drifted.ts', 'export {};\n');
-  gitCommitPathsAt(root, ['specs/a/drifted.spec.md', 'src/drifted.ts', '.cortex/cortex.config.json'], daysAgoIso(30));
+  gitCommitPathsAt(root, ['.specflow/specs/a/drifted.spec.md', 'src/drifted.ts', '.cortex/cortex.config.json'], daysAgoIso(30));
   writeAt(root, 'src/drifted.ts', 'export const changed = true;\n');
   gitCommitPathsAt(root, ['src/drifted.ts'], daysAgoIso(10)); // 20 days after the spec
   return root;
@@ -68,8 +68,8 @@ describe('AC: Fresh spec is not suspect', () => {
     gitInitRepo(root);
     writeAt(root, 'src/settled.ts', 'export {};\n');
     gitCommitPathsAt(root, ['src/settled.ts'], daysAgoIso(60));
-    writeAt(root, 'specs/a/fresh.spec.md', specMd('a.fresh', ['src/settled.ts']));
-    gitCommitPathsAt(root, ['specs/a/fresh.spec.md'], daysAgoIso(5));
+    writeAt(root, '.specflow/specs/a/fresh.spec.md', specMd('a.fresh', ['src/settled.ts']));
+    gitCommitPathsAt(root, ['.specflow/specs/a/fresh.spec.md'], daysAgoIso(5));
 
     await runSpecDrift(root);
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
@@ -83,9 +83,9 @@ describe('AC: Grace window respected', () => {
     const root = tmp('grace');
     makeCortexProject(root);
     gitInitRepo(root);
-    writeAt(root, 'specs/a/graceful.spec.md', specMd('a.graceful', ['src/g.ts']));
+    writeAt(root, '.specflow/specs/a/graceful.spec.md', specMd('a.graceful', ['src/g.ts']));
     writeAt(root, 'src/g.ts', 'export {};\n');
-    gitCommitPathsAt(root, ['specs/a/graceful.spec.md', 'src/g.ts'], daysAgoIso(30));
+    gitCommitPathsAt(root, ['.specflow/specs/a/graceful.spec.md', 'src/g.ts'], daysAgoIso(30));
     writeAt(root, 'src/g.ts', 'export const g = 1;\n');
     gitCommitPathsAt(root, ['src/g.ts'], daysAgoIso(25));
 
@@ -102,10 +102,10 @@ describe('AC: Ungoverned spec skipped, untracked spec noted', () => {
     const root = tmp('skip-note');
     makeCortexProject(root);
     gitInitRepo(root);
-    writeAt(root, 'specs/a/floaty.spec.md', specMd('a.floaty'));
+    writeAt(root, '.specflow/specs/a/floaty.spec.md', specMd('a.floaty'));
     writeAt(root, 'src/x.ts', 'export {};\n');
-    gitCommitPathsAt(root, ['specs/a/floaty.spec.md', 'src/x.ts'], daysAgoIso(30));
-    writeAt(root, 'specs/a/uncommitted.spec.md', specMd('a.uncommitted', ['src/x.ts']));
+    gitCommitPathsAt(root, ['.specflow/specs/a/floaty.spec.md', 'src/x.ts'], daysAgoIso(30));
+    writeAt(root, '.specflow/specs/a/uncommitted.spec.md', specMd('a.uncommitted', ['src/x.ts']));
 
     await runSpecDrift(root);
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
@@ -121,8 +121,8 @@ describe('Always-write (schema §4.5) and non-repo handling', () => {
     const root = tmp('clean');
     makeCortexProject(root);
     gitInitRepo(root);
-    writeAt(root, 'specs/a/only.spec.md', specMd('a.only'));
-    gitCommitPathsAt(root, ['specs/a/only.spec.md'], daysAgoIso(2));
+    writeAt(root, '.specflow/specs/a/only.spec.md', specMd('a.only'));
+    gitCommitPathsAt(root, ['.specflow/specs/a/only.spec.md'], daysAgoIso(2));
 
     await runSpecDrift(root, { now: new Date('2026-07-01T07:00:00.000Z') });
     let report = parsePulseReport(path.join(root, REPORT_REL));
@@ -139,7 +139,7 @@ describe('Always-write (schema §4.5) and non-repo handling', () => {
   it('a non-git project still writes the report with the no-history notice, exit 0 (Rule 3)', async () => {
     const root = tmp('norepo');
     makeCortexProject(root);
-    writeAt(root, 'specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
+    writeAt(root, '.specflow/specs/a/thing.spec.md', specMd('a.thing', ['src/a.ts']));
     const code = await runSpecDrift(root);
     expect(code).toBe(0);
     const { body } = parsePulseReport(path.join(root, REPORT_REL));

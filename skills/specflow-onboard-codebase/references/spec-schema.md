@@ -2,8 +2,8 @@
 
 Onboarding produces two parallel trees:
 
-- `specs/` — developer specs (this file).
-- `specs-business/` — business specs (see `business-spec-template.md`).
+- `.specflow/specs/` — developer specs (this file).
+- `.specflow/specs-business/` — business specs (see `business-spec-template.md`).
 
 Both trees use frontmatter to link to each other bidirectionally. Both trees have an
 `_overview.md` in every folder (see `folder-overview-template.md`).
@@ -25,7 +25,7 @@ flag it. Exactly one value — not a list.
 
 ## File naming
 
-`specs/{domain}/{capability}/{leaf}.spec.md`
+`.specflow/specs/{domain}/{capability}/{leaf}.spec.md`
 
 The leaf spec filename uses the leaf name, not generic `spec.md`.
 

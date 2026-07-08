@@ -126,7 +126,7 @@ export const REASONING_FIXING_WRITER_SH =
 /**
  * A minimal test-runner-able project: a synthetic failing vitest file, the
  * dev spec it traces to (§3 path convention: tests/atomic/demo/sample.test.ts
- * → specs/demo/sample.spec.md), a `.cortex` skeleton, `target.txt`, and a
+ * → .specflow/specs/demo/sample.spec.md), a `.cortex` skeleton, `target.txt`, and a
  * tier stub script `tier-atomic.sh` that emits vitest-shaped output — failing
  * until target.txt contains FIXED. Pass `fixed: true` for green tiers.
  */
@@ -156,7 +156,7 @@ export function makeTestRunnerProject(root: string, opts: { fixed?: boolean } = 
     'utf-8',
   );
 
-  const specDir = path.join(root, 'specs', 'demo');
+  const specDir = path.join(root, '.specflow', 'specs', 'demo');
   fs.mkdirSync(specDir, { recursive: true });
   fs.writeFileSync(
     path.join(specDir, 'sample.spec.md'),

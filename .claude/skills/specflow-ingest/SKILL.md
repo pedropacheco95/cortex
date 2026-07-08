@@ -89,9 +89,9 @@ conflicts flagged.
 Read the existing spec trees thoroughly — not just domains and overviews, but rules and
 acceptance criteria. Spec gaps and conflicts hide in the criteria.
 
-- `specs/_index.md` for domain structure and dependency graph
-- `specs-business/` — read each business spec's outcome, journey steps, and business rules
-- `specs/` — read each dev spec's intent, entity references, rules, AND acceptance criteria
+- `.specflow/specs/_index.md` for domain structure and dependency graph
+- `.specflow/specs-business/` — read each business spec's outcome, journey steps, and business rules
+- `.specflow/specs/` — read each dev spec's intent, entity references, rules, AND acceptance criteria
 - `_overview.md` files for domain boundaries
 
 **Agent delegation for large spec trees (30+ specs):** Spawn one agent per domain to
@@ -231,7 +231,7 @@ spec" but the exact rules, criteria, and entity references to add or modify.
 **Plan agreement:** Convergent / Resolved from plans A+B / Investigated
 
 **Current state:**
-- Spec: `specs/{path}`
+- Spec: `.specflow/specs/{path}`
 - Rule N: "[current text]"
 
 **Proposed state:**
@@ -258,8 +258,8 @@ spec" but the exact rules, criteria, and entity references to add or modify.
 
 **Source:** [document name], [paraphrase]
 **Possible interpretations:**
-1. [interpretation A] → would be [classification] to `specs/{path}`
-2. [interpretation B] → would be [classification] to `specs/{path}`
+1. [interpretation A] → would be [classification] to `.specflow/specs/{path}`
+2. [interpretation B] → would be [classification] to `.specflow/specs/{path}`
 
 **Need from human:** Which interpretation is correct?
 
@@ -269,8 +269,8 @@ spec" but the exact rules, criteria, and entity references to add or modify.
 
 [List for confidence — the human sees that the spec tree covers these]
 
-- "[document statement]" → covered by `specs/{path}`, Rule N
-- "[document statement]" → covered by `specs-business/{path}`, Journey step 3
+- "[document statement]" → covered by `.specflow/specs/{path}`, Rule N
+- "[document statement]" → covered by `.specflow/specs-business/{path}`, Journey step 3
 
 ---
 
@@ -334,14 +334,14 @@ The manifest includes a **test sweep section** at the bottom:
 ## Test Sweep (after all changes applied)
 
 **Affected dev specs requiring test generation/update:**
-- specs/cardinality/update-cardinality.spec.md (CHANGE-03: new rules added)
-- specs/cardinality/create-portions.spec.md (CHANGE-04: new spec)
-- specs/families/assign-family.spec.md (CHANGE-05: new spec)
-- specs/navigation/step-gating.spec.md (CHANGE-08: criteria modified)
+- .specflow/specs/cardinality/update-cardinality.spec.md (CHANGE-03: new rules added)
+- .specflow/specs/cardinality/create-portions.spec.md (CHANGE-04: new spec)
+- .specflow/specs/families/assign-family.spec.md (CHANGE-05: new spec)
+- .specflow/specs/navigation/step-gating.spec.md (CHANGE-08: criteria modified)
 
 **Affected business specs requiring journey test generation/update:**
-- specs-business/form-authoring/user-adjusts-cardinality.business.md (CHANGE-03)
-- specs-business/form-authoring/user-groups-into-families.business.md (CHANGE-05: new)
+- .specflow/specs-business/form-authoring/user-adjusts-cardinality.business.md (CHANGE-03)
+- .specflow/specs-business/form-authoring/user-groups-into-families.business.md (CHANGE-05: new)
 
 **Scenario coverage check needed:**
 - New business spec user-groups-into-families must appear in at least one scenario's

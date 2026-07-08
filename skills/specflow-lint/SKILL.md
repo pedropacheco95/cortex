@@ -1,7 +1,7 @@
 ---
 name: specflow-lint
 description: >
-  Verify and correct the structural integrity of both spec trees (specs/ and specs-business/).
+  Verify and correct the structural integrity of both spec trees (.specflow/specs/ and .specflow/specs-business/).
   Checks that every spec follows the correct format, naming conventions, frontmatter schema,
   entity reference style, folder structure, and bidirectional linking rules. Fixes violations
   automatically where possible, flags ambiguous issues for human review. Use this skill
@@ -41,12 +41,12 @@ The linter runs checks in order. Each check produces: PASS, AUTO-FIXED, or NEEDS
 ### 1. File Structure
 
 **1a. Directory layout**
-- `specs/` exists at project root
-- `specs-business/` exists at project root
-- `specs/` contains `_index.md` at root
+- `.specflow/specs/` exists at project root
+- `.specflow/specs-business/` exists at project root
+- `.specflow/specs/` contains `_index.md` at root
 - Both trees are organized in domain subfolders (not flat)
-- Dev spec path matches: `specs/{domain}/{capability}/{leaf}.spec.md`
-- Business spec path matches: `specs-business/{domain}/{outcome}.business.md`
+- Dev spec path matches: `.specflow/specs/{domain}/{capability}/{leaf}.spec.md`
+- Business spec path matches: `.specflow/specs-business/{domain}/{outcome}.business.md`
 - No `spec.md` generic filenames (must be `{leaf}.spec.md`)
 - No subfolder per leaf spec (file lives directly in capability folder)
 
@@ -65,7 +65,7 @@ For every `.spec.md` file:
 **2a. Frontmatter**
 - Has `id:` field
 - `id:` matches the file path (e.g., `auth.registration.email-signup` for
-  `specs/auth/registration/email-signup.spec.md`)
+  `.specflow/specs/auth/registration/email-signup.spec.md`)
 - Has `status:` field with valid value (`draft`, `implementing`, `implemented`, `deprecated`)
 - Has `depends_on:` field (can be empty list)
 - Has `implements:` field
@@ -182,7 +182,7 @@ human review.
 # Spec Lint Report
 
 **Run:** [date]
-**Trees scanned:** specs/ ([N] files), specs-business/ ([N] files)
+**Trees scanned:** .specflow/specs/ ([N] files), .specflow/specs-business/ ([N] files)
 
 ## Summary
 
@@ -197,32 +197,32 @@ human review.
 
 ## Auto-fixes Applied
 
-- `specs/auth/login/email-signup.spec.md`: Converted `implements:` from list to scalar
-- `specs-business/booking/_overview.md`: Created stub (TODO: fill in content)
-- `specs/booking/reservation/hold-slot.spec.md`: Renumbered rules (1,3,4 → 1,2,3)
+- `.specflow/specs/auth/login/email-signup.spec.md`: Converted `implements:` from list to scalar
+- `.specflow/specs-business/booking/_overview.md`: Created stub (TODO: fill in content)
+- `.specflow/specs/booking/reservation/hold-slot.spec.md`: Renumbered rules (1,3,4 → 1,2,3)
 - Added `hold-slot.spec.md` to `user-books-a-class.business.md` implemented_by list
 
 ## Needs Review
 
 ### LINT-001: Field table in entity section
-**File:** `specs/billing/invoice/generate.spec.md`
+**File:** `.specflow/specs/billing/invoice/generate.spec.md`
 **Issue:** Entities section contains a `| Field | Type | Description |` table
 **Expected:** READS/WRITES/CREATES references only — no schema definitions in specs
 **Suggestion:** Replace the field table with:
   `- **WRITES:** Invoice (creates invoice record)`
 
 ### LINT-002: Business spec missing persona prefix
-**File:** `specs-business/notifications/booking-confirmation.business.md`
+**File:** `.specflow/specs-business/notifications/booking-confirmation.business.md`
 **Issue:** Filename does not start with a persona
 **Suggestion:** Rename to `user-receives-booking-confirmation.business.md`
 
 ### LINT-003: Engineering jargon in business spec
-**File:** `specs-business/auth/user-accesses-account.business.md`
+**File:** `.specflow/specs-business/auth/user-accesses-account.business.md`
 **Line 24:** "The system returns a JWT token valid for 24 hours"
 **Suggestion:** Rewrite as "The user stays logged in for 24 hours"
 
 ### LINT-004: Thin overview
-**File:** `specs/billing/_overview.md`
+**File:** `.specflow/specs/billing/_overview.md`
 **Issue:** Overview is only 2 lines and doesn't mention any child specs
 **Suggestion:** Expand to cover what the billing domain contains and why it's grouped
 ```

@@ -247,13 +247,13 @@ describe('AC6: spec cross-link present vs absent', () => {
     tmpDir = makeTmp('ac6');
     writeConfig(tmpDir);
     fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, 'specs', 'app'), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, 'specs-business', 'app'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.specflow', 'specs', 'app'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.specflow', 'specs-business', 'app'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, 'src', 'a.ts'), 'export const x = 1;\n');
 
     // Valid business spec
     fs.writeFileSync(
-      path.join(tmpDir, 'specs-business', 'app', 'thing.business.md'),
+      path.join(tmpDir, '.specflow', 'specs-business', 'app', 'thing.business.md'),
       [
         '---',
         'id: app.thing',
@@ -271,7 +271,7 @@ describe('AC6: spec cross-link present vs absent', () => {
 
     // Valid dev spec with governs
     fs.writeFileSync(
-      path.join(tmpDir, 'specs', 'app', 'a.spec.md'),
+      path.join(tmpDir, '.specflow', 'specs', 'app', 'a.spec.md'),
       [
         '---',
         'id: app.a',
@@ -288,17 +288,17 @@ describe('AC6: spec cross-link present vs absent', () => {
 
     // Overview files
     fs.writeFileSync(
-      path.join(tmpDir, 'specs', 'app', '_overview.md'),
+      path.join(tmpDir, '.specflow', 'specs', 'app', '_overview.md'),
       '## What this is\nApp domain.\n## What it covers\nApp specs.\n## Why it\'s grouped this way\nGrouped for app.\n',
     );
     fs.writeFileSync(
-      path.join(tmpDir, 'specs-business', 'app', '_overview.md'),
+      path.join(tmpDir, '.specflow', 'specs-business', 'app', '_overview.md'),
       '## What this is\nApp business domain.\n## What it covers\nBusiness specs.\n## Why it\'s grouped this way\nGrouped for business.\n',
     );
 
-    // specs/_index.md (required for spec cross-linking)
+    // .specflow/specs/_index.md (required for spec cross-linking)
     fs.writeFileSync(
-      path.join(tmpDir, 'specs', '_index.md'),
+      path.join(tmpDir, '.specflow', 'specs', '_index.md'),
       [
         '**Read this when:** implementing or reviewing a spec.',
         '',
@@ -319,7 +319,7 @@ describe('AC6: spec cross-link present vs absent', () => {
   }, TEST_TIMEOUT);
   afterAll(() => cleanTmp(tmpDir));
 
-  it('with specs/_index.md + governs glob → specLinks contains the spec id', async () => {
+  it('with .specflow/specs/_index.md + governs glob → specLinks contains the spec id', async () => {
     const result = await scan(tmpDir);
     const file = result.files.find(f => f.path === 'src/a.ts');
     expect(file).toBeDefined();
@@ -334,11 +334,11 @@ describe('AC6b: spec cross-link absent', () => {
     writeConfig(tmpDir);
     fs.mkdirSync(path.join(tmpDir, 'src'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, 'src', 'a.ts'), 'export const x = 1;\n');
-    // NO specs/_index.md
+    // NO .specflow/specs/_index.md
   }, TEST_TIMEOUT);
   afterAll(() => cleanTmp(tmpDir));
 
-  it('without specs/_index.md → specLinks empty', async () => {
+  it('without .specflow/specs/_index.md → specLinks empty', async () => {
     const result = await scan(tmpDir);
     const file = result.files.find(f => f.path === 'src/a.ts');
     expect(file).toBeDefined();

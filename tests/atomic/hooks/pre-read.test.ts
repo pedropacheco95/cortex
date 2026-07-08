@@ -1,5 +1,5 @@
 /**
- * Atomic tests — hooks.pre-read internals: payload composition (specs/rules
+ * Atomic tests — hooks.pre-read internals: payload composition (.specflow/specs/rules
  * empty states, retired rules), the invitation gate per provenance value, the
  * per-session read-memory file, budget trimming, config-flag defaults, and
  * degradation paths.
