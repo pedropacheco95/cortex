@@ -164,6 +164,15 @@ referenceable. Go straight to step 8 (register update). Write nothing to
    distil/rule-decay loops) and not `decision-candidate` (reserved for
    `cortex-loop-session-observe`). Do not use those two here.
 
+   **Provenance stamping (schema §6 / addendum A6, mandatory):** every
+   rule/decision the plan creates or updates carries `provenance:` frontmatter
+   in the proposed payload, with one `- derives_from:
+   archive/documents/<slug>/extracted/<file>` entry per motivating extracted
+   file (the same file the plan entry cites). `check.provenance` validates
+   these references on the landed artefact — a dangling one is an error — and
+   they are what the backward-traversal index (step 7) reads to answer "what
+   derives from this document."
+
 4. **Write the suggestion section(s) yourself**, directly, into
    `.cortex/pulse/archive-ingestion.md` (a new pulse report this skill owns,
    alongside `bug-triage.md`, `rule-candidates.md`, etc. — schema §4.5:
@@ -197,6 +206,8 @@ referenceable. Go straight to step 8 (register update). Write nothing to
      governs:
        - "<glob>"
      confidence: EXTRACTED
+     provenance:
+       - derives_from: archive/documents/<slug>/extracted/<file>
      ---
 
      # R-NNN — ...
@@ -220,7 +231,10 @@ referenceable. Go straight to step 8 (register update). Write nothing to
    spec-shaped item in your plan separately: "this also looks like a spec
    change — route it to `specflow-ingest`/`specflow-spec-editor` outside this
    gate," and do not include it in the `.cortex/pulse/archive-ingestion.md`
-   write.
+   write. When you hand a spec-shaped item off, pass its
+   `archive/documents/<slug>/extracted/<file>` reference along so the created
+   spec carries the same `provenance: - derives_from:` entry (schema §4.6/§4.7
+   allow it on both trees).
 
 ## Step 7 — Document version updates
 
@@ -231,14 +245,18 @@ When the user ingests a new version of an already-active document (e.g.
    `client-spec-v2-1`), with `metadata.yaml` `supersedes: [documents/<prior-slug>/]`.
 2. Diff the new version's `extracted/` content against the prior version's.
    Surface inline: "new: …", "changed: …", "removed: …".
-3. For changed/removed items, identify downstream artefacts derived from
-   them **if you can** — but note honestly: **downstream artefact
-   identification pending provenance system (step 4)**. Full backward
-   lookup depends on `provenance.frontmatter-check` (build-order-v3 step 4),
-   which is not yet built — there is no reverse index from an archive
-   document to the rules/specs/decisions that cite it. Do not fabricate a
-   provenance/`derives_from` reverse-lookup mechanism; state the diff, state
-   this limitation, and stop there.
+3. For changed/removed items, identify downstream artefacts via the
+   **provenance backward-traversal index** (schema §6 / addendum A6,
+   `provenance.frontmatter-check`): search the four provenance-bearing
+   artefact kinds — `compass/rules/R-*.md`, `.specflow/specs/**/*.spec.md`,
+   `.specflow/specs-business/**/*.business.md`, `atlas/decisions/*.md` — for
+   frontmatter `derives_from:` entries pointing into the prior version's
+   `archive/documents/<prior-slug>/...` paths (the changed/removed extracted
+   files in particular). `check.provenance` keeps these entries well-formed
+   and resolving, so a frontmatter search is exact — this is the same reverse
+   map Core computes in `src/schema/provenance-index.ts`. Surface every
+   citing rule/spec/decision for review in the update plan; none may silently
+   continue enforcing a superseded requirement.
 4. Run the same yes/no gate as step 6 for an **update plan**.
 5. Update the **prior** version's `metadata.yaml` to `status: superseded` —
    its directory is kept, never deleted or overwritten. The new version's
@@ -270,5 +288,5 @@ written, any clarifying questions asked and answered, the yes/no gate outcome
 (and if yes: the `S-NNN` ids written to `.cortex/pulse/archive-ingestion.md`
 and their types), any spec-shaped items flagged for `specflow-ingest`/
 `specflow-spec-editor` instead, the version-update diff and superseded status
-change (if applicable, including the provenance limitation note verbatim),
-and the `register.md` update.
+change (if applicable, including the downstream artefacts the provenance
+reverse-lookup surfaced), and the `register.md` update.

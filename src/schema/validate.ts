@@ -14,6 +14,7 @@ import { checkDevSpecs } from './checks/devspec.js';
 import { checkBizSpecs, checkBusinessStatus } from './checks/bizspec.js';
 import { checkScenarios } from './checks/scenario.js';
 import { checkXrefSymmetry, checkXrefUnique, checkXrefAcyclic } from './checks/xref.js';
+import { checkProvenance } from './checks/provenance.js';
 import { checkHookConfig } from './checks/hooks.js';
 import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
@@ -117,6 +118,10 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...await checkXrefSymmetry(root, index));
   allViolations.push(...await checkXrefUnique(root, index));
   allViolations.push(...await checkXrefAcyclic(root, index));
+
+  // Provenance check (§6, addendum A6, new at v3.0) — tolerant of the field
+  // being absent everywhere (absence means "authored directly")
+  allViolations.push(...await checkProvenance(root));
 
   // Hook config check
   allViolations.push(...checkHookConfig(root, config));
