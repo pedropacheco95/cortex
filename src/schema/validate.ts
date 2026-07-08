@@ -18,6 +18,7 @@ import { checkHookConfig } from './checks/hooks.js';
 import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
 import { checkConstellation } from './checks/constellation.js';
+import { checkInsightIndex, checkInsightProse, checkInsightGraph, checkInsightOwnership } from './checks/insight.js';
 
 export interface ValidateOptions {
   scope?: 'project' | 'tree' | 'file';
@@ -127,6 +128,12 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
 
   // constellation.json check (§4.9 — only when the file exists)
   allViolations.push(...checkConstellation(root));
+
+  // Insight-module checks (§4.10, §7.4) — run when the insight/ module is present
+  allViolations.push(...checkInsightIndex(root));
+  allViolations.push(...checkInsightProse(root));
+  allViolations.push(...checkInsightGraph(root));
+  allViolations.push(...checkInsightOwnership(root));
 
   // When scoped to a single file, filter violations to only those relevant to that file
   let filteredViolations = allViolations;
