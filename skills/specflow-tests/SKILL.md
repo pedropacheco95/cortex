@@ -56,6 +56,12 @@ When the project has a `.cortex/` directory, read the knowledge layer before gen
    `.cortex/pulse/verification-report.md` — never `tests/verification-report.md`. The
    pulse directory is where transient process outputs live and where the scheduled
    specflow-verify loop expects to find it.
+5. **Insight leads (when `.cortex/insight/` exists).** Before generating, run
+   `cortex insight query testing` (or the spec's domain) to surface testing conventions
+   recorded in the ungated layer. Insight is **ungated/unreviewed** — the gated cerebrum
+   rules and their `check:` predicates (step 1) still govern; treat any hit as a lead to
+   confirm against the gated layers (cerebrum/atlas/`RULES.md`) before it drives a
+   decision, never as authoritative. Insight only supplements.
 
 ## How It Works: Five Phases
 

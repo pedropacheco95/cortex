@@ -119,6 +119,11 @@ bridge 5), build from the scanned anatomy instead of re-walking the tree:
   Phases 6 and 8 is filed as `.cortex/cerebrum/bugs/B-NNN-<slug>.md` with the
   seven-type frontmatter — never a root `bugs.md` deliverable — so the daily bug-triage
   loop finds them.
+- **`cortex insight` is the ungated complement to the scanned anatomy.** Onboarding
+  populates specs/anatomy; the insight loops populate `insight/` later, so a fresh
+  onboard has an empty `map/` and nothing to query yet. When it fills, insight is
+  **ungated/unreviewed** — confirm any `cortex insight` hit against the gated layers
+  (cerebrum/atlas/`RULES.md`) before it drives a decision, never as authoritative.
 
 ## The Eight Phases
 

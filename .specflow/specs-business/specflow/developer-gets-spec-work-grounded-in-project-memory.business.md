@@ -3,6 +3,7 @@ id: specflow.developer-gets-spec-work-grounded-in-project-memory
 status: implemented
 implemented_by:
   - ../../specs/specflow/cortex-awareness.spec.md
+  - ../../specs/specflow/insight-awareness.spec.md
 ---
 
 # Spec work draws on everything the project already knows

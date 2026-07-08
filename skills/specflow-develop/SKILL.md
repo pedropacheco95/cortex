@@ -63,9 +63,15 @@ before planning or coding (skip this section cleanly when `.cortex/` is absent):
 4. **Atlas decisions.** Consult the `.cortex/atlas/decisions/` entries relevant to the
    touched domain — they record why the current approach was chosen; never undo a
    recorded decision silently.
-5. **Validate before finishing.** Run `cortex validate` before reporting completion and
+5. **Insight leads (when `.cortex/insight/` exists).** Before planning or coding, run
+   `cortex insight query <topic>` for the task's domain (setup / testing / conventions /
+   deploy prose) and `cortex insight neighbors <node-id>` for inferred related code.
+   Treat every hit as an ungated lead to confirm against anatomy/cerebrum before it
+   drives a decision — never a gated rule. Insight is **ungated/unreviewed**; the gated
+   layers (cerebrum/atlas/`RULES.md`) win.
+6. **Validate before finishing.** Run `cortex validate` before reporting completion and
    resolve (or explicitly surface) anything it flags.
-6. **Gap documentation home (design §8.5).** Gap entries and the final gap report land
+7. **Gap documentation home (design §8.5).** Gap entries and the final gap report land
    at `.cortex/pulse/gaps.md` — never a root `gaps.md` — where they are reviewed and
    dismissed like other pulse outputs.
 
