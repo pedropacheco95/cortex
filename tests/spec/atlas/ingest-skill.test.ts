@@ -89,9 +89,10 @@ describe('Overwrite protection becomes live', () => {
 
       const after = fs.readFileSync(target, 'utf-8');
       expect(after).not.toBe(USER_CONTENT);
-      // The shipped bundle carries the workflow contract, not the user's stub.
-      expect(after).toContain('cortex validate');
-      expect(after).toContain('atlas/sources/<slug>.<ext>');
+      // build-order-v3 step 3b retired cortex-ingest to a redirect stub — the
+      // shipped bundle now carries the redirect, not the old workflow contract.
+      expect(after).toContain('cortex-archive-ingest');
+      expect(after).toMatch(/retired|moved/i);
     } finally {
       cleanTmp(root); cleanTmp(home);
     }
