@@ -1,5 +1,8 @@
 .cortex/anatomy/
-.cortex/atlas/sources/
+.cortex/atlas/sources/*
+# v3 reframe source is committed deliberately — atlas decisions cite it by path
+!.cortex/atlas/sources/cortex-v3-reframe.md
+!.cortex/atlas/sources/cortex-v3-reframe.meta.md
 .cortex/pulse/
 .cortex/constellation.json
 node_modules/
