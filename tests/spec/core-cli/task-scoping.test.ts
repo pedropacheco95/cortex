@@ -69,11 +69,11 @@ describe("AC2: two same-named projects don't collide", () => {
     expect(resultB.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
-    expect(dirs).toHaveLength(30);
+    expect(dirs).toHaveLength(28); // 2 × the fourteen §9.1 canonical tasks
     const ofA = dirs.filter((d) => isOwnScopedTask(rootA, d));
     const ofB = dirs.filter((d) => isOwnScopedTask(rootB, d));
-    expect(ofA).toHaveLength(15);
-    expect(ofB).toHaveLength(15);
+    expect(ofA).toHaveLength(14);
+    expect(ofB).toHaveLength(14);
     expect(ofA.filter((d) => ofB.includes(d))).toHaveLength(0);
     // Same slug (the Desktop-scannable part), disambiguated by the path hash.
     expect(projectTaskSlug(rootA)).toBe('api');
@@ -82,7 +82,7 @@ describe("AC2: two same-named projects don't collide", () => {
   });
 
   it('zero overwrites: the second init wrote all fresh (nothing preserved) and every frontmatter name matches its dir', () => {
-    expect(resultB.summary).toMatch(/Scheduled tasks: 15 written/);
+    expect(resultB.summary).toMatch(/Scheduled tasks: 14 written/);
     expect(resultB.summary).not.toMatch(/preserved/);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     for (const dir of fs.readdirSync(base)) {
@@ -165,13 +165,13 @@ describe('AC4: --partial recognises only its own project', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(otherRoot); cleanTmp(home); });
 
-  it("registered/preserved counts reflect only this project's tasks (14 written + 1 preserved = 15 packaged loops)", () => {
+  it("registered/preserved counts reflect only this project's tasks (13 written + 1 preserved = 14 packaged loops)", () => {
     // Since specflow.cortex-awareness Rule 3 the packaged skills cover every
     // task, so --partial registers the full set.
     expect(result.exitCode).toBe(0);
-    expect(result.summary).toContain('Scheduled tasks (--partial): 14 written');
+    expect(result.summary).toContain('Scheduled tasks (--partial): 13 written');
     expect(result.summary).toContain('1 existing preserved');
-    expect(result.summary).toContain('15 loops registered');
+    expect(result.summary).toContain('14 loops registered');
   });
 
   it('the foreign entries and the unrelated user task are byte-untouched', () => {

@@ -16,16 +16,15 @@ import { createHash } from 'crypto';
 
 /**
  * Internal short id → canonical task name (schema §9.1 Cortex-managed tasks;
- * fifteen while `anatomy-refresh-deep` awaits its step-7 deregistration —
- * `session-observe` registered at build-order-v3 step 6). Keys are the
- * `SCHEDULED_TASKS` internal ids (templates.ts); values are the full §9.1
- * canonical identities.
+ * the FOURTEEN of schema 3.0 — `anatomy-refresh-deep` deregistered at
+ * build-order-v3 step 7, `session-observe` registered at step 6). Keys are
+ * the `SCHEDULED_TASKS` internal ids (templates.ts); values are the full
+ * §9.1 canonical identities.
  */
 export const CANONICAL_TASK_NAMES: Readonly<Record<string, string>> = {
   'hygiene': 'cortex-pulse-hygiene',
   'distil': 'cortex-pulse-distil',
   'skill-suggest': 'cortex-loop-skill-suggest',
-  'anatomy-refresh-deep': 'cortex-loop-anatomy-refresh-deep',
   'rule-decay': 'cortex-loop-rule-decay',
   'atlas-staleness': 'cortex-loop-atlas-staleness',
   'onboarding-drift': 'cortex-loop-onboarding-drift',
@@ -40,17 +39,19 @@ export const CANONICAL_TASK_NAMES: Readonly<Record<string, string>> = {
 };
 
 /**
- * Canonical names deregistered at v3 (build-order-v3 step 5e, design §8.3):
- * the v2 insight pair. `cortex init` removes this project's scoped task dirs
- * for these; `cortex-loop-insight-refresh-fast` never appears here — it is
- * the git post-commit hook, not a scheduled task (schema §9.1).
+ * Canonical names deregistered at v3 (build-order-v3 steps 5e and 7, design
+ * §8.3, §5.10): the v2 insight pair and the anatomy deep-refresh. `cortex
+ * init` removes this project's scoped task dirs for these;
+ * `cortex-loop-insight-refresh-fast` never appears here — it is the git
+ * post-commit hook, not a scheduled task (schema §9.1).
  */
 export const RETIRED_CANONICAL_TASK_NAMES: readonly string[] = [
   'cortex-loop-insight-refresh',
   'cortex-loop-insight-gaps',
+  'cortex-loop-anatomy-refresh-deep',
 ];
 
-/** The fifteen registered canonical task names (suffix set for recognition). */
+/** The fourteen registered canonical task names (suffix set for recognition). */
 const CANONICAL_SET: ReadonlySet<string> = new Set(Object.values(CANONICAL_TASK_NAMES));
 
 /**

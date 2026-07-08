@@ -4,7 +4,7 @@
  * (skills/specflow-*, the source of truth; byte-identity with .claude/skills/
  * is the spec tier's job).
  *
- * Deep skills: index-first + anatomy + compass (incl. `check:` predicates
+ * Deep skills: index-first + insight + compass (incl. `check:` predicates
  * where specified) + atlas + `cortex validate` where specified.
  * Moderate skills: their targeted reads. Light skills: their minimal touch.
  * specflow-bugs: ledger path present AND no root-bugs.md write instruction.
@@ -42,7 +42,7 @@ function expectOnlyProhibitions(text: string, legacy: string, label: string): vo
 // Deep tier
 // ---------------------------------------------------------------------------
 
-describe('specflow-develop (Deep): index-first, anatomy, compass incl. predicates, atlas, validate', () => {
+describe('specflow-develop (Deep): index-first, insight, compass incl. predicates, atlas, validate', () => {
   const s = body('specflow-develop');
 
   it('carries a clearly-delimited Cortex awareness section', () => {
@@ -54,11 +54,12 @@ describe('specflow-develop (Deep): index-first, anatomy, compass incl. predicate
     expect(s).toContain('Index first');
   });
 
-  it('pulls anatomy rows for task-relevant files via spec_links/governs and uses purpose lines', () => {
-    expect(s).toContain('.cortex/anatomy/files.md');
-    expect(s).toContain('`spec_links`');
+  it('pulls insight for the touched files via governs globs and uses Purpose lines + Connections', () => {
+    expect(s).toContain('Insight for the touched files.');
+    expect(s).toContain('cortex insight file');
     expect(s).toContain('`governs:`');
-    expect(s).toMatch(/purpose line.*replaces a whole-file read/s);
+    expect(s).toMatch(/Purpose line.*replaces a whole-file read/s);
+    expect(s).toContain('Connections');
   });
 
   it('collects both governs-matched and check:-predicated compass rules and honours them', () => {
@@ -86,7 +87,7 @@ describe('specflow-develop (Deep): index-first, anatomy, compass incl. predicate
   });
 });
 
-describe('specflow-tests (Deep): compass check: predicates into generated tests, anatomy, covers: conventions', () => {
+describe('specflow-tests (Deep): compass check: predicates into generated tests, insight, covers: conventions', () => {
   const s = body('specflow-tests');
 
   it('carries a clearly-delimited Cortex awareness section', () => {
@@ -104,9 +105,11 @@ describe('specflow-tests (Deep): compass check: predicates into generated tests,
     expect(s).toContain('bridge 1');
   });
 
-  it('reads anatomy for the governed files of the spec under test', () => {
-    expect(s).toContain('.cortex/anatomy/files.md');
-    expect(s).toContain('`spec_links`');
+  it('reads insight for the governed files of the spec under test', () => {
+    expect(s).toContain('Insight for the governed files.');
+    expect(s).toContain('cortex insight file');
+    expect(s).toContain('`governs:`');
+    expect(s).toMatch(/Purpose lines/);
   });
 
   it('notes the four-tier and covers: conventions per schema §3/§4.8', () => {
@@ -136,8 +139,10 @@ describe('specflow-change-router (Deep): routes by Cortex module touched, bug re
     expect(s).toContain('bridge 6');
   });
 
-  it('greps anatomy, compass, and atlas indexes as part of classification', () => {
-    expect(s).toContain('.cortex/anatomy/files.md');
+  it('names the insight layer, compass, and atlas indexes as part of classification', () => {
+    expect(s).toContain('cortex insight file <path>');
+    expect(s).toContain('cortex insight concept <name>');
+    expect(s).toContain('`governs:`');
     expect(s).toContain('.cortex/compass/_index.md');
     expect(s).toContain('.cortex/atlas/_index.md');
   });
@@ -159,18 +164,20 @@ describe('specflow-change-router (Deep): routes by Cortex module touched, bug re
 // Moderate tier
 // ---------------------------------------------------------------------------
 
-describe('specflow-onboard-codebase (Moderate): anatomy-first build (bridge 5), §4.2 rule drafts', () => {
+describe('specflow-onboard-codebase (Moderate): insight-first build (bridge 5), §4.2 rule drafts', () => {
   const s = body('specflow-onboard-codebase');
 
   it('carries a clearly-delimited Cortex awareness section', () => {
     expect(s).toMatch(/^## Cortex [Aa]wareness$/m);
   });
 
-  it('builds from the scanned anatomy instead of re-walking the tree when .cortex/anatomy/ exists', () => {
-    expect(s).toContain('.cortex/anatomy/');
-    expect(s).toMatch(/instead of re-walking\s+the tree/);
-    expect(s).toContain('.cortex/anatomy/files.md');
-    expect(s).toContain('.cortex/anatomy/graph.json');
+  it('builds from the extracted insight instead of re-walking the tree when .cortex/insight/ exists', () => {
+    expect(s).toContain('a `.cortex/insight/` directory');
+    expect(s).toMatch(/instead of re-walking the tree/);
+    expect(s).toMatch(/Phase 1 starts from insight/);
+    expect(s).toContain('.cortex/insight/graph.json');
+    expect(s).toContain('`imports` edges');
+    expect(s).toMatch(/only where a file has no insight entry/);
     expect(s).toContain('bridge 5');
   });
 
@@ -193,17 +200,17 @@ describe('specflow-onboard-codebase (Moderate): anatomy-first build (bridge 5), 
   });
 });
 
-describe('specflow-deep-onboard (Moderate): anatomy-first input, §8.5 pulse output homes', () => {
+describe('specflow-deep-onboard (Moderate): insight-first input, §8.5 pulse output homes', () => {
   const s = body('specflow-deep-onboard');
 
   it('carries a clearly-delimited Cortex awareness section', () => {
     expect(s).toMatch(/^## Cortex [Aa]wareness$/m);
   });
 
-  it('inherits the anatomy-first input from specflow-onboard-codebase', () => {
-    expect(s).toContain('.cortex/anatomy/files.md');
-    expect(s).toContain('.cortex/anatomy/graph.json');
-    expect(s).toMatch(/[Aa]natomy-first/);
+  it('inherits the insight-first input from specflow-onboard-codebase', () => {
+    expect(s).toContain('.cortex/insight/anatomy/<path>.md');
+    expect(s).toContain('.cortex/insight/graph.json');
+    expect(s).toMatch(/[Ii]nsight-first/);
   });
 
   it('passes outputs through the .cortex/pulse/ homes the design names (§8.5)', () => {
@@ -299,7 +306,7 @@ describe('specflow-spec-editor (Moderate): governed_by check on edit, cortex val
 // Light tier
 // ---------------------------------------------------------------------------
 
-describe('specflow-viewer (Light): one optional-anatomy note, no required reads', () => {
+describe('specflow-viewer (Light): one optional-insight note, no required reads', () => {
   const s = body('specflow-viewer');
 
   it('carries exactly one Cortex awareness note', () => {
@@ -307,10 +314,10 @@ describe('specflow-viewer (Light): one optional-anatomy note, no required reads'
     expect(notes).toHaveLength(1);
   });
 
-  it('the note says anatomy purpose lines MAY enrich rendering and no reads are required', () => {
-    expect(s).toContain('.cortex/anatomy/files.md');
+  it('the note says insight Purpose lines MAY enrich rendering and no reads are required', () => {
+    expect(s).toContain('.cortex/insight/anatomy/<path>.md');
     expect(s).toMatch(/MAY read/);
-    expect(s).toMatch(/No Cortex reads are required/);
+    expect(s).toMatch(/No Cortex[\s>]+reads are required/);
   });
 
   it('adds no full Cortex awareness section (light tier: a note, not a workflow phase)', () => {

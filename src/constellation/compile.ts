@@ -1,23 +1,28 @@
 /**
- * Constellation compiler (spec constellation.compiler, 9 rules; schema §4.9).
+ * Constellation compiler (spec constellation.compiler; schema §4.9, v3.0).
  *
- * Reads the four knowledge surfaces (anatomy, compass, atlas, the two spec
- * trees) plus scenario specs, builds the citation graph per schema §6, groups
- * nodes into the four Level-1 constellations, and writes
- * `.cortex/constellation.json` deterministically. Pure Core: offline,
- * read-only over every input, tolerant of missing surfaces (Rule 9), and
- * never fails on a broken reference — dangling refs are dropped and counted
- * (Rule 6; complaining is `check.constellation` / `schema.validator`'s job).
+ * Reads the three curated knowledge surfaces (compass, atlas, the two spec
+ * trees), builds the citation graph per schema §6, groups nodes into the
+ * three Level-1 constellations (schema §4.9 v3.0: compass, atlas, specs —
+ * anatomy no longer emits nodes; it was removed and absorbed into insight,
+ * which stays out of constellation.json entirely, build-order-v3 step 7),
+ * and writes `.cortex/constellation.json` deterministically. Pure Core:
+ * offline, read-only over every input, tolerant of missing surfaces
+ * (Rule 9), and never fails on a broken reference — dangling refs are
+ * dropped and counted (Rule 6; complaining is `check.constellation` /
+ * `schema.validator`'s job).
  *
- * Import/export edges from `graph.json` are deliberately excluded (Rule 5,
- * design §12.7): the constellation is the citation graph, not code structure.
+ * Structural/semantic edges from insight's `graph.json` are deliberately
+ * excluded (Rule 5, design §12.7): the constellation is the curated citation
+ * graph, not code structure or inferred understanding. With file nodes gone,
+ * `governs:` globs and scenario `covers:` no longer produce edges — a glob
+ * references paths (not nodes) and scenario specs are not a node kind, so
+ * neither emission counts as a dropped ref (§4.9: `spec_links` removed).
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
-import picomatch from 'picomatch';
-import { splitDataRowCells } from '../anatomy/files-md.js';
 import { specsRoot, businessRoot, SPECS_GLOB, BUSINESS_GLOB } from '../paths.js';
 
 export interface ConstellationGroupChild {
@@ -37,7 +42,7 @@ export interface ConstellationNode {
   label: string;
   group: string;
   ref: string;
-  /** Token estimate — anatomy nodes only (§4.9). */
+  /** Token estimate (§4.9 v3.0: no emitter uses it — reserved for future use). */
   size?: number;
 }
 
@@ -47,9 +52,8 @@ export interface ConstellationEdge {
   kind: string;
 }
 
-/** §4.9 module enum. */
+/** §4.9 module enum (v3.0 — the `anatomy` value is removed). */
 export type ConstellationModule =
-  | 'anatomy'
   | 'rule'
   | 'bug'
   | 'compass'
@@ -64,7 +68,6 @@ export interface Constellation {
   nodes: ConstellationNode[];
   edges: ConstellationEdge[];
   counters: {
-    anatomy: number;
     compass: number;
     atlas: number;
     specs: number;
@@ -76,14 +79,6 @@ export interface Constellation {
 /** The four compass core files (§1; `decisions.md` excluded — decisions live
  *  solely in `atlas/decisions/`, addendum §A2.1) — `compass:<file>` nodes when present. */
 const COMPASS_CORE_FILES = ['do-not-repeat.md', 'environment.md', 'preferences.md', 'standing-authorities.md'];
-
-const UNASSIGNED_LAYER = '(unassigned)';
-
-/** Scaffolding files never become nodes (compiler Rule 3). */
-function isScaffolding(relPath: string): boolean {
-  const base = path.posix.basename(relPath);
-  return base === '_index.md' || base === '_overview.md';
-}
 
 function toStringList(value: unknown): string[] {
   if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string');
@@ -97,63 +92,6 @@ function readFrontmatter(absPath: string): Record<string, unknown> | undefined {
   } catch {
     return undefined; // tolerant: a malformed artefact simply produces no node
   }
-}
-
-interface AnatomyRow {
-  relPath: string;
-  tokens: number | undefined;
-  specLinks: string[];
-}
-
-/** Parse `.cortex/anatomy/files.md` rows (shared row format, schema §4.1). */
-function readAnatomyRows(root: string): AnatomyRow[] {
-  const filesPath = path.join(root, '.cortex', 'anatomy', 'files.md');
-  if (!fs.existsSync(filesPath)) return [];
-  let content: string;
-  try {
-    content = matter(fs.readFileSync(filesPath, 'utf-8')).content;
-  } catch {
-    return [];
-  }
-  const rows: AnatomyRow[] = [];
-  for (const line of content.split('\n')) {
-    const cols = splitDataRowCells(line);
-    if (cols === null || cols.length < 7 || !cols[0]) continue;
-    const tokensRaw = Number(cols[2]);
-    const specLinksCell = cols[5] ?? '';
-    rows.push({
-      relPath: cols[0],
-      tokens: Number.isFinite(tokensRaw) ? tokensRaw : undefined,
-      specLinks: specLinksCell === '-' || specLinksCell === '' ? [] : specLinksCell.split(/\s+/).filter(Boolean),
-    });
-  }
-  return rows;
-}
-
-/** Parse `layers.md` (H2 per layer, `- path` bullets) → path→layer + heading order. */
-function readLayers(root: string): { pathToLayer: Map<string, string>; layerNames: string[] } {
-  const pathToLayer = new Map<string, string>();
-  const layerNames: string[] = [];
-  const layersPath = path.join(root, '.cortex', 'anatomy', 'layers.md');
-  if (!fs.existsSync(layersPath)) return { pathToLayer, layerNames };
-  let content: string;
-  try {
-    content = fs.readFileSync(layersPath, 'utf-8');
-  } catch {
-    return { pathToLayer, layerNames };
-  }
-  let current: string | undefined;
-  for (const line of content.split('\n')) {
-    const heading = /^##\s+(.+?)\s*$/.exec(line);
-    if (heading?.[1]) {
-      current = heading[1];
-      if (!layerNames.includes(current)) layerNames.push(current);
-      continue;
-    }
-    const bullet = /^-\s+(.+?)\s*$/.exec(line);
-    if (bullet?.[1] && current) pathToLayer.set(bullet[1], current);
-  }
-  return { pathToLayer, layerNames };
 }
 
 function compareEdges(a: ConstellationEdge, b: ConstellationEdge): number {
@@ -198,35 +136,6 @@ export async function assembleConstellation(root: string): Promise<Constellation
     nodes.push(node);
     if (absPath) pathToNodeId.set(path.resolve(absPath), node.id);
     return true;
-  }
-
-  // -------------------------------------------------------------------------
-  // Nodes — anatomy (files.md rows; size = tokens; layer grouping via layers.md)
-  // -------------------------------------------------------------------------
-  const anatomyRows = readAnatomyRows(absRoot).filter((r) => !isScaffolding(r.relPath));
-  const { pathToLayer, layerNames } = readLayers(absRoot);
-
-  let hasUnassigned = false;
-  for (const row of anatomyRows) {
-    const layer = pathToLayer.get(row.relPath);
-    if (!layer) hasUnassigned = true;
-    addNode(
-      {
-        id: `anatomy:${row.relPath}`,
-        module: 'anatomy',
-        label: path.posix.basename(row.relPath),
-        group: `anatomy:layer:${layer ?? UNASSIGNED_LAYER}`,
-        ref: row.relPath,
-        ...(row.tokens !== undefined ? { size: row.tokens } : {}),
-      },
-      path.join(absRoot, row.relPath),
-    );
-  }
-
-  const anatomyChildNames = [...layerNames].sort();
-  if (hasUnassigned && !anatomyChildNames.includes(UNASSIGNED_LAYER)) {
-    anatomyChildNames.push(UNASSIGNED_LAYER);
-    anatomyChildNames.sort();
   }
 
   // -------------------------------------------------------------------------
@@ -394,32 +303,12 @@ export async function assembleConstellation(root: string): Promise<Constellation
     return undefined;
   }
 
-  const anatomyRelPaths = anatomyRows.map((r) => r.relPath);
+  // NOTE (v3.0): `governs:` globs reference project FILES, which are no longer
+  // a node kind — they expand to no edges and no droppedRefs (a glob is not a
+  // node reference). The v2.0 `spec_links` (anatomy → dev spec) edge emission
+  // is removed with anatomy (§4.9, §6).
 
-  /** `governs` globs expand to one edge per matched anatomy node (Rule 5); a
-   *  0-match glob produces no edge and no droppedRef — it references no target. */
-  function addGovernsEdges(fromNode: string, globs: string[]): void {
-    for (const glob of globs) {
-      let matcher: (p: string) => boolean;
-      try {
-        matcher = picomatch(glob);
-      } catch {
-        continue; // malformed glob: check.rule/check.dev-spec owns flagging it
-      }
-      for (const relPath of anatomyRelPaths) {
-        if (matcher(relPath)) addEdge(fromNode, `anatomy:${relPath}`, 'governs');
-      }
-    }
-  }
-
-  // anatomy rows: spec_links cells → file → dev-spec edges.
-  for (const row of anatomyRows) {
-    for (const id of row.specLinks) {
-      addEdge(`anatomy:${row.relPath}`, `spec:${id}`, 'spec_links');
-    }
-  }
-
-  // dev specs: implements (path), depends_on (ids), governed_by (ids), governs (globs).
+  // dev specs: implements (path), depends_on (ids), governed_by (ids).
   for (const spec of devSpecs) {
     for (const ref of toStringList(spec.data['implements'])) {
       addEdge(spec.nodeId, resolvePathRef(spec.absPath, ref), 'implements');
@@ -430,7 +319,6 @@ export async function assembleConstellation(root: string): Promise<Constellation
     for (const id of toStringList(spec.data['governed_by'])) {
       addEdge(spec.nodeId, `rule:${id}`, 'governed_by');
     }
-    addGovernsEdges(spec.nodeId, toStringList(spec.data['governs']));
   }
 
   // business specs: implemented_by dedupes into the symmetric dev→business
@@ -444,12 +332,12 @@ export async function assembleConstellation(root: string): Promise<Constellation
     }
   }
 
-  // rules: source (paths → atlas decisions / bugs), governs (globs), related_specs (ids).
+  // rules: source (paths → atlas decisions / bugs), related_specs (ids).
+  // (governs globs: see the v3.0 note above — files are not nodes.)
   for (const rule of ruleArtefacts) {
     for (const ref of toStringList(rule.data['source'])) {
       addEdge(rule.nodeId, resolvePathRef(rule.absPath, ref), 'source');
     }
-    addGovernsEdges(rule.nodeId, toStringList(rule.data['governs']));
     for (const id of toStringList(rule.data['related_specs'])) {
       addEdge(rule.nodeId, specIdToNode(id), 'related_specs');
     }
@@ -472,28 +360,15 @@ export async function assembleConstellation(root: string): Promise<Constellation
     }
   }
 
-  // scenario specs: covers (ids → business specs); the `from` endpoint is the
-  // scenario file's own anatomy node (scenario specs are not a node kind, §4.9).
-  const scenarioFiles = await fg('tests/scenario/specs/*.md', { cwd: absRoot, absolute: true });
-  for (const file of scenarioFiles.sort()) {
-    const data = readFrontmatter(file);
-    if (!data) continue;
-    const rel = path.relative(absRoot, file).replace(/\\/g, '/');
-    for (const id of toStringList(data['covers'])) {
-      addEdge(`anatomy:${rel}`, `business:${id}`, 'covers');
-    }
-  }
+  // scenario specs: `covers` produced edges FROM the scenario file's anatomy
+  // node in v2.0; scenario specs are not a node kind and file nodes are gone
+  // (v3.0), so no covers edges are emitted and none are dropped-and-counted.
 
   // -------------------------------------------------------------------------
-  // Assemble deterministically (Rule 7): four top groups, sorted children,
-  // sorted nodes, sorted edges.
+  // Assemble deterministically (Rule 7): three top groups (§4.9 v3.0), sorted
+  // children, sorted nodes, sorted edges.
   // -------------------------------------------------------------------------
   const groups: ConstellationGroup[] = [
-    {
-      id: 'anatomy',
-      label: 'Anatomy',
-      children: anatomyChildNames.map((l) => ({ id: `anatomy:layer:${l}`, label: l })),
-    },
     {
       id: 'atlas',
       label: 'Atlas',
@@ -515,7 +390,6 @@ export async function assembleConstellation(root: string): Promise<Constellation
   edges.sort(compareEdges);
 
   const counters = {
-    anatomy: nodes.filter((n) => n.module === 'anatomy').length,
     compass: nodes.filter((n) => n.module === 'rule' || n.module === 'bug' || n.module === 'compass').length,
     atlas: nodes.filter((n) => n.module === 'atlas').length,
     specs: nodes.filter((n) => n.module === 'spec-dev' || n.module === 'spec-business').length,
@@ -537,9 +411,9 @@ export async function assembleConstellation(root: string): Promise<Constellation
 
 /**
  * Compile the constellation for `root` and write `.cortex/constellation.json`.
- * The public entry (invoked by `cortex scan` after anatomy emission); the
- * assembly is delegated to `assembleConstellation` so consumers that only need
- * the node set (insight refresh) can borrow it without the side-effect write.
+ * The public entry; the assembly is delegated to `assembleConstellation` so
+ * consumers that only need the node set can borrow it without the
+ * side-effect write.
  */
 export async function compile(root: string): Promise<Constellation> {
   const absRoot = path.resolve(root);

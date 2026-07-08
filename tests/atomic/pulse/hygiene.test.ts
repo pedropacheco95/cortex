@@ -14,14 +14,14 @@ import {
   gitCommitAllAt,
   gitCommitPathsAt,
   gitRun,
-  filesMdContent,
+  insightLedgerContent,
   ruleMd,
   specMd,
 } from '../../fixtures/loops-harness.js';
 import {
   checkOrphanBranches,
   checkStalePrs,
-  checkAnatomyDrift,
+  checkInsightDrift,
   checkCompassDeadRefs,
   checkSpecOrphans,
   checkAgedTodos,
@@ -142,37 +142,46 @@ describe('check (b): stale open PRs via gh', () => {
 });
 
 // ===========================================================================
-describe('check (c): anatomy drift, both directions', () => {
-  it('names indexed-but-deleted files and on-disk-but-unscanned files', async () => {
-    const root = tmp('anatomy-drift');
+describe('check (c): insight drift — ledger entries whose source vanished', () => {
+  it('names ledger entries missing on disk; on-disk-but-unextracted files are NOT findings', async () => {
+    const root = tmp('insight-drift');
     writeAt(root, 'src/kept.ts', 'export {};\n');
-    writeAt(root, 'src/new.ts', 'export {};\n');
-    writeAt(
-      root,
-      '.cortex/anatomy/files.md',
-      filesMdContent([{ path: 'src/kept.ts' }, { path: 'src/gone.ts' }]),
-    );
-    const section = await checkAnatomyDrift(root);
+    writeAt(root, 'src/new.ts', 'export {};\n'); // unextracted — the refresh loops' business, not noise here
+    writeAt(root, '.cortex/insight/ledger.json', insightLedgerContent(['src/kept.ts', 'src/gone.ts']));
+    const section = await checkInsightDrift(root);
+    expect(section.title).toBe('Insight drift');
+    expect(section.skipped).toBeUndefined();
+    expect(section.findings).toHaveLength(1);
     const joined = section.findings.join('\n');
     expect(joined).toContain('src/gone.ts');
-    expect(joined).toContain('missing on disk');
-    expect(joined).toContain('src/new.ts');
-    expect(joined).toContain('not in anatomy');
+    expect(joined).toContain('has an insight ledger entry but is missing on disk');
+    expect(joined).not.toContain('src/new.ts');
     expect(joined).not.toContain('src/kept.ts');
   });
 
-  it('is skipped-with-notice when files.md does not exist', async () => {
-    const root = tmp('anatomy-none');
+  it('is skipped-with-notice when ledger.json does not exist', async () => {
+    const root = tmp('insight-none');
     writeAt(root, 'src/a.ts', 'export {};\n');
-    const section = await checkAnatomyDrift(root);
-    expect(section.skipped).toContain('files.md missing');
+    const section = await checkInsightDrift(root);
+    expect(section.skipped).toBe(
+      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)',
+    );
+    expect(section.findings).toEqual([]);
   });
 
-  it('a files.md that matches the disk exactly is clean', async () => {
-    const root = tmp('anatomy-clean');
+  it('a schema-invalid ledger is skipped-with-reason, not a crash (check.insight-ledger owns the shape)', async () => {
+    const root = tmp('insight-invalid');
+    writeAt(root, '.cortex/insight/ledger.json', '{"entries": "not-an-object"}');
+    const section = await checkInsightDrift(root);
+    expect(section.skipped).toContain('not schema-valid');
+    expect(section.findings).toEqual([]);
+  });
+
+  it('a ledger that matches the disk exactly is clean', async () => {
+    const root = tmp('insight-clean');
     writeAt(root, 'src/only.ts', 'export {};\n');
-    writeAt(root, '.cortex/anatomy/files.md', filesMdContent([{ path: 'src/only.ts' }]));
-    const section = await checkAnatomyDrift(root);
+    writeAt(root, '.cortex/insight/ledger.json', insightLedgerContent(['src/only.ts']));
+    const section = await checkInsightDrift(root);
     expect(section.findings).toEqual([]);
   });
 });
@@ -222,7 +231,7 @@ describe('check (d): compass dead references (validator resolution logic)', () =
 });
 
 // ===========================================================================
-describe('check (e): spec/anatomy orphans', () => {
+describe('check (e): spec orphans', () => {
   it('flags a dev spec whose governs matches nothing; governed and governs-less specs are silent', async () => {
     const root = tmp('spec-orphans');
     writeAt(root, 'src/app.ts', 'export {};\n');

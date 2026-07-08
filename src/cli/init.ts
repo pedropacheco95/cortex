@@ -1,22 +1,21 @@
 /**
- * `cortex init` — day-1 bootstrap (spec core-cli.init, 17 rules).
+ * `cortex init` — day-1 bootstrap (spec core-cli.init).
  *
- * Core makes NO LLM/API calls (RULES.md rule 3): the inline purpose pass is
- * delegated to the Claude Code CLI as an opaque subprocess (Rule 6).
+ * Core makes NO LLM/API calls (RULES.md rule 3). v3 (build-order-v3 step 7):
+ * the anatomy scan + inline purpose pass are retired with the anatomy module
+ * (design §5.10) — codebase understanding is produced by the
+ * `cortex-extract-insight` skill, which init only points at; the git
+ * post-commit hook consolidates onto `cortex insight-refresh-fast` alone,
+ * and init idempotently strips a stale anatomy line from an existing hook.
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 import * as readline from 'readline/promises';
-import { scan } from '../anatomy/scan.js';
 import { scaffoldInsight } from '../insight/scaffold.js';
 import { scaffoldArchive } from '../archive/scaffold.js';
-import { splitDataRowCells } from '../anatomy/files-md.js';
 import { validate } from '../schema/validate.js';
-// Rule 6 auth-failure detection, shared with the writer/verifier harness.
-import { AUTH_FAILURE_PATTERN } from './claude-auth.js';
 import {
   SCHEMA_VERSION,
   CONFIG_DEFAULTS,
@@ -40,6 +39,7 @@ import { specsRoot, businessRoot, SPECS_REL, BUSINESS_REL } from '../paths.js';
 export interface InitOptions {
   force?: boolean;
   yes?: boolean;
+  /** Accepted for CLI compatibility; a no-op since the v1/v2 purpose pass retired (step 7). */
   noLlm?: boolean;
   /** Rule 17: register a scheduled task only if every skill its prompt invokes is present in .claude/skills/. */
   partial?: boolean;
@@ -47,9 +47,9 @@ export interface InitOptions {
   home?: string;
   /** Testability seam: the platform (default process.platform). */
   platform?: string;
-  /** Testability seam: the Claude Code CLI binary (default 'claude' on PATH). */
+  /** Accepted for CLI compatibility; unused since the purpose pass retired (step 7). */
   claudeBin?: string;
-  /** Testability seam: purpose-pass subprocess timeout (default 300000ms). */
+  /** Accepted for CLI compatibility; unused since the purpose pass retired (step 7). */
   timeoutMs?: number;
 }
 
@@ -57,8 +57,6 @@ export interface InitResult {
   exitCode: number;
   summary: string;
 }
-
-const DEFAULT_TIMEOUT_MS = 300_000;
 
 // ---------------------------------------------------------------------------
 // small fs helpers
@@ -204,65 +202,6 @@ async function installSkills(root: string, yes: boolean): Promise<{ installed: n
     installed++;
   }
   return { installed, preserved };
-}
-
-// ---------------------------------------------------------------------------
-// Rule 6 — inline purpose pass (subprocess only; Core makes no LLM calls)
-// ---------------------------------------------------------------------------
-
-interface SubprocessResult {
-  kind: 'ok' | 'no-binary' | 'timeout' | 'cancelled' | 'error' | 'auth';
-  detail: string;
-}
-
-function runClaudeSubprocess(bin: string, prompt: string, cwd: string, timeoutMs: number): Promise<SubprocessResult> {
-  return new Promise((resolve) => {
-    execFile(
-      bin,
-      ['-p', prompt],
-      { cwd, timeout: timeoutMs, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024 },
-      (error, stdout, stderr) => {
-        const output = `${stdout ?? ''}\n${stderr ?? ''}`;
-        if (AUTH_FAILURE_PATTERN.test(output)) {
-          resolve({ kind: 'auth', detail: 'the Claude CLI reported it is not authenticated' });
-          return;
-        }
-        if (!error) {
-          resolve({ kind: 'ok', detail: '' });
-          return;
-        }
-        const err = error as NodeJS.ErrnoException & { killed?: boolean; signal?: string; code?: unknown };
-        if (err.code === 'ENOENT') {
-          resolve({ kind: 'no-binary', detail: `claude binary not found (${bin})` });
-        } else if (err.killed || err.signal === 'SIGKILL' || err.signal === 'SIGTERM') {
-          resolve({ kind: 'timeout', detail: `subprocess timed out after ${timeoutMs}ms` });
-        } else if (err.signal === 'SIGINT') {
-          resolve({ kind: 'cancelled', detail: 'subprocess was cancelled (SIGINT)' });
-        } else {
-          resolve({ kind: 'error', detail: `subprocess exited with code ${String(err.code ?? 'unknown')}` });
-        }
-      },
-    );
-  });
-}
-
-/** Count data rows / flagged rows in .cortex/anatomy/files.md. */
-function countFlagged(root: string): { total: number; flagged: number } {
-  const filesPath = path.join(root, '.cortex', 'anatomy', 'files.md');
-  let total = 0;
-  let flagged = 0;
-  if (!fs.existsSync(filesPath)) return { total, flagged };
-  for (const line of fs.readFileSync(filesPath, 'utf-8').split('\n')) {
-    const cells = splitDataRowCells(line);
-    if (cells === null || cells.length < 7) continue;
-    // Column 7 is needs_purpose_refresh (§4.1) — the last cell is now
-    // purpose_source, so the flag is addressed positionally.
-    const flag = cells[6];
-    if (flag !== 'true' && flag !== 'false') continue; // header / separator rows
-    total++;
-    if (flag === 'true') flagged++;
-  }
-  return { total, flagged };
 }
 
 // ---------------------------------------------------------------------------
@@ -578,28 +517,51 @@ function mergeSettings(root: string, preRead: boolean): string[] {
 // Rule 12 — git post-commit hook
 // ---------------------------------------------------------------------------
 
-/** The exact command the installed post-commit hook calls (Rule 12) — the
- *  CLI's `anatomy-refresh-fast` branch must dispatch this exact string. */
-export const GIT_HOOK_INVOCATION = 'cortex anatomy-refresh-fast';
-/** The insight fast tier's post-commit invocation (insight.refresh-loops;
- *  schema §9.1: `cortex-loop-insight-refresh-fast` is the git hook, not a
- *  scheduled task). Installed ALONGSIDE the anatomy invocation until
- *  build-order-v3 step 7 retires anatomy and consolidates the hook. */
-export const INSIGHT_GIT_HOOK_INVOCATION = 'cortex insight-refresh-fast';
+/** The exact command the installed post-commit hook calls (Rule 12; schema
+ *  §9.1: `cortex-loop-insight-refresh-fast` is the git hook, not a scheduled
+ *  task). SOLE invocation since build-order-v3 step 7 consolidated the hook —
+ *  the anatomy fast tier is retired. */
+export const GIT_HOOK_INVOCATION = 'cortex insight-refresh-fast';
+/** Retained alias (some callers/tests referenced the insight-specific name
+ *  while the dual-line hook existed). */
+export const INSIGHT_GIT_HOOK_INVOCATION = GIT_HOOK_INVOCATION;
+/** The retired v1/v2 anatomy invocation — init strips this line (and its
+ *  comment) from an existing post-commit hook (step-7 migration). */
+export const RETIRED_GIT_HOOK_INVOCATION = 'cortex anatomy-refresh-fast';
 
 const GIT_HOOK_SNIPPETS: ReadonlyArray<{ invocation: string; comment: string }> = [
   {
     invocation: GIT_HOOK_INVOCATION,
-    comment: '# Cortex: fast deterministic anatomy refresh after each commit (never triggers the LLM subprocess)',
-  },
-  {
-    invocation: INSIGHT_GIT_HOOK_INVOCATION,
     comment: '# Cortex: fast deterministic insight change-flagging after each commit (no LLM, no extraction)',
   },
 ];
 
 function gitHookSnippet(entry: { invocation: string; comment: string }): string {
   return `\n${entry.comment}\n${entry.invocation} >/dev/null 2>&1 || true\n`;
+}
+
+/**
+ * Idempotently remove the retired anatomy invocation from an existing hook:
+ * every line whose command is `cortex anatomy-refresh-fast` is dropped, along
+ * with an immediately preceding `# Cortex:` comment line (the shape init
+ * itself wrote). User content is otherwise untouched. Line-based on purpose —
+ * exact-string matching would miss redirection suffixes.
+ */
+export function stripRetiredGitHookLines(content: string): string {
+  const lines = content.split('\n');
+  const out: string[] = [];
+  for (const line of lines) {
+    if (line.trimStart().startsWith(RETIRED_GIT_HOOK_INVOCATION)) {
+      // Drop the retired invocation; also drop the Cortex comment above it.
+      const prev = out[out.length - 1] ?? '';
+      if (prev.trimStart().startsWith('# Cortex:')) out.pop();
+      // Collapse the blank separator the snippet carried, if doubled.
+      if ((out[out.length - 1] ?? '') === '' && (out[out.length - 2] ?? '') === '') out.pop();
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
 }
 
 function installGitHook(root: string): 'created' | 'appended' | 'already-installed' | 'skipped-no-git' {
@@ -611,7 +573,9 @@ function installGitHook(root: string): 'created' | 'appended' | 'already-install
   const hookPath = path.join(hooksDir, 'post-commit');
 
   if (fs.existsSync(hookPath)) {
-    let content = fs.readFileSync(hookPath, 'utf-8');
+    const original = fs.readFileSync(hookPath, 'utf-8');
+    // Step-7 migration: strip the retired anatomy line before reconciling.
+    let content = stripRetiredGitHookLines(original);
     let appended = false;
     for (const entry of GIT_HOOK_SNIPPETS) {
       if (content.includes(entry.invocation)) continue;
@@ -619,7 +583,7 @@ function installGitHook(root: string): 'created' | 'appended' | 'already-install
       content = content + sep + gitHookSnippet(entry);
       appended = true;
     }
-    if (appended) fs.writeFileSync(hookPath, content, 'utf-8');
+    if (content !== original) fs.writeFileSync(hookPath, content, 'utf-8');
     fs.chmodSync(hookPath, 0o755);
     return appended ? 'appended' : 'already-installed';
   }
@@ -711,10 +675,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   const home = opts.home ?? os.homedir();
   const force = opts.force ?? false;
   const yes = opts.yes ?? false;
-  const noLlm = opts.noLlm ?? false;
   const partial = opts.partial ?? false;
-  const claudeBin = opts.claudeBin ?? 'claude';
-  const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const nowIso = new Date().toISOString();
 
   // Rule 1 — preflight: refuse before anything is written.
@@ -744,56 +705,11 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   // Rule 4 — skills install.
   const skills = await installSkills(absRoot, yes || force);
 
-  // Rule 5 — anatomy scan (deterministic, per anatomy.scanner).
-  const scanResult = await scan(absRoot);
-  const flaggedAfterScan = scanResult.files.filter((f) => f.needsPurposeRefresh).length;
-
-  // Rule 6 — inline purpose pass via the Claude Code CLI subprocess.
-  let purposeLine: string;
-  let authFailure = false;
-  let filledInline = 0;
-  let remainingFlagged = flaggedAfterScan;
-
-  if (noLlm) {
-    // Deliberate skip: a success state, never an error.
-    purposeLine = `Purpose pass: skipped (--no-llm). ${flaggedAfterScan} file(s) flagged needs_purpose_refresh; the scheduled anatomy deep-refresh (or a re-run after authentication) will fill them.`;
-  } else if (flaggedAfterScan === 0) {
-    purposeLine = 'Purpose pass: nothing to do — no files flagged needs_purpose_refresh.';
-  } else {
-    const prompt =
-      `Run the anatomy deep-refresh Skill (cortex-loop-anatomy-refresh, deep tier) on this project: ` +
-      `for every row in .cortex/anatomy/files.md with needs_purpose_refresh: true, read the file, ` +
-      `write a one-line purpose into the row, and set the flag to false. ` +
-      `Keep the table format per cortex-schema.md section 4.1.`;
-    const result = await runClaudeSubprocess(claudeBin, prompt, absRoot, timeoutMs);
-    remainingFlagged = countFlagged(absRoot).flagged;
-    filledInline = Math.max(0, flaggedAfterScan - remainingFlagged);
-
-    switch (result.kind) {
-      case 'ok':
-        purposeLine = `Purpose pass: completed inline — ${filledInline} purpose(s) filled, ${remainingFlagged} left flagged needs_purpose_refresh.`;
-        break;
-      case 'auth':
-        authFailure = true;
-        purposeLine =
-          `Purpose pass: authentication failure — ${result.detail}. ` +
-          `Authenticate the Claude CLI (run \`claude\` and log in via /login), then re-run the purpose pass ` +
-          `(cortex init --force) or wait for the scheduled anatomy deep-refresh. ` +
-          `${remainingFlagged} file(s) remain flagged needs_purpose_refresh. All other artefacts are complete.`;
-        break;
-      case 'no-binary':
-        purposeLine =
-          `Purpose pass: skipped — ${result.detail}. ${remainingFlagged} file(s) remain flagged ` +
-          `needs_purpose_refresh; the scheduled anatomy deep-refresh will handle them.`;
-        break;
-      default:
-        // timeout / cancellation / mid-batch error: degrade gracefully, still exit 0.
-        purposeLine =
-          `Purpose pass: did not complete (${result.detail}). ${filledInline} purpose(s) were filled before it stopped; ` +
-          `${remainingFlagged} file(s) remain flagged needs_purpose_refresh and the scheduled anatomy deep-refresh will finish them.`;
-        break;
-    }
-  }
+  // Rules 5-6 (v1/v2 anatomy scan + inline purpose pass) are RETIRED at
+  // build-order-v3 step 7: codebase understanding is the cortex-extract-insight
+  // skill's job (design §5.10); init only scaffolds the empty insight module
+  // and points at the extraction. --no-llm is accepted for CLI compatibility
+  // (init no longer spawns any subprocess either way).
 
   // Rule 7 — preferences draft.
   const prefs = draftPreferences(absRoot, nowIso);
@@ -803,6 +719,12 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
 
   // Rule 9 — legacy bugs.md migration.
   const migration = migrateBugs(absRoot, nowIso);
+
+  // Citation-graph compile (schema §4.9): formerly a side effect of the
+  // anatomy scan (retired at build-order-v3 step 7); init now compiles the
+  // curated constellation directly so the renderer works day-1.
+  const { compile } = await import('../constellation/compile.js');
+  await compile(absRoot);
 
   // Rule 10 — CLAUDE.md managed block.
   const claudeMdState = upsertClaudeMd(absRoot);
@@ -826,9 +748,8 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   lines.push('cortex init — summary');
   lines.push(`Project: ${absRoot} (schema ${SCHEMA_VERSION})`);
   lines.push(
-    `Files indexed: ${scanResult.files.length} (${filledInline} purpose(s) filled inline, ${remainingFlagged} flagged needs_purpose_refresh)`,
+    'Insight: module scaffolded empty — run the cortex-extract-insight skill to build the understanding layer (init never runs it automatically).',
   );
-  lines.push(purposeLine);
   lines.push(
     gitignoreAdded.length > 0
       ? `Gitignore: added ${gitignoreAdded.join(', ')}`
@@ -844,10 +765,10 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
       lines.push('Git hook: skipped — not a git repository.');
       break;
     case 'already-installed':
-      lines.push('Git hook: .git/hooks/post-commit already contains the anatomy-refresh-fast and insight-refresh-fast invocations.');
+      lines.push('Git hook: .git/hooks/post-commit already contains the insight-refresh-fast invocation.');
       break;
     default:
-      lines.push(`Git hook: anatomy-refresh-fast + insight-refresh-fast ${gitHookState} in .git/hooks/post-commit (executable).`);
+      lines.push(`Git hook: insight-refresh-fast ${gitHookState} in .git/hooks/post-commit (executable).`);
       break;
   }
   if (partial) {
@@ -899,7 +820,8 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
     lines.push(`Self-validation: conformant${warnings.length > 0 ? ` (${warnings.length} warning(s))` : ''}.`);
   }
 
-  // Exit codes (Rule 15): validation failure (1) wins over auth (3); otherwise 0.
-  const exitCode = errors.length > 0 ? 1 : authFailure ? 3 : 0;
+  // Exit codes (Rule 15): validation failure → 1; otherwise 0. (Exit 3 — the
+  // v1/v2 purpose-pass auth failure — retired with the purpose pass, step 7.)
+  const exitCode = errors.length > 0 ? 1 : 0;
   return { exitCode, summary: lines.join('\n') };
 }

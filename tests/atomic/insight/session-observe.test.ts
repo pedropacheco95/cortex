@@ -12,7 +12,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { makeTmpDir, cleanTmp, gitInit, gitCommitAll } from '../../fixtures/anatomy-harness.js';
+import { makeTmpDir, cleanTmp, gitInit, gitCommitAll } from '../../fixtures/insight-refresh-harness.js';
 import { projectSlug } from '../../../src/sessions/read.js';
 import {
   collectObserve,
@@ -432,11 +432,12 @@ describe('decision-candidate in the typed pulse gate', () => {
 });
 
 // ---------------------------------------------------------------------------
-// task registration (schema §9.1; build-order-v3 step 6: 14 → 15)
+// task registration (schema §9.1; build-order-v3 step 6 added session-observe,
+// step 7 deregistered anatomy-refresh-deep: count settles at 14)
 // ---------------------------------------------------------------------------
 describe('session-observe scheduled-task registration', () => {
-  it('registers in SCHEDULED_TASKS and the canonical map (count 15)', () => {
-    expect(SCHEDULED_TASKS).toHaveLength(15);
+  it('registers in SCHEDULED_TASKS and the canonical map (count 14)', () => {
+    expect(SCHEDULED_TASKS).toHaveLength(14);
     const task = SCHEDULED_TASKS.find((t) => t.name === 'session-observe');
     expect(task).toBeDefined();
     expect(task?.requiredSkills).toEqual(['cortex-loop-session-observe']);
@@ -444,7 +445,7 @@ describe('session-observe scheduled-task registration', () => {
     expect(task?.body).toContain('cortex loop-session-observe --collect');
     expect(task?.body).toContain('--apply');
     expect(CANONICAL_TASK_NAMES['session-observe']).toBe('cortex-loop-session-observe');
-    expect(Object.keys(CANONICAL_TASK_NAMES)).toHaveLength(15);
+    expect(Object.keys(CANONICAL_TASK_NAMES)).toHaveLength(14);
   });
 });
 

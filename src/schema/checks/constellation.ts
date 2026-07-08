@@ -12,7 +12,7 @@ import type { Violation } from '../types.js';
 
 const REQUIRED_KEYS = ['schemaVersion', 'generated', 'groups', 'nodes', 'edges', 'counters'] as const;
 
-const MODULE_ENUM = ['anatomy', 'rule', 'bug', 'compass', 'atlas', 'spec-dev', 'spec-business'];
+const MODULE_ENUM = ['rule', 'bug', 'compass', 'atlas', 'spec-dev', 'spec-business']; // v3.0: `anatomy` removed (§4.9)
 
 export function checkConstellation(root: string): Violation[] {
   const violations: Violation[] = [];

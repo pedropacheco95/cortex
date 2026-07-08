@@ -10,7 +10,10 @@ export function checkLayout(root: string): Violation[] {
     return violations; // .cortex is optional; if absent, no layout violations
   }
 
-  const expectedDirs = ['anatomy', 'compass', 'atlas', 'insight', 'pulse'];
+  // Schema §1 (v3.0): the five modules — `anatomy/` (and `cerebrum/`) no
+  // longer exist; every module dir is present-tolerant (checked only when it
+  // exists), so archive-less projects still validate clean.
+  const expectedDirs = ['compass', 'atlas', 'archive', 'insight', 'pulse'];
   for (const dir of expectedDirs) {
     const dirPath = path.join(cortexDir, dir);
     if (fs.existsSync(dirPath)) {

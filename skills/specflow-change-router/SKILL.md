@@ -51,8 +51,9 @@ When the project has a `.cortex/` directory, classification includes the knowled
 (skip this section cleanly when `.cortex/` is absent):
 
 - As part of classification, grep the module indexes alongside the spec tree:
-  `.cortex/anatomy/files.md` (which files and specs the request maps to, via the purpose
-  lines and `spec_links` column), `.cortex/compass/_index.md` and
+  the insight layer (which files the request maps to — `cortex insight file <path>` /
+  `cortex insight concept <name>`, plus the specs' own `governs:` globs for the
+  spec mapping), `.cortex/compass/_index.md` and
   `.cortex/compass/rules/` (is the request already governed by a rule — is it a rule
   change rather than a spec change?), and `.cortex/atlas/_index.md` (does a recorded
   decision or stakeholder context reframe the request?).

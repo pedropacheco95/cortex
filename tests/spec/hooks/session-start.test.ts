@@ -1,19 +1,18 @@
 /**
- * Spec-level tests — hooks.session-start (split from the combined
- * tests/spec/hooks/hooks.test.ts per the schema §3 one-file-per-leaf
- * convention; describe blocks moved verbatim, zero behavioural change).
+ * Spec-level tests — hooks.session-start (one file per leaf per the schema §3
+ * convention; the cross-hook dispatch-alignment suite lives in hooks.test.ts).
  *
  * End-to-end over tmp fixture projects driven through the `cortex hook
  * <name>` dispatch (runHook) with raw stdin JSON, exactly as Claude Code
- * invokes them. One describe per spec AC, plus the dispatch-alignment
- * describe shared across the three hooks.
+ * invokes them. One describe per spec AC. The v3 module roster is
+ * compass/atlas/archive/insight/pulse — anatomy is deprecated and never
+ * listed (build-order-v3 step 7).
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { runHook } from '../../../src/hooks/cli.js';
 import { run as runSessionStart } from '../../../src/hooks/session-start.js';
-import { scan } from '../../../src/anatomy/scan.js';
 import {
   makeTmpDir,
   cleanTmp,
@@ -24,7 +23,6 @@ import {
   isoHoursAgo,
 } from '../../fixtures/hooks-harness.js';
 
-const TEST_TIMEOUT = 30_000;
 const dirs: string[] = [];
 function tmp(label: string): string {
   const d = makeTmpDir(`spec-${label}`);
@@ -39,44 +37,25 @@ function stdinJson(fields: Record<string, unknown>): string {
   return JSON.stringify({ session_id: 'spec-session', ...fields });
 }
 
-/** Scanned fixture: real src files + a real files.md written by the scanner. */
-async function makeScannedProject(label: string): Promise<string> {
-  const root = tmp(label);
-  makeCortexProject(root);
-  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
-  fs.writeFileSync(
-    path.join(root, 'src', 'a.ts'),
-    '/** Handles the A concern for the fixture project. */\nexport const a = 1;\n',
-  );
-  fs.writeFileSync(
-    path.join(root, 'src', 'b.ts'),
-    '/** Handles the B concern for the fixture project. */\nexport const b = 2;\n',
-  );
-  await scan(root);
-  return root;
-}
-
 describe('AC session-start.1: fresh hygiene report → pointer plus one-line summary', () => {
-  it(
-    'generated 3 hours ago → pointer, modules, and a hygiene line naming the report',
-    async () => {
-      const root = await makeScannedProject('ss1');
-      writeHygieneReport(root, isoHoursAgo(3, new Date()), '3 stale purposes flagged.');
-      const { exitCode, stdout } = await runHook(
-        'session-start',
-        stdinJson({ hook_event_name: 'SessionStart', source: 'startup', cwd: root }),
-      );
-      expect(exitCode).toBe(0);
-      const env = parseEnvelope(stdout);
-      expect(env.hookEventName).toBe('SessionStart');
-      expect(env.additionalContext).toContain('Cortex is active');
-      expect(env.additionalContext).toContain('.cortex/_index.md');
-      expect(env.additionalContext).toContain('Modules: anatomy, compass, atlas, pulse.');
-      expect(env.additionalContext).toContain('Hygiene: 3 stale purposes flagged.');
-      expect(env.additionalContext).toContain('.cortex/pulse/hygiene-report.md');
-    },
-    TEST_TIMEOUT,
-  );
+  it('generated 3 hours ago → pointer, v3 modules, and a hygiene line naming the report', async () => {
+    const root = tmp('ss1');
+    makeCortexProject(root);
+    writeHygieneReport(root, isoHoursAgo(3, new Date()), '3 stale purposes flagged.');
+    const { exitCode, stdout } = await runHook(
+      'session-start',
+      stdinJson({ hook_event_name: 'SessionStart', source: 'startup', cwd: root }),
+    );
+    expect(exitCode).toBe(0);
+    const env = parseEnvelope(stdout);
+    expect(env.hookEventName).toBe('SessionStart');
+    expect(env.additionalContext).toContain('Cortex is active');
+    expect(env.additionalContext).toContain('.cortex/_index.md');
+    expect(env.additionalContext).toContain('Modules: compass, atlas, insight, pulse.');
+    expect(env.additionalContext).not.toContain('anatomy');
+    expect(env.additionalContext).toContain('Hygiene: 3 stale purposes flagged.');
+    expect(env.additionalContext).toContain('.cortex/pulse/hygiene-report.md');
+  });
 });
 
 describe('AC session-start.2: stale report → pointer only', () => {
@@ -129,46 +108,37 @@ describe('AC session-start.4: malformed hygiene report degrades to pointer', () 
 });
 
 describe('AC session-start.5: payload respects the token budget', () => {
-  it(
-    'additionalContext is under 100 tokens (chars/4), per schema §5',
-    async () => {
-      const root = await makeScannedProject('ss5');
-      writeHygieneReport(root, isoHoursAgo(1, new Date()), 'summary '.repeat(200));
-      for (const source of ['startup', 'resume', 'clear', 'compact']) {
-        const { stdout } = await runHook(
-          'session-start',
-          stdinJson({ hook_event_name: 'SessionStart', source, cwd: root }),
-        );
-        const ctx = parseEnvelope(stdout).additionalContext;
-        expect(ctx.length / 4).toBeLessThan(100);
-      }
-    },
-    TEST_TIMEOUT,
-  );
+  it('additionalContext is under 100 tokens (chars/4), per schema §5, on every source', async () => {
+    const root = tmp('ss5');
+    makeCortexProject(root, { modules: ['compass', 'atlas', 'archive', 'insight', 'pulse'] });
+    writeHygieneReport(root, isoHoursAgo(1, new Date()), 'summary '.repeat(200));
+    for (const source of ['startup', 'resume', 'clear', 'compact']) {
+      const { stdout } = await runHook(
+        'session-start',
+        stdinJson({ hook_event_name: 'SessionStart', source, cwd: root }),
+      );
+      const ctx = parseEnvelope(stdout).additionalContext;
+      expect(ctx.length / 4).toBeLessThan(100);
+    }
+  });
 });
 
-// ===========================================================================
-// dispatch alignment: `cortex hook <name>` names match init's registrations
-// ===========================================================================
-
-describe('cortex hook dispatch matches the init-registered command names', () => {
-  it('session-start / pre-write / post-write are handled; unknown names stay silent', async () => {
-    const root = tmp('dispatch');
-    makeCortexProject(root);
-    // Registered command suffixes per core-cli.init Rule 11 / hooks.* Rule 1:
-    const registered = ['session-start', 'pre-write', 'post-write'];
-    for (const name of registered) {
-      const result = await runHook(name, stdinJson({ cwd: root, tool_input: {} }));
-      expect(result.exitCode).toBe(0);
-    }
-    // pre-read is implemented but self-gates on hooks.preRead (false in this
-    // fixture's config) → silent; post-read is silent without a files.md:
-    expect(await runHook('pre-read', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
-    expect(await runHook('post-read', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
-    expect(await runHook('nonsense', 'not even json')).toEqual({ exitCode: 0, stdout: '' });
+describe('the v3 module roster (anatomy deprecation)', () => {
+  it('all five v3 modules present → listed in roster order; a stray anatomy/ dir is ignored', async () => {
+    const root = tmp('roster');
+    makeCortexProject(root, { modules: ['anatomy', 'compass', 'atlas', 'archive', 'insight', 'pulse'] });
+    const { stdout } = await runHook(
+      'session-start',
+      stdinJson({ hook_event_name: 'SessionStart', source: 'startup', cwd: root }),
+    );
+    const ctx = parseEnvelope(stdout).additionalContext;
+    expect(ctx).toContain('Modules: compass, atlas, archive, insight, pulse.');
+    expect(ctx).not.toContain('anatomy');
   });
+});
 
-  it('runSessionStart export shape: pure run(stdinJson, opts) seam works with now', async () => {
+describe('runSessionStart export shape', () => {
+  it('pure run(stdinJson, opts) seam works with an injected now', async () => {
     const root = tmp('seam');
     makeCortexProject(root);
     const now = new Date('2026-07-02T00:00:00.000Z');

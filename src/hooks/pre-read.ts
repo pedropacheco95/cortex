@@ -1,40 +1,41 @@
 /**
- * PreRead hook — PreToolUse on Read (spec hooks.pre-read-writeback).
+ * PreRead hook — PreToolUse on Read (spec hooks.pre-read-writeback,
+ * re-pointed to insight at build-order-v3 step 7 — anatomy deprecation,
+ * design §5.10; schema §5).
  *
- * The priming half of refine-during-use (design §5, schema §5): before a file
- * read, inject the anatomy summary — purpose, tokens, specs, applicable rules
- * — plus the one-line writeback invitation that hooks.post-read captures. The
- * invitation is suppressed when the row's `purpose_source` is already
- * `read-time` (a witnessed correction shouldn't invite constant
- * re-litigating). Registered together with post-read under the one
- * `hooks.preRead` flag (default true, §10.1); the hook also self-gates on the
- * flag so a stale registration stays silent.
+ * The priming half of refine-during-use: before a file read, inject a
+ * one-line summary from the target's **insight per-file entry**
+ * (`insight/anatomy/<path>.md`, or scope-local — resolved by the insight
+ * query layer): the first line of its `## Purpose` section, the entry's
+ * `size_tokens`, and the applicable compass rule IDs. When the target has NO
+ * insight entry the hook injects nothing (graceful absence — extraction owns
+ * entry creation; never fabricate). The one-line writeback invitation that
+ * hooks.post-read captures rides along unless the entry's Purpose already
+ * carries a read-time provenance marker (a witnessed correction shouldn't
+ * invite constant re-litigating). Registered together with post-read under
+ * the one `hooks.preRead` flag (default true, §10.1); the hook also
+ * self-gates on the flag so a stale registration stays silent.
  *
- * Warn-never-block: always exit 0; silence is the common case (no row, no
+ * Warn-never-block: always exit 0; silence is the common case (no entry, no
  * `.cortex/`, flag off); internal errors degrade to silence + hook-errors.md.
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import picomatch from 'picomatch';
-import {
-  parseFilesMdTable,
-  splitDataRowCells,
-  isDataRowShape,
-  purposeSourceCell,
-  sanitizeCell,
-  PURPOSE_SOURCE_READ_TIME,
-} from '../anatomy/files-md.js';
+import { fileQuery } from '../insight/query.js';
+import { READ_TIME_MARKER } from './post-read.js';
 import { appendHookError } from './errors.js';
 import type { HookRunResult, HookRunOptions } from './session-start.js';
 
 const HOOK_NAME = 'pre-read';
 
 /**
- * Budgets (schema §5 / spec Rule 2), as chars at the project-wide chars/4
- * token estimate: <75 tokens with the writeback instruction, <50 without.
- * Enforced by trimming the purpose — never the instruction line, whose tag
- * must stay intact.
+ * Budgets (schema §5 / RULES 11), as chars at the project-wide chars/4 token
+ * estimate: the summary line alone stays under 50 tokens (RULES 11 "PreRead
+ * injection <50"); with the writeback invitation the payload ceiling is 75
+ * tokens (the v2 two-budget precedent, schema §5). Enforced by trimming the
+ * purpose — never the instruction line, whose tag must stay intact.
  */
 const MAX_CHARS_WITH_INVITE = 75 * 4;
 const MAX_CHARS_WITHOUT_INVITE = 50 * 4;
@@ -103,6 +104,15 @@ function applicableRuleIds(root: string, relPath: string): string[] {
   return ids;
 }
 
+/** First non-empty line of an entry's `## Purpose` section, whitespace-collapsed. */
+export function purposeFirstLine(purposeSection: string): string {
+  for (const line of purposeSection.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.length > 0) return trimmed.replace(/\s+/g, ' ');
+  }
+  return '';
+}
+
 export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<HookRunResult> {
   try {
     const stdin = (typeof stdinJson === 'object' && stdinJson !== null ? stdinJson : {}) as Record<
@@ -130,36 +140,33 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
       // Unparseable config: check.config's business — treat as default-on.
     }
 
-    // Rule 3: unscanned project / no row → silent.
-    const filesMdPath = path.join(root, '.cortex', 'anatomy', 'files.md');
-    if (!fs.existsSync(filesMdPath)) return SILENT;
-
     const relPath = path.relative(root, path.resolve(root, filePath)).replace(/\\/g, '/');
     if (relPath.startsWith('..') || path.isAbsolute(relPath) || relPath.length === 0) return SILENT;
 
-    const table = parseFilesMdTable(fs.readFileSync(filesMdPath, 'utf-8'));
-    if (table === null) {
+    // Data source (schema §5, v3): the insight per-file entry. No insight
+    // module or no entry → silent (graceful absence, never fabricated).
+    let entryResult: ReturnType<typeof fileQuery>;
+    try {
+      entryResult = fileQuery(root, relPath);
+    } catch (err) {
+      // A malformed insight artefact degrades to silence + one log entry.
       appendHookError(
         root,
-        { hook: HOOK_NAME, file: '.cortex/anatomy/files.md', failure: 'existing files.md could not be parsed as an anatomy-files table; summary not injected' },
+        { hook: HOOK_NAME, file: relPath, failure: `insight entry unreadable: ${(err as Error).message}` },
         now,
       );
       return SILENT;
     }
+    if (!entryResult.found || !entryResult.entry || !entryResult.sections) return SILENT;
 
-    const rowIdx = table.rowIdxByPath.get(sanitizeCell(relPath));
-    if (rowIdx === undefined) return SILENT;
-    const cells = splitDataRowCells(table.lines[rowIdx] ?? '');
-    if (cells === null || !isDataRowShape(cells)) return SILENT; // defensive; parse guaranteed shape
+    const purposeSection = entryResult.sections['Purpose'] ?? '';
+    const purpose = purposeFirstLine(purposeSection);
+    if (purpose === '') return SILENT; // an entry with no purpose has nothing worth injecting
+    const tokens = entryResult.entry.frontmatter.size_tokens;
 
-    const purpose = cells[1] ?? '';
-    const tokens = cells[2] ?? '?';
-    const specLinks = cells[5] || '-';
-    const purposeSource = purposeSourceCell(cells);
-
-    // Rule 2: the writeback instruction rides along ONLY when the row's
-    // purpose_source is not already read-time.
-    const invite = purposeSource !== PURPOSE_SOURCE_READ_TIME;
+    // The writeback instruction rides along ONLY while the entry's Purpose
+    // carries no read-time provenance marker (post-read writes the marker).
+    const invite = !purposeSection.includes(READ_TIME_MARKER);
 
     // Rule 4: duplicate-read detection via the per-session read-memory.
     const sessionId = typeof stdin['session_id'] === 'string' ? stdin['session_id'] : '';
@@ -182,16 +189,16 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
 
     const ruleIds = applicableRuleIds(root, relPath);
 
-    // Payload per schema §5, pinned line by line.
+    // Payload per schema §5 (v3), pinned line by line.
     const inviteLine = `If this purpose is wrong or stale after reading, emit: <cortex:purpose file="${relPath}">corrected one-line purpose</cortex:purpose>`;
     const noteLine = '(already read this session)';
     const composeSummary = (p: string): string =>
-      `${relPath}: ${p} (~${tokens} tok). Specs: ${specLinks}. Rules: ${ruleIds.length > 0 ? ruleIds.join(' ') : '-'}.`;
+      `${relPath}: ${p} (~${tokens} tok). Rules: ${ruleIds.length > 0 ? ruleIds.join(' ') : '-'}.`;
     const compose = (p: string): string =>
       [composeSummary(p), ...(invite ? [inviteLine] : []), ...(alreadyRead ? [noteLine] : [])].join('\n');
 
-    // Budget enforcement (Rule 2): trim the purpose until the payload fits —
-    // the instruction line's tag is never cut.
+    // Budget enforcement: trim the purpose until the payload fits — the
+    // instruction line's tag is never cut.
     const budget = invite ? MAX_CHARS_WITH_INVITE : MAX_CHARS_WITHOUT_INVITE;
     let payload = compose(purpose);
     if (payload.length > budget) {

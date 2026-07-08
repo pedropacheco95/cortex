@@ -210,14 +210,15 @@ describe('AC: CLI dispatch — tiers required, v2 verbs retired', () => {
 });
 
 describe('AC: scheduled-task registration matches the fast/daily/full split (spec AC 10)', () => {
-  it('daily + full register as scheduled tasks; fast does not; the v2 pair is deregistered', () => {
+  it('daily + full register as scheduled tasks; fast does not; the v2 pair + anatomy deep-refresh are deregistered', () => {
     const names = SCHEDULED_TASKS.map((t) => t.name);
     expect(names).toContain('insight-refresh-daily');
     expect(names).toContain('insight-refresh-full');
     expect(names).not.toContain('insight-refresh');
     expect(names).not.toContain('insight-gaps');
     expect(names).not.toContain('insight-refresh-fast'); // the git hook, not a task
-    expect(SCHEDULED_TASKS).toHaveLength(15); // +1 vs v2: session-observe registered at step 6 (anatomy-refresh-deep deregisters at step 7)
+    expect(names).not.toContain('anatomy-refresh-deep'); // deregistered at step 7
+    expect(SCHEDULED_TASKS).toHaveLength(14); // step 6 added session-observe; step 7 deregistered anatomy-refresh-deep
 
     const canonicals = Object.values(CANONICAL_TASK_NAMES);
     expect(canonicals).toContain('cortex-loop-insight-refresh-daily');
@@ -225,7 +226,12 @@ describe('AC: scheduled-task registration matches the fast/daily/full split (spe
     expect(canonicals).not.toContain('cortex-loop-insight-refresh');
     expect(canonicals).not.toContain('cortex-loop-insight-gaps');
     expect(canonicals).not.toContain('cortex-loop-insight-refresh-fast');
-    expect(RETIRED_CANONICAL_TASK_NAMES).toEqual(['cortex-loop-insight-refresh', 'cortex-loop-insight-gaps']);
+    expect(canonicals).not.toContain('cortex-loop-anatomy-refresh-deep');
+    expect(RETIRED_CANONICAL_TASK_NAMES).toEqual([
+      'cortex-loop-insight-refresh',
+      'cortex-loop-insight-gaps',
+      'cortex-loop-anatomy-refresh-deep',
+    ]);
   });
 
   it('the daily and full task prompts invoke their skills and cortex-extract-insight by name', () => {

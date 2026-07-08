@@ -1,3 +1,11 @@
+/**
+ * Tree-sitter structural extraction for the insight L1 pass (spec
+ * insight.l1-structural; RULES 18 — tree-sitter is the only parser
+ * dependency). Relocated from `src/anatomy/parse.ts` at build-order-v3 step 7
+ * (anatomy deprecation); the export surface (`extract`, `ExtractResult`) and
+ * the relative-import resolver (`resolveImport`, formerly anatomy/scan.ts)
+ * are unchanged so `l1.ts` keeps its import contract.
+ */
 import { Parser, Language } from 'web-tree-sitter';
 import type { Node } from 'web-tree-sitter';
 import { createRequire } from 'module';
@@ -351,4 +359,39 @@ export async function extract(ext: string, source: string): Promise<ExtractResul
   } catch {
     return { definitions: [], imports: [], purpose: null };
   }
+}
+
+/**
+ * Resolve a relative import spec to a project-relative file path (the ONE
+ * resolution contract, shared by the L1 import-graph builder). Relocated from
+ * `src/anatomy/scan.ts` at build-order-v3 step 7; behaviour unchanged.
+ */
+export function resolveImport(root: string, fromRel: string, importSpec: string): string | null {
+  if (!importSpec.startsWith('./') && !importSpec.startsWith('../')) return null;
+
+  const fromAbs = path.resolve(root, fromRel);
+  const fromDir = path.dirname(fromAbs);
+  const base = path.resolve(fromDir, importSpec);
+
+  const suffixes = [
+    '', '.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.mjs', '.cjs', '.py', '.rs', '.go',
+  ];
+
+  for (const suffix of suffixes) {
+    const candidate = base + suffix;
+    try {
+      if (fs.statSync(candidate).isFile()) {
+        return path.relative(root, candidate).replace(/\\/g, '/');
+      }
+    } catch { /* not found */ }
+
+    const indexCandidate = path.join(base, 'index' + suffix);
+    try {
+      if (fs.statSync(indexCandidate).isFile()) {
+        return path.relative(root, indexCandidate).replace(/\\/g, '/');
+      }
+    } catch { /* not found */ }
+  }
+
+  return null;
 }

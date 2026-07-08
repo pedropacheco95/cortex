@@ -46,9 +46,10 @@ When the project has a `.cortex/` directory, read the knowledge layer before gen
    predicate into the generated atomic and spec tests** — the predicate (regex / grep /
    AST pattern with `expect: absent|present`) becomes an executed assertion over the
    governed files, not a comment.
-2. **Anatomy for the governed files.** Read the `.cortex/anatomy/files.md` rows for the
-   governed files of the spec under test (matched via `spec_links`); the one-line
-   purposes tell generation agents what each file does without whole-file reads.
+2. **Insight for the governed files.** Run `cortex insight file <path>` for the
+   governed files of the spec under test (matched via the spec's `governs:` globs,
+   when `.cortex/insight/` exists); the entries' Purpose lines tell generation agents
+   what each file does without whole-file reads.
 3. **Layout conventions.** The four-tier layout (atomic/spec/journey/scenario) and the
    scenario `covers:` mechanism follow cortex-schema §3 and §4.8 — generated files must
    land in that layout, and every scenario spec must carry a resolvable `covers:` list.

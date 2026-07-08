@@ -46,22 +46,15 @@ export function writeExecutable(filePath: string, script: string): string {
   return filePath;
 }
 
-/** Rewrites every flagged files.md row (run from the project cwd). */
-const REWRITE_ALL_JS =
-  'const fs=require("fs");const p=".cortex/anatomy/files.md";if(fs.existsSync(p)){let s=fs.readFileSync(p,"utf8");s=s.split("\\n").map(function(l){if(l.startsWith("|")&&/ true \\| [^|]*\\|\\s*$/.test(l)){return l.replace("(needs purpose)","Filled by stub.").replace(/ true \\| [^|]*\\|\\s*$/," false | scanner-llm |");}return l;}).join("\\n");fs.writeFileSync(p,s);}';
-
-/** Rewrites only the FIRST flagged row, then the stub dies mid-batch. */
-const REWRITE_FIRST_JS =
-  'const fs=require("fs");const p=".cortex/anatomy/files.md";if(fs.existsSync(p)){let done=false;let s=fs.readFileSync(p,"utf8");s=s.split("\\n").map(function(l){if(!done&&l.startsWith("|")&&/ true \\| [^|]*\\|\\s*$/.test(l)){done=true;return l.replace("(needs purpose)","Filled by stub.").replace(/ true \\| [^|]*\\|\\s*$/," false | scanner-llm |");}return l;}).join("\\n");fs.writeFileSync(p,s);}';
-
-/** Stub claude: records its invocation + args, rewrites all flagged purposes, exits 0. */
+/** Stub claude: records its invocation + args, exits 0. Since the v1/v2
+ *  purpose pass retired (build-order-v3 step 7) init must NEVER invoke it —
+ *  tests assert the record file stays absent. */
 export function recordingStub(binDir: string, recordFile: string): string {
   return writeExecutable(
     path.join(binDir, 'claude'),
     `#!/bin/sh
 echo "INVOKED" >> "${recordFile}"
 for a in "$@"; do printf 'ARG:%s\\n' "$a" >> "${recordFile}"; done
-node -e '${REWRITE_ALL_JS}'
 exit 0
 `,
   );
@@ -88,36 +81,6 @@ sleep 30
   );
 }
 
-/** Stub claude: rewrites one row, then dies mid-batch with a non-auth error. */
-export function midBatchStub(binDir: string, recordFile: string): string {
-  return writeExecutable(
-    path.join(binDir, 'claude'),
-    `#!/bin/sh
-echo "INVOKED" >> "${recordFile}"
-node -e '${REWRITE_FIRST_JS}'
-echo "boom: subprocess crashed mid-batch" >&2
-exit 1
-`,
-  );
-}
-
-/** Parse .cortex/anatomy/files.md rows → [{path, purpose, flagged}]. */
-export function readFilesMdRows(root: string): { path: string; purpose: string; flagged: boolean }[] {
-  const filesPath = path.join(root, '.cortex', 'anatomy', 'files.md');
-  if (!fs.existsSync(filesPath)) return [];
-  const rows: { path: string; purpose: string; flagged: boolean }[] = [];
-  for (const line of fs.readFileSync(filesPath, 'utf-8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith('|')) continue;
-    const cells = trimmed.split('|').map((c) => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
-    // Column 7 is needs_purpose_refresh; the 8th (last) is purpose_source (§4.1).
-    const flag = cells[6];
-    if (flag !== 'true' && flag !== 'false') continue;
-    rows.push({ path: cells[0] ?? '', purpose: cells[1] ?? '', flagged: flag === 'true' });
-  }
-  return rows;
-}
-
 /** Seed skill directories (each with a SKILL.md) into the project's .claude/skills/ (Rule 17). */
 export function seedProjectSkills(root: string, names: string[]): void {
   for (const name of names) {
@@ -127,7 +90,7 @@ export function seedProjectSkills(root: string, names: string[]): void {
   }
 }
 
-/** Write N undocumented source files (no doc comments → needs_purpose_refresh). */
+/** Write N undocumented source files (plain project content for init to see). */
 export function writeUndocumentedFiles(root: string, n: number): void {
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
   for (let i = 0; i < n; i++) {

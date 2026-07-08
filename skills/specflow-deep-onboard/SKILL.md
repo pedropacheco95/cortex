@@ -27,10 +27,10 @@ access to the Agent tool.
 
 When the project has a `.cortex/` directory:
 
-- **Anatomy-first input (design §8.4 bridge 5).** Each pass inherits
-  specflow-onboard-codebase's anatomy-first behaviour: passes build from
-  `.cortex/anatomy/files.md` and `.cortex/anatomy/graph.json` instead of re-walking
-  the tree.
+- **Insight-first input (design §8.4 bridge 5).** Each pass inherits
+  specflow-onboard-codebase's insight-first behaviour: passes build from the insight
+  per-file entries (`.cortex/insight/anatomy/<path>.md`) and
+  `.cortex/insight/graph.json` instead of re-walking the tree.
 - **Pulse output homes (design §8.5).** The transient process outputs live under
   `.cortex/pulse/`: write `onboarding-scratch/` (the `atoms/` and `pass-{a,b,c}/`
   directories) to `.cortex/pulse/onboarding-scratch/`, `deep-onboard-report.md` to

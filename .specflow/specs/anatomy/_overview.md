@@ -1,5 +1,7 @@
 # Anatomy — Overview
 
+> **SUPERSEDED at v3 (build-order-v3 step 7):** the anatomy module is retired and absorbed into `insight/` (design §5.10). Every spec in this folder carries a supersession banner; retained for lineage.
+
 ## What this is
 
 The native code-structure scanner and its artefacts. `cortex scan` lists files, estimates tokens, parses structure with tree-sitter, resolves one-line file purposes (docstring-first, with the LLM fallback delegated to the agentic refresh pass), cross-links specs, and emits the anatomy artefacts.

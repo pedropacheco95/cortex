@@ -20,16 +20,15 @@ import {
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
-/** The fifteen registered canonical task names, pinned verbatim (v3: the v2
+/** The fourteen registered canonical task names, pinned verbatim (v3: the v2
  *  insight pair is deregistered; the daily/full insight-refresh tiers and
  *  session-observe (build-order-v3 step 6) register; the fast tier is the
- *  git hook, never a scheduled task; anatomy-refresh-deep deregisters at
+ *  git hook, never a scheduled task; anatomy-refresh-deep deregistered at
  *  step 7, bringing the roster to the schema §9.1 fourteen). */
 const CANONICALS = [
   'cortex-pulse-hygiene',
   'cortex-pulse-distil',
   'cortex-loop-skill-suggest',
-  'cortex-loop-anatomy-refresh-deep',
   'cortex-loop-rule-decay',
   'cortex-loop-atlas-staleness',
   'cortex-loop-onboarding-drift',
@@ -125,7 +124,6 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
       'hygiene': 'cortex-pulse-hygiene',
       'distil': 'cortex-pulse-distil',
       'skill-suggest': 'cortex-loop-skill-suggest',
-      'anatomy-refresh-deep': 'cortex-loop-anatomy-refresh-deep',
       'rule-decay': 'cortex-loop-rule-decay',
       'atlas-staleness': 'cortex-loop-atlas-staleness',
       'onboarding-drift': 'cortex-loop-onboarding-drift',
@@ -145,16 +143,16 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
 // legacyTaskNames — both unscoped families
 // ---------------------------------------------------------------------------
 describe('legacyTaskNames: the internal short ids AND the unscoped canonical names', () => {
-  it('contains every internal id and every canonical name, deduped (28 total)', () => {
+  it('contains every internal id and every canonical name, deduped (26 total)', () => {
     for (const id of Object.keys(CANONICAL_TASK_NAMES)) {
       expect(legacyTaskNames, id).toContain(id);
     }
     for (const canonical of CANONICALS) {
       expect(legacyTaskNames, canonical).toContain(canonical);
     }
-    // 15 ids + 15 canonicals − 2 shared (specflow-lint, specflow-verify).
+    // 14 ids + 14 canonicals − 2 shared (specflow-lint, specflow-verify).
     expect(new Set(legacyTaskNames).size).toBe(legacyTaskNames.length);
-    expect(legacyTaskNames).toHaveLength(28);
+    expect(legacyTaskNames).toHaveLength(26);
   });
 });
 
@@ -166,7 +164,7 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
   const other = '/tmp/personal/api';
   const prefix = `${projectTaskSlug(root)}-${projectTaskHash(root)}-`;
 
-  it('accepts all twelve of its own scoped names', () => {
+  it('accepts all fourteen of its own scoped names', () => {
     for (const canonical of CANONICALS) {
       expect(isOwnScopedTask(root, scopedTaskName(root, canonical)), canonical).toBe(true);
     }

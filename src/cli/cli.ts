@@ -15,15 +15,10 @@
  * Rule 1) and `cortex loop-skill-suggest [--propose <f>]`
  * (spec loops.skill-suggest, Rule 1), the collect/judge/report loop
  * `cortex loop-bug-triage [--collect|--report <f>|--no-llm]`
- * (spec loops.bug-triage, Rule 1), and the two anatomy refresh tiers:
- * `cortex anatomy-refresh-fast` — the exact string the installed git
- * post-commit hook calls (core-cli.init Rule 12 / GIT_HOOK_INVOCATION) —
- * with `cortex loop-anatomy-refresh --fast` as its identical design-§15
- * alias (spec anatomy.refresh-fast, Rule 1), and
- * `cortex loop-anatomy-refresh --deep [--collect|--apply <f>|--no-llm]`
- * (spec anatomy.refresh-deep, Rule 1), the three insight-refresh tiers
- * `cortex insight-refresh-fast` (the git post-commit hook string, with
- * `cortex loop-insight-refresh --fast` as its alias) plus
+ * (spec loops.bug-triage, Rule 1), the three insight-refresh tiers
+ * `cortex insight-refresh-fast` — the exact string the installed git
+ * post-commit hook calls (core-cli.init Rule 12 / GIT_HOOK_INVOCATION,
+ * with `cortex loop-insight-refresh --fast` as its alias) plus
  * `cortex loop-insight-refresh --daily [--collect|--apply]` and
  * `cortex loop-insight-refresh --full [--collect|--report]`
  * (spec insight.refresh-loops, Rule 1 each), the session-observation loop
@@ -192,38 +187,27 @@ export async function run(argv: string[]): Promise<number> {
       return 1;
     }
   }
-  // `cortex anatomy-refresh-fast` — the exact command the installed git
-  // post-commit hook calls (anatomy.refresh-fast Rule 1). Hook-safe: the
-  // runner degrades internally and always exits 0.
+  // `cortex anatomy-refresh-fast` — RETIRED at build-order-v3 step 7 (anatomy
+  // deprecation, design §5.10): the post-commit git hook consolidates onto
+  // `cortex insight-refresh-fast`. A STALE git hook still calling this verb
+  // must never disturb a commit, so it exits 0 silently on stdout-suppressed
+  // hook invocations — the pointed message goes to stderr.
   if (argv[0] === 'anatomy-refresh-fast') {
-    const { runRefreshFast } = await import('../anatomy/refresh-fast.js');
-    return await runRefreshFast('.');
+    console.error(
+      'cortex anatomy-refresh-fast: retired in v3 — anatomy is absorbed into insight (design §5.10). ' +
+        'The post-commit fast tier is `cortex insight-refresh-fast`; re-run `cortex init --force` to refresh the git hook.',
+    );
+    return 0; // hook-safe: a stale post-commit hook must never fail the commit
   }
-  // `cortex loop-anatomy-refresh --fast|--deep [...]` — the design-§15 form.
-  // --fast dispatches identically to `anatomy-refresh-fast`; --deep is the
-  // collect/judge/apply purpose-filler (anatomy.refresh-deep Rule 1).
+  // `cortex loop-anatomy-refresh` — RETIRED at build-order-v3 step 7. Pointed
+  // message so the verb never falls through to `cortex init <target>`.
   if (argv[0] === 'loop-anatomy-refresh') {
-    const rest = argv.slice(1);
-    const fast = rest.includes('--fast');
-    const deep = rest.includes('--deep');
-    if (fast === deep) {
-      console.error('cortex loop-anatomy-refresh: exactly one of --fast or --deep is required.');
-      return 1;
-    }
-    if (fast) {
-      const { runRefreshFast } = await import('../anatomy/refresh-fast.js');
-      return await runRefreshFast('.');
-    }
-    const flags = parseLoopFlags('loop-anatomy-refresh', rest, '--apply', 'results');
-    if (flags === null) return 1;
-    try {
-      const { runRefreshDeep } = await import('../anatomy/refresh-deep.js');
-      const { file, ...restFlags } = flags;
-      return await runRefreshDeep('.', { ...restFlags, ...(file !== undefined ? { applyFile: file } : {}) });
-    } catch (err) {
-      console.error(`cortex loop-anatomy-refresh: ${(err as Error).message}`);
-      return 1;
-    }
+    console.error(
+      'cortex loop-anatomy-refresh: retired in v3 — anatomy is absorbed into insight (design §5.10). ' +
+        'Fast tier: `cortex insight-refresh-fast` (git post-commit hook). Deep/daily maintenance: the insight refresh ' +
+        'loops — `cortex loop-insight-refresh --daily|--full` with the cortex-loop-insight-refresh-* skills.',
+    );
+    return 1;
   }
   // `cortex loop-test-runner [--tier ...|--trigger ...|--collect|--fix-stage <f>|--no-llm]`
   // — the code-writing loop (loops.test-runner Rule 1). `cortex test-run` is
@@ -341,6 +325,25 @@ export async function run(argv: string[]): Promise<number> {
         'cortex-loop-session-observe (design §9); the five-gap-signal mechanism no longer exists.',
     );
     return 1;
+  }
+
+  // `cortex scan` — recompile the curated citation graph to
+  // `.cortex/constellation.json` (schema §4.9). v3 note (build-order-v3 step
+  // 7): the v1/v2 anatomy scan half is retired with the anatomy module; the
+  // verb keeps its constellation-compiler half so the renderer's
+  // "run cortex scan" contract still holds.
+  if (argv[0] === 'scan') {
+    try {
+      const { compile } = await import('../constellation/compile.js');
+      const constellation = await compile('.');
+      console.log(
+        `cortex scan: wrote .cortex/constellation.json (${constellation.nodes.length} node(s), ${constellation.edges.length} edge(s), ${constellation.counters.droppedRefs} dropped ref(s)).`,
+      );
+      return 0;
+    } catch (err) {
+      console.error(`cortex scan: ${(err as Error).message}`);
+      return 1;
+    }
   }
 
   // `cortex constellation [--port N]` — localhost-only read-only renderer

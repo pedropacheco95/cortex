@@ -5,11 +5,21 @@ depends_on:
   - schema.validator
 implements: ../../specs-business/anatomy/contributor-gets-a-legible-codebase.business.md
 governed_by: []
-governs:
-  - "src/anatomy/**/*.ts"
 ---
 
 # Native Anatomy Scanner
+
+> **SUPERSEDED at v3 (build-order-v3 step 7; design §5.10, §8.3).** The
+> anatomy module this spec describes is retired: `.cortex/anatomy/` no longer
+> exists and its role is absorbed into `insight/` — the file listing and
+> structural graph are insight **L1** output, purpose lines are **L2** per-file
+> entries, `spec_links`/`governs:` resolution lives in the entries' Connections
+> section, and `purpose_source` became insight extraction metadata (read-time
+> purpose capture now writes read-time-tagged provenance into the entries).
+> `src/anatomy/` is deleted (the tree-sitter extractor, import resolver, and
+> exclusion filter relocated into `src/insight/` for the L1 pass); the former
+> `governs:` targets no longer exist, so the list is removed. Retained for
+> lineage.
 
 ## Intent
 

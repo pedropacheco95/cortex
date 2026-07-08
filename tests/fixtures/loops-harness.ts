@@ -7,6 +7,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { createHash } from 'crypto';
 import { execFileSync } from 'child_process';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -139,24 +140,20 @@ export function decisionMd(slug: string, dateIso: string, extra: string[] = []):
   ].join('\n');
 }
 
-/** anatomy files.md content from (path, spec_links) pairs. */
-export function filesMdContent(rows: Array<{ path: string; specLinks?: string }>): string {
-  const lines = [
-    '---',
-    'kind: anatomy-files',
-    `generated: ${new Date().toISOString()}`,
-    '---',
-    '',
-    '# Files',
-    '',
-    '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |',
-    '|------|---------|--------|--------|-----------|------------|-----------------------|----------------|',
-  ];
-  for (const r of rows) {
-    lines.push(
-      `| ${r.path} | test purpose | 10 | abc123 | 2026-01-01T00:00:00Z | ${r.specLinks ?? '-'} | false | scanner-llm |`,
-    );
+/**
+ * Schema-valid insight staleness ledger content (src/insight/storage.ts
+ * parseLedger shape: schemaVersion + built_at_commit + entries keyed by
+ * source path, each with a 64-hex source_sha256, built_at_commit, and
+ * extraction_level 2|3). Used by the hygiene insight-drift tests.
+ */
+export function insightLedgerContent(paths: string[]): string {
+  const entries: Record<string, unknown> = {};
+  for (const p of paths) {
+    entries[p] = {
+      source_sha256: createHash('sha256').update(p).digest('hex'),
+      built_at_commit: 'abc1234',
+      extraction_level: 2,
+    };
   }
-  lines.push('');
-  return lines.join('\n');
+  return JSON.stringify({ schemaVersion: '3.0', built_at_commit: 'abc1234', entries }, null, 2) + '\n';
 }

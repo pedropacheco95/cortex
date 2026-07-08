@@ -1,7 +1,10 @@
 /**
- * Spec tests for core-cli.init — one describe per Acceptance Criterion (18 ACs).
+ * Spec tests for core-cli.init — one describe per Acceptance Criterion.
  * Every test runs in a fresh tmp project with an injected fake home dir;
- * the real ~/.claude is never touched.
+ * the real ~/.claude is never touched. The v1/v2 anatomy scan + inline
+ * purpose pass ACs (7-11) are retired at build-order-v3 step 7: init never
+ * spawns a claude subprocess, exit 3 no longer exists, and
+ * noLlm/claudeBin/timeoutMs are accepted no-ops.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import * as fs from 'fs';
@@ -15,10 +18,6 @@ import {
   gitInit,
   snapshotTree,
   recordingStub,
-  authFailStub,
-  hangingStub,
-  midBatchStub,
-  readFilesMdRows,
   writeUndocumentedFiles,
   seedProjectSkills,
 } from '../../fixtures/init-harness.js';
@@ -32,15 +31,14 @@ const DARWIN = { platform: 'darwin' as const };
  * Skill bundles shipped in the package's skills/ dir that a scheduled task's
  * prompt invokes (pulse.hygiene Rule 1; loops.* Rule 1 each; pulse.distil
  * Rule 1; loops.skill-suggest Rule 1; loops.bug-triage Rule 1;
- * anatomy.refresh-deep Rule 1; loops.test-runner Rule 10;
- * specflow.cortex-awareness Rule 3 — the eleven specflow bundles now ship
- * too, of which specflow-lint, specflow-tests, and specflow-bugs are
- * task-invoked). Rule 4 installs them into every project, so ALL twelve
- * tasks are always registrable under --partial.
+ * loops.test-runner Rule 10; specflow.cortex-awareness Rule 3 — the eleven
+ * specflow bundles ship too, of which specflow-lint, specflow-tests, and
+ * specflow-bugs are task-invoked; cortex-loop-anatomy-refresh deleted at
+ * step 7). Rule 4 installs them into every project, so ALL fourteen tasks
+ * are always registrable under --partial.
  */
 const PACKAGED_LOOP_SKILLS = [
   'cortex-extract-insight',
-  'cortex-loop-anatomy-refresh',
   'cortex-loop-atlas-staleness',
   'cortex-loop-bug-triage',
   'cortex-loop-insight-refresh-daily',
@@ -58,7 +56,7 @@ const PACKAGED_LOOP_SKILLS = [
   'specflow-tests',
 ];
 const PACKAGED_LOOP_TASKS = [
-  'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-refresh-daily', 'insight-refresh-full', 'onboarding-drift', 'rule-decay', 'session-observe', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
+  'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-refresh-daily', 'insight-refresh-full', 'onboarding-drift', 'rule-decay', 'session-observe', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
 ];
 
 // ---------------------------------------------------------------------------
@@ -79,19 +77,23 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
 
   it('.cortex/ matches the schema §1 layout with an _index.md in every directory', () => {
     const dirs = [
-      '', 'anatomy', 'compass', 'compass/bugs', 'compass/rules',
+      '', 'compass', 'compass/bugs', 'compass/rules',
       'atlas', 'atlas/stakeholders', 'atlas/decisions', 'atlas/domain', 'atlas/sources',
-      'pulse',
+      'pulse', 'insight', 'archive',
     ];
     for (const d of dirs) {
       const indexPath = path.join(root, '.cortex', d, '_index.md');
       expect(fs.existsSync(indexPath), `missing ${indexPath}`).toBe(true);
     }
-    // anatomy artefacts written by the scanner
-    expect(fs.existsSync(path.join(root, '.cortex', 'anatomy', 'files.md'))).toBe(true);
-    expect(fs.existsSync(path.join(root, '.cortex', 'anatomy', 'graph.json'))).toBe(true);
-    expect(fs.existsSync(path.join(root, '.cortex', 'anatomy', 'layers.md'))).toBe(true);
+    // The anatomy module no longer exists (retired at build-order-v3 step 7).
+    expect(fs.existsSync(path.join(root, '.cortex', 'anatomy'))).toBe(false);
     expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'dismissed.md'))).toBe(true);
+  });
+
+  it('the constellation is compiled directly by init (schema §4.9)', () => {
+    expect(fs.existsSync(path.join(root, '.cortex', 'constellation.json'))).toBe(true);
+    const doc = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'constellation.json'), 'utf-8'));
+    expect(doc).toBeTypeOf('object');
   });
 
   it('cortex.config.json declares the current schemaVersion', () => {
@@ -171,12 +173,13 @@ describe('AC4: gitignore additions are exact and idempotent', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('contains the four paths exactly once each and no bare .cortex/ line', () => {
+  it('contains the four paths exactly once each, no anatomy line, and no bare .cortex/ line', () => {
     const lines = fs.readFileSync(path.join(root, '.gitignore'), 'utf-8').split('\n').map((l) => l.trim());
-    for (const wanted of ['.cortex/anatomy/', '.cortex/atlas/sources/', '.cortex/pulse/', '.cortex/constellation.json']) {
+    for (const wanted of ['.cortex/atlas/sources/', '.cortex/pulse/', '.cortex/constellation.json', '.cortex/archive/documents/*/source.*']) {
       expect(lines.filter((l) => l === wanted)).toHaveLength(1);
     }
     expect(lines).not.toContain('.cortex/');
+    expect(lines).not.toContain('.cortex/anatomy/'); // retired at step 7
     expect(lines).toContain('node_modules/');
   });
 });
@@ -248,45 +251,12 @@ describe('AC6: settings.json merge preserves unrelated keys', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AC7: Purpose pass skipped cleanly when claude is unavailable
+// ACs 7-11 RETIRED (build-order-v3 step 7): the anatomy scan and inline
+// purpose pass are gone — init never spawns a claude subprocess, exit 3 no
+// longer exists, and noLlm/claudeBin/timeoutMs are accepted no-ops. The
+// replacement coverage below pins the retirement itself.
 // ---------------------------------------------------------------------------
-describe('AC7: purpose pass skipped cleanly when claude is unavailable', () => {
-  let root: string;
-  let home: string;
-  let result: { exitCode: number; summary: string };
-  beforeAll(async () => {
-    root = makeTmpDir('ac7-proj');
-    home = makeTmpDir('ac7-home');
-    writeUndocumentedFiles(root, 3);
-    result = await init(root, {
-      home,
-      ...DARWIN,
-      claudeBin: '/nonexistent/definitely-not-claude',
-      timeoutMs: 5_000,
-    });
-  }, TEST_TIMEOUT);
-  afterAll(() => { cleanTmp(root); cleanTmp(home); });
-
-  it('still exits 0', () => {
-    expect(result.exitCode).toBe(0);
-  });
-
-  it('affected files.md rows keep needs_purpose_refresh: true', () => {
-    const rows = readFilesMdRows(root);
-    expect(rows.length).toBe(3);
-    expect(rows.every((r) => r.flagged)).toBe(true);
-  });
-
-  it('summary states the pass was skipped and the scheduled refresh will handle it', () => {
-    expect(result.summary).toMatch(/Purpose pass: skipped/);
-    expect(result.summary).toMatch(/scheduled anatomy deep-refresh/);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// AC8: Inline purpose pass invoked as a subprocess when available
-// ---------------------------------------------------------------------------
-describe('AC8: inline purpose pass invoked as a subprocess when available', () => {
+describe('Retired purpose-pass surface: init never spawns a subprocess', () => {
   let root: string;
   let home: string;
   let binDir: string;
@@ -295,13 +265,13 @@ describe('AC8: inline purpose pass invoked as a subprocess when available', () =
   let fetchSpy: ReturnType<typeof vi.spyOn>;
 
   beforeAll(async () => {
-    root = makeTmpDir('ac8-proj');
-    home = makeTmpDir('ac8-home');
-    binDir = makeTmpDir('ac8-bin');
+    root = makeTmpDir('retired-proj');
+    home = makeTmpDir('retired-home');
+    binDir = makeTmpDir('retired-bin');
     recordFile = path.join(binDir, 'record.txt');
     const stub = recordingStub(binDir, recordFile);
     fetchSpy = vi.spyOn(globalThis, 'fetch' as never);
-    writeUndocumentedFiles(root, 2);
+    writeUndocumentedFiles(root, 2); // v1/v2 would have flagged and purpose-passed these
     result = await init(root, { home, ...DARWIN, claudeBin: stub, timeoutMs: 20_000 });
   }, TEST_TIMEOUT);
   afterAll(() => {
@@ -309,19 +279,18 @@ describe('AC8: inline purpose pass invoked as a subprocess when available', () =
     cleanTmp(root); cleanTmp(home); cleanTmp(binDir);
   });
 
-  it('the stub was invoked exactly once with a prompt naming the anatomy deep-refresh Skill', () => {
-    const record = fs.readFileSync(recordFile, 'utf-8');
-    expect(record.split('\n').filter((l) => l === 'INVOKED')).toHaveLength(1);
-    expect(record).toContain('ARG:-p');
-    expect(record).toContain('cortex-loop-anatomy-refresh');
-    expect(record).toMatch(/deep-refresh Skill/);
+  it('exits 0 and the claude stub is never invoked, even when claudeBin points at it', () => {
+    expect(result.exitCode).toBe(0);
+    expect(fs.existsSync(recordFile)).toBe(false);
   });
 
-  it('rewritten purposes are picked up and init exits 0', () => {
-    expect(result.exitCode).toBe(0);
-    const rows = readFilesMdRows(root);
-    expect(rows.every((r) => !r.flagged)).toBe(true);
-    expect(result.summary).toMatch(/2 purpose\(s\) filled/);
+  it('the summary carries the insight pointer line instead of scan/purpose-pass lines', () => {
+    expect(result.summary).toContain(
+      'Insight: module scaffolded empty — run the cortex-extract-insight skill to build the understanding layer (init never runs it automatically).',
+    );
+    expect(result.summary).not.toMatch(/Files indexed:/);
+    expect(result.summary).not.toMatch(/Purpose pass:/);
+    expect(result.summary).not.toMatch(/authentication/i);
   });
 
   it("init's own process opened no network connections (fetch never called)", () => {
@@ -329,130 +298,24 @@ describe('AC8: inline purpose pass invoked as a subprocess when available', () =
   });
 });
 
-// ---------------------------------------------------------------------------
-// AC9: Auth failure — named specifically, exit 3, everything else complete
-// ---------------------------------------------------------------------------
-describe('AC9: auth failure named specifically, exit 3, everything else complete', () => {
-  let root: string;
-  let home: string;
-  let binDir: string;
-  let result: { exitCode: number; summary: string };
-  beforeAll(async () => {
-    root = makeTmpDir('ac9-proj');
-    home = makeTmpDir('ac9-home');
-    binDir = makeTmpDir('ac9-bin');
-    const stub = authFailStub(binDir);
-    writeUndocumentedFiles(root, 2);
-    result = await init(root, { home, ...DARWIN, claudeBin: stub, timeoutMs: 20_000 });
-  }, TEST_TIMEOUT);
-  afterAll(() => { cleanTmp(root); cleanTmp(home); cleanTmp(binDir); });
-
-  it('does not hang, completes every remaining step, and exits 3', () => {
-    expect(result.exitCode).toBe(3);
-    // hooks
-    expect(fs.existsSync(path.join(root, '.claude', 'settings.json'))).toBe(true);
-    // scheduled tasks
-    expect(fs.readdirSync(path.join(home, '.claude', 'scheduled-tasks'))).toHaveLength(15);
-    // CLAUDE.md managed block
-    expect(fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8')).toContain('<!-- cortex:start');
-    // self-validation ran and was conformant (otherwise exit would be 1)
-    expect(result.summary).toContain('Self-validation: conformant');
-  });
-
-  it('summary names authentication specifically and tells the user how to recover', () => {
-    expect(result.summary).toMatch(/authentication/i);
-    expect(result.summary).toMatch(/log ?in/i);
-    expect(result.summary).toMatch(/deep-refresh|re-run/i);
-  });
-
-  it("every undocumented file's row still has needs_purpose_refresh: true", () => {
-    const rows = readFilesMdRows(root);
-    expect(rows.length).toBe(2);
-    expect(rows.every((r) => r.flagged)).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// AC10: Subprocess timeout or mid-batch error degrades gracefully
-// ---------------------------------------------------------------------------
-describe('AC10: subprocess timeout degrades gracefully', () => {
-  let root: string;
-  let home: string;
-  let binDir: string;
-  let result: { exitCode: number; summary: string };
-  beforeAll(async () => {
-    root = makeTmpDir('ac10a-proj');
-    home = makeTmpDir('ac10a-home');
-    binDir = makeTmpDir('ac10a-bin');
-    const stub = hangingStub(binDir);
-    writeUndocumentedFiles(root, 2);
-    result = await init(root, { home, ...DARWIN, claudeBin: stub, timeoutMs: 500 });
-  }, TEST_TIMEOUT);
-  afterAll(() => { cleanTmp(root); cleanTmp(home); cleanTmp(binDir); });
-
-  it('exits 0, keeps flags, and the summary carries the incomplete-pass notice', () => {
-    expect(result.exitCode).toBe(0);
-    const rows = readFilesMdRows(root);
-    expect(rows.every((r) => r.flagged)).toBe(true);
-    expect(result.summary).toMatch(/did not complete/);
-    expect(result.summary).toMatch(/scheduled anatomy deep-refresh will finish/);
-  });
-});
-
-describe('AC10: mid-batch error degrades gracefully, keeping rewritten rows', () => {
-  let root: string;
-  let home: string;
-  let binDir: string;
-  let result: { exitCode: number; summary: string };
-  beforeAll(async () => {
-    root = makeTmpDir('ac10b-proj');
-    home = makeTmpDir('ac10b-home');
-    binDir = makeTmpDir('ac10b-bin');
-    const stub = midBatchStub(binDir, path.join(binDir, 'record.txt'));
-    writeUndocumentedFiles(root, 3);
-    result = await init(root, { home, ...DARWIN, claudeBin: stub, timeoutMs: 20_000 });
-  }, TEST_TIMEOUT);
-  afterAll(() => { cleanTmp(root); cleanTmp(home); cleanTmp(binDir); });
-
-  it('exits 0; unconfirmed rows stay flagged; rewritten row keeps its new purpose', () => {
-    expect(result.exitCode).toBe(0);
-    const rows = readFilesMdRows(root);
-    expect(rows).toHaveLength(3);
-    const rewritten = rows.filter((r) => !r.flagged);
-    const stillFlagged = rows.filter((r) => r.flagged);
-    expect(rewritten).toHaveLength(1);
-    expect(rewritten[0]!.purpose).toBe('Filled by stub.');
-    expect(stillFlagged).toHaveLength(2);
-    expect(result.summary).toMatch(/did not complete/);
-    expect(result.summary).toMatch(/scheduled anatomy deep-refresh/);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// AC11: --no-llm is a success state with a visible flagged count
-// ---------------------------------------------------------------------------
-describe('AC11: --no-llm is a success state with a visible flagged count', () => {
+describe('Retired options: noLlm is an accepted no-op success state', () => {
   let root: string;
   let home: string;
   let result: { exitCode: number; summary: string };
   beforeAll(async () => {
-    root = makeTmpDir('ac11-proj');
-    home = makeTmpDir('ac11-home');
+    root = makeTmpDir('nollm-proj');
+    home = makeTmpDir('nollm-home');
     writeUndocumentedFiles(root, 5);
     result = await init(root, { noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('exits 0 with no error-styled output about the LLM', () => {
+  it('exits 0 with no error-styled output and no flagged-count line', () => {
     expect(result.exitCode).toBe(0);
     expect(result.summary).not.toMatch(/error/i);
     expect(result.summary).not.toMatch(/fail/i);
-  });
-
-  it('summary states 5 files flagged and that the scheduled refresh or a re-run will fill them', () => {
-    expect(result.summary).toMatch(/5 file\(s\) flagged needs_purpose_refresh/);
-    expect(result.summary).toMatch(/scheduled anatomy deep-refresh/);
-    expect(result.summary).toMatch(/re-run after authentication/);
+    expect(result.summary).not.toMatch(/needs_purpose_refresh/);
+    expect(result.summary).toContain('Insight: module scaffolded empty');
   });
 });
 
@@ -562,9 +425,9 @@ describe('AC13: existing .specflow/specs/ content is byte-identical after init',
 });
 
 // ---------------------------------------------------------------------------
-// AC14: Twelve scheduled task definitions written
+// AC14: Fourteen scheduled task definitions written
 // ---------------------------------------------------------------------------
-describe('AC14: twelve scheduled task definitions written to the stubbed home', () => {
+describe('AC14: fourteen scheduled task definitions written to the stubbed home', () => {
   let root: string;
   let home: string;
   beforeAll(async () => {
@@ -577,7 +440,7 @@ describe('AC14: twelve scheduled task definitions written to the stubbed home', 
   it("~/.claude/scheduled-tasks contains every dir under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
-    expect(dirs).toHaveLength(15);
+    expect(dirs).toHaveLength(14);
     const expected = SCHEDULED_TASKS
       .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t.name]!))
       .sort();
@@ -604,7 +467,7 @@ describe('AC14: twelve scheduled task definitions written to the stubbed home', 
     const result = await init(root, { noLlm: true, home, ...DARWIN });
     expect(result.exitCode).toBe(0);
     expect(fs.readFileSync(hygienePath, 'utf-8')).toBe(userEdit);
-    expect(result.summary).toMatch(/12 existing preserved|preserved/);
+    expect(result.summary).toMatch(/14 existing preserved|preserved/);
   }, TEST_TIMEOUT);
 });
 
@@ -637,10 +500,11 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
     expect(fs.readdirSync(base).sort()).toEqual(expected);
   });
 
-  it('.cortex/ skeleton, anatomy, hooks, and CLAUDE.md block are all complete', () => {
+  it('.cortex/ skeleton, insight module, hooks, and CLAUDE.md block are all complete', () => {
     expect(fs.existsSync(path.join(root, '.cortex', 'cortex.config.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.cortex', '_index.md'))).toBe(true);
-    expect(fs.existsSync(path.join(root, '.cortex', 'anatomy', 'files.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'insight', '_index.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'anatomy'))).toBe(false);
     const settings = fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8');
     expect(settings).toContain('cortex hook session-start');
     const claudeMd = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
@@ -648,8 +512,8 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
     expect(claudeMd).toContain('<!-- cortex:end -->');
   });
 
-  it('summary states "15 loops registered" and skips nothing — the packaged skills cover every task', () => {
-    expect(result.summary).toContain('15 loops registered');
+  it('summary states "14 loops registered" and skips nothing — the packaged skills cover every task', () => {
+    expect(result.summary).toContain('14 loops registered');
     const skippedTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => PACKAGED_LOOP_SKILLS.includes(s)),
     );
@@ -687,7 +551,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
     expect(fs.readdirSync(base).sort()).toEqual(expected);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-lint'), 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-verify'), 'SKILL.md'))).toBe(true);
-    expect(result.summary).toContain('15 loops registered');
+    expect(result.summary).toContain('14 loops registered');
   });
 
   it('no task is skipped — every required skill is packaged', () => {
@@ -701,12 +565,12 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
 });
 
 // ---------------------------------------------------------------------------
-// AC17: Default mode → all twelve written, no lacking-skill warning
+// AC17: Default mode → all fourteen written, no lacking-skill warning
 // (The Rule 17 warning path survives in the code for the removed-bundle edge
 // case, but a fresh init can no longer produce it: specflow.cortex-awareness
 // Rule 3 packages every task-invoked skill.)
 // ---------------------------------------------------------------------------
-describe('AC17: default mode → all twelve written, no lacking-skill warning', () => {
+describe('AC17: default mode → all fourteen written, no lacking-skill warning', () => {
   let root: string;
   let home: string;
   let result: { exitCode: number; summary: string };
@@ -722,8 +586,8 @@ describe('AC17: default mode → all twelve written, no lacking-skill warning', 
   it('all task directories are written', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.readdirSync(base)).toHaveLength(15);
-    expect(result.summary).toMatch(/Scheduled tasks: 15 written/);
+    expect(fs.readdirSync(base)).toHaveLength(14);
+    expect(result.summary).toMatch(/Scheduled tasks: 14 written/);
   });
 
   it('summary carries no lacking-skill warning — every registered task has its packaged skill', () => {
@@ -738,7 +602,7 @@ describe('AC17: default mode → all twelve written, no lacking-skill warning', 
 });
 
 // ---------------------------------------------------------------------------
-// AC18: Git hook appended, not clobbered
+// AC18: Git hook appended, not clobbered (insight-refresh-fast since step 7)
 // ---------------------------------------------------------------------------
 describe('AC18: git hook appended, not clobbered', () => {
   let root: string;
@@ -753,12 +617,67 @@ describe('AC18: git hook appended, not clobbered', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('hook still contains echo existing, followed by anatomy-refresh-fast, and is executable', () => {
+  it('hook still contains echo existing, followed by insight-refresh-fast only, and is executable', () => {
     const hookPath = path.join(root, '.git', 'hooks', 'post-commit');
     const content = fs.readFileSync(hookPath, 'utf-8');
     expect(content).toContain('echo existing');
-    expect(content).toContain('cortex anatomy-refresh-fast');
-    expect(content.indexOf('echo existing')).toBeLessThan(content.indexOf('cortex anatomy-refresh-fast'));
+    expect(content).toContain('cortex insight-refresh-fast');
+    expect(content).not.toContain('cortex anatomy-refresh-fast'); // retired at step 7
+    expect(content.indexOf('echo existing')).toBeLessThan(content.indexOf('cortex insight-refresh-fast'));
     expect(fs.statSync(hookPath).mode & 0o111).toBeGreaterThan(0);
   });
+});
+
+// ---------------------------------------------------------------------------
+// AC18b: Existing v2 dual-line hook migrated to insight-only (step 7)
+// ---------------------------------------------------------------------------
+describe('AC18b: existing v2 dual-line hook migrated to insight-only, idempotently', () => {
+  let root: string;
+  let home: string;
+  let hookPath: string;
+  let firstResult: { exitCode: number; summary: string };
+  beforeAll(async () => {
+    root = makeTmpDir('ac18b-proj');
+    home = makeTmpDir('ac18b-home');
+    gitInit(root);
+    hookPath = path.join(root, '.git', 'hooks', 'post-commit');
+    fs.mkdirSync(path.dirname(hookPath), { recursive: true });
+    fs.writeFileSync(
+      hookPath,
+      [
+        '#!/bin/sh',
+        'echo my-own-hook-content',
+        '',
+        '# Cortex: fast deterministic anatomy re-scan after each commit (no LLM)',
+        'cortex anatomy-refresh-fast >/dev/null 2>&1 || true',
+        '',
+        '# Cortex: fast deterministic insight change-flagging after each commit (no LLM, no extraction)',
+        'cortex insight-refresh-fast >/dev/null 2>&1 || true',
+        '',
+      ].join('\n'),
+    );
+    firstResult = await init(root, { noLlm: true, home, ...DARWIN });
+  }, TEST_TIMEOUT);
+  afterAll(() => { cleanTmp(root); cleanTmp(home); });
+
+  it('the anatomy line and its # Cortex: comment are stripped; user content and the insight line remain', () => {
+    expect(firstResult.exitCode).toBe(0);
+    const content = fs.readFileSync(hookPath, 'utf-8');
+    expect(content).toContain('echo my-own-hook-content');
+    expect(content).not.toContain('anatomy-refresh-fast');
+    expect(content).not.toContain('anatomy re-scan');
+    expect(content).toContain('cortex insight-refresh-fast >/dev/null 2>&1 || true');
+    // Exactly one insight invocation — the migration must not duplicate it.
+    expect(content.split('cortex insight-refresh-fast').length - 1).toBe(1);
+    expect(firstResult.summary).toContain(
+      'Git hook: .git/hooks/post-commit already contains the insight-refresh-fast invocation.',
+    );
+  });
+
+  it('a re-run is idempotent: the hook is byte-identical afterwards', async () => {
+    const before = fs.readFileSync(hookPath, 'utf-8');
+    const second = await init(root, { noLlm: true, force: true, home, ...DARWIN });
+    expect(second.exitCode).toBe(0);
+    expect(fs.readFileSync(hookPath, 'utf-8')).toBe(before);
+  }, TEST_TIMEOUT);
 });

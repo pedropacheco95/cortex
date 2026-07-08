@@ -1,9 +1,10 @@
 /**
- * Atomic tests — check.constellation (schema §4.9 "Validated by"): runs only
- * when .cortex/constellation.json exists; valid JSON, required top-level
+ * Atomic tests — check.constellation (schema §4.9 v3.0 "Validated by"): runs
+ * only when .cortex/constellation.json exists; valid JSON, required top-level
  * keys, node id uniqueness, group resolution, edge-endpoint resolution,
- * module enum. Severity: error. Exercised through the registered validator
- * (validate()) over tmp fixture projects.
+ * module enum (v3.0: `anatomy` removed from the enum). Severity: error.
+ * Exercised through the registered validator (validate()) over tmp fixture
+ * projects.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
@@ -14,10 +15,9 @@ import {
   makeTmpDir,
   cleanTmp,
   makeCortexProject,
-  writeFilesMd,
-  filesRow,
-  writeLayersMd,
   writeRule,
+  writeDevSpec,
+  writeBizSpec,
   constellationPath,
 } from '../../fixtures/constellation-harness.js';
 import type { Violation } from '../../../src/schema/types.js';
@@ -37,23 +37,22 @@ async function constellationViolations(root: string): Promise<Violation[]> {
   return report.violations.filter((v) => v.check === 'check.constellation');
 }
 
-/** A minimal valid constellation document to mutate per violation class. */
+/** A minimal valid v3.0 constellation document to mutate per violation class. */
 function validDoc(): Record<string, unknown> {
   return {
     schemaVersion: '1.0',
     generated: '2026-07-02T14:00:00.000Z',
     groups: [
-      { id: 'anatomy', label: 'Anatomy', children: [{ id: 'anatomy:layer:src', label: 'src' }] },
       { id: 'atlas', label: 'Atlas', children: [] },
       { id: 'compass', label: 'Compass', children: [{ id: 'compass:rules', label: 'rules' }] },
-      { id: 'specs', label: 'Specs', children: [] },
+      { id: 'specs', label: 'Specs', children: [{ id: 'specs:schema', label: 'schema' }] },
     ],
     nodes: [
-      { id: 'anatomy:src/a.ts', module: 'anatomy', label: 'a.ts', group: 'anatomy:layer:src', ref: 'src/a.ts', size: 10 },
       { id: 'rule:R-001', module: 'rule', label: 'Rule', group: 'compass:rules', ref: 'R-001' },
+      { id: 'spec:schema.validator', module: 'spec-dev', label: 'schema.validator', group: 'specs:schema', ref: 'schema.validator' },
     ],
-    edges: [{ from: 'rule:R-001', to: 'anatomy:src/a.ts', kind: 'governs' }],
-    counters: { anatomy: 1, compass: 1, atlas: 0, specs: 0, edges: 1, droppedRefs: 0 },
+    edges: [{ from: 'rule:R-001', to: 'spec:schema.validator', kind: 'related_specs' }],
+    counters: { compass: 1, atlas: 0, specs: 1, edges: 1, droppedRefs: 0 },
   };
 }
 
@@ -73,9 +72,17 @@ describe('check.constellation — absence and conformance', () => {
   it('a real compiler output is conformant (zero violations)', async () => {
     const root = tmp('conformant');
     makeCortexProject(root, { config: { schemaVersion: '3.0' } });
-    writeFilesMd(root, [filesRow('src/a.ts', 10), filesRow('src/b.ts', 20)]);
-    writeLayersMd(root, { src: ['src/a.ts', 'src/b.ts'] });
-    writeRule(root, 'R-001-r.md', `id: R-001\ntitle: R\nsource: []\ngoverns:\n  - "src/**"`);
+    writeRule(root, 'R-001-r.md', `id: R-001\ntitle: R\nsource: []\nrelated_specs:\n  - schema.validator`);
+    writeDevSpec(
+      root,
+      'schema/validator.spec.md',
+      `id: schema.validator\nstatus: draft\nimplements: ../../specs-business/schema/trust.business.md`,
+    );
+    writeBizSpec(
+      root,
+      'schema/trust.business.md',
+      `id: schema.trust\nstatus: draft\nimplemented_by:\n  - ../../specs/schema/validator.spec.md`,
+    );
     await compile(root);
     expect(await constellationViolations(root)).toEqual([]);
   });
@@ -132,7 +139,7 @@ describe('check.constellation — violation classes (all severity error, clause 
     const root = tmp('bad-group');
     makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     const doc = validDoc();
-    (doc['nodes'] as Record<string, unknown>[])[0]!['group'] = 'anatomy:layer:nonexistent';
+    (doc['nodes'] as Record<string, unknown>[])[0]!['group'] = 'compass:nonexistent';
     writeConstellation(root, JSON.stringify(doc));
     const violations = await constellationViolations(root);
     expect(
@@ -166,5 +173,15 @@ describe('check.constellation — violation classes (all severity error, clause 
     writeConstellation(root, JSON.stringify(doc));
     const violations = await constellationViolations(root);
     expect(violations.some((v) => v.severity === 'error' && v.message.includes('module "galaxy"'))).toBe(true);
+  });
+
+  it('the retired anatomy module is outside the v3.0 enum → error', async () => {
+    const root = tmp('anatomy-module');
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
+    const doc = validDoc();
+    (doc['nodes'] as Record<string, unknown>[])[0]!['module'] = 'anatomy';
+    writeConstellation(root, JSON.stringify(doc));
+    const violations = await constellationViolations(root);
+    expect(violations.some((v) => v.severity === 'error' && v.message.includes('module "anatomy"'))).toBe(true);
   });
 });

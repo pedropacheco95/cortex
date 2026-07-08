@@ -9,17 +9,16 @@
  * the daily loop. `ledger.json` is NOT updated here — that happens only on a
  * successful re-extraction (daily apply).
  *
- * Hook-safe like anatomy-refresh-fast: every failure degrades to exit 0 with a
- * `pulse/hook-errors.md` entry; an unextracted project (no ledger) and a
- * non-repo are silent no-ops. Runs alongside the anatomy hook until
- * build-order-v3 step 7 retires anatomy.
+ * Hook-safe: every failure degrades to exit 0 with a `pulse/hook-errors.md`
+ * entry; an unextracted project (no ledger) and a non-repo are silent no-ops.
+ * The SOLE post-commit invocation since build-order-v3 step 7 retired the
+ * anatomy fast tier and consolidated the git hook.
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
-import { parseNameStatus } from '../anatomy/refresh-fast.js';
-import { buildIgnoreFilter, hasExcludedSegment } from '../anatomy/exclude.js';
+import { buildIgnoreFilter, hasExcludedSegment } from './exclude.js';
 import {
   L1_SKIP_DIRS,
   L1_SENSITIVE_DIRS,
@@ -33,6 +32,46 @@ import { parseLedger, type LedgerFile } from './storage.js';
 import { appendHookError } from '../hooks/errors.js';
 
 const HOOK_NAME = 'insight-refresh-fast';
+
+export interface CommitScope {
+  /** Modified or added paths. */
+  changed: string[];
+  /** Deleted paths. */
+  deleted: string[];
+}
+
+/**
+ * Parse `git diff-tree --no-commit-id --name-status -r HEAD` output.
+ * Statuses: M/A → changed, D → deleted; renames (R<score>, two paths) are
+ * treated as delete(old) + add(new); copies (C<score>) as add(new).
+ * Unknown statuses and blank lines are ignored. (Relocated verbatim from
+ * `src/anatomy/refresh-fast.ts` at build-order-v3 step 7.)
+ */
+export function parseNameStatus(output: string): CommitScope {
+  const changed: string[] = [];
+  const deleted: string[] = [];
+  for (const line of output.split('\n')) {
+    if (!line.trim()) continue;
+    const parts = line.split('\t');
+    const status = (parts[0] ?? '').trim();
+    const p1 = parts[1];
+    const p2 = parts[2];
+    if (!status || !p1) continue;
+    const kind = status[0] ?? '';
+    if (kind === 'M' || kind === 'A') {
+      changed.push(p1);
+    } else if (kind === 'D') {
+      deleted.push(p1);
+    } else if (kind === 'R') {
+      // rename → delete old + add new (fast tier keeps no identity across paths)
+      deleted.push(p1);
+      if (p2) changed.push(p2);
+    } else if (kind === 'C') {
+      if (p2) changed.push(p2);
+    }
+  }
+  return { changed, deleted };
+}
 
 /** The v3 fast-tier worklist (replaces the v2 node-set worklist of the same
  *  filename — the v2 `cortex loop-insight-refresh` is retired, design §8.3). */

@@ -9,6 +9,12 @@ implemented_by:
 
 # A contributor gets a codebase Claude can read without manual documentation
 
+> **SUPERSEDED at v3 (build-order-v3 step 7; design §5.10).** The outcome
+> survives — a codebase Claude can read without manual documentation — but it
+> is now delivered by the insight layer (`cortex insight file/concept/element`
+> over `.cortex/insight/`), not the anatomy map. The implementing anatomy dev
+> specs are themselves superseded. Retained for lineage.
+
 ## Outcome
 
 When this works, a developer can point Cortex at a codebase and — without writing a single document — get a map where every file has a plain-language purpose, a size estimate, and links to the specs that govern it. Claude, and any teammate, can then understand what each file is for and how the files connect, without reading the whole codebase or relying on knowledge that lives only in someone's head.

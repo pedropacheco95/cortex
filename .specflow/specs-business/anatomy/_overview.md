@@ -1,5 +1,7 @@
 # Anatomy — Overview
 
+> **SUPERSEDED at v3 (build-order-v3 step 7):** the outcomes in this folder are now delivered by the insight layer (design §5.10). Every spec carries a supersession banner; retained for lineage.
+
 ## What this is
 
 An always-current map of the code. The outcome is that a developer, or their AI assistant, can see what every file is for and how the files connect — without having to read the whole codebase first.

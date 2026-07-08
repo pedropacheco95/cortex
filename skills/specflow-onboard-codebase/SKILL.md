@@ -102,14 +102,15 @@ classification decisions and writes specs from sub-agent outputs.
 
 ## Cortex Awareness
 
-When the project has a `.cortex/anatomy/` directory (a Cortex project — design §8.4
-bridge 5), build from the scanned anatomy instead of re-walking the tree:
+When the project has a `.cortex/insight/` directory (a Cortex project — design §8.4
+bridge 5), build from the extracted insight instead of re-walking the tree:
 
-- **Phase 1 starts from anatomy.** Read `.cortex/anatomy/files.md` (one row per file:
-  path, one-line purpose, `spec_links`) and `.cortex/anatomy/graph.json` (import/export
-  edges) as the initial file inventory and relationship seed. Delegate deep file reads
-  only where an anatomy row's purpose is missing, flagged `needs_purpose_refresh`, or
-  too thin to extract atoms from — not for files the anatomy already explains.
+- **Phase 1 starts from insight.** Use the insight per-file entries (`cortex insight
+  file <path>` — Purpose + Connections per source file) and the L1 import graph
+  (`.cortex/insight/graph.json` `imports` edges) as the initial file inventory and
+  relationship seed. Delegate deep file reads only where a file has no insight entry
+  or its entry is too thin to extract atoms from — not for files insight already
+  explains.
 - **Phase 7 rules use the schema format.** Alongside the human-readable RULES.md, draft
   the machine-readable compass rules per cortex-schema §4.2: one
   `.cortex/compass/rules/R-NNN-<slug>.md` per rule with `id`, `title`, `source`, and

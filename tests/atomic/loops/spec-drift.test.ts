@@ -1,6 +1,8 @@
 /**
  * Atomic tests — loops.spec-drift signals in isolation (Rule 2's date
- * comparison, Rule 3's skip/note handling, the anatomy reverse map).
+ * comparison, Rule 3's skip/note handling). Governed files come ONLY from
+ * each spec's own `governs:` glob expansion — the v1/v2 anatomy `spec_links`
+ * reverse map (readSpecLinksReverseMap) was deleted at build-order-v3 step 7.
  * Sandboxed git fixtures with backdated commits throughout.
  */
 import { describe, it, expect, afterEach } from 'vitest';
@@ -10,12 +12,10 @@ import {
   writeAt,
   gitInitRepo,
   gitCommitPathsAt,
-  filesMdContent,
   specMd,
 } from '../../fixtures/loops-harness.js';
 import {
   scanSpecDrift,
-  readSpecLinksReverseMap,
   SPEC_DRIFT_GRACE_DAYS,
 } from '../../../src/loops/spec-drift.js';
 
@@ -77,7 +77,7 @@ describe('drift signal: governed file newer than spec + grace', () => {
 });
 
 describe('Rule 3: skip and note handling', () => {
-  it('an ungoverned spec (no governs, no spec_links) is skipped entirely', async () => {
+  it('an ungoverned spec (no governs) is skipped entirely', async () => {
     const root = tmp('ungoverned');
     gitInitRepo(root);
     writeAt(root, '.specflow/specs/a/floaty.spec.md', specMd('a.floaty'));
@@ -121,36 +121,30 @@ describe('Rule 3: skip and note handling', () => {
   });
 });
 
-describe('anatomy spec_links as the reverse map', () => {
-  it('readSpecLinksReverseMap parses multi-id cells', () => {
-    const root = tmp('reverse-parse');
-    writeAt(
-      root,
-      '.cortex/anatomy/files.md',
-      filesMdContent([
-        { path: 'src/a.ts', specLinks: 'a.thing b.other' },
-        { path: 'src/b.ts', specLinks: '-' },
-      ]),
-    );
-    const map = readSpecLinksReverseMap(root);
-    expect(map.get('a.thing')).toEqual(['src/a.ts']);
-    expect(map.get('b.other')).toEqual(['src/a.ts']);
-    expect(map.has('-')).toBe(false);
-  });
-
-  it('a spec with no governs is still compared against files whose spec_links name it', async () => {
-    const root = tmp('reverse-drift');
+describe('governed files come only from the spec\'s own governs expansion (reverse map deleted at step 7)', () => {
+  it('a governs-less spec is skipped even when a governed-looking file changed later — no second artefact links them', async () => {
+    const root = tmp('no-reverse-map');
     gitInitRepo(root);
     writeAt(root, '.specflow/specs/a/linked.spec.md', specMd('a.linked'));
     writeAt(root, 'src/b.ts', 'export {};\n');
     gitCommitPathsAt(root, ['.specflow/specs/a/linked.spec.md', 'src/b.ts'], daysAgoIso(40));
     writeAt(root, 'src/b.ts', 'export const changed = true;\n');
     gitCommitPathsAt(root, ['src/b.ts'], daysAgoIso(10));
-    writeAt(root, '.cortex/anatomy/files.md', filesMdContent([{ path: 'src/b.ts', specLinks: 'a.linked' }]));
 
     const scan = await scanSpecDrift(root);
-    expect(scan.suspects).toHaveLength(1);
-    expect(scan.suspects[0]?.specId).toBe('a.linked');
-    expect(scan.suspects[0]?.newerFiles[0]?.path).toBe('src/b.ts');
+    expect(scan.suspects).toEqual([]);
+    expect(scan.skippedUngoverned).toBe(1);
+  });
+
+  it("a spec whose glob matches only itself is treated as ungoverned (the spec file is excluded from its own expansion)", async () => {
+    const root = tmp('self-match');
+    gitInitRepo(root);
+    writeAt(root, '.specflow/specs/a/selfy.spec.md', specMd('a.selfy', ['.specflow/specs/**/*.md']));
+    gitCommitPathsAt(root, ['.specflow/specs/a/selfy.spec.md'], daysAgoIso(40));
+
+    const scan = await scanSpecDrift(root);
+    expect(scan.suspects).toEqual([]);
+    expect(scan.untracked).toEqual([]);
+    expect(scan.skippedUngoverned).toBe(1);
   });
 });

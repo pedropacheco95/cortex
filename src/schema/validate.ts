@@ -6,7 +6,6 @@ import { SUPPORTED_VERSION } from './version.js';
 import { checkConfig } from './checks/config.js';
 import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout.js';
 import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatchesPath } from './checks/specs.js';
-import { checkAnatomyFiles, checkAnatomyGraph, checkAnatomyPurposeSource } from './checks/anatomy.js';
 import { checkRules, checkBugs } from './checks/compass.js';
 import { checkAtlas } from './checks/atlas.js';
 import { checkPulse } from './checks/pulse.js';
@@ -95,10 +94,9 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...checkOverviewShape(root));
   allViolations.push(...checkIdMatchesPath(root));
 
-  // Anatomy checks
-  allViolations.push(...checkAnatomyFiles(root, index));
-  allViolations.push(...checkAnatomyGraph(root));
-  allViolations.push(...checkAnatomyPurposeSource(root));
+  // Anatomy checks REMOVED at v3.0 (schema Appendix A: check.anatomy-files,
+  // check.anatomy-graph, check.anatomy-purpose-source — module removed,
+  // addendum A7.3; build-order-v3 step 7).
 
   // Compass checks
   allViolations.push(...checkRules(root, index));

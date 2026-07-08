@@ -161,7 +161,7 @@ export const L1_DEFAULT_MAX_FILE_BYTES = 1_000_000;
 export type L1SkipReason =
   | 'skip-list'
   | 'sensitive'
-  | 'ignored' // .gitignore or cortex.config.json anatomy.exclude
+  | 'ignored' // .gitignore or cortex.config.json insight.exclude (legacy anatomy.exclude honoured)
   | 'binary'
   | 'oversized';
 

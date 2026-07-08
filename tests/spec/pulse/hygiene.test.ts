@@ -16,7 +16,7 @@ import {
   gitInitRepo,
   gitCommitAllAt,
   gitRun,
-  filesMdContent,
+  insightLedgerContent,
   ruleMd,
   parsePulseReport,
 } from '../../fixtures/loops-harness.js';
@@ -53,7 +53,8 @@ function emptyGhStub(): string {
 
 /**
  * A fully conformant clean fixture: git repo, one branch, no TODOs, and an
- * anatomy files.md that matches the disk exactly (rows for every listed file).
+ * insight staleness ledger that matches the disk exactly (an entry for every
+ * extracted file — anatomy files.md retired at build-order-v3 step 7).
  */
 function makeCleanProject(label: string): string {
   const root = tmp(label);
@@ -61,11 +62,7 @@ function makeCleanProject(label: string): string {
   writeAt(root, 'src/app.ts', 'export const ok = true;\n');
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
   writeAt(root, '.cortex/cortex.config.json', JSON.stringify({ schemaVersion: '1.0' }) + '\n');
-  writeAt(
-    root,
-    '.cortex/anatomy/files.md',
-    filesMdContent([{ path: 'README.md' }, { path: 'src/app.ts' }]),
-  );
+  writeAt(root, '.cortex/insight/ledger.json', insightLedgerContent(['README.md', 'src/app.ts']));
   gitInitRepo(root);
   gitCommitAllAt(root, daysAgoIso(1));
   return root;
@@ -109,17 +106,28 @@ describe('AC: Always-writes, even when clean', () => {
 });
 
 // ===========================================================================
-describe('AC: Anatomy drift both directions', () => {
-  it('names the deleted-but-indexed file and the created-but-unscanned file', async () => {
+describe('AC: Insight drift — vanished ledger entries flagged, unextracted files ignored', () => {
+  it('names the deleted-but-extracted file; a created-but-unextracted file is NOT a finding', async () => {
     const root = makeCleanProject('drift');
     fs.rmSync(path.join(root, 'src/app.ts'));
     writeAt(root, 'src/brand-new.ts', 'export {};\n');
     await runHygiene(root, { ghBin: emptyGhStub() });
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('## Insight drift');
     expect(body).toContain('src/app.ts');
-    expect(body).toContain('missing on disk');
-    expect(body).toContain('src/brand-new.ts');
-    expect(body).toContain('not in anatomy');
+    expect(body).toContain('has an insight ledger entry but is missing on disk');
+    // Forward direction is the refresh loops' business, not hygiene noise.
+    expect(body).not.toContain('src/brand-new.ts');
+  });
+
+  it('a project without a ledger gets the skipped-with-reason notice', async () => {
+    const root = makeCleanProject('drift-noledger');
+    fs.rmSync(path.join(root, '.cortex', 'insight', 'ledger.json'));
+    await runHygiene(root, { ghBin: emptyGhStub() });
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain(
+      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)',
+    );
   });
 });
 
@@ -148,16 +156,8 @@ describe('AC: Orphan branch flagged', () => {
     gitCommitAllAt(root, daysAgoIso(40));
     gitRun(root, ['checkout', 'main', '--quiet']);
     writeAt(root, 'main.txt', 'm\n');
-    // keep anatomy in sync so the anatomy section stays out of the way
-    writeAt(
-      root,
-      '.cortex/anatomy/files.md',
-      filesMdContent([
-        { path: 'README.md' },
-        { path: 'src/app.ts' },
-        { path: 'main.txt' },
-      ]),
-    );
+    // main.txt is on-disk-but-unextracted — never an insight-drift finding,
+    // so the ledger needs no update to keep that section clean.
     gitCommitAllAt(root, daysAgoIso(0));
 
     await runHygiene(root, { ghBin: emptyGhStub() });

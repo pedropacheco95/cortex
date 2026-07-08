@@ -7,11 +7,19 @@ implements: ../../specs-business/insight/assistant-has-project-knowledge-when-wo
 governed_by:
   - R-001
 governs:
-  - "src/insight/formats.ts"
   - "src/insight/scaffold.ts"
 ---
 
 # Insight Module Contract — formats and scaffolding
+
+> **SUPERSEDED at v3 (design §8.3; build-order-v3 steps 5b and 7).** The v2
+> `map/` layout and its three JSON contracts are replaced wholesale by the v3
+> storage contract (schema §4.10 — per-file entries, ledger, reverse index,
+> the new graph/tags/clusters shapes, owned by `src/insight/storage.ts` /
+> `entry.ts`). The legacy formats module (`src/insight/formats.ts`) was kept
+> only for the v2 constellation overlay and is deleted with it at step 7 (the
+> step-10 disposition), so its `governs:` glob is removed; `scaffold.ts`
+> survives, rebuilt for the v3 layout. Retained for lineage.
 
 ## Intent
 

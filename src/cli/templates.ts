@@ -6,29 +6,30 @@
 
 export const SCHEMA_VERSION = '3.0';
 
-export const PRESENT_MODULES = 'anatomy, compass, atlas, archive, insight, pulse';
+export const PRESENT_MODULES = 'compass, atlas, archive, insight, pulse';
 
-/** Schema §10.1 defaults, verbatim. `hooks.preRead` governs the Read pair
- *  (PreRead + PostRead) and defaults TRUE; init writes it explicitly on fresh
- *  projects so the config self-documents (§10.1). */
+/** Schema §10.1 defaults, verbatim (v3.0, addendum A10.0): the v2.0 `anatomy`
+ *  block is removed with the anatomy module, and the v2.0 `insight` block
+ *  (cluster carry-over / promotion tuning) is superseded — the v3 insight
+ *  config keys are deferred to the insight-refresh loop spec and are not yet
+ *  part of the contract. `hooks.preRead` governs the Read pair (PreRead +
+ *  PostRead) and defaults TRUE; init writes it explicitly on fresh projects
+ *  so the config self-documents (§10.1). */
 export const CONFIG_DEFAULTS: Record<string, unknown> = {
   schemaVersion: SCHEMA_VERSION,
-  anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
   hooks: { preRead: true },
   pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
-  insight: { clusterCarryOverJaccard: 0.5, promotionMinAgeDays: 14, promotionMinObservations: 2 },
   harness: { maxIterations: 3 },
   loop: { enabled: false },
 };
 
-/** Gitignore paths per schema Decision 1 (the three regenerable/sensitive/
- *  transient dirs + the compiled constellation, §4.9) — never a bare `.cortex/`.
+/** Gitignore paths per schema Decision 1 (v3.0: `.cortex/anatomy/` no longer
+ *  exists — its line retired at build-order-v3 step 7) — never a bare `.cortex/`.
  *  v3.0 amendment (Decision 1): `archive/` is a fifth, MIXED git policy within
  *  the one module — only `documents/*\/source.<ext>` (the verbatim, possibly
  *  sensitive raw source) is gitignored; `_index.md`, `register.md`,
  *  `metadata.yaml`, `extracted/`, and `types/` are committed (schema §4.4). */
 export const GITIGNORE_LINES = [
-  '.cortex/anatomy/',
   '.cortex/atlas/sources/',
   '.cortex/pulse/',
   '.cortex/constellation.json',
@@ -48,27 +49,15 @@ export const CORTEX_INDEXES: Record<string, string> = {
 knowledge layer.
 
 **What's here:**
-- \`anatomy/\` — per-file index of the codebase (purpose, tokens, spec links). Open before navigating unfamiliar code.
 - \`compass/\` — rules, preferences, and the bug ledger. Open before writes and for "why" questions.
 - \`atlas/\` — stakeholders, narrative decisions, domain terms, raw sources. Open for project context.
+- \`archive/\` — ingested source documents and their structured extractions. Open for verbatim sources.
+- \`insight/\` — inferred per-file/concept understanding of the codebase (query via \`cortex insight\`).
 - \`pulse/\` — transient loop outputs and suggestions. Open when reviewing proposals.
 - \`cortex.config.json\` — schema version and module config.
 
 **How to navigate:** each module's \`_index.md\` says when to read deeper. Follow
 frontmatter cross-references (paths and bare IDs) to trace any claim to its source.
-`,
-  'anatomy': `# Anatomy — index
-
-**Read this when:** you need to locate code, understand what a file is for, or
-estimate the cost of reading it — before opening unfamiliar files.
-
-**What's here:**
-- \`files.md\` — one row per indexed file: purpose, tokens, sha256, spec links, needs_purpose_refresh, purpose_source.
-- \`graph.json\` — import/export edges between files.
-- \`layers.md\` — architectural-layer assignments.
-
-**How to navigate:** find the file's row in \`files.md\`; follow \`spec_links\` to the
-dev specs that govern it; use \`graph.json\` to walk imports before editing.
 `,
   'compass': `# Compass — index
 
@@ -316,7 +305,6 @@ export function claudeMdBlock(projectName: string): string {
 
 Cortex is active on **${projectName}**. The knowledge layer lives in \`.cortex/\`:
 
-- \`anatomy/\` — per-file map (purpose, tokens, governing specs). What each file is.
 - \`compass/\` — rules, preferences, and the bug ledger. The "must".
 - \`atlas/\` — stakeholders, decisions (narrative), domain terms, source materials.
 - \`archive/\` — ingested source documents (client specs, transcripts, contracts) and their structured extractions.
@@ -336,12 +324,11 @@ Modules present: ${PRESENT_MODULES}. Schema: ${SCHEMA_VERSION}.
 
 /**
  * The Desktop scheduled tasks (design §13 step 12, init Rules 13 & 17; schema
- * §9.1 canonical set — fifteen registered here: the v2 insight pair is
- * deregistered at v3, replaced by `cortex-loop-insight-refresh-daily` and
- * `cortex-loop-insight-refresh-full`; the fast tier is the git post-commit
- * hook, not a scheduled task. `cortex-loop-session-observe` registered at
- * build-order-v3 step 6; `anatomy-refresh-deep` deregisters at step 7,
- * bringing the roster to the schema §9.1 fourteen).
+ * §9.1 canonical set — the FOURTEEN registered here: the v2 insight pair and
+ * `anatomy-refresh-deep` are deregistered (build-order-v3 steps 5e and 7),
+ * replaced by `cortex-loop-insight-refresh-daily`,
+ * `cortex-loop-insight-refresh-full`, and `cortex-loop-session-observe`; the
+ * fast tier is the git post-commit hook, not a scheduled task.
  * `requiredSkills` declares the skill(s) the task's prompt body invokes — the
  * task→skill mapping is owned here, by the task definitions themselves. Each
  * skill named in `requiredSkills` is named verbatim in `body`; `--partial`
@@ -361,7 +348,7 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     name: 'hygiene',
     description: 'Nightly hygiene scan of the Cortex knowledge layer; writes a report to .cortex/pulse/.',
     requiredSkills: ['cortex-pulse-hygiene'],
-    body: 'Invoke the `cortex-pulse-hygiene` skill: read `.cortex/_index.md`, then audit every Cortex artefact for staleness, broken cross-references, and budget overruns. Write `hygiene-report.md` to `.cortex/pulse/` with schema-valid frontmatter. Propose only — never edit compass, anatomy, atlas, or the spec trees directly.',
+    body: 'Invoke the `cortex-pulse-hygiene` skill: read `.cortex/_index.md`, then audit every Cortex artefact for staleness, broken cross-references, and budget overruns. Write `hygiene-report.md` to `.cortex/pulse/` with schema-valid frontmatter. Propose only — never edit compass, atlas, the spec trees, or insight directly.',
   },
   {
     name: 'distil',
@@ -374,12 +361,6 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     description: 'Suggest new Claude skills from repeated project workflows; proposals go to .cortex/pulse/.',
     requiredSkills: ['cortex-loop-skill-suggest'],
     body: 'Invoke the `cortex-loop-skill-suggest` skill: look for repeated multi-step workflows in this project that would benefit from a dedicated skill. Write suggestions (S-NNN entries) to `.cortex/pulse/suggestions.md`. Respect `.cortex/pulse/dismissed.md` — do not re-suggest dismissed items inside their expiry window.',
-  },
-  {
-    name: 'anatomy-refresh-deep',
-    description: 'Fill needs_purpose_refresh rows in .cortex/anatomy/files.md with reviewed one-line purposes.',
-    requiredSkills: ['cortex-loop-anatomy-refresh'],
-    body: 'Invoke the `cortex-loop-anatomy-refresh` skill (deep tier): open `.cortex/anatomy/files.md` and, for every row with `needs_purpose_refresh: true`, read the file and write a precise one-line purpose into the row, then set the flag to `false`. Keep the table format exactly as specified by cortex-schema.md §4.1.',
   },
   {
     name: 'rule-decay',
@@ -397,7 +378,7 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     name: 'onboarding-drift',
     description: 'Detect drift between the codebase and the onboarded spec tree; report to .cortex/pulse/.',
     requiredSkills: ['cortex-loop-onboarding-drift'],
-    body: 'Invoke the `cortex-loop-onboarding-drift` skill: compare `.cortex/anatomy/files.md` and the code against `.specflow/specs/` — find files with no governing spec and specs whose governed files vanished. Write a drift report to `.cortex/pulse/` recommending onboarding updates.',
+    body: 'Invoke the `cortex-loop-onboarding-drift` skill: compare the codebase (and its insight entries, via `cortex insight file`) against `.specflow/specs/` — find files with no governing spec and specs whose governed files vanished. Write a drift report to `.cortex/pulse/` recommending onboarding updates.',
   },
   {
     name: 'spec-drift',

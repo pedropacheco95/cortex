@@ -1,30 +1,15 @@
 /**
  * Shared fixtures for the constellation.compiler tests. Builds handcrafted
- * knowledge surfaces (files.md, layers.md, rules, bugs, atlas artefacts, the
- * two spec trees, scenario specs) inside sandboxed tmp projects and reads the
- * compiled `.cortex/constellation.json` back for JSON-property assertions.
+ * knowledge surfaces (rules, bugs, atlas artefacts, the two spec trees,
+ * scenario specs) inside sandboxed tmp projects and reads the compiled
+ * `.cortex/constellation.json` back for JSON-property assertions.
+ * (§4.9 v3.0: anatomy is gone — no files.md/layers.md scaffolding here.)
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import type { Constellation } from '../../src/constellation/compile.js';
 
-export { makeTmpDir, cleanTmp, makeCortexProject, writeRule, writeFilesMd } from './hooks-harness.js';
-
-/** One well-formed files.md data row (schema §4.1 column order). */
-export function filesRow(relPath: string, tokens: number, specLinks = '-'): string {
-  return `| ${relPath} | Fixture purpose for ${relPath}. | ${tokens} | ${'a'.repeat(64)} | 2026-06-30T14:00:00.000Z | ${specLinks} | false | scanner-llm |`;
-}
-
-/** layers.md: an H2 per layer with `- path` bullets (schema §4.1). */
-export function writeLayersMd(root: string, layers: Record<string, string[]>): string {
-  const p = path.join(root, '.cortex', 'anatomy', 'layers.md');
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  const sections = Object.entries(layers).map(
-    ([layer, files]) => `## ${layer}\n\n${files.map((f) => `- ${f}`).join('\n')}`,
-  );
-  fs.writeFileSync(p, sections.join('\n\n') + '\n', 'utf-8');
-  return p;
-}
+export { makeTmpDir, cleanTmp, makeCortexProject, writeRule } from './hooks-harness.js';
 
 function writeArtefact(absPath: string, frontmatter: string, body: string): string {
   fs.mkdirSync(path.dirname(absPath), { recursive: true });

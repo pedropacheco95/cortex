@@ -8,11 +8,18 @@ depends_on:
 implements: ../../specs-business/constellation/stakeholder-navigates-the-project-map.business.md
 governed_by:
   - R-001
-governs:
-  - "src/constellation/insight-overlay.ts"
 ---
 
 # Constellation Insight Preset — serve-time overlay
+
+> **SUPERSEDED at v3 (build-order-v3 step 7 + the step-10 disposition; design
+> §8.3, §11 Q2).** The v2 serve-time `insight` overlay this spec describes is
+> DROPPED: it composed over `insight/map/graph.json`, a node set that no
+> longer exists after the v3 insight rebuild. `src/constellation/
+> insight-overlay.ts` is deleted, the `insight` preset returns the
+> unknown-preset 400, and the former `governs:` target no longer exists, so
+> the list is removed. A NEW v3 preset over the code-understanding graph
+> stays deferred (design §11 Q2 — "not central; defer"). Retained for lineage.
 
 ## Intent
 

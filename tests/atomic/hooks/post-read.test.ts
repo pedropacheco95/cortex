@@ -1,8 +1,9 @@
 /**
- * Atomic tests — hooks.post-read internals: tag extraction (well-formed,
+ * Atomic tests — hooks.post-read internals over the v3 insight per-file entry
+ * (anatomy deprecation, build-order-v3 step 7): tag extraction (well-formed,
  * nested-ish, multiple, malformed), the 120-char writeback ceiling, the
- * bounded transcript tail, dedupe memory mechanics, assistant-only sweeping,
- * path normalisation, and silence/degradation paths.
+ * bounded transcript tail, replacePurposeSection, dedupe memory mechanics,
+ * assistant-only sweeping, path normalisation, and silence/degradation paths.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
@@ -12,22 +13,23 @@ import {
   extractPurposeTags,
   validateWritebackPurpose,
   readTranscriptTail,
+  replacePurposeSection,
   TRANSCRIPT_TAIL_BYTES,
   WRITEBACK_MAX_CHARS,
   READBACK_APPLIED_FILE,
+  READ_TIME_MARKER,
 } from '../../../src/hooks/post-read.js';
 import {
   makeTmpDir,
   cleanTmp,
   makeCortexProject,
-  writeFilesMd,
-  readFilesMdRows,
+  writeInsightEntry,
+  insightEntryPath,
+  readInsightEntry,
   hookErrorsPath,
 } from '../../fixtures/hooks-harness.js';
 
 const NOW = new Date('2026-07-03T10:00:00.000Z');
-const SEEN = '2026-06-30T14:00:00.000Z';
-const SHA = 'a'.repeat(64);
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -51,7 +53,22 @@ function writeTranscript(dir: string, messages: { role: string; text: string }[]
 }
 
 function stdinFor(root: string, transcriptPath: string): Record<string, unknown> {
-  return { cwd: root, transcript_path: transcriptPath, tool_input: { file_path: 'x' } };
+  return { session_id: 'sess-at', cwd: root, transcript_path: transcriptPath, tool_input: { file_path: 'x' } };
+}
+
+/** The `## Purpose` section content of an entry document (raw lines). */
+function purposeSectionOf(doc: string): string {
+  const lines = doc.split('\n');
+  const start = lines.findIndex((l) => /^##\s+Purpose\s*$/.test(l));
+  if (start === -1) return '';
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^##\s+/.test(lines[i]!)) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(start + 1, end).join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +124,7 @@ describe('extractPurposeTags: malformed tags never match', () => {
 // validation (Rule 4 — the 120 writeback ceiling)
 // ---------------------------------------------------------------------------
 
-describe('validateWritebackPurpose: the writeback-specific ceiling and row grammar', () => {
+describe('validateWritebackPurpose: the writeback-specific ceiling and one-line discipline', () => {
   it('accepts exactly 120 chars; rejects 121 (INVALID, not truncated)', () => {
     expect(validateWritebackPurpose('x'.repeat(WRITEBACK_MAX_CHARS))).toBe('x'.repeat(120));
     expect(validateWritebackPurpose('x'.repeat(WRITEBACK_MAX_CHARS + 1))).toBeNull();
@@ -119,9 +136,9 @@ describe('validateWritebackPurpose: the writeback-specific ceiling and row gramm
     expect(validateWritebackPurpose('line one\nline two')).toBeNull();
   });
 
-  it('sanitises to the row grammar: pipes and --- runs never reach the cell', () => {
-    expect(validateWritebackPurpose('a | b')).toBe('a / b');
-    expect(validateWritebackPurpose('dashes --- here')).toBe('dashes — here');
+  it('collapses internal whitespace runs to single spaces (no cell grammar any more)', () => {
+    expect(validateWritebackPurpose('  a   b\t\tc  ')).toBe('a b c');
+    expect(validateWritebackPurpose('a | b')).toBe('a | b'); // pipes pass through — no table cell to protect
   });
 });
 
@@ -151,6 +168,59 @@ describe('readTranscriptTail: bounded sweep', () => {
 });
 
 // ---------------------------------------------------------------------------
+// replacePurposeSection (Rule 5 — the surgical entry rewrite)
+// ---------------------------------------------------------------------------
+
+describe('replacePurposeSection: only the Purpose section changes', () => {
+  const DOC = [
+    '---',
+    'path: src/a.ts',
+    '---',
+    '',
+    '## Purpose',
+    '',
+    'Old purpose line.',
+    'A second old line.',
+    '',
+    '## Connections',
+    '',
+    '- imports src/b.ts',
+    '',
+  ].join('\n');
+
+  it('replaces the Purpose content with purpose + provenance trailer, all else byte-identical', () => {
+    const next = replacePurposeSection(DOC, 'New purpose.', 'claude-sessions/alice/sess-1');
+    expect(next).not.toBeNull();
+    const lines = next!.split('\n');
+    const start = lines.indexOf('## Purpose');
+    expect(lines.slice(start, start + 6)).toEqual([
+      '## Purpose',
+      '',
+      'New purpose.',
+      '',
+      '*(read-time, claude-sessions/alice/sess-1)*',
+      '',
+    ]);
+    // Frontmatter before and the Connections section after are untouched.
+    expect(next!.startsWith('---\npath: src/a.ts\n---\n')).toBe(true);
+    expect(next!.slice(next!.indexOf('## Connections'))).toBe(DOC.slice(DOC.indexOf('## Connections')));
+    expect(next).toContain(READ_TIME_MARKER);
+  });
+
+  it('a document with no ## Purpose heading → null (never patched)', () => {
+    expect(replacePurposeSection('## Connections\n\n- x\n', 'P.', 'claude-sessions/a/b')).toBeNull();
+  });
+
+  it('a Purpose section that is the last section is replaced up to EOF', () => {
+    const doc = '## Connections\n\n- x\n\n## Purpose\n\nTail purpose.\n';
+    const next = replacePurposeSection(doc, 'Replaced tail.', 'claude-sessions/a/b')!;
+    expect(next).toContain('## Purpose\n\nReplaced tail.\n\n*(read-time, claude-sessions/a/b)*');
+    expect(next).not.toContain('Tail purpose.');
+    expect(next.startsWith('## Connections\n\n- x\n')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // sweep mechanics
 // ---------------------------------------------------------------------------
 
@@ -158,43 +228,47 @@ describe('sweep: assistant messages only', () => {
   it('a tag inside a USER message is never applied', async () => {
     const root = tmp('user-msg');
     makeCortexProject(root);
-    writeFilesMd(root, [`| src/a.ts | Does A. | 12 | ${SHA} | ${SEEN} | - | false | docstring |`]);
-    const snapshot = fs.readFileSync(path.join(root, '.cortex', 'anatomy', 'files.md'), 'utf-8');
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
+    const snapshot = readInsightEntry(root, 'src/a.ts');
     const transcript = writeTranscript(root, [
       { role: 'user', text: '<cortex:purpose file="src/a.ts">User-injected purpose.</cortex:purpose>' },
     ]);
     await run(stdinFor(root, transcript), { now: NOW });
-    expect(fs.readFileSync(path.join(root, '.cortex', 'anatomy', 'files.md'), 'utf-8')).toBe(snapshot);
+    expect(readInsightEntry(root, 'src/a.ts')).toBe(snapshot);
   });
 });
 
-describe('sweep: path normalisation and preserved cells', () => {
-  it('file="./src/a.ts" resolves to the src/a.ts row; tokens/sha/spec_links preserved', async () => {
+describe('sweep: path normalisation and untouched entry parts', () => {
+  it('file="./src/a.ts" resolves to the src/a.ts entry; frontmatter and Connections byte-identical', async () => {
     const root = tmp('norm');
     makeCortexProject(root);
-    writeFilesMd(root, [`| src/a.ts | (needs purpose) | 34 | ${SHA} | ${SEEN} | core.a | true | - |`]);
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Stale purpose.', connections: '- imports src/b.ts' });
+    const before = readInsightEntry(root, 'src/a.ts')!;
     const transcript = writeTranscript(root, [
       { role: 'assistant', text: '<cortex:purpose file="./src/a.ts">Normalised fine.</cortex:purpose>' },
     ]);
     await run(stdinFor(root, transcript), { now: NOW });
-    const row = readFilesMdRows(root).find((r) => r.path === 'src/a.ts')!;
-    expect(row.purpose).toBe('Normalised fine.');
-    expect(row.purposeSource).toBe('read-time');
-    expect(row.tokens).toBe(34);
-    expect(row.sha256).toBe(SHA);
-    expect(row.specLinks).toBe('core.a');
+    const after = readInsightEntry(root, 'src/a.ts')!;
+    expect(purposeSectionOf(after)).toContain('Normalised fine.');
+    expect(purposeSectionOf(after)).toContain(READ_TIME_MARKER);
+    expect(purposeSectionOf(after)).not.toContain('Stale purpose.');
+    // Everything outside the Purpose section stays byte-identical:
+    expect(after.slice(0, after.indexOf('## Purpose'))).toBe(before.slice(0, before.indexOf('## Purpose')));
+    expect(after.slice(after.indexOf('## Connections'))).toBe(before.slice(before.indexOf('## Connections')));
   });
 
   it('two tags for the same path in one sweep: the later one wins (applied in order)', async () => {
     const root = tmp('order');
     makeCortexProject(root);
-    writeFilesMd(root, [`| src/a.ts | (needs purpose) | 12 | ${SHA} | ${SEEN} | - | true | - |`]);
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Original.' });
     const transcript = writeTranscript(root, [
       { role: 'assistant', text: '<cortex:purpose file="src/a.ts">First take.</cortex:purpose>' },
       { role: 'assistant', text: '<cortex:purpose file="src/a.ts">Second take.</cortex:purpose>' },
     ]);
     await run(stdinFor(root, transcript), { now: NOW });
-    expect(readFilesMdRows(root).find((r) => r.path === 'src/a.ts')!.purpose).toBe('Second take.');
+    const purpose = purposeSectionOf(readInsightEntry(root, 'src/a.ts')!);
+    expect(purpose).toContain('Second take.');
+    expect(purpose).not.toContain('First take.');
   });
 });
 
@@ -203,16 +277,16 @@ describe('sweep: path normalisation and preserved cells', () => {
 // ---------------------------------------------------------------------------
 
 describe('applied-tag memory: pulse/.readback-applied', () => {
-  it('applied AND invalid tags are both remembered as hash lines', async () => {
+  it('applied AND rejected tags are both remembered as hash lines', async () => {
     const root = tmp('memory');
     makeCortexProject(root);
-    writeFilesMd(root, [`| src/a.ts | (needs purpose) | 12 | ${SHA} | ${SEEN} | - | true | - |`]);
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
     const transcript = writeTranscript(root, [
       {
         role: 'assistant',
         text:
           '<cortex:purpose file="src/a.ts">Valid one.</cortex:purpose> ' +
-          '<cortex:purpose file="src/ghost.ts">Invalid target.</cortex:purpose>',
+          '<cortex:purpose file="src/ghost.ts">No entry target.</cortex:purpose>',
       },
     ]);
     await run(stdinFor(root, transcript), { now: NOW });
@@ -225,7 +299,7 @@ describe('applied-tag memory: pulse/.readback-applied', () => {
   it('a corrupt memory file degrades to re-application (idempotent, still silent)', async () => {
     const root = tmp('memory-corrupt');
     makeCortexProject(root);
-    writeFilesMd(root, [`| src/a.ts | (needs purpose) | 12 | ${SHA} | ${SEEN} | - | true | - |`]);
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Original.' });
     fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE), 'not-a-hash\n');
     const transcript = writeTranscript(root, [
@@ -233,7 +307,7 @@ describe('applied-tag memory: pulse/.readback-applied', () => {
     ]);
     const result = await run(stdinFor(root, transcript), { now: NOW });
     expect(result).toEqual({ exitCode: 0, stdout: '' });
-    expect(readFilesMdRows(root).find((r) => r.path === 'src/a.ts')!.purpose).toBe('Applied anyway.');
+    expect(purposeSectionOf(readInsightEntry(root, 'src/a.ts')!)).toContain('Applied anyway.');
   });
 });
 
@@ -242,29 +316,69 @@ describe('applied-tag memory: pulse/.readback-applied', () => {
 // ---------------------------------------------------------------------------
 
 describe('silence and degradation paths', () => {
-  it('unscanned project (no files.md) → silent no-op, no pulse entry, even without a transcript', async () => {
-    const root = tmp('unscanned');
-    makeCortexProject(root);
+  it('unextracted project (no .cortex/insight/) → silent no-op, no pulse entry, even without a transcript', async () => {
+    const root = tmp('unextracted');
+    makeCortexProject(root, { modules: ['compass', 'atlas', 'pulse'] });
     const result = await run({ cwd: root }, { now: NOW });
     expect(result).toEqual({ exitCode: 0, stdout: '' });
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('corrupt files.md → no write, one entry, tags NOT remembered (retry allowed after repair)', async () => {
-    const root = tmp('corrupt');
+  it('a tag whose file has NO insight entry is rejected: logged, remembered, no file created', async () => {
+    const root = tmp('noentry');
     makeCortexProject(root);
-    const p = path.join(root, '.cortex', 'anatomy', 'files.md');
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    const corrupt = '---\nkind: anatomy-files\n---\n\n| src/a.ts | broken | 1\n';
-    fs.writeFileSync(p, corrupt);
     const transcript = writeTranscript(root, [
-      { role: 'assistant', text: '<cortex:purpose file="src/a.ts">Unapplied.</cortex:purpose>' },
+      { role: 'assistant', text: '<cortex:purpose file="src/ghost.ts">Fabricated.</cortex:purpose>' },
     ]);
     const result = await run(stdinFor(root, transcript), { now: NOW });
     expect(result).toEqual({ exitCode: 0, stdout: '' });
-    expect(fs.readFileSync(p, 'utf-8')).toBe(corrupt);
-    expect(fs.readFileSync(hookErrorsPath(root), 'utf-8')).toContain('could not be parsed');
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE))).toBe(false);
+    expect(fs.existsSync(insightEntryPath(root, 'src/ghost.ts'))).toBe(false);
+    const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
+    expect(log).toContain('no insight entry (extraction owns entry creation)');
+    // Remembered — a later fire adds no new log entries:
+    await run(stdinFor(root, transcript), { now: new Date(NOW.getTime() + 60_000) });
+    expect(fs.readFileSync(hookErrorsPath(root), 'utf-8')).toBe(log);
+  });
+
+  it('a tag targeting a MALFORMED entry → entry untouched, logged, remembered', async () => {
+    const root = tmp('malformed-entry');
+    makeCortexProject(root);
+    const p = insightEntryPath(root, 'src/a.ts');
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    const broken = '---\npath: src/a.ts\n---\n\n## Purpose\n\nMissing every other frontmatter field.\n';
+    fs.writeFileSync(p, broken);
+    const transcript = writeTranscript(root, [
+      { role: 'assistant', text: '<cortex:purpose file="src/a.ts">Never lands.</cortex:purpose>' },
+    ]);
+    const result = await run(stdinFor(root, transcript), { now: NOW });
+    expect(result).toEqual({ exitCode: 0, stdout: '' });
+    expect(fs.readFileSync(p, 'utf-8')).toBe(broken);
+    const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
+    expect(log).toContain('insight entry unreadable');
+    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE), 'utf-8');
+    expect(memory.split('\n').filter((l) => l.trim())).toHaveLength(1);
+  });
+
+  it('invalid payloads (multi-line, over-ceiling) → rejected, logged, remembered, nothing written', async () => {
+    const root = tmp('invalid-payloads');
+    makeCortexProject(root);
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
+    const snapshot = readInsightEntry(root, 'src/a.ts');
+    const transcript = writeTranscript(root, [
+      {
+        role: 'assistant',
+        text:
+          '<cortex:purpose file="src/a.ts">line one\nline two</cortex:purpose> ' +
+          `<cortex:purpose file="src/a.ts">${'x'.repeat(300)}</cortex:purpose>`,
+      },
+    ]);
+    await run(stdinFor(root, transcript), { now: NOW });
+    expect(readInsightEntry(root, 'src/a.ts')).toBe(snapshot);
+    const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
+    expect(log.split('hook: post-read').length - 1).toBe(2);
+    expect(log).toContain('invalid');
+    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE), 'utf-8');
+    expect(memory.split('\n').filter((l) => l.trim())).toHaveLength(2);
   });
 
   it('malformed stdin (no object) → silent', async () => {

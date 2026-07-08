@@ -1,12 +1,5 @@
 {
   "schemaVersion": "3.0",
-  "anatomy": {
-    "exclude": [
-      "dist/**",
-      "node_modules/**"
-    ],
-    "enhancement": "none"
-  },
   "hooks": {
     "preRead": true
   },
@@ -14,11 +7,6 @@
     "distilThresholdN": 3,
     "dismissedWindowDays": 90,
     "hygieneFreshnessHours": 48
-  },
-  "insight": {
-    "clusterCarryOverJaccard": 0.5,
-    "promotionMinAgeDays": 14,
-    "promotionMinObservations": 2
   },
   "harness": {
     "maxIterations": 3

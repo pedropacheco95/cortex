@@ -86,7 +86,12 @@ export function checkConfig(root: string): ConfigResult {
     });
   }
 
-  // Check for unknown keys (§10.1 shape: schemaVersion, anatomy, hooks, pulse, harness, loop)
+  // Check for unknown keys (§10.1 v3.0 shape: schemaVersion, hooks, pulse,
+  // harness, loop — the v2.0 `anatomy` block is removed and the v2.0
+  // `insight` block superseded, addendum A10.0. Both legacy keys are still
+  // TOLERATED here (no warning) so an unmigrated config surfaces its real
+  // problems, not churn; the exclude reader honours anatomy.exclude for
+  // back-compat, src/insight/exclude.ts.)
   const knownKeys = ['schemaVersion', 'anatomy', 'hooks', 'pulse', 'insight', 'harness', 'loop'];
   for (const key of Object.keys(config)) {
     if (!knownKeys.includes(key)) {

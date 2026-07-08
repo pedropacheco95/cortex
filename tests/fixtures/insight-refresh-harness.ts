@@ -5,9 +5,9 @@
  * hashes and the real HEAD commit. The real repo is NEVER touched.
  */
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
-import { makeTmpDir, cleanTmp, gitInit, gitCommitAll, git } from './anatomy-harness.js';
 import { sha256Of } from '../../src/insight/refresh-fast.js';
 import {
   serializeLedger,
@@ -20,7 +20,35 @@ import {
   type GraphEdgeV3,
 } from '../../src/insight/storage.js';
 
-export { makeTmpDir, cleanTmp, gitInit, gitCommitAll, git };
+// Tmp-dir and git helpers (formerly in the deleted anatomy-harness — the
+// anatomy module was folded into insight in build-order-v3 step 7).
+let counter = 0;
+
+export function makeTmpDir(label: string): string {
+  const dir = path.join(os.tmpdir(), `cortex-insight-${label}-${Date.now()}-${counter++}`);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+export function cleanTmp(dir: string): void {
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+export function git(cwd: string, ...args: string[]): string {
+  return execFileSync('git', args, { cwd, encoding: 'utf-8' });
+}
+
+export function gitInit(cwd: string): void {
+  git(cwd, 'init', '--quiet');
+  git(cwd, 'config', 'user.email', 'fixture@example.com');
+  git(cwd, 'config', 'user.name', 'Fixture');
+  git(cwd, 'config', 'commit.gpgsign', 'false');
+}
+
+export function gitCommitAll(cwd: string, message: string): void {
+  git(cwd, 'add', '-A');
+  git(cwd, 'commit', '--quiet', '-m', message);
+}
 
 export function headShort(root: string): string {
   return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf-8' }).trim();

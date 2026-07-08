@@ -36,6 +36,10 @@ describe('AC1: valid fixture passes with 0 errors', () => {
     expect(report.conformant).toBe(true);
     expect(report.counts.error).toBe(0);
   });
+
+  it('a .cortex without anatomy/ is valid — the module (and its checks) retired at v3.0 step 7', () => {
+    expect(fs.existsSync(path.join(VALID_FIXTURE, '.cortex', 'anatomy'))).toBe(false);
+  });
 });
 
 describe('AC2: leaf with two implements values → error at implements key', () => {
@@ -254,41 +258,21 @@ loop: "weekly"
   });
 });
 
-describe('check.anatomy-files: bad sha256 → fires', () => {
+// check.anatomy-files / check.anatomy-graph / check.anatomy-purpose-source
+// were DELETED at v3.0 (schema Appendix A; build-order-v3 step 7) — the
+// anatomy module no longer exists and the checks are unregistered.
+describe('anatomy checks retired: leftover anatomy content never fires an anatomy check', () => {
   let tmpDir: string;
-  beforeAll(() => { tmpDir = makeTmpFixture('anatomy-files'); });
+  beforeAll(() => { tmpDir = makeTmpFixture('anatomy-retired'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('anatomy/files.md with bad sha256 fires', async () => {
+  it('a stray .cortex/anatomy/ with garbage artefacts yields no check.anatomy-* violations', async () => {
     const anatomyDir = path.join(tmpDir, '.cortex', 'anatomy');
     fs.mkdirSync(anatomyDir, { recursive: true });
-    fs.writeFileSync(path.join(anatomyDir, 'files.md'), `---
-kind: anatomy-files
-last_full_scan: "2024-01-01T00:00:00Z"
----
-
-| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |
-|------|---------|--------|--------|-----------|------------|-----------------------|----------------|
-| src/foo.ts | Does foo. | 200 | BADHASH | 2024-01-01T00:00:00Z | - | false | scanner-llm |
-`);
-    const report = await validate(tmpDir);
-    const v = report.violations.find((v) => v.check === 'check.anatomy-files');
-    expect(v).toBeDefined();
-  });
-});
-
-describe('check.anatomy-graph: invalid JSON → fires', () => {
-  let tmpDir: string;
-  beforeAll(() => { tmpDir = makeTmpFixture('anatomy-graph'); });
-  afterAll(() => cleanup(tmpDir));
-
-  it('anatomy/graph.json with invalid JSON fires warning', async () => {
-    const anatomyDir = path.join(tmpDir, '.cortex', 'anatomy');
-    fs.mkdirSync(anatomyDir, { recursive: true });
+    fs.writeFileSync(path.join(anatomyDir, 'files.md'), '| src/foo.ts | Does foo. | 200 | BADHASH |\n');
     fs.writeFileSync(path.join(anatomyDir, 'graph.json'), 'NOT JSON {{{');
     const report = await validate(tmpDir);
-    const v = report.violations.find((v) => v.check === 'check.anatomy-graph');
-    expect(v).toBeDefined();
+    expect(report.violations.filter((v) => v.check.startsWith('check.anatomy'))).toEqual([]);
   });
 });
 

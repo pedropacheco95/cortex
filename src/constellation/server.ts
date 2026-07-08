@@ -1,13 +1,20 @@
 /**
- * Constellation renderer server (spec constellation.renderer, 9 rules;
- * schema §4.9; design §12.7-§12.8).
+ * Constellation renderer server (spec constellation.renderer;
+ * schema §4.9 v3.0; design §12.7-§12.8).
  *
  * A localhost-only, read-only Node HTTP server over `.cortex/constellation.json`:
  * re-reads the compiled map per request (Rule: a fresh scan is visible on
- * reload), filters it server-side through the five locked presets, and serves
+ * reload), filters it server-side through the locked presets, and serves
  * the single-page Cytoscape renderer. Never writes, never invokes the
  * compiler — a stale or missing map is reported (`404` + "run cortex scan"),
  * not rebuilt (renderer Rule 3/4).
+ *
+ * v3.0 (build-order-v3 step 7 + the step-10 disposition): the two
+ * anatomy-defined lenses (`anatomy-only`, `knowledge-only`) retire with the
+ * anatomy node kind (schema §4.9 v3.0 module enum), and the v2 serve-time
+ * `insight` overlay preset is DROPPED (design §8.3 — its `insight/map/`
+ * node set no longer exists; a NEW v3 preset over the code-understanding
+ * graph stays deferred, design §11 Q2 "not central; defer").
  */
 import * as fs from 'fs';
 import * as http from 'http';
@@ -16,12 +23,9 @@ import { createRequire } from 'module';
 import type { AddressInfo } from 'net';
 import type { Constellation, ConstellationNode } from './compile.js';
 import { SPA_HTML } from './spa.js';
-import { composeInsightOverlay } from './insight-overlay.js';
-import { parseGraph, parseClusters } from '../insight/formats.js';
-import type { InsightGraph, ClustersFile } from '../insight/formats.js';
 
-/** The locked preset set (renderer Rule 6) — exactly five, never extended ad hoc. */
-export const PRESET_NAMES = ['default', 'anatomy-only', 'knowledge-only', 'orphans', 'domain'] as const;
+/** The locked preset set (renderer Rule 6) — never extended ad hoc. */
+export const PRESET_NAMES = ['default', 'orphans', 'domain'] as const;
 export type PresetName = (typeof PRESET_NAMES)[number];
 
 /** Default port, fixed at implementation (renderer Rule 1). */
@@ -39,7 +43,7 @@ function domainSegment(node: ConstellationNode): string {
 }
 
 /**
- * Filter a compiled constellation through one of the five locked presets
+ * Filter a compiled constellation through one of the locked presets
  * (Rule 6) with full filter closure (Rule 7): edges are kept iff both
  * endpoints survive; groups/children are pruned to those with at least one
  * remaining node; counters are recomputed over the filtered sets
@@ -67,12 +71,6 @@ export function applyPreset(constellation: Constellation, preset: string, domain
   switch (preset as PresetName) {
     case 'default':
       keep = () => true;
-      break;
-    case 'anatomy-only':
-      keep = (n) => n.module === 'anatomy';
-      break;
-    case 'knowledge-only':
-      keep = (n) => n.module !== 'anatomy';
       break;
     case 'orphans': {
       // Zero connected edges in EITHER direction (spec Notes: deliberate
@@ -105,7 +103,6 @@ export function applyPreset(constellation: Constellation, preset: string, domain
     .filter((g) => g.children.length > 0 || usedGroups.has(g.id));
 
   const counters = {
-    anatomy: nodes.filter((n) => n.module === 'anatomy').length,
     compass: nodes.filter((n) => n.module === 'rule' || n.module === 'bug' || n.module === 'compass').length,
     atlas: nodes.filter((n) => n.module === 'atlas').length,
     specs: nodes.filter((n) => n.module === 'spec-dev' || n.module === 'spec-business').length,
@@ -134,31 +131,6 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
   res.end(typeof body === 'string' ? body : JSON.stringify(body, null, 2) + '\n');
 }
 
-/**
- * Read the ungated insight overlay for the `insight` preset ONLY (Rule 2, 6):
- * `insight/map/graph.json` + `clusters.json`, at request time. Strictly
- * read-only — never invokes the refresh loop or the compiler; a stale/missing
- * or unparseable file yields `null` (an honest empty overlay, never a rebuild,
- * never an error). Reuses the insight.formats parsers (Entities: READS).
- */
-function readInsightOverlay(root: string): { graph: InsightGraph | null; clusters: ClustersFile | null } {
-  const mapDir = path.join(root, '.cortex', 'insight', 'map');
-  const readParsed = <T>(file: string, parse: (raw: string) => { ok: boolean; value?: T }): T | null => {
-    let raw: string;
-    try {
-      raw = fs.readFileSync(path.join(mapDir, file), 'utf-8');
-    } catch {
-      return null; // absent → empty overlay (Rule 2)
-    }
-    const result = parse(raw);
-    return result.ok && result.value ? result.value : null; // unparseable → empty (tolerant, Rule 6)
-  };
-  return {
-    graph: readParsed('graph.json', parseGraph),
-    clusters: readParsed('clusters.json', parseClusters),
-  };
-}
-
 function handleApi(root: string, url: URL, res: http.ServerResponse): void {
   const mapPath = path.join(root, '.cortex', 'constellation.json');
   // Re-read per request so a fresh scan is visible on reload (Entities: READS).
@@ -183,20 +155,9 @@ function handleApi(root: string, url: URL, res: http.ServerResponse): void {
   const preset = url.searchParams.get('preset') ?? 'default';
   const domain = url.searchParams.get('domain') ?? undefined;
 
-  // The sixth preset (spec constellation.insight-preset, schema §4.9): the
-  // curated graph plus a serve-time inferred overlay. Composed here — never
-  // compiled into constellation.json — over the FULL curated node set (a join,
-  // not a merge). The five v1 presets are byte-unchanged (they never reach the
-  // overlay path); `default` stays curated-only (Rule 5).
-  if (preset === 'insight') {
-    const { graph, clusters } = readInsightOverlay(root);
-    const withOverlay = composeInsightOverlay(constellation, graph, clusters);
-    // Deterministic at the contract (Rule 7): a pure function of the curated
-    // bytes + the insight bytes; overlay edges/clusters are sorted stably.
-    sendJson(res, 200, JSON.stringify(withOverlay, null, 2) + '\n');
-    return;
-  }
-
+  // The v2 `insight` overlay preset is DROPPED (design §8.3; step-10
+  // disposition: the new v3 preset stays deferred, design §11 Q2) — an
+  // `?preset=insight` request now falls through to the unknown-preset 400.
   const result = applyPreset(constellation, preset, domain);
   if (!result.ok) {
     sendJson(res, result.status, { error: result.error });

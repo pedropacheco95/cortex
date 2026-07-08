@@ -3,8 +3,8 @@
  * (build-order-v3 step 5a; design §5.2 Level 1, §5.11 Failure-modes TAKEs).
  *
  * Walks the repo (skip-lists + sensitive patterns + .gitignore/config
- * excludes), tree-sitter-parses source files (RULES 18 — reuses the anatomy
- * parser), and produces the import/export graph, file sizes, entry points,
+ * excludes), tree-sitter-parses source files (RULES 18 — the l1-parse
+ * module), and produces the import/export graph, file sizes, entry points,
  * module structure, and a degree-centrality ranking with mechanical hubs
  * excluded. No LLM (RULES 3), no timestamps/randomness — output is
  * byte-identical across runs on unchanged input. Persistence is NOT done
@@ -13,9 +13,8 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { extract } from '../anatomy/parse.js';
-import { resolveImport } from '../anatomy/scan.js';
-import { hasExcludedSegment, buildIgnoreFilter } from '../anatomy/exclude.js';
+import { extract, resolveImport } from './l1-parse.js';
+import { hasExcludedSegment, buildIgnoreFilter } from './exclude.js';
 import {
   L1_SKIP_DIRS,
   L1_SENSITIVE_DIRS,

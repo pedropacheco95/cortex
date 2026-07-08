@@ -12,7 +12,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
-import { makeTmpDir, cleanTmp, gitInit, gitCommitAll } from '../../fixtures/anatomy-harness.js';
+import { makeTmpDir, cleanTmp, gitInit, gitCommitAll } from '../../fixtures/insight-refresh-harness.js';
 import { run } from '../../../src/cli/cli.js';
 import {
   applyObserve,

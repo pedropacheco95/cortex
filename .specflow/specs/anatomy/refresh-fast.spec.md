@@ -4,14 +4,24 @@ status: implemented
 depends_on:
   - anatomy.scanner
   - core-cli.init
-governs:
-  - "src/anatomy/refresh-fast.ts"
 implements: ../../specs-business/anatomy/contributor-gets-a-legible-codebase.business.md
 governed_by:
   - R-001
 ---
 
 # Anatomy Refresh — Fast Tier
+
+> **SUPERSEDED at v3 (build-order-v3 step 7; design §5.10, §8.3).** The
+> anatomy module this spec describes is retired: `.cortex/anatomy/` no longer
+> exists and its role is absorbed into `insight/` — the file listing and
+> structural graph are insight **L1** output, purpose lines are **L2** per-file
+> entries, `spec_links`/`governs:` resolution lives in the entries' Connections
+> section, and `purpose_source` became insight extraction metadata (read-time
+> purpose capture now writes read-time-tagged provenance into the entries).
+> The post-commit fast tier is now `cortex insight-refresh-fast` (the sole
+> git-hook invocation; insight.refresh-loops); `cortex anatomy-refresh-fast`
+> answers with a pointed retirement message. The former `governs:` targets no
+> longer exist, so the list is removed. Retained for lineage.
 
 ## Intent
 

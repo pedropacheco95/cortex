@@ -18,7 +18,7 @@ import * as path from 'path';
 import fg from 'fast-glob';
 import { checkIndexShape } from '../schema/checks/layout.js';
 import { readManagedBlockVersion } from '../schema/checks/claude-md.js';
-import { computeTokens } from '../anatomy/files-md.js';
+import { computeTokens } from '../insight/measure.js';
 import { CORTEX_INDEXES } from '../cli/templates.js';
 import { writePulseReport } from './report.js';
 
@@ -128,7 +128,7 @@ export async function checkIndexBudgets(root: string): Promise<DriftFinding[]> {
 // ---------------------------------------------------------------------------
 
 /** Directories where localisation matters (curated knowledge); machine-written
- *  (anatomy) and transient (pulse) trees are excluded, as is the root. */
+ *  (insight) and transient (pulse) trees are excluded, as is the root. */
 const HEURISTIC_DIRS = [
   'compass',
   'compass/rules',

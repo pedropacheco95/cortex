@@ -8,6 +8,13 @@ implemented_by:
 
 # The map improves during normal work, not just during scheduled maintenance
 
+> **SUPERSEDED at v3 (build-order-v3 step 7; design §5.10).** The outcome
+> survives — the map sharpens during ordinary reading — re-homed to insight:
+> PreRead now injects the insight entry's Purpose line and PostRead captures
+> corrections into the entry with read-time-tagged `claude-sessions/*`
+> provenance (schema §5). The hooks specs it points at describe the mechanism.
+> Retained for lineage.
+
 ## Outcome
 
 When this works, the moment of highest understanding — the assistant actually reading a file — stops being wasted. Opening a file shows the assistant what the map currently believes about it; if that belief turns out wrong or stale once the file is read, the correction is offered in passing and quietly captured. The map gets sharper as a side effect of ordinary work, with corrections made at the moment of understanding outranking descriptions generated in bulk.

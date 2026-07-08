@@ -7,10 +7,10 @@ description: Generate a polished, self-contained HTML page (`specs.html`) for br
 
 Generates **one self-contained HTML file** that presents a Specflow project's full two-layer spec tree (business + developer) as a polished, client-facing documentation site. CSS, JS, all spec data, all folder overviews, and the cross-tree mapping inline into a single file — no server, no build, no external assets. The user double-clicks it and it works.
 
-> **Cortex awareness:** on a Cortex project, the viewer MAY read the one-line purpose
-> lines in `.cortex/anatomy/files.md` to enrich rendering (e.g. file summaries alongside
-> the specs that govern them). No Cortex reads are required — the spec trees remain the
-> only mandatory input.
+> **Cortex awareness:** on a Cortex project, the viewer MAY read the Purpose lines of
+> the insight per-file entries (`.cortex/insight/anatomy/<path>.md`) to enrich
+> rendering (e.g. file summaries alongside the specs that govern them). No Cortex
+> reads are required — the spec trees remain the only mandatory input.
 
 ## When to use
 

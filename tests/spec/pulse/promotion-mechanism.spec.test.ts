@@ -11,7 +11,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { makeTmpDir, cleanTmp, snapshotTree } from '../../fixtures/init-harness.js';
 import { pulseCli } from '../../../src/pulse/review.js';
-import { PROMOTED_TRAILER_PATTERN } from '../../../src/insight/formats.js';
+
+/**
+ * §4.10.4 promoted trailer, as written by src/pulse/promote.ts
+ * (`promotedTrailer`): `_(promoted <iso-date> → <gated-target-path> via S-NNN)_`.
+ * Inlined here since the legacy formats module that exported it was deleted
+ * at build-order-v3 step 7 (anatomy deprecation).
+ */
+const PROMOTED_TRAILER_PATTERN = /^_\(promoted \d{4}-\d{2}-\d{2} → .+ via S-\d+\)_$/;
 
 const dirs: string[] = [];
 function tmp(label: string): string {

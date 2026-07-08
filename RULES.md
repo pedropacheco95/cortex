@@ -84,7 +84,7 @@ Never "here are the specs, build it all."
 
 ## 15. Separate regenerable working state from durable knowledge in git.
 
-`.cortex/anatomy/`, `.cortex/atlas/sources/`, and `.cortex/pulse/` are gitignored (regenerable/sensitive/transient); `.cortex/compass/` and atlas (minus sources) are committable durable knowledge.
+`.cortex/atlas/sources/` and `.cortex/pulse/` are gitignored (sensitive/transient); `.cortex/compass/` and atlas (minus sources) are committable durable knowledge, and `.cortex/insight/` is committed in full (machine-owned AND committed — the fourth git-policy quadrant, schema Decision 1).
 
 **Why:** separate regenerable working state from durable project knowledge.
 
@@ -100,11 +100,11 @@ The CLI is the source of truth; the visualisation observes, it never acts.
 
 **Why:** a deterministic Core depends on the type system catching errors before runtime.
 
-## 18. tree-sitter (Node bindings) is the only parser dependency for anatomy.
+## 18. tree-sitter (Node bindings) is the only parser dependency for the insight L1 structural pass.
 
 Don't introduce a second parsing stack.
 
-**Why:** one runtime and one parser keep the anatomy schema stable and owned by Cortex.
+**Why:** one runtime and one parser keep the L1 structural schema stable and owned by Cortex.
 
 ## 19. Any change to a shared contract surface reports every clause touched.
 

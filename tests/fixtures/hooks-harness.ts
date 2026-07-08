@@ -20,7 +20,8 @@ export function cleanTmp(dir: string): void {
 
 /**
  * Handcrafted init-like `.cortex/` skeleton: config, root _index.md, and the
- * four module directories. Enough substrate for every hook.
+ * v3 module directories (anatomy is deprecated — never scaffolded by default).
+ * Enough substrate for every hook.
  */
 export function makeCortexProject(
   root: string,
@@ -29,15 +30,14 @@ export function makeCortexProject(
   const cortexDir = path.join(root, '.cortex');
   fs.mkdirSync(cortexDir, { recursive: true });
   const config = opts.config ?? {
-    schemaVersion: '1.0',
-    anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
+    schemaVersion: '3.0',
     hooks: { preRead: false },
     pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
     loop: { enabled: false },
   };
   fs.writeFileSync(path.join(cortexDir, 'cortex.config.json'), JSON.stringify(config, null, 2) + '\n');
   fs.writeFileSync(path.join(cortexDir, '_index.md'), '# Cortex — index\n\n**Read this when:** always.\n');
-  for (const m of opts.modules ?? ['anatomy', 'compass', 'atlas', 'pulse']) {
+  for (const m of opts.modules ?? ['compass', 'atlas', 'insight', 'pulse']) {
     fs.mkdirSync(path.join(cortexDir, m), { recursive: true });
   }
 }
@@ -60,59 +60,63 @@ export function writeRule(root: string, filename: string, frontmatter: string, b
   return p;
 }
 
-/** Minimal well-formed anatomy/files.md with the given data rows. */
-export function writeFilesMd(root: string, rows: string[], lastFullScan = '2026-06-30T14:00:00.000Z'): string {
-  const p = path.join(root, '.cortex', 'anatomy', 'files.md');
+// ---------------------------------------------------------------------------
+// Insight per-file entries (v3 — the hooks' data source after the anatomy
+// deprecation). Entries live at .cortex/insight/anatomy/<relpath>.md and
+// satisfy the src/insight/entry.ts frontmatter + section contract.
+// ---------------------------------------------------------------------------
+
+export interface InsightEntryOptions {
+  /** Content of the `## Purpose` section (default a one-liner). */
+  purpose?: string;
+  /** 2 (Purpose + Connections) or 3 (adds Main players). Default 2. */
+  level?: 2 | 3;
+  tokens?: number;
+  lines?: number;
+  centrality?: 'high' | 'medium' | 'low';
+  sha256?: string;
+  extractedAt?: string;
+  builtAtCommit?: string;
+  /** Content of the `## Connections` section. */
+  connections?: string;
+  /** Content of the `## Main players` section (L3 only). */
+  mainPlayers?: string;
+}
+
+/** Absolute path of the flat-layout insight entry for a source path. */
+export function insightEntryPath(root: string, relPath: string): string {
+  return path.join(root, '.cortex', 'insight', 'anatomy', `${relPath}.md`);
+}
+
+/** Write a schema-valid insight per-file entry (flat layout). */
+export function writeInsightEntry(root: string, relPath: string, opts: InsightEntryOptions = {}): string {
+  const p = insightEntryPath(root, relPath);
   fs.mkdirSync(path.dirname(p), { recursive: true });
-  const header = '| path | purpose | tokens | sha256 | last_seen | spec_links | needs_purpose_refresh | purpose_source |';
-  const sep = '|------|---------|--------|--------|-----------|------------|-----------------------|----------------|';
-  fs.writeFileSync(
-    p,
-    `---\nkind: anatomy-files\nlast_full_scan: ${lastFullScan}\nfile_count: ${rows.length}\n---\n\n` +
-      [header, sep, ...rows].join('\n') +
-      '\n',
-  );
+  const level = opts.level ?? 2;
+  const frontmatter = [
+    '---',
+    `path: ${relPath}`,
+    `extracted_at: '${opts.extractedAt ?? '2026-06-30T14:00:00.000Z'}'`,
+    `extraction_level: ${level}`,
+    `size_lines: ${opts.lines ?? 10}`,
+    `size_tokens: ${opts.tokens ?? 120}`,
+    `centrality: ${opts.centrality ?? 'medium'}`,
+    `built_at_commit: '${opts.builtAtCommit ?? 'abc1234'}'`,
+    `source_sha256: ${opts.sha256 ?? 'a'.repeat(64)}`,
+    '---',
+  ].join('\n');
+  const body: string[] = ['## Purpose', '', opts.purpose ?? 'Does A.', ''];
+  if (level === 3) {
+    body.push('## Main players', '', opts.mainPlayers ?? '- `main` — the main player (L1-L9).', '');
+  }
+  body.push('## Connections', '', opts.connections ?? '- none observed.', '');
+  fs.writeFileSync(p, frontmatter + '\n\n' + body.join('\n'));
   return p;
 }
 
-export interface FilesMdRow {
-  path: string;
-  purpose: string;
-  tokens: number;
-  sha256: string;
-  lastSeen: string;
-  specLinks: string;
-  flagged: boolean;
-  /** purpose_source cell (§4.1); '-' when the row is legacy 7-column. */
-  purposeSource: string;
-  raw: string;
-}
-
-/** Parse files.md data rows for assertions (8-column, legacy 7 tolerated). */
-export function readFilesMdRows(root: string): FilesMdRow[] {
-  const p = path.join(root, '.cortex', 'anatomy', 'files.md');
-  if (!fs.existsSync(p)) return [];
-  const rows: FilesMdRow[] = [];
-  for (const line of fs.readFileSync(p, 'utf-8').split('\n')) {
-    if (!line.trim().startsWith('|') || line.includes('---')) continue;
-    const cells = line
-      .split('|')
-      .filter((_, i, arr) => i > 0 && i < arr.length - 1)
-      .map((c) => c.trim());
-    if ((cells.length !== 8 && cells.length !== 7) || cells[0] === 'path' || !cells[0]) continue;
-    rows.push({
-      path: cells[0] ?? '',
-      purpose: cells[1] ?? '',
-      tokens: Number(cells[2]),
-      sha256: cells[3] ?? '',
-      lastSeen: cells[4] ?? '',
-      specLinks: cells[5] ?? '',
-      flagged: cells[6] === 'true',
-      purposeSource: cells[7] || '-',
-      raw: line,
-    });
-  }
-  return rows;
+/** The raw content of a source path's insight entry, or null when absent. */
+export function readInsightEntry(root: string, relPath: string): string | null {
+  return readIfExists(insightEntryPath(root, relPath));
 }
 
 export function readIfExists(p: string): string | null {

@@ -1,9 +1,11 @@
 /**
- * Atomic tests — constellation.compiler (schema §4.9 contract mechanics):
- * node id prefixes and modules per surface, scaffolding exclusion, group
- * children per natural grouping, every §6 edge kind, implements dedup,
- * dangling-ref counting, counters, determinism, missing-surface tolerance.
- * JSON-property assertions over handcrafted tmp fixture projects.
+ * Atomic tests — constellation.compiler (schema §4.9 v3.0 contract mechanics):
+ * node id prefixes and modules per surface (anatomy no longer emits nodes),
+ * scaffolding exclusion, group children per natural grouping, every emitted §6
+ * edge kind (spec_links/governs/covers are no longer emitted), implements
+ * dedup, dangling-ref counting, counters (no anatomy key), determinism,
+ * missing-surface tolerance. JSON-property assertions over handcrafted tmp
+ * fixture projects.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
@@ -14,9 +16,6 @@ import {
   cleanTmp,
   makeCortexProject,
   writeRule,
-  writeFilesMd,
-  filesRow,
-  writeLayersMd,
   writeDevSpec,
   writeBizSpec,
   writeBug,
@@ -39,18 +38,9 @@ afterEach(() => {
   while (dirs.length > 0) cleanTmp(dirs.pop() as string);
 });
 
-/** A project exercising all four surfaces and every §6 citation field. */
+/** A project exercising all three surfaces and every emitted §6 citation field. */
 function fullFixture(root: string): void {
   makeCortexProject(root);
-  writeFilesMd(root, [
-    filesRow('src/schema/validate.ts', 120, 'schema.validator'),
-    filesRow('src/schema/types.ts', 30),
-    filesRow('src/cli/init.ts', 200),
-    filesRow('.specflow/specs/_overview.md', 10), // scaffolding — never a node
-    filesRow('docs/_index.md', 5), // scaffolding — never a node
-    filesRow('tests/scenario/specs/first-run.md', 40),
-  ]);
-  writeLayersMd(root, { 'src/schema': ['src/schema/validate.ts', 'src/schema/types.ts'] });
   writeRule(
     root,
     'R-001-pure-core.md',
@@ -142,26 +132,25 @@ describe('top-level shape (§4.9)', () => {
     fullFixture(root);
     const c = await compile(root);
     expect(Object.keys(c)).toEqual(['schemaVersion', 'generated', 'groups', 'nodes', 'edges', 'counters']);
-    expect(c.schemaVersion).toBe('1.0');
+    expect(c.schemaVersion).toBe('3.0'); // from the fixture's cortex.config.json (Rule 2)
     expect(Number.isNaN(Date.parse(c.generated))).toBe(false);
     expect(fs.existsSync(constellationPath(root))).toBe(true);
     expect(readConstellation(root)).toEqual(c);
   });
 
-  it('exactly the four top groups, sorted', async () => {
+  it('exactly the three top groups, in array order (v3.0: anatomy removed)', async () => {
     const root = tmp('groups');
     fullFixture(root);
     const c = await compile(root);
-    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'compass', 'specs']);
+    expect(c.groups.map((g) => g.id)).toEqual(['atlas', 'compass', 'specs']);
   });
 });
 
 describe('nodes: module-prefixed unique ids per surface (Rule 3)', () => {
-  it('emits anatomy/rule/bug/compass/atlas/spec/business nodes with the §4.9 modules', async () => {
+  it('emits rule/bug/compass/atlas/spec/business nodes with the §4.9 v3.0 modules', async () => {
     const root = tmp('nodes');
     fullFixture(root);
     const c = await compile(root);
-    expect(node(c, 'anatomy:src/schema/validate.ts')?.module).toBe('anatomy');
     expect(node(c, 'rule:R-001')?.module).toBe('rule');
     expect(node(c, 'bug:B-001')?.module).toBe('bug');
     expect(node(c, 'compass:preferences.md')?.module).toBe('compass');
@@ -172,23 +161,34 @@ describe('nodes: module-prefixed unique ids per surface (Rule 3)', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('anatomy nodes carry ref = relpath and size = tokens; rule label = title', async () => {
+  it('never emits anatomy nodes or an anatomy module (v3.0: the surface is gone)', async () => {
+    const root = tmp('no-anatomy');
+    fullFixture(root);
+    const c = await compile(root);
+    expect(c.nodes.filter((n) => n.id.startsWith('anatomy:'))).toEqual([]);
+    expect(c.nodes.filter((n) => (n.module as string) === 'anatomy')).toEqual([]);
+    expect(c.groups.find((g) => g.id === 'anatomy')).toBeUndefined();
+  });
+
+  it('labels and refs: rule label = title, atlas label = title, compass ref = repo-relative path', async () => {
     const root = tmp('refs');
     fullFixture(root);
     const c = await compile(root);
-    const anatomy = node(c, 'anatomy:src/schema/validate.ts');
-    expect(anatomy?.ref).toBe('src/schema/validate.ts');
-    expect(anatomy?.size).toBe(120);
-    expect(anatomy?.label).toBe('validate.ts');
     expect(node(c, 'rule:R-001')?.label).toBe('Pure core');
+    expect(node(c, 'rule:R-001')?.ref).toBe('R-001');
+    expect(node(c, 'atlas:decision.2026-01-01-core')?.label).toBe('Core decision');
+    expect(node(c, 'compass:preferences.md')?.ref).toBe('.cortex/compass/preferences.md');
+    expect(node(c, 'spec:schema.validator')?.label).toBe('schema.validator');
   });
 
   it('_index.md and _overview.md files never become nodes', async () => {
     const root = tmp('scaffolding');
     fullFixture(root);
+    writeAtlas(root, 'decisions/_index.md', `id: atlas.index\ntitle: Index`);
+    writeAtlas(root, 'decisions/_overview.md', `id: atlas.overview\ntitle: Overview`);
     const c = await compile(root);
-    expect(node(c, 'anatomy:.specflow/specs/_overview.md')).toBeUndefined();
-    expect(node(c, 'anatomy:docs/_index.md')).toBeUndefined();
+    expect(node(c, 'atlas:atlas.index')).toBeUndefined();
+    expect(node(c, 'atlas:atlas.overview')).toBeUndefined();
   });
 
   it('compass core-file nodes exist only for files that exist', async () => {
@@ -218,19 +218,6 @@ describe('nodes: module-prefixed unique ids per surface (Rule 3)', () => {
 });
 
 describe('groups: natural children (Rule 4)', () => {
-  it('anatomy children come from layers.md; unlisted files fall into (unassigned)', async () => {
-    const root = tmp('layers');
-    fullFixture(root);
-    const c = await compile(root);
-    const anatomyGroup = c.groups.find((g) => g.id === 'anatomy');
-    expect(anatomyGroup?.children).toEqual([
-      { id: 'anatomy:layer:(unassigned)', label: '(unassigned)' },
-      { id: 'anatomy:layer:src/schema', label: 'src/schema' },
-    ]);
-    expect(node(c, 'anatomy:src/schema/types.ts')?.group).toBe('anatomy:layer:src/schema');
-    expect(node(c, 'anatomy:src/cli/init.ts')?.group).toBe('anatomy:layer:(unassigned)');
-  });
-
   it('compass children by category; atlas by subfolder; specs by domain (dev+business shared)', async () => {
     const root = tmp('children');
     fullFixture(root);
@@ -263,7 +250,7 @@ describe('groups: natural children (Rule 4)', () => {
 });
 
 describe('edges: the §6 citation graph, one kind per producing field (Rule 5)', () => {
-  it('emits every §6 edge kind from the full fixture', async () => {
+  it('emits every §6 v3.0 edge kind from the full fixture', async () => {
     const root = tmp('edges');
     fullFixture(root);
     const c = await compile(root);
@@ -303,12 +290,6 @@ describe('edges: the §6 citation graph, one kind per producing field (Rule 5)',
       to: 'business:schema.contributor-trusts',
       kind: 'related_specs',
     });
-    expect(edgesOf(c, 'spec_links')).toEqual([
-      { from: 'anatomy:src/schema/validate.ts', to: 'spec:schema.validator', kind: 'spec_links' },
-    ]);
-    expect(edgesOf(c, 'covers')).toEqual([
-      { from: 'anatomy:tests/scenario/specs/first-run.md', to: 'business:schema.contributor-trusts', kind: 'covers' },
-    ]);
     expect(edgesOf(c, 'compass_rules')).toEqual([
       { from: 'atlas:decision.2026-01-01-core', to: 'rule:R-001', kind: 'compass_rules' },
     ]);
@@ -318,6 +299,13 @@ describe('edges: the §6 citation graph, one kind per producing field (Rule 5)',
     expect(edgesOf(c, 'sources')).toEqual([
       { from: 'atlas:decision.2026-01-01-core', to: 'atlas:source.brief', kind: 'sources' },
     ]);
+  });
+
+  it('never emits the retired kinds spec_links, governs, or covers (v3.0: file nodes are gone)', async () => {
+    const root = tmp('retired-kinds');
+    fullFixture(root); // rule + dev spec carry governs globs; a scenario spec carries covers
+    const c = await compile(root);
+    expect(c.edges.filter((e) => ['spec_links', 'governs', 'covers'].includes(e.kind))).toEqual([]);
   });
 
   it('the symmetric implements/implemented_by pair dedupes to ONE implements edge', async () => {
@@ -332,27 +320,36 @@ describe('edges: the §6 citation graph, one kind per producing field (Rule 5)',
     ]);
   });
 
-  it('governs globs expand to one edge per matched anatomy node, for rules AND dev specs', async () => {
+  it('governs globs expand to no edges AND no droppedRefs — a glob references files, not nodes', async () => {
     const root = tmp('governs');
-    fullFixture(root);
+    makeCortexProject(root);
+    writeRule(root, 'R-001-scope.md', `id: R-001\ntitle: Scoped\nsource: []\ngoverns:\n  - "src/schema/**/*.ts"`);
+    writeDevSpec(
+      root,
+      'schema/validator.spec.md',
+      `id: schema.validator\nstatus: draft\ngoverns:\n  - "src/schema/**"`,
+    );
     const c = await compile(root);
-    const ruleGoverns = edgesOf(c, 'governs').filter((e) => e.from === 'rule:R-001');
-    expect(ruleGoverns.map((e) => e.to).sort()).toEqual([
-      'anatomy:src/schema/types.ts',
-      'anatomy:src/schema/validate.ts',
-    ]);
-    const specGoverns = edgesOf(c, 'governs').filter((e) => e.from === 'spec:schema.validator');
-    expect(specGoverns.map((e) => e.to).sort()).toEqual([
-      'anatomy:src/schema/types.ts',
-      'anatomy:src/schema/validate.ts',
-    ]);
+    expect(edgesOf(c, 'governs')).toEqual([]);
+    expect(c.counters.droppedRefs).toBe(0);
   });
 
-  it('never emits import/export edges (design §12.7)', async () => {
+  it('scenario covers emit no edges AND no droppedRefs — scenario specs are not a node kind', async () => {
+    const root = tmp('covers');
+    makeCortexProject(root);
+    writeBizSpec(root, 'schema/outcome.business.md', `id: schema.outcome\nstatus: draft\nimplemented_by: []`);
+    writeScenarioSpec(root, 'lonely', ['schema.outcome']);
+    const c = await compile(root);
+    expect(edgesOf(c, 'covers')).toEqual([]);
+    expect(c.counters.droppedRefs).toBe(0);
+  });
+
+  it('never emits import/export edges from the insight graph (design §12.7)', async () => {
     const root = tmp('imports');
     fullFixture(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'insight'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, '.cortex', 'anatomy', 'graph.json'),
+      path.join(root, '.cortex', 'insight', 'graph.json'),
       JSON.stringify({
         nodes: ['src/schema/validate.ts', 'src/schema/types.ts'],
         edges: [
@@ -371,49 +368,34 @@ describe('dangling refs dropped and counted (Rule 6)', () => {
   it('unresolvable targets produce no edge and increment counters.droppedRefs per reference', async () => {
     const root = tmp('dangling');
     makeCortexProject(root);
-    writeFilesMd(root, [filesRow('src/a.ts', 10, 'no.such-spec')]);
     writeRule(
       root,
       'R-001-r.md',
-      `id: R-001\ntitle: R\nsource:\n  - ../../atlas/decisions/deleted.md\ngoverns:\n  - "src/**"`,
+      `id: R-001\ntitle: R\nsource:\n  - ../../atlas/decisions/deleted.md\nrelated_specs:\n  - no.such-spec\ngoverns:\n  - "src/**"`,
     );
     const c = await compile(root);
-    expect(c.counters.droppedRefs).toBe(2); // dead source path + unresolvable spec_links id
+    expect(c.counters.droppedRefs).toBe(2); // dead source path + unresolvable related_specs id (governs glob: not a ref)
     const nodeIds = new Set(c.nodes.map((n) => n.id));
     for (const e of c.edges) {
       expect(nodeIds.has(e.from)).toBe(true);
       expect(nodeIds.has(e.to)).toBe(true);
     }
-    // the governs edge to the real anatomy node survives
-    expect(c.edges).toContainEqual({ from: 'rule:R-001', to: 'anatomy:src/a.ts', kind: 'governs' });
-  });
-
-  it('a covers edge whose scenario file is not an anatomy node is dropped and counted', async () => {
-    const root = tmp('covers-drop');
-    makeCortexProject(root);
-    writeFilesMd(root, [filesRow('src/a.ts', 10)]); // scenario file NOT scanned
-    writeBizSpec(root, 'schema/outcome.business.md', `id: schema.outcome\nstatus: draft\nimplemented_by: []`);
-    writeScenarioSpec(root, 'lonely', ['schema.outcome']);
-    const c = await compile(root);
-    expect(c.edges.filter((e) => e.kind === 'covers')).toEqual([]);
-    expect(c.counters.droppedRefs).toBe(1);
   });
 });
 
 describe('counters (Rule 8)', () => {
-  it('per-module node counts plus edges and droppedRefs', async () => {
+  it('per-module node counts plus edges and droppedRefs — and NO anatomy key (v3.0)', async () => {
     const root = tmp('counters');
     fullFixture(root);
     const c = await compile(root);
     expect(c.counters).toEqual({
-      anatomy: 4, // 6 rows minus 2 scaffolding files
       compass: 4, // 1 rule + 1 bug + 2 core files
       atlas: 3,
       specs: 4, // 2 dev + 2 business
       edges: c.edges.length,
       droppedRefs: 0,
     });
-    expect(c.nodes).toHaveLength(4 + 4 + 3 + 4);
+    expect(c.nodes).toHaveLength(4 + 3 + 4);
   });
 });
 
@@ -441,26 +423,27 @@ describe('determinism (Rule 7)', () => {
 });
 
 describe('missing surfaces are tolerated (Rule 9)', () => {
-  it('a bare directory with no .cortex/ compiles to four empty groups with schemaVersion fallback', async () => {
+  it('a bare directory with no .cortex/ compiles to three empty groups with schemaVersion fallback', async () => {
     const root = tmp('bare');
     const c = await compile(root);
     expect(c.schemaVersion).toBe('1.0');
-    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'compass', 'specs']);
+    expect(c.groups.map((g) => g.id)).toEqual(['atlas', 'compass', 'specs']);
     for (const g of c.groups) expect(g.children).toEqual([]);
     expect(c.nodes).toEqual([]);
     expect(c.edges).toEqual([]);
-    expect(c.counters).toEqual({ anatomy: 0, compass: 0, atlas: 0, specs: 0, edges: 0, droppedRefs: 0 });
+    expect(c.counters).toEqual({ compass: 0, atlas: 0, specs: 0, edges: 0, droppedRefs: 0 });
     expect(fs.existsSync(constellationPath(root))).toBe(true);
   });
 
-  it('anatomy without layers.md groups every file under (unassigned)', async () => {
-    const root = tmp('nolayers');
+  it('a specs-only project compiles: the orphan spec node is emitted, other groups stay empty', async () => {
+    const root = tmp('specs-only');
     makeCortexProject(root);
-    writeFilesMd(root, [filesRow('src/a.ts', 10)]);
+    writeDevSpec(root, 'schema/validator.spec.md', `id: schema.validator\nstatus: draft`);
     const c = await compile(root);
-    expect(c.groups.find((g) => g.id === 'anatomy')?.children).toEqual([
-      { id: 'anatomy:layer:(unassigned)', label: '(unassigned)' },
-    ]);
-    expect(node(c, 'anatomy:src/a.ts')?.group).toBe('anatomy:layer:(unassigned)');
+    expect(c.groups.find((g) => g.id === 'specs')?.children).toEqual([{ id: 'specs:schema', label: 'schema' }]);
+    expect(c.groups.find((g) => g.id === 'atlas')?.children).toEqual([]);
+    expect(c.groups.find((g) => g.id === 'compass')?.children).toEqual([]);
+    expect(node(c, 'spec:schema.validator')).toBeDefined(); // orphan nodes survive — gaps are information
+    expect(c.edges).toEqual([]);
   });
 });

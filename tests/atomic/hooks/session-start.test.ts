@@ -39,15 +39,23 @@ describe('pointer payload (Rule 2, schema §5)', () => {
     expect(exitCode).toBe(0);
     const env = parseEnvelope(stdout);
     expect(env.hookEventName).toBe('SessionStart');
-    expect(env.additionalContext).toContain('Cortex is active (schema 1.0). See .cortex/_index.md.');
-    expect(env.additionalContext).toContain('Modules: anatomy, compass, atlas, pulse.');
+    expect(env.additionalContext).toContain('Cortex is active (schema 3.0). See .cortex/_index.md.');
+    expect(env.additionalContext).toContain('Modules: compass, atlas, insight, pulse.');
   });
 
-  it('lists only the module directories actually present', async () => {
+  it('lists only the module directories actually present (v3 roster order)', async () => {
     const root = tmp('modules');
-    makeCortexProject(root, { modules: ['anatomy', 'pulse'] });
+    makeCortexProject(root, { modules: ['insight', 'pulse'] });
     const { stdout } = await run(stdinFor(root), { now: NOW });
-    expect(parseEnvelope(stdout).additionalContext).toContain('Modules: anatomy, pulse.');
+    expect(parseEnvelope(stdout).additionalContext).toContain('Modules: insight, pulse.');
+  });
+
+  it('archive is part of the roster; a stray anatomy/ dir NEVER appears (deprecated module)', async () => {
+    const root = tmp('roster');
+    makeCortexProject(root, { modules: ['anatomy', 'compass', 'archive', 'pulse'] });
+    const ctx = parseEnvelope((await run(stdinFor(root), { now: NOW })).stdout).additionalContext;
+    expect(ctx).toContain('Modules: compass, archive, pulse.');
+    expect(ctx).not.toContain('anatomy');
   });
 
   it('injects on every source: startup, resume, clear, compact (Rule 4)', async () => {

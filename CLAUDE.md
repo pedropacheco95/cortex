@@ -101,9 +101,9 @@ pnpm test:scenario        # scenario layer (full sandbox)
 
 Cortex is active on **cortex**. The knowledge layer lives in `.cortex/`:
 
-- `anatomy/` — per-file map (purpose, tokens, governing specs). What each file is.
 - `compass/` — rules, preferences, and the bug ledger. The "must".
 - `atlas/` — stakeholders, decisions (narrative), domain terms, source materials.
+- `archive/` — ingested source documents (client specs, transcripts, contracts) and their structured extractions.
 - `insight/` — ungated, queryable inferred/observed knowledge layer (`cortex insight` to query).
 
 **Protocol:** before working a task, read the relevant `_index.md` first — they are
@@ -114,5 +114,5 @@ cross-references (the citation graph) to trace any claim to its source.
 Specs are the source of truth: `.specflow/specs-business/` (outcomes) and `.specflow/specs/` (implementation),
 linked by `implements:`/`implemented_by:`. Don't let the trees drift.
 
-Modules present: anatomy, compass, atlas, insight, pulse. Schema: 3.0.
+Modules present: compass, atlas, archive, insight, pulse. Schema: 3.0.
 <!-- cortex:end -->

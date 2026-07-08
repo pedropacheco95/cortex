@@ -5,11 +5,14 @@
  * design §11.3 property 2). Deterministic Core (R-001): no LLM; git and gh
  * are queried read-only via execFile.
  *
- * v1 checks (Rule 2): (a) orphan local branches, (b) stale open PRs via gh,
- * (c) anatomy drift both directions, (d) compass dead references (reusing
- * the validator's resolution logic), (e) spec/anatomy orphans, (f) aged
- * TODO/FIXME comments. Mid-conversation drop-off detection is deferred to
- * the agentic layer (Rule 5) and named as such in the footer.
+ * Checks (Rule 2): (a) orphan local branches, (b) stale open PRs via gh,
+ * (c) insight drift (staleness-ledger entries whose source files vanished —
+ * re-pointed from the v1/v2 anatomy drift check at build-order-v3 step 7;
+ * on-disk-but-unextracted files are the refresh loops' business, not noise
+ * here), (d) compass dead references (reusing the validator's resolution
+ * logic), (e) spec orphans, (f) aged TODO/FIXME comments. Mid-conversation
+ * drop-off detection is deferred to the agentic layer (Rule 5) and named as
+ * such in the footer.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,8 +21,8 @@ import fg from 'fast-glob';
 import matter from 'gray-matter';
 import { buildIndex, resolveId, resolveRelativePath } from '../schema/index-build.js';
 import { globMatchesNothing } from '../schema/checks/compass.js';
-import { splitDataRowCells } from '../anatomy/files-md.js';
-import { hasExcludedSegment, buildIgnoreFilter } from '../anatomy/exclude.js';
+import { parseLedger } from '../insight/storage.js';
+import { hasExcludedSegment, buildIgnoreFilter } from '../insight/exclude.js';
 import { gitExec, isGitRepo, gitLastCommitEpoch } from '../loops/git-info.js';
 import { writePulseReport } from '../loops/report.js';
 import { specsRoot, SPECS_GLOB } from '../paths.js';
@@ -48,8 +51,8 @@ export interface HygieneOptions {
 }
 
 // ---------------------------------------------------------------------------
-// shared listing (same scope as the anatomy scanner: dot:false, hard excludes,
-// .gitignore + anatomy.exclude — via the shared exclude module)
+// shared listing (same scope as the insight L1 walk: dot:false, hard excludes,
+// .gitignore + config excludes — via the shared insight exclude module)
 // ---------------------------------------------------------------------------
 
 async function listProjectFiles(root: string): Promise<string[]> {
@@ -143,35 +146,34 @@ export async function checkStalePrs(root: string, ghBin = 'gh', nowMs = Date.now
 }
 
 // ---------------------------------------------------------------------------
-// (c) anatomy drift — files.md rows vs the filesystem, both directions
+// (c) insight drift — staleness-ledger entries whose source file vanished
+//     (re-pointed from anatomy drift at build-order-v3 step 7; the forward
+//     direction — changed/unextracted files — is owned by the insight
+//     refresh loops, so it is deliberately not duplicated here)
 // ---------------------------------------------------------------------------
 
-export async function checkAnatomyDrift(root: string): Promise<HygieneSection> {
-  const title = 'Anatomy drift';
-  const filesPath = path.join(root, '.cortex', 'anatomy', 'files.md');
-  if (!fs.existsSync(filesPath)) {
-    return { title, findings: [], skipped: 'skipped — no anatomy index (.cortex/anatomy/files.md missing; run the scanner)' };
+export async function checkInsightDrift(root: string): Promise<HygieneSection> {
+  const title = 'Insight drift';
+  const ledgerPath = path.join(root, '.cortex', 'insight', 'ledger.json');
+  if (!fs.existsSync(ledgerPath)) {
+    return { title, findings: [], skipped: 'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)' };
   }
-  const indexed = new Set<string>();
-  for (const line of fs.readFileSync(filesPath, 'utf-8').split('\n')) {
-    const cols = splitDataRowCells(line);
-    if (cols === null || cols.length < 7 || !cols[0]) continue;
-    indexed.add(cols[0]);
+  let raw: string;
+  try {
+    raw = fs.readFileSync(ledgerPath, 'utf-8');
+  } catch {
+    return { title, findings: [], skipped: 'skipped — insight ledger unreadable' };
   }
-  const onDisk = new Set(await listProjectFiles(root));
+  const parsed = parseLedger(raw);
+  if (!parsed.ok || !parsed.value) {
+    return { title, findings: [], skipped: 'skipped — insight ledger is not schema-valid (check.insight-ledger owns reporting the shape)' };
+  }
 
   const findings: string[] = [];
-  for (const rel of [...indexed].sort()) {
-    if (!onDisk.has(rel)) {
+  for (const rel of Object.keys(parsed.value.entries).sort()) {
+    if (!fs.existsSync(path.join(root, rel))) {
       findings.push(
-        `\`${rel}\` — indexed in anatomy/files.md but missing on disk. Suggested next step: re-run the anatomy scan.`,
-      );
-    }
-  }
-  for (const rel of onDisk) {
-    if (!indexed.has(rel)) {
-      findings.push(
-        `\`${rel}\` — on disk but not in anatomy/files.md. Suggested next step: re-run the anatomy scan.`,
+        `\`${rel}\` — has an insight ledger entry but is missing on disk. Suggested next step: let the insight refresh loops prune it (or re-run the extraction).`,
       );
     }
   }
@@ -228,7 +230,7 @@ export async function checkCompassDeadRefs(root: string): Promise<HygieneSection
 }
 
 // ---------------------------------------------------------------------------
-// (e) spec/anatomy orphans — dev specs whose governs matches nothing
+// (e) spec orphans — dev specs whose governs matches nothing
 // ---------------------------------------------------------------------------
 
 export async function checkSpecOrphans(root: string): Promise<HygieneSection> {
@@ -338,7 +340,7 @@ export async function runHygiene(root = '.', opts: HygieneOptions = {}): Promise
   const sections: HygieneSection[] = [
     await checkOrphanBranches(absRoot, nowMs),
     await checkStalePrs(absRoot, opts.ghBin ?? 'gh', nowMs),
-    await checkAnatomyDrift(absRoot),
+    await checkInsightDrift(absRoot),
     await checkCompassDeadRefs(absRoot),
     await checkSpecOrphans(absRoot),
     await checkAgedTodos(absRoot, nowMs),

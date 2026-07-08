@@ -6,15 +6,18 @@
  * Deterministic Core (R-001): flags suspects; classification is the human's
  * (or specflow-bugs') job.
  *
- * Governed files = the spec's `governs:` glob matches, unioned with anatomy
- * `spec_links` rows naming the spec (the reverse map, parsed with the shared
- * files-md row parser).
+ * Governed files = the spec's own `governs:` glob matches, expanded directly
+ * against the working tree. (v1/v2 additionally unioned the anatomy
+ * `spec_links` reverse map; anatomy retired at build-order-v3 step 7, and
+ * `spec_links` was itself derived from the specs' `governs:` globs at scan
+ * time — the direct expansion IS the reverse map, with no second artefact to
+ * drift. Design §5.10: the spec-link role lives on in insight's Connections;
+ * this loop needs only the governs ground truth.)
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
-import { splitDataRowCells } from '../anatomy/files-md.js';
 import { gitLastCommitEpoch, isGitRepo } from './git-info.js';
 import { writePulseReport } from './report.js';
 import { SPECS_GLOB } from '../paths.js';
@@ -48,31 +51,6 @@ export interface SpecDriftScan {
   notARepo: boolean;
 }
 
-/** anatomy files.md reverse map: spec id → governed file paths. */
-export function readSpecLinksReverseMap(root: string): Map<string, string[]> {
-  const map = new Map<string, string[]>();
-  const filesPath = path.join(root, '.cortex', 'anatomy', 'files.md');
-  if (!fs.existsSync(filesPath)) return map;
-  let content: string;
-  try {
-    content = fs.readFileSync(filesPath, 'utf-8');
-  } catch {
-    return map;
-  }
-  for (const line of content.split('\n')) {
-    const cols = splitDataRowCells(line);
-    if (cols === null || cols.length < 7 || !cols[0]) continue;
-    const specLinksCell = cols[5] ?? '';
-    if (specLinksCell === '-' || specLinksCell === '') continue;
-    for (const id of specLinksCell.split(/\s+/).filter(Boolean)) {
-      const list = map.get(id) ?? [];
-      if (!list.includes(cols[0])) list.push(cols[0]);
-      map.set(id, list);
-    }
-  }
-  return map;
-}
-
 export async function scanSpecDrift(root: string): Promise<SpecDriftScan> {
   const scan: SpecDriftScan = { suspects: [], untracked: [], skippedUngoverned: 0, notARepo: false };
   if (!isGitRepo(root)) {
@@ -80,7 +58,6 @@ export async function scanSpecDrift(root: string): Promise<SpecDriftScan> {
     return scan;
   }
 
-  const reverseMap = readSpecLinksReverseMap(root);
   const specFiles = (await fg(SPECS_GLOB, { cwd: root })).sort();
   const epochCache = new Map<string, number | null>();
   const epochOf = async (rel: string): Promise<number | null> => {
@@ -112,7 +89,6 @@ export async function scanSpecDrift(root: string): Promise<SpecDriftScan> {
         /* malformed glob — the validator owns reporting that */
       }
     }
-    for (const p of reverseMap.get(specId) ?? []) governed.add(p);
     governed.delete(specRel);
 
     // Rule 3: ungoverned specs are skipped — nothing to drift against.

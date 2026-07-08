@@ -52,10 +52,11 @@ before planning or coding (skip this section cleanly when `.cortex/` is absent):
 
 1. **Index first.** Read `.cortex/_index.md` to learn which Cortex modules exist and
    what they hold. Never bulk-read module contents.
-2. **Anatomy for the touched files.** Pull the `.cortex/anatomy/files.md` rows for the
-   task-relevant files — match rows via `spec_links` (the specs being implemented) and
-   the specs' `governs:` globs. Use each row's one-line purpose to decide what NOT to
-   read: a purpose line that answers the question replaces a whole-file read.
+2. **Insight for the touched files.** Match the task-relevant files via the specs'
+   `governs:` globs, then run `cortex insight file <path>` for each (when
+   `.cortex/insight/` exists). Use the entry's Purpose line to decide what NOT to
+   read: a purpose that answers the question replaces a whole-file read; the entry's
+   Connections section replaces a manual import walk.
 3. **Compass rules.** Collect the applicable rules from `.cortex/compass/rules/R-*.md`:
    every rule whose `governs` globs match the files being touched AND every rule whose
    `check:` predicate applies to them. Honour them while coding — a `check:` predicate
