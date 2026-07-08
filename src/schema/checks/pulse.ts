@@ -5,7 +5,9 @@
  *        — warnings (transient data is not held to artefact-grade rigor).
  *  - v2: per suggestion section (`## S-NNN: …`) the typed pulse gate —
  *        `**Type:**` present + in enum (absent → rule-candidate + warning; value
- *        outside enum → error); `**Target:**` root permitted FOR ITS TYPE per
+ *        outside enum → error; the v3.0 enum includes `decision-candidate`,
+ *        A7.4, via the shared SUGGESTION_TYPES table); `**Target:**` root
+ *        permitted FOR ITS TYPE per
  *        the §4.5.1 table (wrong root → error); exactly one payload shape among
  *        `**Proposed addition:**`/`**Proposed edit:**`/`**Proposed file:**`
  *        (zero or >1 → error).

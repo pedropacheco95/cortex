@@ -26,7 +26,9 @@
  * `cortex loop-insight-refresh --fast` as its alias) plus
  * `cortex loop-insight-refresh --daily [--collect|--apply]` and
  * `cortex loop-insight-refresh --full [--collect|--report]`
- * (spec insight.refresh-loops, Rule 1 each), the code-writing test-runner loop
+ * (spec insight.refresh-loops, Rule 1 each), the session-observation loop
+ * `cortex loop-session-observe [--collect|--apply [--proposals <f>]]`
+ * (spec insight.session-observe, Rule 1), the code-writing test-runner loop
  * `cortex loop-test-runner [--tier ...|--trigger ...|--collect|`
  * `--fix-stage <f>|--no-llm]` with its design-§15 manual alias
  * `cortex test-run` (spec loops.test-runner, Rule 1), plus
@@ -293,6 +295,38 @@ export async function run(argv: string[]): Promise<number> {
       return await runRefreshFull('.', { collect, report: rest.includes('--report') });
     } catch (err) {
       console.error(`cortex loop-insight-refresh: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+
+  // `cortex loop-session-observe [--collect|--apply [--proposals <f>]]` — the
+  // v3 session-observation loop (spec insight.session-observe, Rule 1; design
+  // §9). --collect reuses the shared distil corpus and emits the unobserved-
+  // sessions worklist; --apply audits the skill's ungated enrichments, lands
+  // gated candidates as typed pulse proposals, and advances the observed
+  // state. The judgment middle is the shipped skill — Core never runs it.
+  if (argv[0] === 'loop-session-observe') {
+    const rest = argv.slice(1);
+    const collect = rest.includes('--collect');
+    const apply = rest.includes('--apply');
+    let proposalsFile: string | undefined;
+    const pIdx = rest.indexOf('--proposals');
+    if (pIdx >= 0) {
+      proposalsFile = rest[pIdx + 1];
+      if (!proposalsFile || proposalsFile.startsWith('-')) {
+        console.error('cortex loop-session-observe: --proposals requires a candidates JSON file path.');
+        return 1;
+      }
+    }
+    try {
+      const { runSessionObserve } = await import('../insight/session-observe.js');
+      return await runSessionObserve('.', {
+        collect,
+        apply,
+        ...(proposalsFile !== undefined ? { proposalsFile } : {}),
+      });
+    } catch (err) {
+      console.error(`cortex loop-session-observe: ${(err as Error).message}`);
       return 1;
     }
   }

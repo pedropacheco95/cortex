@@ -20,9 +20,11 @@ import {
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
-/** The fourteen §9.1 canonical task names, pinned verbatim (v3: the v2
- *  insight pair is deregistered; the daily/full insight-refresh tiers
- *  register; the fast tier is the git hook, never a scheduled task). */
+/** The fifteen registered canonical task names, pinned verbatim (v3: the v2
+ *  insight pair is deregistered; the daily/full insight-refresh tiers and
+ *  session-observe (build-order-v3 step 6) register; the fast tier is the
+ *  git hook, never a scheduled task; anatomy-refresh-deep deregisters at
+ *  step 7, bringing the roster to the schema §9.1 fourteen). */
 const CANONICALS = [
   'cortex-pulse-hygiene',
   'cortex-pulse-distil',
@@ -38,6 +40,7 @@ const CANONICALS = [
   'cortex-loop-bug-triage',
   'cortex-loop-insight-refresh-daily',
   'cortex-loop-insight-refresh-full',
+  'cortex-loop-session-observe',
 ];
 
 // ---------------------------------------------------------------------------
@@ -133,6 +136,7 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
       'bug-triage': 'cortex-loop-bug-triage',
       'insight-refresh-daily': 'cortex-loop-insight-refresh-daily',
       'insight-refresh-full': 'cortex-loop-insight-refresh-full',
+      'session-observe': 'cortex-loop-session-observe',
     });
   });
 });
@@ -141,16 +145,16 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
 // legacyTaskNames — both unscoped families
 // ---------------------------------------------------------------------------
 describe('legacyTaskNames: the internal short ids AND the unscoped canonical names', () => {
-  it('contains every internal id and every canonical name, deduped (26 total)', () => {
+  it('contains every internal id and every canonical name, deduped (28 total)', () => {
     for (const id of Object.keys(CANONICAL_TASK_NAMES)) {
       expect(legacyTaskNames, id).toContain(id);
     }
     for (const canonical of CANONICALS) {
       expect(legacyTaskNames, canonical).toContain(canonical);
     }
-    // 14 ids + 14 canonicals − 2 shared (specflow-lint, specflow-verify).
+    // 15 ids + 15 canonicals − 2 shared (specflow-lint, specflow-verify).
     expect(new Set(legacyTaskNames).size).toBe(legacyTaskNames.length);
-    expect(legacyTaskNames).toHaveLength(26);
+    expect(legacyTaskNames).toHaveLength(28);
   });
 });
 

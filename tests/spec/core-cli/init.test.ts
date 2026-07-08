@@ -47,6 +47,7 @@ const PACKAGED_LOOP_SKILLS = [
   'cortex-loop-insight-refresh-full',
   'cortex-loop-onboarding-drift',
   'cortex-loop-rule-decay',
+  'cortex-loop-session-observe',
   'cortex-loop-skill-suggest',
   'cortex-loop-spec-drift',
   'cortex-loop-test-runner',
@@ -57,7 +58,7 @@ const PACKAGED_LOOP_SKILLS = [
   'specflow-tests',
 ];
 const PACKAGED_LOOP_TASKS = [
-  'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-refresh-daily', 'insight-refresh-full', 'onboarding-drift', 'rule-decay', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
+  'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-refresh-daily', 'insight-refresh-full', 'onboarding-drift', 'rule-decay', 'session-observe', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
 ];
 
 // ---------------------------------------------------------------------------
@@ -351,7 +352,7 @@ describe('AC9: auth failure named specifically, exit 3, everything else complete
     // hooks
     expect(fs.existsSync(path.join(root, '.claude', 'settings.json'))).toBe(true);
     // scheduled tasks
-    expect(fs.readdirSync(path.join(home, '.claude', 'scheduled-tasks'))).toHaveLength(14);
+    expect(fs.readdirSync(path.join(home, '.claude', 'scheduled-tasks'))).toHaveLength(15);
     // CLAUDE.md managed block
     expect(fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8')).toContain('<!-- cortex:start');
     // self-validation ran and was conformant (otherwise exit would be 1)
@@ -576,7 +577,7 @@ describe('AC14: twelve scheduled task definitions written to the stubbed home', 
   it("~/.claude/scheduled-tasks contains every dir under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
-    expect(dirs).toHaveLength(14);
+    expect(dirs).toHaveLength(15);
     const expected = SCHEDULED_TASKS
       .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t.name]!))
       .sort();
@@ -647,8 +648,8 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
     expect(claudeMd).toContain('<!-- cortex:end -->');
   });
 
-  it('summary states "14 loops registered" and skips nothing — the packaged skills cover every task', () => {
-    expect(result.summary).toContain('14 loops registered');
+  it('summary states "15 loops registered" and skips nothing — the packaged skills cover every task', () => {
+    expect(result.summary).toContain('15 loops registered');
     const skippedTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => PACKAGED_LOOP_SKILLS.includes(s)),
     );
@@ -686,7 +687,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
     expect(fs.readdirSync(base).sort()).toEqual(expected);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-lint'), 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-verify'), 'SKILL.md'))).toBe(true);
-    expect(result.summary).toContain('14 loops registered');
+    expect(result.summary).toContain('15 loops registered');
   });
 
   it('no task is skipped — every required skill is packaged', () => {
@@ -721,8 +722,8 @@ describe('AC17: default mode → all twelve written, no lacking-skill warning', 
   it('all task directories are written', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.readdirSync(base)).toHaveLength(14);
-    expect(result.summary).toMatch(/Scheduled tasks: 14 written/);
+    expect(fs.readdirSync(base)).toHaveLength(15);
+    expect(result.summary).toMatch(/Scheduled tasks: 15 written/);
   });
 
   it('summary carries no lacking-skill warning — every registered task has its packaged skill', () => {

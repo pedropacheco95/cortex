@@ -484,10 +484,11 @@ describe('Rule 17: task→skill mapping owned by the task definitions', () => {
     'bug-triage': ['cortex-loop-bug-triage', 'specflow-bugs'],
     'insight-refresh-daily': ['cortex-loop-insight-refresh-daily', 'cortex-extract-insight'],
     'insight-refresh-full': ['cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
+    'session-observe': ['cortex-loop-session-observe'],
   };
 
   it('all tasks declare ≥1 required skill matching the design skill names', () => {
-    expect(SCHEDULED_TASKS).toHaveLength(14);
+    expect(SCHEDULED_TASKS).toHaveLength(15);
     expect(SCHEDULED_TASKS.map((t) => t.name).sort()).toEqual(Object.keys(EXPECTED_MAPPING).sort());
     for (const task of SCHEDULED_TASKS) {
       expect(task.requiredSkills.length, `${task.name} declares no required skill`).toBeGreaterThanOrEqual(1);
@@ -521,7 +522,7 @@ describe('Rule 15: summary names every change and the Desktop reminder', () => {
       expect(s).toMatch(/Preferences drafted/);
       expect(s).toMatch(/Hooks registered/);
       expect(s).toMatch(/Git hook:/);
-      expect(s).toMatch(/Scheduled tasks: 14 written/);
+      expect(s).toMatch(/Scheduled tasks: 15 written/);
       expect(s).toMatch(/CLAUDE\.md: managed cortex block/);
       expect(s).toMatch(/Migration:/);
       expect(s).toMatch(/Spec trees:/);

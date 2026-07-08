@@ -217,7 +217,7 @@ describe('AC: scheduled-task registration matches the fast/daily/full split (spe
     expect(names).not.toContain('insight-refresh');
     expect(names).not.toContain('insight-gaps');
     expect(names).not.toContain('insight-refresh-fast'); // the git hook, not a task
-    expect(SCHEDULED_TASKS).toHaveLength(14); // net zero vs v2 (schema §9.1)
+    expect(SCHEDULED_TASKS).toHaveLength(15); // +1 vs v2: session-observe registered at step 6 (anatomy-refresh-deep deregisters at step 7)
 
     const canonicals = Object.values(CANONICAL_TASK_NAMES);
     expect(canonicals).toContain('cortex-loop-insight-refresh-daily');

@@ -31,16 +31,19 @@ export interface PromotionRefusal {
 
 /**
  * §4.5 — a `promotion`'s `**Source:**` MUST name the insight file being
- * promoted. Extract the first `.cortex/insight/map/<...>.md` path from the free
- * provenance text and normalise it project-relative. Returns null when absent.
+ * promoted. Extract the first insight file path — the v2 prose layout
+ * (`.cortex/insight/map/<...>.md`) or a v3 per-file entry
+ * (`.cortex/insight/anatomy/<...>.md` / `.cortex/insight/scopes/<s>/anatomy/<...>.md`,
+ * where `cortex-loop-session-observe` enriches) — from the free provenance
+ * text and normalise it project-relative. Returns null when absent.
  */
 export function extractInsightSource(sourceField: string | null): string | null {
   if (sourceField === null) return null;
-  const m = sourceField.match(/(\S*insight\/map\/\S+?\.md)/);
+  const m = sourceField.match(/(\S*insight\/(?:map|anatomy|scopes\/[^/\s]+\/anatomy)\/\S+?\.md)/);
   if (!m) return null;
   let p = (m[1] as string).replace(/^\.\//, '');
   if (!p.startsWith('.cortex/')) {
-    const idx = p.indexOf('insight/map/');
+    const idx = p.indexOf('insight/');
     p = '.cortex/' + p.slice(idx);
   }
   return p;
@@ -94,7 +97,7 @@ export function planPromotion(args: {
   if (insightRel === null) {
     return {
       ok: false,
-      error: `promotion ${args.suggestionId}: **Source:** must name the insight file being promoted (.cortex/insight/map/<topic>.md).`,
+      error: `promotion ${args.suggestionId}: **Source:** must name the insight file being promoted (.cortex/insight/map/<topic>.md or an anatomy entry .md).`,
     };
   }
   const insightAbs = path.resolve(args.root, insightRel);

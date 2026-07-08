@@ -15,9 +15,11 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 
 /**
- * Internal short id → canonical task name (schema §9.1, the fourteen
- * Cortex-managed tasks). Keys are the `SCHEDULED_TASKS` internal ids
- * (templates.ts); values are the full §9.1 canonical identities.
+ * Internal short id → canonical task name (schema §9.1 Cortex-managed tasks;
+ * fifteen while `anatomy-refresh-deep` awaits its step-7 deregistration —
+ * `session-observe` registered at build-order-v3 step 6). Keys are the
+ * `SCHEDULED_TASKS` internal ids (templates.ts); values are the full §9.1
+ * canonical identities.
  */
 export const CANONICAL_TASK_NAMES: Readonly<Record<string, string>> = {
   'hygiene': 'cortex-pulse-hygiene',
@@ -34,6 +36,7 @@ export const CANONICAL_TASK_NAMES: Readonly<Record<string, string>> = {
   'bug-triage': 'cortex-loop-bug-triage',
   'insight-refresh-daily': 'cortex-loop-insight-refresh-daily',
   'insight-refresh-full': 'cortex-loop-insight-refresh-full',
+  'session-observe': 'cortex-loop-session-observe',
 };
 
 /**
@@ -47,7 +50,7 @@ export const RETIRED_CANONICAL_TASK_NAMES: readonly string[] = [
   'cortex-loop-insight-gaps',
 ];
 
-/** The fourteen §9.1 canonical task names (suffix set for recognition). */
+/** The fifteen registered canonical task names (suffix set for recognition). */
 const CANONICAL_SET: ReadonlySet<string> = new Set(Object.values(CANONICAL_TASK_NAMES));
 
 /**
@@ -95,7 +98,7 @@ export function scopedTaskName(root: string, canonical: string): string {
 /**
  * Recognition (§9.1, spec Rule 3): a directory name is one of THIS project's
  * tasks iff it carries this project's `<slug>-<hash>-` prefix AND the
- * remainder is one of the twelve canonical task names. Other projects'
+ * remainder is one of the canonical task names. Other projects'
  * tasks, prefix-colliding user tasks, and non-Cortex entries are all false.
  */
 export function isOwnScopedTask(root: string, dirName: string): boolean {

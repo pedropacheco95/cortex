@@ -119,13 +119,13 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
     }
   });
 
-  it('the summary installed count reflects the full packaged set (15 cortex + 11 specflow = 26)', () => {
+  it('the summary installed count reflects the full packaged set (16 cortex + 11 specflow = 27)', () => {
     expect(result.exitCode).toBe(0);
     const bundleCount = fs.readdirSync(PKG_SKILLS, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
-    expect(bundleCount).toBe(26);
+    expect(bundleCount).toBe(27);
     const m = /Skills installed: (\d+)/.exec(result.summary);
     expect(m).not.toBeNull();
-    expect(Number(m?.[1])).toBe(26);
+    expect(Number(m?.[1])).toBe(27);
   });
 });
 

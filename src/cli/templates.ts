@@ -336,11 +336,12 @@ Modules present: ${PRESENT_MODULES}. Schema: ${SCHEMA_VERSION}.
 
 /**
  * The Desktop scheduled tasks (design §13 step 12, init Rules 13 & 17; schema
- * §9.1 canonical set — fourteen registered here: the v2 insight pair is
+ * §9.1 canonical set — fifteen registered here: the v2 insight pair is
  * deregistered at v3, replaced by `cortex-loop-insight-refresh-daily` and
  * `cortex-loop-insight-refresh-full`; the fast tier is the git post-commit
- * hook, not a scheduled task. `cortex-loop-session-observe` registers at
- * build-order-v3 step 6; `anatomy-refresh-deep` deregisters at step 7).
+ * hook, not a scheduled task. `cortex-loop-session-observe` registered at
+ * build-order-v3 step 6; `anatomy-refresh-deep` deregisters at step 7,
+ * bringing the roster to the schema §9.1 fourteen).
  * `requiredSkills` declares the skill(s) the task's prompt body invokes — the
  * task→skill mapping is owned here, by the task definitions themselves. Each
  * skill named in `requiredSkills` is named verbatim in `body`; `--partial`
@@ -439,6 +440,12 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     description: 'Weekly ground-truth L4 regeneration of the insight graph, tags, and clusters over all scopes.',
     requiredSkills: ['cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
     body: 'Invoke the `cortex-loop-insight-refresh-full` skill: run `cortex loop-insight-refresh --full --collect`, re-run cross-scope L4 unification via the `cortex-extract-insight` skill over every scope (deterministic regeneration discipline: stable ids, total-ordered serialization; a legitimate shrink from deleted files is sanctioned on this ground-truth pass), then run `cortex loop-insight-refresh --full --report`. Writes only `.cortex/insight/` plus the pulse report — never gated content, never a pulse proposal.',
+  },
+  {
+    name: 'session-observe',
+    description: 'Daily session-observation loop: mine recent sessions for durable knowledge; enrich insight directly, propose rules/decisions via pulse.',
+    requiredSkills: ['cortex-loop-session-observe'],
+    body: 'Invoke the `cortex-loop-session-observe` skill: run `cortex loop-session-observe --collect`, read the unobserved sessions from the shared corpus, infer durable knowledge (user corrections, gotchas hit, non-obvious behaviour discovered, patterns established) and route it BY TYPE — ungated codebase observations are appended directly to the relevant insight per-file entry\'s `## Insights` / `## Query pointers` sections with a `(claude-sessions/<user>/<id>)` provenance trailer (never any other section; skip files with no entry); conventions/rules and decisions go into a proposals JSON — then run `cortex loop-session-observe --apply --proposals <file>`. Never write `.cortex/compass/` or `.cortex/atlas/` directly (RULES 7): gated changes land only as rule-candidate / decision-candidate pulse proposals. Leave cross-session repetition to `cortex-pulse-distil` (shared corpus, different altitude).',
   },
 ];
 

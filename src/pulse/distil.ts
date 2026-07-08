@@ -310,12 +310,15 @@ function readCompassNormalised(root: string): string {
 }
 
 /**
- * Insight-prose corpus for the already-covered filter's v2 extension (design
- * §6, spec insight.gaps-loop Rule 7): each `insight/map/*.md` file's normalised
- * content, project-relative path retained. A candidate already present in
- * insight prose is proposed as a `promotion` of that file — not fresh compass
- * text (the graduation path: gaps captures once, distil later detects the
- * repetition and proposes promotion).
+ * Insight corpus for the already-covered filter (v2 design §6; v3 spec
+ * insight.session-observe Rule 6): each insight file's normalised content,
+ * project-relative path retained. A candidate already present in insight is
+ * proposed as a `promotion` of that file — not fresh compass text (the
+ * graduation path: a session-observation loop captures once, distil later
+ * detects the repetition and proposes promotion — the no-double-propose
+ * boundary). Covers the v2 `insight/map/*.md` prose AND the v3 per-file
+ * entries under `insight/anatomy/**` / `insight/scopes/<s>/anatomy/**`
+ * (where `cortex-loop-session-observe` writes its enrichments).
  */
 interface InsightProseFile {
   rel: string;
@@ -323,24 +326,51 @@ interface InsightProseFile {
 }
 
 function readInsightProse(root: string): InsightProseFile[] {
-  const dir = path.join(root, '.cortex', 'insight', 'map');
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
+  const insightRoot = path.join(root, '.cortex', 'insight');
   const out: InsightProseFile[] = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+
+  const collectDir = (dir: string, relBase: string, recursive: boolean): void => {
+    let entries: fs.Dirent[];
     try {
-      out.push({
-        rel: `.cortex/insight/map/${entry.name}`,
-        norm: normaliseText(fs.readFileSync(path.join(dir, entry.name), 'utf-8')),
-      });
+      entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch {
-      /* unreadable file covers nothing */
+      return;
     }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      const rel = `${relBase}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (recursive) collectDir(full, rel, true);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      try {
+        out.push({ rel, norm: normaliseText(fs.readFileSync(full, 'utf-8')) });
+      } catch {
+        /* unreadable file covers nothing */
+      }
+    }
+  };
+
+  // v2 prose layout (retained for pre-migration projects).
+  collectDir(path.join(insightRoot, 'map'), '.cortex/insight/map', false);
+  // v3 per-file entries — flat layout.
+  collectDir(path.join(insightRoot, 'anatomy'), '.cortex/insight/anatomy', true);
+  // v3 per-file entries — scoped layout.
+  const scopesDir = path.join(insightRoot, 'scopes');
+  let scopes: fs.Dirent[] = [];
+  try {
+    scopes = fs.readdirSync(scopesDir, { withFileTypes: true });
+  } catch {
+    /* unscoped layout */
+  }
+  for (const scope of scopes) {
+    if (!scope.isDirectory()) continue;
+    collectDir(
+      path.join(scopesDir, scope.name, 'anatomy'),
+      `.cortex/insight/scopes/${scope.name}/anatomy`,
+      true,
+    );
   }
   return out;
 }

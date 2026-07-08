@@ -1,9 +1,10 @@
 /**
  * The typed pulse gate's shared type→policy contract (schema §4.5.1, §4.5.2).
- * The five `**Type:**` values, the three payload-operation shapes, and the
- * per-type permitted `**Target:**` roots — extracted so the runtime accept
- * (src/pulse/review.ts) and the validator (src/schema/checks/pulse.ts) share
- * ONE copy of the policy and cannot drift.
+ * The six `**Type:**` values (v3.0 adds `decision-candidate`, addendum A7.4),
+ * the three payload-operation shapes, and the per-type permitted `**Target:**`
+ * roots — extracted so the runtime accept (src/pulse/review.ts) and the
+ * validator (src/schema/checks/pulse.ts) share ONE copy of the policy and
+ * cannot drift.
  *
  * The string-level `isTargetPermitted` here is the STRUCTURAL policy the
  * validator uses; the runtime additionally resolves paths for `..`-escape
@@ -12,13 +13,14 @@
  * Pure module: no fs, no LLM, no network (R-001).
  */
 
-/** The five suggestion types (§4.5.1). */
+/** The six suggestion types (§4.5.1; `decision-candidate` new at v3.0, A7.4). */
 export const SUGGESTION_TYPES = [
   'rule-candidate',
   'skill-proposal',
   'promotion',
   'gated-layer-update',
   'user-directed-capture',
+  'decision-candidate',
 ] as const;
 export type SuggestionType = (typeof SUGGESTION_TYPES)[number];
 
@@ -44,6 +46,9 @@ export type RootSpec =
 
 const COMPASS: RootSpec = { kind: 'dir', prefix: '.cortex/compass/' };
 const ATLAS: RootSpec = { kind: 'dir', prefix: '.cortex/atlas/' };
+/** `decision-candidate` targets exactly the sole-home decisions directory
+ *  (§4.5.1 note: `atlas/decisions/` specifically, not all of `atlas/`). */
+const ATLAS_DECISIONS: RootSpec = { kind: 'dir', prefix: '.cortex/atlas/decisions/' };
 const INSIGHT_MAP: RootSpec = { kind: 'dir', prefix: '.cortex/insight/map/' };
 const RULES: RootSpec = { kind: 'file', path: 'RULES.md' };
 const SKILL: RootSpec = { kind: 'skill' };
@@ -62,6 +67,9 @@ export function permittedRoots(type: SuggestionType): RootSpec[] {
     case 'user-directed-capture':
       // the only type that MAY target insight (§4.5.1 note).
       return [COMPASS, ATLAS, INSIGHT_MAP, RULES];
+    case 'decision-candidate':
+      // parallel to rule-candidate, targeting the decisions sole home (A7.4).
+      return [ATLAS_DECISIONS];
   }
 }
 
@@ -92,5 +100,7 @@ export function permittedRootsLabel(type: SuggestionType): string {
       return '.cortex/compass/, .cortex/atlas/, RULES.md';
     case 'user-directed-capture':
       return '.cortex/compass/, .cortex/atlas/, .cortex/insight/map/, RULES.md';
+    case 'decision-candidate':
+      return '.cortex/atlas/decisions/';
   }
 }
