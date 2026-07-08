@@ -31,7 +31,7 @@ function citeRule(root: string): void {
   writeAt(root, 'src/app.ts', 'export {};\n');
   writeAt(
     root,
-    '.cortex/cerebrum/rules/R-201-citer.md',
+    '.cortex/compass/rules/R-201-citer.md',
     ruleMd('R-201', { source: ['../../atlas/decisions/2025-12-01-choose-x.md'], governs: ['src/**/*.ts'] }),
   );
 }
@@ -127,16 +127,16 @@ describe('signal (c): dead cross-references', () => {
     expect(scan.deadLinks[0]?.ref).toBe('../sources/vanished.txt');
   });
 
-  it('an unresolvable cerebrum_rules id is a dead-link finding', async () => {
+  it('an unresolvable compass_rules id is a dead-link finding', async () => {
     const root = tmp('dead-rule-ref');
     writeAt(
       root,
       '.cortex/atlas/decisions/2026-06-01-rule.md',
-      decisionMd('2026-06-01-rule', daysAgoIso(5), ['cerebrum_rules:', '  - R-999']),
+      decisionMd('2026-06-01-rule', daysAgoIso(5), ['compass_rules:', '  - R-999']),
     );
     const scan = await scanAtlasStaleness(root);
     expect(scan.deadLinks).toHaveLength(1);
-    expect(scan.deadLinks[0]?.key).toBe('cerebrum_rules');
+    expect(scan.deadLinks[0]?.key).toBe('compass_rules');
     expect(scan.deadLinks[0]?.ref).toBe('R-999');
   });
 });

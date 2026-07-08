@@ -46,7 +46,7 @@ describe('AC: Old cited decision → re-verify with the citer named', () => {
     writeAt(root, '.cortex/atlas/decisions/2025-12-01-choose-x.md', decisionMd('2025-12-01-choose-x', daysAgoIso(200)));
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-301-citer.md',
+      '.cortex/compass/rules/R-301-citer.md',
       ruleMd('R-301', { source: ['../../atlas/decisions/2025-12-01-choose-x.md'], governs: ['src/**/*.ts'] }),
     );
     expect(await runAtlasStaleness(root)).toBe(0);
@@ -75,7 +75,7 @@ describe('AC: Fresh entries stay silent', () => {
     writeAt(root, '.cortex/atlas/decisions/2026-06-20-recent.md', decisionMd('2026-06-20-recent', daysAgoIso(10)));
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-302-citer.md',
+      '.cortex/compass/rules/R-302-citer.md',
       ruleMd('R-302', { source: ['../../atlas/decisions/2026-06-20-recent.md'], governs: ['src/**/*.ts'] }),
     );
     await runAtlasStaleness(root);

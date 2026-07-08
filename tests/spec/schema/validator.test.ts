@@ -7,7 +7,7 @@ const VALID_FIXTURE = path.resolve('/Users/pedropacheco1/Documents/Projetos/cort
 describe('Spec-level: full validator over valid fixture', () => {
   it('valid fixture produces conformant report with 0 errors', async () => {
     const report = await validate(VALID_FIXTURE);
-    expect(report.schemaVersion).toBe('2.0');
+    expect(report.schemaVersion).toBe('3.0');
     expect(report.conformant).toBe(true);
     expect(report.counts.error).toBe(0);
     expect(report.target).toBe(VALID_FIXTURE);

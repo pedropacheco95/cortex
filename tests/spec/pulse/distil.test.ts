@@ -48,13 +48,13 @@ afterEach(() => {
 function makeProject(label: string): string {
   const root = tmp(label);
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '1.0', pulse: { distilThresholdN: 3 } }, null, 2),
     'utf-8',
   );
-  fs.writeFileSync(path.join(root, '.cortex', 'cerebrum', 'environment.md'), '# Environment\n', 'utf-8');
+  fs.writeFileSync(path.join(root, '.cortex', 'compass', 'environment.md'), '# Environment\n', 'utf-8');
   return root;
 }
 
@@ -63,7 +63,7 @@ const CANDIDATES = [
     pattern: 'chrome profile is profile-X',
     occurrences: 4,
     sessionIds: ['sess-1'],
-    proposedTarget: '.cortex/cerebrum/environment.md',
+    proposedTarget: '.cortex/compass/environment.md',
     proposedText: 'Chrome profile: profile-X',
     confidence: 'high',
   },
@@ -89,7 +89,7 @@ describe('pulse.distil integrated slices (through cortex CLI run())', () => {
     expect(report).toContain('kind: pulse-suggestions');
     expect(report).toContain('## S-001: chrome profile is profile-X');
     expect(report).toContain('**Source:** distil (sessions: sess-1)');
-    expect(report).toContain('**Target:** .cortex/cerebrum/environment.md');
+    expect(report).toContain('**Target:** .cortex/compass/environment.md');
     expect(fs.existsSync(path.join(root, '.cortex', 'pulse', '.distil-last-run'))).toBe(true);
 
     // End-to-end through the review gate: list shows it (id, title, source,
@@ -98,7 +98,7 @@ describe('pulse.distil integrated slices (through cortex CLI run())', () => {
     expect(out.join('\n')).toContain('S-001');
     expect(out.join('\n')).toContain('Source: distil (sessions: sess-1)');
     expect(await run(['pulse-accept', 'S-001'])).toBe(0);
-    const env = fs.readFileSync(path.join(root, '.cortex', 'cerebrum', 'environment.md'), 'utf-8');
+    const env = fs.readFileSync(path.join(root, '.cortex', 'compass', 'environment.md'), 'utf-8');
     expect(env.endsWith('Chrome profile: profile-X')).toBe(true);
   }, TEST_TIMEOUT);
 

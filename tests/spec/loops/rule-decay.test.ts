@@ -41,7 +41,7 @@ function makeProject(label: string): string {
 describe('AC: Dead-governs rule proposed with evidence', () => {
   it('names the rule, quotes the glob, and states the zero-match signal', async () => {
     const root = makeProject('dead-governs');
-    writeAt(root, '.cortex/cerebrum/rules/R-110-dead.md', ruleMd('R-110', { governs: ['src/legacy/**/*.ts'] }));
+    writeAt(root, '.cortex/compass/rules/R-110-dead.md', ruleMd('R-110', { governs: ['src/legacy/**/*.ts'] }));
     expect(await runRuleDecay(root)).toBe(0);
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
     expect(body).toContain('R-110');
@@ -55,7 +55,7 @@ describe('AC: Dead-source rule proposed', () => {
     const root = makeProject('dead-source');
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-111-src.md',
+      '.cortex/compass/rules/R-111-src.md',
       ruleMd('R-111', { source: ['../../../docs/gone.md'], governs: ['src/**/*.ts'] }),
     );
     await runRuleDecay(root);
@@ -68,8 +68,8 @@ describe('AC: Dead-source rule proposed', () => {
 describe('AC: Healthy rule stays silent', () => {
   it('a rule with matching globs and resolving sources does not appear among candidates', async () => {
     const root = makeProject('healthy');
-    writeAt(root, '.cortex/cerebrum/rules/R-112-ok.md', ruleMd('R-112'));
-    writeAt(root, '.cortex/cerebrum/rules/R-113-dead.md', ruleMd('R-113', { governs: ['lib/gone/**'] }));
+    writeAt(root, '.cortex/compass/rules/R-112-ok.md', ruleMd('R-112'));
+    writeAt(root, '.cortex/compass/rules/R-113-dead.md', ruleMd('R-113', { governs: ['lib/gone/**'] }));
     await runRuleDecay(root);
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
     expect(body).not.toContain('R-112');
@@ -82,7 +82,7 @@ describe('AC: Retired rules skipped', () => {
     const root = makeProject('retired');
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-114-retired.md',
+      '.cortex/compass/rules/R-114-retired.md',
       ruleMd('R-114', { governs: ['lib/gone/**'], status: 'retired' }),
     );
     await runRuleDecay(root);
@@ -95,7 +95,7 @@ describe('AC: Retired rules skipped', () => {
 describe('AC: Always-writes when clean', () => {
   it('healthy-only rules yield the explicit no-candidates line with a fresh generated', async () => {
     const root = makeProject('clean');
-    writeAt(root, '.cortex/cerebrum/rules/R-115-ok.md', ruleMd('R-115'));
+    writeAt(root, '.cortex/compass/rules/R-115-ok.md', ruleMd('R-115'));
     await runRuleDecay(root, { now: new Date('2026-07-01T08:00:00.000Z') });
     let report = parsePulseReport(path.join(root, REPORT_REL));
     expect(report.kind).toBe('pulse-rule-candidates');
@@ -121,7 +121,7 @@ describe('AC: Always-writes when clean', () => {
 describe('AC: Only the report is written', () => {
   it('a full-tree snapshot differs only by pulse/rule-candidates.md', async () => {
     const root = makeProject('only-report');
-    writeAt(root, '.cortex/cerebrum/rules/R-116-dead.md', ruleMd('R-116', { governs: ['lib/gone/**'] }));
+    writeAt(root, '.cortex/compass/rules/R-116-dead.md', ruleMd('R-116', { governs: ['lib/gone/**'] }));
     const before = snapshotTree(root);
     await runRuleDecay(root);
     const after = snapshotTree(root);

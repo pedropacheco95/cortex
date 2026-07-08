@@ -68,7 +68,7 @@ function envelope(payload: string): HookRunResult {
 
 /** Rule IDs whose `governs` glob matches the path — {{APPLICABLE_RULE_IDS}}. */
 function applicableRuleIds(root: string, relPath: string): string[] {
-  const rulesDir = path.join(root, '.cortex', 'cerebrum', 'rules');
+  const rulesDir = path.join(root, '.cortex', 'compass', 'rules');
   let ruleFiles: string[];
   try {
     ruleFiles = fs.readdirSync(rulesDir).filter((f) => /^R-.*\.md$/.test(f)).sort();

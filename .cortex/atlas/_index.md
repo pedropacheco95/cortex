@@ -10,4 +10,4 @@ why, or what a domain term means.
 - `sources/` — raw materials (gitignored; may be sensitive).
 
 **How to navigate:** from a decision, follow `sources:` to raw material and
-`cerebrum_rules:` to rules derived from it; `supersedes:` walks decision history.
+`compass_rules:` to rules derived from it; `supersedes:` walks decision history.

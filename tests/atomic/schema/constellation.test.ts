@@ -45,15 +45,15 @@ function validDoc(): Record<string, unknown> {
     groups: [
       { id: 'anatomy', label: 'Anatomy', children: [{ id: 'anatomy:layer:src', label: 'src' }] },
       { id: 'atlas', label: 'Atlas', children: [] },
-      { id: 'cerebrum', label: 'Cerebrum', children: [{ id: 'cerebrum:rules', label: 'rules' }] },
+      { id: 'compass', label: 'Compass', children: [{ id: 'compass:rules', label: 'rules' }] },
       { id: 'specs', label: 'Specs', children: [] },
     ],
     nodes: [
       { id: 'anatomy:src/a.ts', module: 'anatomy', label: 'a.ts', group: 'anatomy:layer:src', ref: 'src/a.ts', size: 10 },
-      { id: 'rule:R-001', module: 'rule', label: 'Rule', group: 'cerebrum:rules', ref: 'R-001' },
+      { id: 'rule:R-001', module: 'rule', label: 'Rule', group: 'compass:rules', ref: 'R-001' },
     ],
     edges: [{ from: 'rule:R-001', to: 'anatomy:src/a.ts', kind: 'governs' }],
-    counters: { anatomy: 1, cerebrum: 1, atlas: 0, specs: 0, edges: 1, droppedRefs: 0 },
+    counters: { anatomy: 1, compass: 1, atlas: 0, specs: 0, edges: 1, droppedRefs: 0 },
   };
 }
 
@@ -65,14 +65,14 @@ function writeConstellation(root: string, content: string): void {
 describe('check.constellation — absence and conformance', () => {
   it('file absent → no check.constellation violations', async () => {
     const root = tmp('absent');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     expect(fs.existsSync(constellationPath(root))).toBe(false);
     expect(await constellationViolations(root)).toEqual([]);
   });
 
   it('a real compiler output is conformant (zero violations)', async () => {
     const root = tmp('conformant');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     writeFilesMd(root, [filesRow('src/a.ts', 10), filesRow('src/b.ts', 20)]);
     writeLayersMd(root, { src: ['src/a.ts', 'src/b.ts'] });
     writeRule(root, 'R-001-r.md', `id: R-001\ntitle: R\nsource: []\ngoverns:\n  - "src/**"`);
@@ -82,7 +82,7 @@ describe('check.constellation — absence and conformance', () => {
 
   it('a handcrafted valid document is conformant', async () => {
     const root = tmp('valid-doc');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     writeConstellation(root, JSON.stringify(validDoc(), null, 2));
     expect(await constellationViolations(root)).toEqual([]);
   });
@@ -91,7 +91,7 @@ describe('check.constellation — absence and conformance', () => {
 describe('check.constellation — violation classes (all severity error, clause §4.9)', () => {
   it('invalid JSON → one error', async () => {
     const root = tmp('bad-json');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     writeConstellation(root, '{ not json at all');
     const violations = await constellationViolations(root);
     expect(violations).toHaveLength(1);
@@ -102,7 +102,7 @@ describe('check.constellation — violation classes (all severity error, clause 
 
   it('missing required top-level key → error naming the key', async () => {
     const root = tmp('missing-key');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     const doc = validDoc();
     delete doc['counters'];
     writeConstellation(root, JSON.stringify(doc));
@@ -112,13 +112,13 @@ describe('check.constellation — violation classes (all severity error, clause 
 
   it('duplicate node id → error', async () => {
     const root = tmp('dup-id');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     const doc = validDoc();
     (doc['nodes'] as unknown[]).push({
       id: 'rule:R-001',
       module: 'rule',
       label: 'Duplicate',
-      group: 'cerebrum:rules',
+      group: 'compass:rules',
       ref: 'R-001',
     });
     writeConstellation(root, JSON.stringify(doc));
@@ -130,7 +130,7 @@ describe('check.constellation — violation classes (all severity error, clause 
 
   it('node group not resolving to a declared group/child id → error', async () => {
     const root = tmp('bad-group');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     const doc = validDoc();
     (doc['nodes'] as Record<string, unknown>[])[0]!['group'] = 'anatomy:layer:nonexistent';
     writeConstellation(root, JSON.stringify(doc));
@@ -144,7 +144,7 @@ describe('check.constellation — violation classes (all severity error, clause 
 
   it('edge endpoint not resolving to an emitted node id → error per endpoint', async () => {
     const root = tmp('bad-edge');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     const doc = validDoc();
     (doc['edges'] as unknown[]).push({ from: 'rule:R-001', to: 'spec:ghost.spec', kind: 'related_specs' });
     writeConstellation(root, JSON.stringify(doc));
@@ -160,7 +160,7 @@ describe('check.constellation — violation classes (all severity error, clause 
 
   it('module outside the §4.9 enum → error', async () => {
     const root = tmp('bad-module');
-    makeCortexProject(root, { config: { schemaVersion: '2.0' } });
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     const doc = validDoc();
     (doc['nodes'] as Record<string, unknown>[])[0]!['module'] = 'galaxy';
     writeConstellation(root, JSON.stringify(doc));

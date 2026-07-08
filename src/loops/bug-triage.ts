@@ -8,7 +8,7 @@
  * Claude judgment (core-cli.init Rule 6 subprocess semantics) → report. The
  * shipped skill does the judgment in-session instead.
  *
- * Rule 3 — fill-only mutation, the loop's single sanctioned cerebrum write:
+ * Rule 3 — fill-only mutation, the loop's single sanctioned compass write:
  * absent `type:`/`severity:`/`proposed_fix:` frontmatter fields on OPEN bugs
  * are filled from results; present fields are NEVER overwritten — divergences
  * are reported with both readings. WRITES only: bug-triage.md, the worklist,
@@ -81,7 +81,7 @@ function stringField(data: Record<string, unknown>, key: string): string | null 
 
 /** All `status: open` bugs in the ledger, sorted by filename. */
 export function scanOpenBugs(root: string): OpenBug[] {
-  const bugsDir = path.join(root, '.cortex', 'cerebrum', 'bugs');
+  const bugsDir = path.join(root, '.cortex', 'compass', 'bugs');
   if (!fs.existsSync(bugsDir)) return [];
   const files = fs
     .readdirSync(bugsDir)
@@ -189,7 +189,7 @@ export function validateTriageResult(raw: unknown): TriageResult | null {
 }
 
 // ---------------------------------------------------------------------------
-// fill-only apply (spec Rule 3 — the narrow sanctioned cerebrum write)
+// fill-only apply (spec Rule 3 — the narrow sanctioned compass write)
 // ---------------------------------------------------------------------------
 
 /** YAML-safe scalar for the simple `key: value` frontmatter lines we insert. */

@@ -274,17 +274,17 @@ export function validateDistilCandidate(raw: unknown): DistilCandidate | null {
   if (!isStringArray(sessionIds)) return null;
   if (typeof proposedTarget !== 'string' || proposedTarget.trim() === '') return null;
   // Rule 5: the Target must satisfy the review CLI's target roots — distil
-  // proposes cerebrum additions only; a target the gate would refuse is a
+  // proposes compass additions only; a target the gate would refuse is a
   // malformed judgment output.
-  if (!proposedTarget.startsWith('.cortex/cerebrum/') || proposedTarget.includes('..')) return null;
+  if (!proposedTarget.startsWith('.cortex/compass/') || proposedTarget.includes('..')) return null;
   if (typeof proposedText !== 'string' || proposedText.trim() === '') return null;
   if (typeof confidence !== 'string' && typeof confidence !== 'number') return null;
   return { pattern, occurrences, sessionIds, proposedTarget, proposedText, confidence };
 }
 
-/** All curated cerebrum text, normalised, for the already-covered filter (Rule 3b). */
-function readCerebrumNormalised(root: string): string {
-  const cerebrumDir = path.join(root, '.cortex', 'cerebrum');
+/** All curated compass text, normalised, for the already-covered filter (Rule 3b). */
+function readCompassNormalised(root: string): string {
+  const compassDir = path.join(root, '.cortex', 'compass');
   const chunks: string[] = [];
   const walk = (dir: string): void => {
     let entries: fs.Dirent[];
@@ -305,7 +305,7 @@ function readCerebrumNormalised(root: string): string {
       }
     }
   };
-  walk(cerebrumDir);
+  walk(compassDir);
   return normaliseText(chunks.join('\n'));
 }
 
@@ -313,7 +313,7 @@ function readCerebrumNormalised(root: string): string {
  * Insight-prose corpus for the already-covered filter's v2 extension (design
  * §6, spec insight.gaps-loop Rule 7): each `insight/map/*.md` file's normalised
  * content, project-relative path retained. A candidate already present in
- * insight prose is proposed as a `promotion` of that file — not fresh cerebrum
+ * insight prose is proposed as a `promotion` of that file — not fresh compass
  * text (the graduation path: gaps captures once, distil later detects the
  * repetition and proposes promotion).
  */
@@ -421,13 +421,13 @@ function writeSuggestionsReport(opts: WriteReportOptions): void {
     lines.push(
       `Candidates: ${c.received} received; ${c.proposed} proposed (${c.carried} carried forward with original ids). ` +
         `Dropped: ${c.malformed} malformed, ${c.belowThreshold} below-threshold (occurrences < ${opts.thresholdN}), ` +
-        `${c.covered} covered by cerebrum, ${c.dismissed} dismissed (unexpired).`,
+        `${c.covered} covered by compass, ${c.dismissed} dismissed (unexpired).`,
     );
   }
   lines.push(
     `Threshold N=${opts.thresholdN} (\`pulse.distilThresholdN\`). First runs bound collection to the last ` +
       `${DISTIL_FIRST_RUN_WINDOW_DAYS} days (engineering call). Proposals flow through \`cortex pulse-list\` / ` +
-      `\`pulse-accept\` — this loop never touches cerebrum.`,
+      `\`pulse-accept\` — this loop never touches compass.`,
   );
   for (const notice of opts.notices) lines.push('', notice);
   writePulseReport(opts.root, SUGGESTIONS_FILE, 'pulse-suggestions', 'cortex-pulse-distil', opts.nowIso, lines.join('\n'));
@@ -461,7 +461,7 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
     dismissed: 0,
   };
 
-  const cerebrum = readCerebrumNormalised(root);
+  const compass = readCompassNormalised(root);
   const insightProse = readInsightProse(root);
   const dismissals = readUnexpiredDismissals(root, now.getTime());
   const suggestionsPath = path.join(root, '.cortex', 'pulse', SUGGESTIONS_FILE);
@@ -482,7 +482,7 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
       counts.belowThreshold++;
       continue;
     }
-    if (cerebrum !== '' && cerebrum.includes(normaliseText(candidate.proposedText))) {
+    if (compass !== '' && compass.includes(normaliseText(candidate.proposedText))) {
       counts.covered++;
       continue;
     }
@@ -632,7 +632,7 @@ function judgmentPrompt(): string {
     `Be conservative: filter one-offs; every candidate must cite the session ids it was seen in. ` +
     `Output ONLY a JSON array of candidates, each shaped ` +
     `{"pattern": string, "occurrences": number, "sessionIds": [string], ` +
-    `"proposedTarget": ".cortex/cerebrum/<file>.md", "proposedText": string, "confidence": string}. ` +
+    `"proposedTarget": ".cortex/compass/<file>.md", "proposedText": string, "confidence": string}. ` +
     `Do not write any files.`
   );
 }

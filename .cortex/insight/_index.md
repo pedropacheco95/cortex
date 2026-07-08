@@ -2,7 +2,7 @@
 
 **Read this when:** you need conceptual orientation — how things relate, what a
 domain cluster contains, or how setup/testing/deploy actually work here. Insight
-is **ungated**: useful immediately, **not human-reviewed**. For enforced rules, cerebrum.
+is **ungated**: useful immediately, **not human-reviewed**. For enforced rules, compass.
 
 **What's here:**
 - `map/*.md` — observed project knowledge (setup, testing, deploy, conventions, …).

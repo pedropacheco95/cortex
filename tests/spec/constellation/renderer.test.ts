@@ -23,7 +23,7 @@ import {
   writeBizSpec,
   writeBug,
   writeAtlas,
-  writeCerebrumCoreFile,
+  writeCompassCoreFile,
   readConstellation,
 } from '../../fixtures/constellation-harness.js';
 
@@ -32,7 +32,7 @@ const TEST_TIMEOUT = 30_000;
 /**
  * Scannable project covering every module: src files in two layers plus a
  * fully unreferenced `src/lone.ts`, a rule governing src/schema only, a bug,
- * an atlas artefact, a cerebrum core file, and dev+business specs in the
+ * an atlas artefact, a compass core file, and dev+business specs in the
  * `schema` and `hooks` domains.
  */
 function rendererFixture(root: string): void {
@@ -53,8 +53,8 @@ function rendererFixture(root: string): void {
     'B-001-fixture.md',
     `id: B-001\ntitle: Fixture bug\ntype: test-defect\nseverity: low\nstatus: open\naffects:\n  - R-001`,
   );
-  writeAtlas(root, 'decisions/D-001.md', `id: D-001\ntitle: Fixture decision\ncerebrum_rules:\n  - R-001`);
-  writeCerebrumCoreFile(root, 'preferences.md');
+  writeAtlas(root, 'decisions/D-001.md', `id: D-001\ntitle: Fixture decision\ncompass_rules:\n  - R-001`);
+  writeCompassCoreFile(root, 'preferences.md');
   writeDevSpec(
     root,
     'schema/validator.spec.md',
@@ -217,7 +217,7 @@ describe('AC renderer.3: anatomy-only lens', () => {
       for (const child of group.children) expect(usedGroups.has(child.id)).toBe(true);
     }
     expect(body.groups.map((g) => g.id)).not.toContain('specs');
-    expect(body.groups.map((g) => g.id)).not.toContain('cerebrum');
+    expect(body.groups.map((g) => g.id)).not.toContain('compass');
   });
 });
 
@@ -226,12 +226,12 @@ describe('AC renderer.3: anatomy-only lens', () => {
 // ===========================================================================
 
 describe('AC renderer.4: knowledge-only lens', () => {
-  it('no anatomy node; rule, bug, cerebrum, atlas, and both spec modules are all present', async () => {
+  it('no anatomy node; rule, bug, compass, atlas, and both spec modules are all present', async () => {
     const { status, body } = await api('?preset=knowledge-only');
     expect(status).toBe(200);
     const modules = new Set(body.nodes.map((n) => n.module));
     expect(modules.has('anatomy')).toBe(false);
-    for (const m of ['rule', 'bug', 'cerebrum', 'atlas', 'spec-dev', 'spec-business']) {
+    for (const m of ['rule', 'bug', 'compass', 'atlas', 'spec-dev', 'spec-business']) {
       expect(modules.has(m as never)).toBe(true);
     }
   });

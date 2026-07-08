@@ -34,7 +34,7 @@ const BUG_STATUS_ENUM = ['open', 'triaged', 'resolved'] as const;
 
 export function checkRules(root: string, index: ProjectIndex): Violation[] {
   const violations: Violation[] = [];
-  const rulesDir = path.join(root, '.cortex', 'cerebrum', 'rules');
+  const rulesDir = path.join(root, '.cortex', 'compass', 'rules');
 
   if (!fs.existsSync(rulesDir)) return violations;
 
@@ -111,7 +111,7 @@ export function checkRules(root: string, index: ProjectIndex): Violation[] {
 
 export function checkBugs(root: string, index: ProjectIndex): Violation[] {
   const violations: Violation[] = [];
-  const bugsDir = path.join(root, '.cortex', 'cerebrum', 'bugs');
+  const bugsDir = path.join(root, '.cortex', 'compass', 'bugs');
 
   if (!fs.existsSync(bugsDir)) return violations;
 

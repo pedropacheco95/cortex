@@ -42,9 +42,9 @@ export function writeBizSpec(root: string, relPath: string, frontmatter: string,
   return writeArtefact(path.join(root, '.specflow', 'specs-business', relPath), frontmatter, body);
 }
 
-/** Bug ledger entry at .cortex/cerebrum/bugs/<filename>. */
+/** Bug ledger entry at .cortex/compass/bugs/<filename>. */
 export function writeBug(root: string, filename: string, frontmatter: string, body = '# Bug\n'): string {
-  return writeArtefact(path.join(root, '.cortex', 'cerebrum', 'bugs', filename), frontmatter, body);
+  return writeArtefact(path.join(root, '.cortex', 'compass', 'bugs', filename), frontmatter, body);
 }
 
 /** Atlas artefact at .cortex/atlas/<relPath>. */
@@ -52,9 +52,9 @@ export function writeAtlas(root: string, relPath: string, frontmatter: string, b
   return writeArtefact(path.join(root, '.cortex', 'atlas', relPath), frontmatter, body);
 }
 
-/** Cerebrum core file (preferences.md, environment.md, …). */
-export function writeCerebrumCoreFile(root: string, filename: string): string {
-  const p = path.join(root, '.cortex', 'cerebrum', filename);
+/** Compass core file (preferences.md, environment.md, …). */
+export function writeCompassCoreFile(root: string, filename: string): string {
+  const p = path.join(root, '.cortex', 'compass', filename);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, `# ${filename}\n\nFixture content.\n`, 'utf-8');
   return p;

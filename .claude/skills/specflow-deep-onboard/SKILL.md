@@ -38,9 +38,9 @@ When the project has a `.cortex/` directory:
   to `.cortex/pulse/`. Substitute these homes wherever the instructions below name the
   project-root equivalents. On a non-Cortex project the root paths below stand as-is.
 - **Bug findings live in the ledger, never `bugs.md` files.** Each pass files its bugs
-  as ledger files (`cerebrum/bugs/B-NNN-<slug>.md`, cortex-schema §4.3) inside its own
+  as ledger files (`compass/bugs/B-NNN-<slug>.md`, cortex-schema §4.3) inside its own
   pass directory; the merge step files the confirmed set in the project's
-  `.cortex/cerebrum/bugs/` ledger — never per-pass or root `bugs.md` files.
+  `.cortex/compass/bugs/` ledger — never per-pass or root `bugs.md` files.
 
 ## Execution Model
 
@@ -60,7 +60,7 @@ window that works independently and returns results when done.
 Agent tool call:
   prompt: "You have the specflow-onboard-codebase skill. Run the full 8-phase onboarding
            against [scope]. Write ALL output — .specflow/specs/, .specflow/specs-business/, _overview.md files,
-           bug ledger files (cerebrum/bugs/B-NNN-*.md), proposed-notes.md,
+           bug ledger files (compass/bugs/B-NNN-*.md), proposed-notes.md,
            onboarding-scratch/atoms/ — to
            onboarding-scratch/pass-a/. Do not write anything outside that directory.
            When done, return a summary: atom count, domain list, dev spec count, business
@@ -132,7 +132,7 @@ diff <(find onboarding-scratch/pass-a/specs -type d | sort) \
      <(find onboarding-scratch/pass-b/specs -type d | sort)
 
 # Compare bug ledgers
-diff -r onboarding-scratch/pass-a/cerebrum/bugs onboarding-scratch/pass-b/cerebrum/bugs
+diff -r onboarding-scratch/pass-a/compass/bugs onboarding-scratch/pass-b/compass/bugs
 
 # Compare business spec lists
 find onboarding-scratch/pass-a/specs-business -name "*.business.md" | sort
@@ -288,7 +288,7 @@ Write the final merged output to the project root (not to a pass directory). Bui
 2. **Apply structural resolutions from Step 4** — domain boundaries, granularity decisions
 3. **Merge the bug ledgers** — include only bugs that are either convergent (all passes
    agree) or confirmed by investigation, filing the confirmed set in the project's
-   `.cortex/cerebrum/bugs/` ledger (cortex-schema §4.3). Do not include dismissed bugs.
+   `.cortex/compass/bugs/` ledger (cortex-schema §4.3). Do not include dismissed bugs.
 4. **Merge investigation trails** — combine proposed-notes.md from all passes plus the
    merge records from Step 3 and investigation records from Step 4
 5. **Produce a unified build order** as a phased remediation plan
@@ -367,7 +367,7 @@ project-root/
 │   ├── pass-a/
 │   │   ├── .specflow/specs/
 │   │   ├── .specflow/specs-business/
-│   │   ├── cerebrum/bugs/
+│   │   ├── compass/bugs/
 │   │   └── proposed-notes.md
 │   ├── pass-b/
 │   │   └── ...
@@ -384,7 +384,7 @@ project-root/
 
 Raw pass outputs are retained in `onboarding-scratch/pass-{a,b,c}/` so the human can
 see what each pass produced independently. Confirmed bugs are filed in the
-`.cortex/cerebrum/bugs/` ledger, not at the project root.
+`.cortex/compass/bugs/` ledger, not at the project root.
 
 ## Critical Rules
 

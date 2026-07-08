@@ -1,7 +1,7 @@
 /**
  * Constellation compiler (spec constellation.compiler, 9 rules; schema §4.9).
  *
- * Reads the four knowledge surfaces (anatomy, cerebrum, atlas, the two spec
+ * Reads the four knowledge surfaces (anatomy, compass, atlas, the two spec
  * trees) plus scenario specs, builds the citation graph per schema §6, groups
  * nodes into the four Level-1 constellations, and writes
  * `.cortex/constellation.json` deterministically. Pure Core: offline,
@@ -52,7 +52,7 @@ export type ConstellationModule =
   | 'anatomy'
   | 'rule'
   | 'bug'
-  | 'cerebrum'
+  | 'compass'
   | 'atlas'
   | 'spec-dev'
   | 'spec-business';
@@ -65,7 +65,7 @@ export interface Constellation {
   edges: ConstellationEdge[];
   counters: {
     anatomy: number;
-    cerebrum: number;
+    compass: number;
     atlas: number;
     specs: number;
     edges: number;
@@ -73,8 +73,9 @@ export interface Constellation {
   };
 }
 
-/** The five cerebrum core files (§1) — `cerebrum:<file>` nodes when present. */
-const CEREBRUM_CORE_FILES = ['decisions.md', 'do-not-repeat.md', 'environment.md', 'preferences.md', 'standing-authorities.md'];
+/** The four compass core files (§1; `decisions.md` excluded — decisions live
+ *  solely in `atlas/decisions/`, addendum §A2.1) — `compass:<file>` nodes when present. */
+const COMPASS_CORE_FILES = ['do-not-repeat.md', 'environment.md', 'preferences.md', 'standing-authorities.md'];
 
 const UNASSIGNED_LAYER = '(unassigned)';
 
@@ -229,7 +230,7 @@ export async function assembleConstellation(root: string): Promise<Constellation
   }
 
   // -------------------------------------------------------------------------
-  // Nodes — cerebrum (rules, bugs, the five core files)
+  // Nodes — compass (rules, bugs, the five core files)
   // -------------------------------------------------------------------------
   interface RuleArtefact {
     nodeId: string;
@@ -237,7 +238,7 @@ export async function assembleConstellation(root: string): Promise<Constellation
     data: Record<string, unknown>;
   }
   const ruleArtefacts: RuleArtefact[] = [];
-  const rulesDir = path.join(absRoot, '.cortex', 'cerebrum', 'rules');
+  const rulesDir = path.join(absRoot, '.cortex', 'compass', 'rules');
   const ruleFiles = await fg('R-*.md', { cwd: rulesDir, absolute: true, dot: true });
   for (const file of ruleFiles.sort()) {
     const data = readFrontmatter(file);
@@ -245,12 +246,12 @@ export async function assembleConstellation(root: string): Promise<Constellation
     if (!data || typeof id !== 'string' || !id) continue;
     const nodeId = `rule:${id}`;
     const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : id;
-    if (addNode({ id: nodeId, module: 'rule', label: title, group: 'cerebrum:rules', ref: id }, file)) {
+    if (addNode({ id: nodeId, module: 'rule', label: title, group: 'compass:rules', ref: id }, file)) {
       ruleArtefacts.push({ nodeId, absPath: file, data });
     }
   }
 
-  const bugsDir = path.join(absRoot, '.cortex', 'cerebrum', 'bugs');
+  const bugsDir = path.join(absRoot, '.cortex', 'compass', 'bugs');
   const bugFiles = await fg('B-*.md', { cwd: bugsDir, absolute: true, dot: true });
   let bugCount = 0;
   for (const file of bugFiles.sort()) {
@@ -258,23 +259,23 @@ export async function assembleConstellation(root: string): Promise<Constellation
     const id = data?.['id'];
     if (!data || typeof id !== 'string' || !id) continue;
     const title = typeof data['title'] === 'string' && data['title'] ? data['title'] : id;
-    if (addNode({ id: `bug:${id}`, module: 'bug', label: title, group: 'cerebrum:bugs', ref: id }, file)) {
+    if (addNode({ id: `bug:${id}`, module: 'bug', label: title, group: 'compass:bugs', ref: id }, file)) {
       bugCount++;
     }
   }
 
   let coreFileCount = 0;
-  for (const file of CEREBRUM_CORE_FILES) {
-    const abs = path.join(absRoot, '.cortex', 'cerebrum', file);
+  for (const file of COMPASS_CORE_FILES) {
+    const abs = path.join(absRoot, '.cortex', 'compass', file);
     if (!fs.existsSync(abs)) continue; // only those that exist (Rule 3)
     if (
       addNode(
         {
-          id: `cerebrum:${file}`,
-          module: 'cerebrum',
+          id: `compass:${file}`,
+          module: 'compass',
           label: file,
-          group: 'cerebrum:core-files',
-          ref: `.cortex/cerebrum/${file}`,
+          group: 'compass:core-files',
+          ref: `.cortex/compass/${file}`,
         },
         abs,
       )
@@ -283,10 +284,10 @@ export async function assembleConstellation(root: string): Promise<Constellation
     }
   }
 
-  const cerebrumChildren: ConstellationGroupChild[] = [];
-  if (bugCount > 0) cerebrumChildren.push({ id: 'cerebrum:bugs', label: 'bugs' });
-  if (coreFileCount > 0) cerebrumChildren.push({ id: 'cerebrum:core-files', label: 'core files' });
-  if (ruleArtefacts.length > 0) cerebrumChildren.push({ id: 'cerebrum:rules', label: 'rules' });
+  const compassChildren: ConstellationGroupChild[] = [];
+  if (bugCount > 0) compassChildren.push({ id: 'compass:bugs', label: 'bugs' });
+  if (coreFileCount > 0) compassChildren.push({ id: 'compass:core-files', label: 'core files' });
+  if (ruleArtefacts.length > 0) compassChildren.push({ id: 'compass:rules', label: 'rules' });
 
   // -------------------------------------------------------------------------
   // Nodes — atlas (leaf artefacts with an id; grouped by subfolder)
@@ -454,11 +455,11 @@ export async function assembleConstellation(root: string): Promise<Constellation
     }
   }
 
-  // atlas artefacts: cerebrum_rules (ids), supersedes (paths), sources (paths),
+  // atlas artefacts: compass_rules (ids), supersedes (paths), sources (paths),
   // related_specs (ids).
   for (const artefact of atlasArtefacts) {
-    for (const id of toStringList(artefact.data['cerebrum_rules'])) {
-      addEdge(artefact.nodeId, `rule:${id}`, 'cerebrum_rules');
+    for (const id of toStringList(artefact.data['compass_rules'])) {
+      addEdge(artefact.nodeId, `rule:${id}`, 'compass_rules');
     }
     for (const ref of toStringList(artefact.data['supersedes'])) {
       addEdge(artefact.nodeId, resolvePathRef(artefact.absPath, ref), 'supersedes');
@@ -499,9 +500,9 @@ export async function assembleConstellation(root: string): Promise<Constellation
       children: [...atlasSubfolders].sort().map((s) => ({ id: `atlas:${s}`, label: s })),
     },
     {
-      id: 'cerebrum',
-      label: 'Cerebrum',
-      children: cerebrumChildren.sort((a, b) => (a.id < b.id ? -1 : 1)),
+      id: 'compass',
+      label: 'Compass',
+      children: compassChildren.sort((a, b) => (a.id < b.id ? -1 : 1)),
     },
     {
       id: 'specs',
@@ -515,7 +516,7 @@ export async function assembleConstellation(root: string): Promise<Constellation
 
   const counters = {
     anatomy: nodes.filter((n) => n.module === 'anatomy').length,
-    cerebrum: nodes.filter((n) => n.module === 'rule' || n.module === 'bug' || n.module === 'cerebrum').length,
+    compass: nodes.filter((n) => n.module === 'rule' || n.module === 'bug' || n.module === 'compass').length,
     atlas: nodes.filter((n) => n.module === 'atlas').length,
     specs: nodes.filter((n) => n.module === 'spec-dev' || n.module === 'spec-business').length,
     edges: edges.length,

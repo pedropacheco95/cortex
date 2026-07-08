@@ -29,7 +29,7 @@ Two parallel spec trees, bidirectionally linked, plus folder overviews:
 - `_overview.md` in every folder of both trees
 - Bidirectional `implements:` (dev, single value) / `implemented_by:` (business, list)
 - `onboarding-scratch/atoms/` — retained atom extraction records (the audit trail)
-- Delta analysis: bug findings filed in the `.cortex/cerebrum/bugs/` ledger, plus
+- Delta analysis: bug findings filed in the `.cortex/compass/bugs/` ledger, plus
   implicit-behaviors.md, dead-features.md, link-map.md
 - Investigation records and verification feedback in proposed-notes.md
 
@@ -111,19 +111,19 @@ bridge 5), build from the scanned anatomy instead of re-walking the tree:
   only where an anatomy row's purpose is missing, flagged `needs_purpose_refresh`, or
   too thin to extract atoms from — not for files the anatomy already explains.
 - **Phase 7 rules use the schema format.** Alongside the human-readable RULES.md, draft
-  the machine-readable cerebrum rules per cortex-schema §4.2: one
-  `.cortex/cerebrum/rules/R-NNN-<slug>.md` per rule with `id`, `title`, `source`, and
+  the machine-readable compass rules per cortex-schema §4.2: one
+  `.cortex/compass/rules/R-NNN-<slug>.md` per rule with `id`, `title`, `source`, and
   `governs` frontmatter — and a `check:` predicate wherever the constraint is
   mechanically checkable.
 - **Bug findings land in the §4.3 ledger (design §8.5).** Every confirmed bug from
-  Phases 6 and 8 is filed as `.cortex/cerebrum/bugs/B-NNN-<slug>.md` with the
+  Phases 6 and 8 is filed as `.cortex/compass/bugs/B-NNN-<slug>.md` with the
   seven-type frontmatter — never a root `bugs.md` deliverable — so the daily bug-triage
   loop finds them.
 - **`cortex insight` is the ungated complement to the scanned anatomy.** Onboarding
   populates specs/anatomy; the insight loops populate `insight/` later, so a fresh
   onboard has an empty `map/` and nothing to query yet. When it fills, insight is
   **ungated/unreviewed** — confirm any `cortex insight` hit against the gated layers
-  (cerebrum/atlas/`RULES.md`) before it drives a decision, never as authoritative.
+  (compass/atlas/`RULES.md`) before it drives a decision, never as authoritative.
 
 ## The Eight Phases
 
@@ -285,7 +285,7 @@ business-merge.
 
 Process corrections.md and generate four deliverables:
 
-- **Bug ledger entries (`.cortex/cerebrum/bugs/B-NNN-<slug>.md`)** — one file per
+- **Bug ledger entries (`.cortex/compass/bugs/B-NNN-<slug>.md`)** — one file per
   confirmed bug with cortex-schema §4.3 frontmatter (seven-type `type:`, `severity`,
   `status`, `affects`) — never a root `bugs.md`. Each body carries: spec ID,
   investigation reference, what code does, what it should do, defense attempted, why it
@@ -318,7 +318,7 @@ codebase to calibrate:
 |---|---|---|
 | Pass | Code matches spec | Alignment confirmed |
 | Fail — test wrong | Agent misinterpreted spec | Fix the test |
-| Fail — code wrong | Code doesn't match spec | File in the `.cortex/cerebrum/bugs/` ledger |
+| Fail — code wrong | Code doesn't match spec | File in the `.cortex/compass/bugs/` ledger |
 
 After calibration: every failing test = a ledger entry (`B-NNN`), every passing test =
 confirmed alignment.
@@ -329,7 +329,7 @@ Generate `build-order.md` as a **phased remediation plan** organized by priority
 
 1. **Phase 0: Guardrails** — critical safety fixes, CI setup
 2. **Phase 1: Major bug triage** — all critical/high-severity bugs from the
-   `.cortex/cerebrum/bugs/` ledger
+   `.cortex/compass/bugs/` ledger
 3. **Phase 2: Robustness** — medium-severity bugs, input validation gaps
 4. **Phase 3: Deduplication** — dead code removal, consolidating duplicated logic
 5. **Phase 4: API hygiene** — consistency fixes, naming, response shapes
@@ -375,7 +375,7 @@ project-root/
 ```
 
 Bug findings are not a project-root deliverable — they are filed in the
-`.cortex/cerebrum/bugs/` ledger (cortex-schema §4.3).
+`.cortex/compass/bugs/` ledger (cortex-schema §4.3).
 
 ## Onboarding Summary Report (mandatory final output)
 

@@ -3,7 +3,7 @@ name: specflow-bugs
 description: >
   Diagnose bugs in a Specflow-managed project by walking the spec-model diagnostic tree to find
   the root cause layer, classify the bug type, file it in the bug ledger
-  (.cortex/cerebrum/bugs/), and produce a concrete
+  (.cortex/compass/bugs/), and produce a concrete
   change plan for the change-router to execute. Use this skill whenever the user reports a bug,
   describes unexpected behavior, says something is broken or wrong, or when a test failure needs
   triage. PROACTIVELY use this skill when you encounter: "X doesn't work", "X returns wrong
@@ -24,7 +24,7 @@ something upstream in the spec model is incomplete or incorrect. Code is a deriv
 if it's wrong, the specification that generated it was wrong or missing.
 
 **This skill diagnoses. It does not fix.** The output is a classified bug file in the
-ledger — `.cortex/cerebrum/bugs/B-NNN-<slug>.md` — with a concrete change plan. The
+ledger — `.cortex/compass/bugs/B-NNN-<slug>.md` — with a concrete change plan. The
 change-router executes the plan.
 
 **"Just fix the code" never happens.** Every fix starts at the spec layer, flows through
@@ -307,10 +307,10 @@ implemented_by: [to be filled after dev specs exist]
 4. Run regression
 ```
 
-## Bug Ledger Format (`.cortex/cerebrum/bugs/`)
+## Bug Ledger Format (`.cortex/compass/bugs/`)
 
 Every diagnosed bug is filed as its own file in the bug ledger —
-`.cortex/cerebrum/bugs/B-NNN-<slug>.md` — with frontmatter conforming to cortex-schema
+`.cortex/compass/bugs/B-NNN-<slug>.md` — with frontmatter conforming to cortex-schema
 §4.3. Never write a flat root `bugs.md`: the ledger is the unified store the daily
 bug-triage loop reads.
 
@@ -371,7 +371,7 @@ the plan.
 
 ### Bug numbering
 
-Bug IDs are sequential: B-001, B-002, etc. List `.cortex/cerebrum/bugs/` to find the
+Bug IDs are sequential: B-001, B-002, etc. List `.cortex/compass/bugs/` to find the
 highest existing `B-NNN` and increment. If the ledger directory doesn't exist yet,
 create it and start at B-001.
 
@@ -404,7 +404,7 @@ The user provides test output (copy-pasted, or points to a log file). For each f
    - The criterion itself is wrong or incomplete (Type 1 or 3 — spec issue)
    - The failure reveals an unspecified interaction (Type 2 — incomplete rule)
 
-4. **Document each failure** as its own ledger file in `.cortex/cerebrum/bugs/`.
+4. **Document each failure** as its own ledger file in `.cortex/compass/bugs/`.
 
 ### Batch triage
 
@@ -429,7 +429,7 @@ When operating as the bug diagnosis agent:
 - **Ask the human when uncertain.** Type 3 (wrong rule) requires human judgment — the agent
   can't know whether the rule or the expectation is wrong. Present both possibilities.
 - **Document everything in the bug ledger.** Even if the bug is trivial — file it as
-  `.cortex/cerebrum/bugs/B-NNN-<slug>.md`. The ledger is the project's memory of what
+  `.cortex/compass/bugs/B-NNN-<slug>.md`. The ledger is the project's memory of what
   went wrong and why.
 - **Classify severity honestly.** Not everything is critical. A cosmetic issue is `low`
   even if the user is frustrated about it.

@@ -71,7 +71,7 @@ describe('AC session-start.1: fresh hygiene report → pointer plus one-line sum
       expect(env.hookEventName).toBe('SessionStart');
       expect(env.additionalContext).toContain('Cortex is active');
       expect(env.additionalContext).toContain('.cortex/_index.md');
-      expect(env.additionalContext).toContain('Modules: anatomy, cerebrum, atlas, pulse.');
+      expect(env.additionalContext).toContain('Modules: anatomy, compass, atlas, pulse.');
       expect(env.additionalContext).toContain('Hygiene: 3 stale purposes flagged.');
       expect(env.additionalContext).toContain('.cortex/pulse/hygiene-report.md');
     },

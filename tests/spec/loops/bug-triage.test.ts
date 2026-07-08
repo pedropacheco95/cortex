@@ -43,7 +43,7 @@ afterEach(() => {
 function makeProject(label: string): string {
   const root = tmp(label);
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum', 'bugs'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass', 'bugs'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '1.0' }, null, 2),
@@ -67,7 +67,7 @@ function writeBug(root: string, id: string, classified: boolean): string {
     `# ${id}`,
     '',
   ].join('\n');
-  const file = path.join(root, '.cortex', 'cerebrum', 'bugs', `${id}-spec-bug.md`);
+  const file = path.join(root, '.cortex', 'compass', 'bugs', `${id}-spec-bug.md`);
   fs.writeFileSync(file, lines, 'utf-8');
   return file;
 }

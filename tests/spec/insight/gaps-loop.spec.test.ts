@@ -32,7 +32,7 @@ function makeProject(label: string): string {
   dirs.push(root);
   fs.mkdirSync(path.join(root, '.cortex', 'insight', 'map'), { recursive: true });
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum', 'rules'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
   fs.writeFileSync(path.join(root, '.cortex', 'insight', '_index.md'), INSIGHT_INDEX_TEMPLATE, 'utf-8');
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
@@ -128,7 +128,7 @@ describe('Signal 4-in-insight rewrites in place and logs', () => {
 // Signal 4-in-gated + signal 5 become typed proposals, never direct writes
 // ---------------------------------------------------------------------------
 describe('Signals 4-gated and 5 route through the typed pulse gate', () => {
-  const RULE_REL = '.cortex/cerebrum/rules/R-014-no-camelcase-columns.md';
+  const RULE_REL = '.cortex/compass/rules/R-014-no-camelcase-columns.md';
   const RULE_BODY = '---\nid: R-014\n---\n\n# R-014 — no camelCase columns\n\nColumns MUST be snake_case, never camelCase.\n';
 
   it('signal 4-in-gated → S-060 gated-layer-update edit proposal; the rule file is unchanged', async () => {
@@ -270,7 +270,7 @@ describe('Distil does not double-propose covered insight content', () => {
           pattern: 'user keeps correcting npm → pnpm',
           occurrences: 4,
           sessionIds: ['sess-1', 'sess-2'],
-          proposedTarget: '.cortex/cerebrum/preferences.md',
+          proposedTarget: '.cortex/compass/preferences.md',
           proposedText: covered,
           confidence: 'high',
         },

@@ -21,7 +21,7 @@ import {
   writeBizSpec,
   writeBug,
   writeAtlas,
-  writeCerebrumCoreFile,
+  writeCompassCoreFile,
   writeScenarioSpec,
   constellationPath,
   readConstellation,
@@ -69,15 +69,15 @@ related_specs:
     'B-001-noise.md',
     `id: B-001\ntitle: Path-match noise\ntype: wrong-rule\nseverity: low\nstatus: resolved\naffects:\n  - R-001`,
   );
-  writeCerebrumCoreFile(root, 'preferences.md');
-  writeCerebrumCoreFile(root, 'decisions.md');
+  writeCompassCoreFile(root, 'preferences.md');
+  writeCompassCoreFile(root, 'environment.md');
   writeAtlas(
     root,
     'decisions/2026-01-01-core.md',
     `id: decision.2026-01-01-core
 title: Core decision
 date: 2026-01-01T00:00:00Z
-cerebrum_rules:
+compass_rules:
   - R-001
 supersedes:
   - 2025-12-01-old.md
@@ -152,19 +152,19 @@ describe('top-level shape (§4.9)', () => {
     const root = tmp('groups');
     fullFixture(root);
     const c = await compile(root);
-    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'cerebrum', 'specs']);
+    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'compass', 'specs']);
   });
 });
 
 describe('nodes: module-prefixed unique ids per surface (Rule 3)', () => {
-  it('emits anatomy/rule/bug/cerebrum/atlas/spec/business nodes with the §4.9 modules', async () => {
+  it('emits anatomy/rule/bug/compass/atlas/spec/business nodes with the §4.9 modules', async () => {
     const root = tmp('nodes');
     fullFixture(root);
     const c = await compile(root);
     expect(node(c, 'anatomy:src/schema/validate.ts')?.module).toBe('anatomy');
     expect(node(c, 'rule:R-001')?.module).toBe('rule');
     expect(node(c, 'bug:B-001')?.module).toBe('bug');
-    expect(node(c, 'cerebrum:preferences.md')?.module).toBe('cerebrum');
+    expect(node(c, 'compass:preferences.md')?.module).toBe('compass');
     expect(node(c, 'atlas:decision.2026-01-01-core')?.module).toBe('atlas');
     expect(node(c, 'spec:schema.validator')?.module).toBe('spec-dev');
     expect(node(c, 'business:schema.contributor-trusts')?.module).toBe('spec-business');
@@ -191,22 +191,29 @@ describe('nodes: module-prefixed unique ids per surface (Rule 3)', () => {
     expect(node(c, 'anatomy:docs/_index.md')).toBeUndefined();
   });
 
-  it('cerebrum core-file nodes exist only for files that exist', async () => {
+  it('compass core-file nodes exist only for files that exist', async () => {
     const root = tmp('corefiles');
-    fullFixture(root); // only preferences.md + decisions.md written
+    fullFixture(root); // only preferences.md + environment.md written
     const c = await compile(root);
-    expect(node(c, 'cerebrum:preferences.md')).toBeDefined();
-    expect(node(c, 'cerebrum:decisions.md')).toBeDefined();
-    expect(node(c, 'cerebrum:environment.md')).toBeUndefined();
-    expect(node(c, 'cerebrum:do-not-repeat.md')).toBeUndefined();
+    expect(node(c, 'compass:preferences.md')).toBeDefined();
+    expect(node(c, 'compass:environment.md')).toBeDefined();
+    expect(node(c, 'compass:do-not-repeat.md')).toBeUndefined();
   });
 
-  it('the standing-authorities.md core file becomes a cerebrum node when present', async () => {
+  it('decisions.md never becomes a compass node, even when present on disk (decisions are single-homed to atlas/decisions/)', async () => {
+    const root = tmp('corefiles-decisions-excluded');
+    fullFixture(root);
+    writeCompassCoreFile(root, 'decisions.md');
+    const c = await compile(root);
+    expect(node(c, 'compass:decisions.md')).toBeUndefined();
+  });
+
+  it('the standing-authorities.md core file becomes a compass node when present', async () => {
     const root = tmp('standing-authorities');
     fullFixture(root);
-    writeCerebrumCoreFile(root, 'standing-authorities.md');
+    writeCompassCoreFile(root, 'standing-authorities.md');
     const c = await compile(root);
-    expect(node(c, 'cerebrum:standing-authorities.md')?.module).toBe('cerebrum');
+    expect(node(c, 'compass:standing-authorities.md')?.module).toBe('compass');
   });
 });
 
@@ -224,14 +231,14 @@ describe('groups: natural children (Rule 4)', () => {
     expect(node(c, 'anatomy:src/cli/init.ts')?.group).toBe('anatomy:layer:(unassigned)');
   });
 
-  it('cerebrum children by category; atlas by subfolder; specs by domain (dev+business shared)', async () => {
+  it('compass children by category; atlas by subfolder; specs by domain (dev+business shared)', async () => {
     const root = tmp('children');
     fullFixture(root);
     const c = await compile(root);
-    expect(c.groups.find((g) => g.id === 'cerebrum')?.children.map((ch) => ch.id)).toEqual([
-      'cerebrum:bugs',
-      'cerebrum:core-files',
-      'cerebrum:rules',
+    expect(c.groups.find((g) => g.id === 'compass')?.children.map((ch) => ch.id)).toEqual([
+      'compass:bugs',
+      'compass:core-files',
+      'compass:rules',
     ]);
     expect(c.groups.find((g) => g.id === 'atlas')?.children.map((ch) => ch.id)).toEqual([
       'atlas:decisions',
@@ -302,8 +309,8 @@ describe('edges: the §6 citation graph, one kind per producing field (Rule 5)',
     expect(edgesOf(c, 'covers')).toEqual([
       { from: 'anatomy:tests/scenario/specs/first-run.md', to: 'business:schema.contributor-trusts', kind: 'covers' },
     ]);
-    expect(edgesOf(c, 'cerebrum_rules')).toEqual([
-      { from: 'atlas:decision.2026-01-01-core', to: 'rule:R-001', kind: 'cerebrum_rules' },
+    expect(edgesOf(c, 'compass_rules')).toEqual([
+      { from: 'atlas:decision.2026-01-01-core', to: 'rule:R-001', kind: 'compass_rules' },
     ]);
     expect(edgesOf(c, 'supersedes')).toEqual([
       { from: 'atlas:decision.2026-01-01-core', to: 'atlas:decision.2025-12-01-old', kind: 'supersedes' },
@@ -400,7 +407,7 @@ describe('counters (Rule 8)', () => {
     const c = await compile(root);
     expect(c.counters).toEqual({
       anatomy: 4, // 6 rows minus 2 scaffolding files
-      cerebrum: 4, // 1 rule + 1 bug + 2 core files
+      compass: 4, // 1 rule + 1 bug + 2 core files
       atlas: 3,
       specs: 4, // 2 dev + 2 business
       edges: c.edges.length,
@@ -438,11 +445,11 @@ describe('missing surfaces are tolerated (Rule 9)', () => {
     const root = tmp('bare');
     const c = await compile(root);
     expect(c.schemaVersion).toBe('1.0');
-    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'cerebrum', 'specs']);
+    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'compass', 'specs']);
     for (const g of c.groups) expect(g.children).toEqual([]);
     expect(c.nodes).toEqual([]);
     expect(c.edges).toEqual([]);
-    expect(c.counters).toEqual({ anatomy: 0, cerebrum: 0, atlas: 0, specs: 0, edges: 0, droppedRefs: 0 });
+    expect(c.counters).toEqual({ anatomy: 0, compass: 0, atlas: 0, specs: 0, edges: 0, droppedRefs: 0 });
     expect(fs.existsSync(constellationPath(root))).toBe(true);
   });
 

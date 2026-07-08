@@ -44,7 +44,7 @@ describe('loops.session-reading — integrated list → read → extract slice',
         '{"type":"summary","summary":"session recap"}',
         '{"type":"user","message":{"role":"user","content":"how do I add a rule?"},"timestamp":"2026-07-02T09:00:00Z"}',
         '{"type":"mode","mode":"default"}',
-        '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"write it under .cortex/cerebrum/rules/"}]},"timestamp":"2026-07-02T09:00:05Z"}',
+        '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"write it under .cortex/compass/rules/"}]},"timestamp":"2026-07-02T09:00:05Z"}',
       ],
       3000,
     );
@@ -86,7 +86,7 @@ describe('loops.session-reading — integrated list → read → extract slice',
     expect(newest?.skipped).toBe(0);
     expect(newest?.messages).toEqual([
       { role: 'user', text: 'how do I add a rule?', timestamp: '2026-07-02T09:00:00Z' },
-      { role: 'assistant', text: 'write it under .cortex/cerebrum/rules/', timestamp: '2026-07-02T09:00:05Z' },
+      { role: 'assistant', text: 'write it under .cortex/compass/rules/', timestamp: '2026-07-02T09:00:05Z' },
     ]);
 
     const older = conversations[1];

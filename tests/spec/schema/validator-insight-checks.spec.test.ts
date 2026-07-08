@@ -21,11 +21,11 @@ afterEach(() => {
   while (dirs.length > 0) cleanTmp(dirs.pop() as string);
 });
 
-/** A minimal 2.0 project with an insight/ module directory + compliant index. */
+/** A minimal 3.0 project with an insight/ module directory + compliant index. */
 function makeInsightProject(root: string): void {
   makeCortexProject(root, {
-    config: { schemaVersion: '2.0' },
-    modules: ['anatomy', 'cerebrum', 'atlas', 'pulse', 'insight'],
+    config: { schemaVersion: '3.0' },
+    modules: ['anatomy', 'compass', 'atlas', 'pulse', 'insight'],
   });
   writeInsightIndex(
     root,
@@ -297,7 +297,7 @@ new
 
 **Type:** rule-candidate
 **Source:** distil; sessions s2
-**Target:** .cortex/cerebrum/rules/R-999-x.md
+**Target:** .cortex/compass/rules/R-999-x.md
 **Proposed addition:**
 \`\`\`
 a rule
@@ -355,7 +355,7 @@ loop: distil
 ## S-043: a rule candidate
 
 **Source:** distil; sessions s3
-**Target:** .cortex/cerebrum/rules/R-500-y.md
+**Target:** .cortex/compass/rules/R-500-y.md
 **Proposed addition:**
 \`\`\`
 a candidate rule

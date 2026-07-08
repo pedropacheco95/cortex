@@ -51,7 +51,7 @@ export const GAPS_LAST_RUN_FILE = '.gaps-last-run';
 export const GAPS_REPORT_FILE = 'insight-gaps.md';
 
 /** The best-guess landing layer for a signal-5 capture when the judgment gives none. */
-const DEFAULT_CAPTURE_TARGET = '.cortex/cerebrum/preferences.md';
+const DEFAULT_CAPTURE_TARGET = '.cortex/compass/preferences.md';
 
 function insightDir(root: string): string {
   return path.join(root, '.cortex', 'insight');
@@ -212,11 +212,11 @@ function proseBasename(obs: GapObservation): string {
   return `${slugify(stem)}.md`;
 }
 
-/** True when `target` addresses gated content (cerebrum / atlas / RULES.md). */
+/** True when `target` addresses gated content (compass / atlas / RULES.md). */
 function isGatedTarget(target: string | undefined): boolean {
   if (typeof target !== 'string') return false;
   const t = target.replace(/^\.\//, '').trim();
-  return t.startsWith('.cortex/cerebrum/') || t.startsWith('.cortex/atlas/') || t === 'RULES.md';
+  return t.startsWith('.cortex/compass/') || t.startsWith('.cortex/atlas/') || t === 'RULES.md';
 }
 
 /** The provenance trailer appended to every loop-written prose entry (§4.10.1). */
@@ -570,7 +570,7 @@ function judgmentPrompt(): string {
     `Read .cortex/pulse/${GAPS_CORPUS_FILE} — this project's session messages for the daily window. ` +
     `Classify the evidence against EXACTLY five gap signals (schema §4.10): ` +
     `1 investigation load, 2 misjudgment, 3 user explanation, 4 correction to existing knowledge ` +
-    `(note where the corrected content lives: insight vs gated cerebrum/atlas/RULES.md), ` +
+    `(note where the corrected content lives: insight vs gated compass/atlas/RULES.md), ` +
     `5 explicit memory-commit request ("remember this"). Evidence matching none is omitted. ` +
     `Output ONLY a JSON array of observations, each ` +
     `{"signal": 1-5, "sessionIds": [string], "topic"?: string, "text"?: string, ` +

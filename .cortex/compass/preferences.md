@@ -1,5 +1,5 @@
 ---
-kind: cerebrum-preferences
+kind: compass-preferences
 generated: 2026-07-02T14:56:17.730Z
 confidence: EXTRACTED
 status: draft

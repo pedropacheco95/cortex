@@ -7,7 +7,7 @@ import { checkConfig } from './checks/config.js';
 import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout.js';
 import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatchesPath } from './checks/specs.js';
 import { checkAnatomyFiles, checkAnatomyGraph, checkAnatomyPurposeSource } from './checks/anatomy.js';
-import { checkRules, checkBugs } from './checks/cerebrum.js';
+import { checkRules, checkBugs } from './checks/compass.js';
 import { checkAtlas } from './checks/atlas.js';
 import { checkPulse } from './checks/pulse.js';
 import { checkDevSpecs } from './checks/devspec.js';
@@ -92,7 +92,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...checkAnatomyGraph(root));
   allViolations.push(...checkAnatomyPurposeSource(root));
 
-  // Cerebrum checks
+  // Compass checks
   allViolations.push(...checkRules(root, index));
   allViolations.push(...checkBugs(root, index));
 

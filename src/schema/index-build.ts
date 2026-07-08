@@ -22,8 +22,8 @@ export async function buildIndex(root: string): Promise<ProjectIndex> {
   const patterns = [
     SPECS_GLOB,
     BUSINESS_GLOB,
-    '.cortex/cerebrum/rules/R-*.md',
-    '.cortex/cerebrum/bugs/B-*.md',
+    '.cortex/compass/rules/R-*.md',
+    '.cortex/compass/bugs/B-*.md',
     '.cortex/atlas/**/*.md',
     'tests/scenario/specs/*.md',
   ];

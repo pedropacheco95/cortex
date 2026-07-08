@@ -73,7 +73,7 @@ function writerSection(payload: string): string {
     '## S-101: round-trip',
     '',
     '**Source:** fences-test',
-    '**Target:** .cortex/cerebrum/preferences.md',
+    '**Target:** .cortex/compass/preferences.md',
     '',
     '**Proposed addition:**',
     '',
@@ -103,7 +103,7 @@ describe('Parser/writer round-trip (B-003) — payload extracted byte-exact', ()
     const parsed = parseSuggestions(writerSection(payload).split('\n'));
     expect(parsed).toHaveLength(1);
     expect(parsed[0]!.id).toBe('S-101');
-    expect(parsed[0]!.target).toBe('.cortex/cerebrum/preferences.md');
+    expect(parsed[0]!.target).toBe('.cortex/compass/preferences.md');
     expect(parsed[0]!.block).toBe(payload);
   });
 });

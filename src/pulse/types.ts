@@ -42,7 +42,7 @@ export type RootSpec =
   | { kind: 'file'; path: string }
   | { kind: 'skill' };
 
-const CEREBRUM: RootSpec = { kind: 'dir', prefix: '.cortex/cerebrum/' };
+const COMPASS: RootSpec = { kind: 'dir', prefix: '.cortex/compass/' };
 const ATLAS: RootSpec = { kind: 'dir', prefix: '.cortex/atlas/' };
 const INSIGHT_MAP: RootSpec = { kind: 'dir', prefix: '.cortex/insight/map/' };
 const RULES: RootSpec = { kind: 'file', path: 'RULES.md' };
@@ -52,16 +52,16 @@ const SKILL: RootSpec = { kind: 'skill' };
 export function permittedRoots(type: SuggestionType): RootSpec[] {
   switch (type) {
     case 'rule-candidate':
-      return [CEREBRUM];
+      return [COMPASS];
     case 'skill-proposal':
       return [SKILL];
     case 'promotion':
     case 'gated-layer-update':
-      // cerebrum / atlas / RULES.md — never insight/map (insight is ungated).
-      return [CEREBRUM, ATLAS, RULES];
+      // compass / atlas / RULES.md — never insight/map (insight is ungated).
+      return [COMPASS, ATLAS, RULES];
     case 'user-directed-capture':
       // the only type that MAY target insight (§4.5.1 note).
-      return [CEREBRUM, ATLAS, INSIGHT_MAP, RULES];
+      return [COMPASS, ATLAS, INSIGHT_MAP, RULES];
   }
 }
 
@@ -84,13 +84,13 @@ export function isTargetPermitted(type: SuggestionType, target: string): boolean
 export function permittedRootsLabel(type: SuggestionType): string {
   switch (type) {
     case 'rule-candidate':
-      return '.cortex/cerebrum/';
+      return '.cortex/compass/';
     case 'skill-proposal':
       return 'a new .claude/skills/<name>/SKILL.md';
     case 'promotion':
     case 'gated-layer-update':
-      return '.cortex/cerebrum/, .cortex/atlas/, RULES.md';
+      return '.cortex/compass/, .cortex/atlas/, RULES.md';
     case 'user-directed-capture':
-      return '.cortex/cerebrum/, .cortex/atlas/, .cortex/insight/map/, RULES.md';
+      return '.cortex/compass/, .cortex/atlas/, .cortex/insight/map/, RULES.md';
   }
 }

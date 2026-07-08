@@ -2,7 +2,7 @@
  * Spec-level tests — hooks.session-start / hooks.pre-write / hooks.post-write.
  *
  * End-to-end over tmp fixture projects: handcrafted init-like `.cortex/`
- * skeletons, real cerebrum rule files, and (for post-write) a real files.md
+ * skeletons, real compass rule files, and (for post-write) a real files.md
  * produced by the anatomy scanner. Hooks are driven through the `cortex hook
  * <name>` dispatch (runHook) with raw stdin JSON, exactly as Claude Code
  * invokes them. One describe per spec AC — 20 in total.
@@ -82,7 +82,7 @@ describe('AC session-start.1: fresh hygiene report → pointer plus one-line sum
       expect(env.hookEventName).toBe('SessionStart');
       expect(env.additionalContext).toContain('Cortex is active');
       expect(env.additionalContext).toContain('.cortex/_index.md');
-      expect(env.additionalContext).toContain('Modules: anatomy, cerebrum, atlas, pulse.');
+      expect(env.additionalContext).toContain('Modules: anatomy, compass, atlas, pulse.');
       expect(env.additionalContext).toContain('Hygiene: 3 stale purposes flagged.');
       expect(env.additionalContext).toContain('.cortex/pulse/hygiene-report.md');
     },

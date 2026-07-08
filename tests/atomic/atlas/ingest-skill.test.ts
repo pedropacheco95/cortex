@@ -93,8 +93,8 @@ describe('Body carries the full instructed workflow', () => {
 // AC "Atlas-only boundary is explicit"
 // ---------------------------------------------------------------------------
 describe('Atlas-only boundary is explicit', () => {
-  it('explicitly forbids writes outside atlas/ (never cerebrum, anatomy, specs, pulse)', () => {
-    expect(body).toMatch(/never.*cerebrum/i);
+  it('explicitly forbids writes outside atlas/ (never compass, anatomy, specs, pulse)', () => {
+    expect(body).toMatch(/never.*compass/i);
     expect(body).toContain('anatomy');
     expect(body).toContain('specs');
     expect(body).toContain('pulse');

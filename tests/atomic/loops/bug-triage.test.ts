@@ -45,7 +45,7 @@ beforeEach(() => {
 function makeProject(label: string): string {
   const root = tmp(label);
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum', 'bugs'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass', 'bugs'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '1.0' }, null, 2),
@@ -84,7 +84,7 @@ function bugMd(id: string, opts: BugOpts = {}): string {
 }
 
 function writeBug(root: string, id: string, opts: BugOpts = {}): string {
-  const file = path.join(root, '.cortex', 'cerebrum', 'bugs', `${id}-test-bug.md`);
+  const file = path.join(root, '.cortex', 'compass', 'bugs', `${id}-test-bug.md`);
   fs.writeFileSync(file, bugMd(id, opts), 'utf-8');
   return file;
 }
@@ -338,7 +338,7 @@ describe('Blast radius', () => {
   it('a full bare run touches only the report, the worklist, and (fill-only) open bug files', async () => {
     const root = makeProject('blast');
     writeBug(root, 'B-001'); // will be filled
-    fs.writeFileSync(path.join(root, '.cortex', 'cerebrum', 'environment.md'), '# Environment\n', 'utf-8');
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'environment.md'), '# Environment\n', 'utf-8');
     fs.writeFileSync(path.join(root, 'app.ts'), 'export const a = 1;\n', 'utf-8');
 
     const bin = tmp('blast-bin');
@@ -359,7 +359,7 @@ JSON
     const allowed = new Set([
       path.join('.cortex', 'pulse', BUG_TRIAGE_REPORT_FILE),
       path.join('.cortex', 'pulse', TRIAGE_WORKLIST_FILE),
-      path.join('.cortex', 'cerebrum', 'bugs', 'B-001-test-bug.md'),
+      path.join('.cortex', 'compass', 'bugs', 'B-001-test-bug.md'),
     ]);
     const keys = new Set([...before.keys(), ...after.keys()]);
     for (const key of keys) {
@@ -367,7 +367,7 @@ JSON
       expect(after.get(key), `unexpected change to ${key}`).toBe(before.get(key));
     }
     // And the run actually filled the bug.
-    expect(after.get(path.join('.cortex', 'cerebrum', 'bugs', 'B-001-test-bug.md'))).toContain('type: wrong-rule');
+    expect(after.get(path.join('.cortex', 'compass', 'bugs', 'B-001-test-bug.md'))).toContain('type: wrong-rule');
   }, TEST_TIMEOUT);
 });
 

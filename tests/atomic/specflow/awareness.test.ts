@@ -4,7 +4,7 @@
  * (skills/specflow-*, the source of truth; byte-identity with .claude/skills/
  * is the spec tier's job).
  *
- * Deep skills: index-first + anatomy + cerebrum (incl. `check:` predicates
+ * Deep skills: index-first + anatomy + compass (incl. `check:` predicates
  * where specified) + atlas + `cortex validate` where specified.
  * Moderate skills: their targeted reads. Light skills: their minimal touch.
  * specflow-bugs: ledger path present AND no root-bugs.md write instruction.
@@ -42,7 +42,7 @@ function expectOnlyProhibitions(text: string, legacy: string, label: string): vo
 // Deep tier
 // ---------------------------------------------------------------------------
 
-describe('specflow-develop (Deep): index-first, anatomy, cerebrum incl. predicates, atlas, validate', () => {
+describe('specflow-develop (Deep): index-first, anatomy, compass incl. predicates, atlas, validate', () => {
   const s = body('specflow-develop');
 
   it('carries a clearly-delimited Cortex awareness section', () => {
@@ -61,8 +61,8 @@ describe('specflow-develop (Deep): index-first, anatomy, cerebrum incl. predicat
     expect(s).toMatch(/purpose line.*replaces a whole-file read/s);
   });
 
-  it('collects both governs-matched and check:-predicated cerebrum rules and honours them', () => {
-    expect(s).toContain('.cortex/cerebrum/rules/R-*.md');
+  it('collects both governs-matched and check:-predicated compass rules and honours them', () => {
+    expect(s).toContain('.cortex/compass/rules/R-*.md');
     expect(s).toMatch(/`governs` globs match.*AND every rule whose\s+`check:` predicate/s);
     expect(s).toMatch(/Honour them while coding/);
   });
@@ -86,16 +86,16 @@ describe('specflow-develop (Deep): index-first, anatomy, cerebrum incl. predicat
   });
 });
 
-describe('specflow-tests (Deep): cerebrum check: predicates into generated tests, anatomy, covers: conventions', () => {
+describe('specflow-tests (Deep): compass check: predicates into generated tests, anatomy, covers: conventions', () => {
   const s = body('specflow-tests');
 
   it('carries a clearly-delimited Cortex awareness section', () => {
     expect(s).toMatch(/^## Cortex [Aa]wareness$/m);
   });
 
-  it('reads applicable cerebrum rules via governed_by: and governs globs', () => {
+  it('reads applicable compass rules via governed_by: and governs globs', () => {
     expect(s).toContain('`governed_by:`');
-    expect(s).toContain('.cortex/cerebrum/rules/R-*.md');
+    expect(s).toContain('.cortex/compass/rules/R-*.md');
   });
 
   it('incorporates check: predicates into generated atomic/spec tests (bridge 1) as assertions, not comments', () => {
@@ -136,15 +136,15 @@ describe('specflow-change-router (Deep): routes by Cortex module touched, bug re
     expect(s).toContain('bridge 6');
   });
 
-  it('greps anatomy, cerebrum, and atlas indexes as part of classification', () => {
+  it('greps anatomy, compass, and atlas indexes as part of classification', () => {
     expect(s).toContain('.cortex/anatomy/files.md');
-    expect(s).toContain('.cortex/cerebrum/_index.md');
+    expect(s).toContain('.cortex/compass/_index.md');
     expect(s).toContain('.cortex/atlas/_index.md');
   });
 
   it('routes bug-shaped reports toward the §4.3 ledger flow', () => {
     expect(s).toMatch(/Bug-shaped reports route toward the ledger flow/);
-    expect(s).toContain('.cortex/cerebrum/bugs/B-NNN-<slug>.md');
+    expect(s).toContain('.cortex/compass/bugs/B-NNN-<slug>.md');
     expect(s).toContain('§4.3');
   });
 
@@ -176,19 +176,19 @@ describe('specflow-onboard-codebase (Moderate): anatomy-first build (bridge 5), 
 
   it('drafts rules referencing the schema §4.2 format', () => {
     expect(s).toMatch(/cortex-schema §4\.2/);
-    expect(s).toContain('.cortex/cerebrum/rules/R-NNN-<slug>.md');
+    expect(s).toContain('.cortex/compass/rules/R-NNN-<slug>.md');
     expect(s).toContain('`check:` predicate');
   });
 
   it('bug findings land in the §4.3 ledger, never a root bugs.md deliverable (§8.5)', () => {
-    expect(s).toContain('.cortex/cerebrum/bugs/B-NNN-<slug>.md');
+    expect(s).toContain('.cortex/compass/bugs/B-NNN-<slug>.md');
     expect(s).toContain('§4.3');
     expect(s).toMatch(/seven-type/);
     expectOnlyProhibitions(s, 'bugs.md', 'specflow-onboard-codebase SKILL.md');
     expect(s).not.toContain('BUG-001');
     // The generated-CLAUDE.md template points at the ledger too.
     const ref = bundleFile('specflow-onboard-codebase', 'references/claude-md-template.md');
-    expect(ref).toContain('.cortex/cerebrum/bugs/');
+    expect(ref).toContain('.cortex/compass/bugs/');
     expectOnlyProhibitions(ref, 'bugs.md', 'claude-md-template.md');
   });
 });
@@ -215,8 +215,8 @@ describe('specflow-deep-onboard (Moderate): anatomy-first input, §8.5 pulse out
 
   it('pass-merge instructions reference the ledger, not per-pass bugs.md files', () => {
     expect(s).toMatch(/Merge the bug ledgers/);
-    expect(s).toContain('.cortex/cerebrum/bugs/');
-    expect(s).toContain('cerebrum/bugs/B-NNN-');
+    expect(s).toContain('.cortex/compass/bugs/');
+    expect(s).toContain('compass/bugs/B-NNN-');
     expect(s).toMatch(/Compare bug ledgers/);
     expectOnlyProhibitions(s, 'bugs.md', 'specflow-deep-onboard SKILL.md');
   });
@@ -224,8 +224,8 @@ describe('specflow-deep-onboard (Moderate): anatomy-first input, §8.5 pulse out
   it('the legacy deep-onboard.md reference file carries the same ledger merge instructions', () => {
     const ref = bundleFile('specflow-deep-onboard', 'deep-onboard.md');
     expect(ref).toMatch(/Merge the bug ledgers/);
-    expect(ref).toContain('.cortex/cerebrum/bugs/');
-    expect(ref).toContain('cerebrum/bugs/B-NNN-');
+    expect(ref).toContain('.cortex/compass/bugs/');
+    expect(ref).toContain('compass/bugs/B-NNN-');
     expectOnlyProhibitions(ref, 'bugs.md', 'deep-onboard.md');
   });
 });
@@ -262,8 +262,8 @@ describe('specflow-new-project (Moderate): preferences.md read before proposing 
     expect(s).toMatch(/^## Cortex [Aa]wareness$/mi);
   });
 
-  it('reads cerebrum/preferences.md (when present) before proposing stack/convention defaults', () => {
-    expect(s).toContain('.cortex/cerebrum/preferences.md');
+  it('reads compass/preferences.md (when present) before proposing stack/convention defaults', () => {
+    expect(s).toContain('.cortex/compass/preferences.md');
     expect(s).toMatch(/\(when present\) before proposing stack or\s+convention defaults/);
   });
 
@@ -281,7 +281,7 @@ describe('specflow-spec-editor (Moderate): governed_by check on edit, cortex val
 
   it('checks governed_by:/rule references when editing specs', () => {
     expect(s).toContain('`governed_by:`');
-    expect(s).toContain('.cortex/cerebrum/rules/R-*.md');
+    expect(s).toContain('.cortex/compass/rules/R-*.md');
   });
 
   it('runs cortex validate after modifications as the mechanical backbone, keeping the judgment layer', () => {
@@ -331,8 +331,8 @@ describe('specflow-lint (Light): names cortex validate as the mechanical backbon
 describe('specflow-bugs (Light): every bug write goes to the §4.3 ledger, no root bugs.md remains', () => {
   const s = body('specflow-bugs');
 
-  it('files bugs at .cortex/cerebrum/bugs/B-NNN-<slug>.md', () => {
-    expect(s).toContain('.cortex/cerebrum/bugs/B-NNN-<slug>.md');
+  it('files bugs at .cortex/compass/bugs/B-NNN-<slug>.md', () => {
+    expect(s).toContain('.cortex/compass/bugs/B-NNN-<slug>.md');
   });
 
   it('the ledger format carries the schema §4.3 seven-type frontmatter', () => {

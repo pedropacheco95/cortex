@@ -38,11 +38,11 @@ export const CLUSTER_ID_PATTERN = /^cluster:[a-z0-9-]+$/;
 
 /**
  * Node ids reuse the constellation node-id grammar (§4.9): a module prefix
- * (`anatomy | rule | bug | cerebrum | atlas | spec | business`) then a
+ * (`anatomy | rule | bug | compass | atlas | spec | business`) then a
  * non-empty body. Identity is borrowed from the constellation compiler, so this
  * only asserts the well-formed shape, not global existence.
  */
-export const NODE_ID_PATTERN = /^(anatomy|rule|bug|cerebrum|atlas|spec|business):.+$/;
+export const NODE_ID_PATTERN = /^(anatomy|rule|bug|compass|atlas|spec|business):.+$/;
 
 /**
  * Provenance trailer on a loop-appended prose entry (§4.10.1):

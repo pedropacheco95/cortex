@@ -4,7 +4,7 @@
  * convention; describe blocks moved verbatim, zero behavioural change).
  *
  * End-to-end over tmp fixture projects: handcrafted init-like `.cortex/`
- * skeletons with real cerebrum rule files, driven through the `cortex hook
+ * skeletons with real compass rule files, driven through the `cortex hook
  * <name>` dispatch (runHook) with raw stdin JSON. One describe per spec AC —
  * 8 in total.
  */

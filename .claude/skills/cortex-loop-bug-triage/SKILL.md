@@ -41,5 +41,5 @@ nested `claude` subprocess, and never run bare `cortex loop-bug-triage`**
    filled, agreements, divergences, and aged open bugs.
 
 **Never overwrite an existing classification.** The fill-only write to open
-bug files is this loop's single sanctioned cerebrum write (spec Rule 3).
+bug files is this loop's single sanctioned compass write (spec Rule 3).
 Never mutate anything else outside `.cortex/pulse/`.

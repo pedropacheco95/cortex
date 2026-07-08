@@ -132,7 +132,7 @@ export const REASONING_FIXING_WRITER_SH =
  */
 export function makeTestRunnerProject(root: string, opts: { fixed?: boolean } = {}): void {
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum', 'bugs'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass', 'bugs'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '1.0' }, null, 2) + '\n',

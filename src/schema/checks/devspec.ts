@@ -4,7 +4,7 @@ import fg from 'fast-glob';
 import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
 import { resolveId, resolveRelativePath } from '../index-build.js';
-import { globMatchesNothing } from './cerebrum.js';
+import { globMatchesNothing } from './compass.js';
 import { specsRoot } from '../../paths.js';
 
 const STATUS_ENUM = ['draft', 'implementing', 'implemented'] as const;

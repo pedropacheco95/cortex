@@ -38,7 +38,7 @@ spawn one).
      content Claude referenced. **Split by where the content lives:** if it
      lives in `insight/map/` set `"location": "insight"` and give the exact
      `was`/`now`/`why` (the loop rewrites in place + logs a correction); if it
-     lives in cerebrum/atlas/`RULES.md` set `"location": "gated"` with the
+     lives in compass/atlas/`RULES.md` set `"location": "gated"` with the
      `target` file and the byte-exact `current`/`replacement` (the loop writes a
      `gated-layer-update` proposal — **never** a direct gated write).
    - **Signal 5 — memory-commit request:** the user explicitly said "remember
@@ -61,7 +61,7 @@ spawn one).
    summarise to the user: the prose appends/rewrites (autonomous, ungated), and
    the gated proposals awaiting review.
 
-**Never write gated content directly.** Cerebrum, atlas, and `RULES.md` change
+**Never write gated content directly.** Compass, atlas, and `RULES.md` change
 only through `cortex pulse-accept`. Insight prose (`map/*.md`) is the loop's own
 ungated layer — direct writes there, always with a provenance trailer, are the
 design.

@@ -49,7 +49,7 @@ beforeEach(() => {
 function makeProject(label: string, config: Record<string, unknown> = {}): string {
   const root = tmp(label);
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '1.0', ...config }, null, 2),
@@ -87,7 +87,7 @@ function cand(over: Partial<CandidateShape> & Record<string, unknown> = {}): Rec
     pattern: 'use pnpm not npm',
     occurrences: 3,
     sessionIds: ['sess-a', 'sess-b'],
-    proposedTarget: '.cortex/cerebrum/preferences.md',
+    proposedTarget: '.cortex/compass/preferences.md',
     proposedText: 'Always use pnpm, never npm.',
     confidence: 'high',
     ...over,
@@ -153,7 +153,7 @@ describe('Covered and dismissed candidates dropped', () => {
   it('a candidate already in environment.md and one matching an unexpired dismissal are counted by reason', () => {
     const root = makeProject('covered-dismissed');
     fs.writeFileSync(
-      path.join(root, '.cortex', 'cerebrum', 'environment.md'),
+      path.join(root, '.cortex', 'compass', 'environment.md'),
       '# Environment\n\nChrome profile: profile-X\n',
       'utf-8',
     );
@@ -183,7 +183,7 @@ loop: cortex-init
     expect(counts.dismissed).toBe(1);
     expect(counts.proposed).toBe(1);
     const report = fs.readFileSync(pulsePath(root, 'suggestions.md'), 'utf-8');
-    expect(report).toContain('1 covered by cerebrum');
+    expect(report).toContain('1 covered by compass');
     expect(report).toContain('1 dismissed (unexpired)');
     expect(report).toContain('fresh pattern');
   });
@@ -243,7 +243,7 @@ loop: cortex-pulse-distil
 ## S-008: recurring pattern
 
 **Source:** distil (sessions: sess-old)
-**Target:** .cortex/cerebrum/preferences.md
+**Target:** .cortex/compass/preferences.md
 **Pattern:** recurring pattern
 **Occurrences:** 3
 **Confidence:** high
@@ -322,7 +322,7 @@ loop: cortex-pulse-distil
 ## S-004: pending survivor
 
 **Source:** distil (sessions: sess-z)
-**Target:** .cortex/cerebrum/preferences.md
+**Target:** .cortex/compass/preferences.md
 **Pattern:** pending survivor
 
 **Proposed addition:**
@@ -359,7 +359,7 @@ describe('Only pulse files written', () => {
   it('a full bare run touches only suggestions.md, .session-corpus.json, .distil-last-run, .suggestion-counter', async () => {
     const root = makeProject('blast');
     const home = tmp('blast-home');
-    fs.writeFileSync(path.join(root, '.cortex', 'cerebrum', 'environment.md'), '# Environment\n', 'utf-8');
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'environment.md'), '# Environment\n', 'utf-8');
     fs.writeFileSync(path.join(root, 'app.ts'), 'export const a = 1;\n', 'utf-8');
     writeTranscript(home, root, 'sess-1', ['always use pnpm']);
     const bin = tmp('blast-bin');
@@ -367,7 +367,7 @@ describe('Only pulse files written', () => {
       path.join(bin, 'claude'),
       `#!/bin/sh
 cat <<'JSON'
-[{"pattern":"use pnpm","occurrences":4,"sessionIds":["sess-1"],"proposedTarget":".cortex/cerebrum/preferences.md","proposedText":"Always use pnpm.","confidence":"high"}]
+[{"pattern":"use pnpm","occurrences":4,"sessionIds":["sess-1"],"proposedTarget":".cortex/compass/preferences.md","proposedText":"Always use pnpm.","confidence":"high"}]
 JSON
 `,
     );
@@ -405,7 +405,7 @@ describe('Malformed candidates are skipped and counted (Rule 2)', () => {
       { pattern: 'no target', occurrences: 3, sessionIds: [], proposedText: 'x', confidence: 1 },
       // Rule 5: a target the review gate would refuse is malformed judgment output.
       cand({ pattern: 'bad target', proposedTarget: 'src/schema/validate.ts' }),
-      cand({ pattern: 'escape target', proposedTarget: '.cortex/cerebrum/../../etc/evil.md' }),
+      cand({ pattern: 'escape target', proposedTarget: '.cortex/compass/../../etc/evil.md' }),
       cand({ pattern: 'the good one' }),
     ]);
     expect(counts.malformed).toBe(7);
@@ -483,7 +483,7 @@ describe('Shipped skills/cortex-pulse-distil/SKILL.md is pinned', () => {
 
   it('pins the propose-don\'t-mutate boundary', () => {
     expect(body).toMatch(/never mutate anything outside `\.cortex\/pulse\/`/i);
-    expect(body).toMatch(/never write into\s*`\.cortex\/cerebrum\/`/i);
+    expect(body).toMatch(/never write into\s*`\.cortex\/compass\/`/i);
     expect(body).toContain('cortex pulse-list');
     expect(body).toContain('cortex pulse-accept');
   });
@@ -497,7 +497,7 @@ describe('Proposals whose text contains fences get a longer outer fence (B-003)'
     const root = makeProject('b003-writer');
     const text = 'Always run:\n\n```bash\npnpm test\n```';
     proposeFromCandidates(root, [
-      { pattern: 'fenced pattern', occurrences: 4, sessionIds: ['s1'], proposedTarget: '.cortex/cerebrum/preferences.md', proposedText: text, confidence: 'high' },
+      { pattern: 'fenced pattern', occurrences: 4, sessionIds: ['s1'], proposedTarget: '.cortex/compass/preferences.md', proposedText: text, confidence: 'high' },
     ]);
     const report = fs.readFileSync(pulsePath(root, 'suggestions.md'), 'utf-8');
     expect(report).toContain('**Proposed addition:**\n\n````\n' + text + '\n````');

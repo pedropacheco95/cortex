@@ -56,7 +56,7 @@ before planning or coding (skip this section cleanly when `.cortex/` is absent):
    task-relevant files — match rows via `spec_links` (the specs being implemented) and
    the specs' `governs:` globs. Use each row's one-line purpose to decide what NOT to
    read: a purpose line that answers the question replaces a whole-file read.
-3. **Cerebrum rules.** Collect the applicable rules from `.cortex/cerebrum/rules/R-*.md`:
+3. **Compass rules.** Collect the applicable rules from `.cortex/compass/rules/R-*.md`:
    every rule whose `governs` globs match the files being touched AND every rule whose
    `check:` predicate applies to them. Honour them while coding — a `check:` predicate
    is a mechanical constraint the written code must satisfy.
@@ -66,9 +66,9 @@ before planning or coding (skip this section cleanly when `.cortex/` is absent):
 5. **Insight leads (when `.cortex/insight/` exists).** Before planning or coding, run
    `cortex insight query <topic>` for the task's domain (setup / testing / conventions /
    deploy prose) and `cortex insight neighbors <node-id>` for inferred related code.
-   Treat every hit as an ungated lead to confirm against anatomy/cerebrum before it
+   Treat every hit as an ungated lead to confirm against anatomy/compass before it
    drives a decision — never a gated rule. Insight is **ungated/unreviewed**; the gated
-   layers (cerebrum/atlas/`RULES.md`) win.
+   layers (compass/atlas/`RULES.md`) win.
 6. **Validate before finishing.** Run `cortex validate` before reporting completion and
    resolve (or explicitly surface) anything it flags.
 7. **Gap documentation home (design §8.5).** Gap entries and the final gap report land

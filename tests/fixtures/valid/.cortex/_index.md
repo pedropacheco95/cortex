@@ -4,8 +4,8 @@
 
 **What's here:**
 - `anatomy/` — file inventory and dependency graph
-- `cerebrum/` — rules and bugs
+- `compass/` — rules and bugs
 - `atlas/` — decisions, stakeholders, domain glossary
 - `pulse/` — health reports
 
-**How to navigate:** start with anatomy for file overview, cerebrum for rules.
+**How to navigate:** start with anatomy for file overview, compass for rules.

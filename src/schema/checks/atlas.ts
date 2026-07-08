@@ -57,10 +57,10 @@ export async function checkAtlas(root: string, index: ProjectIndex): Promise<Vio
       }
     }
 
-    // Check cerebrum_rules and related_specs
-    for (const ref of (data['cerebrum_rules'] as string[] | undefined) ?? []) {
+    // Check compass_rules and related_specs
+    for (const ref of (data['compass_rules'] as string[] | undefined) ?? []) {
       if (!resolveId(index, ref)) {
-        violations.push({ severity: 'error', check: 'check.atlas', clause: '§4.4', location: { path: filePath, key: 'cerebrum_rules' }, message: `cerebrum_rules ID "${ref}" does not resolve` });
+        violations.push({ severity: 'error', check: 'check.atlas', clause: '§4.4', location: { path: filePath, key: 'compass_rules' }, message: `compass_rules ID "${ref}" does not resolve` });
       }
     }
     for (const ref of (data['related_specs'] as string[] | undefined) ?? []) {

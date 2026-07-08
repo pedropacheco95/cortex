@@ -11,7 +11,7 @@ Default decisions Claude holds per-round without asking. Granted by Pedro, 2026-
 
 ## Dogfooding bugs found during a /goal round
 
-File in `cerebrum/bugs/` with the seven-type classification and a populated `proposed_fix`. **Ride the fix into the current round** if it is under ~30 lines *and* the fix's regression test is included; otherwise file it for the next round.
+File in `compass/bugs/` with the seven-type classification and a populated `proposed_fix`. **Ride the fix into the current round** if it is under ~30 lines *and* the fix's regression test is included; otherwise file it for the next round.
 
 **Blocking-batch exception:** when a filed bug blocks the correctness of the current or immediately-next batch (not merely future rounds), it rides with the blocking batch even past the threshold — the scoped reason is *unblock the batch*, never "small enough to ride". Record that reason explicitly on the ride so exceptions don't erode the general rule. (First exercise: B-003 riding the bug-triage batch — skill-suggest's draft payloads contain fences, so the batch's own outputs would be mangled without it.)
 

@@ -10,7 +10,7 @@ export function checkLayout(root: string): Violation[] {
     return violations; // .cortex is optional; if absent, no layout violations
   }
 
-  const expectedDirs = ['anatomy', 'cerebrum', 'atlas', 'pulse'];
+  const expectedDirs = ['anatomy', 'compass', 'atlas', 'pulse'];
   for (const dir of expectedDirs) {
     const dirPath = path.join(cortexDir, dir);
     if (fs.existsSync(dirPath)) {
@@ -29,8 +29,8 @@ export function checkLayout(root: string): Violation[] {
 
   // Check subdirs
   const subDirs = [
-    'cerebrum/rules',
-    'cerebrum/bugs',
+    'compass/rules',
+    'compass/bugs',
     'atlas/decisions',
     'atlas/stakeholders',
     'atlas/domain',

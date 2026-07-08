@@ -1,4 +1,4 @@
-# Cerebrum rules — index
+# Compass rules — index
 
 **Read this when:** you are about to write or edit files under `src/` or `specs/`, or the user asks why a convention exists.
 

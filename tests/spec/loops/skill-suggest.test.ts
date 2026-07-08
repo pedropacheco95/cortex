@@ -43,7 +43,7 @@ afterEach(() => {
 function makeProject(label: string): string {
   const root = tmp(label);
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '1.0', pulse: { distilThresholdN: 3 } }, null, 2),

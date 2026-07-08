@@ -41,7 +41,7 @@ beforeEach(() => {
 function makeProject(label: string, config: Record<string, unknown> = {}): string {
   const root = tmp(label);
   fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '1.0', ...config }, null, 2),
@@ -199,8 +199,8 @@ describe('Shared counter, no collisions with distil', () => {
     fs.writeFileSync(pulsePath(root, '.suggestion-counter'), '7', 'utf-8');
     // Distil proposes two → S-008, S-009 (its own AC), counter at 9.
     proposeFromCandidates(root, [
-      { pattern: 'p one', occurrences: 3, sessionIds: ['s1'], proposedTarget: '.cortex/cerebrum/preferences.md', proposedText: 'One.', confidence: 'high' },
-      { pattern: 'p two', occurrences: 3, sessionIds: ['s1'], proposedTarget: '.cortex/cerebrum/preferences.md', proposedText: 'Two.', confidence: 'high' },
+      { pattern: 'p one', occurrences: 3, sessionIds: ['s1'], proposedTarget: '.cortex/compass/preferences.md', proposedText: 'One.', confidence: 'high' },
+      { pattern: 'p two', occurrences: 3, sessionIds: ['s1'], proposedTarget: '.cortex/compass/preferences.md', proposedText: 'Two.', confidence: 'high' },
     ]);
     const counts = proposeSkillCandidates(root, [
       cand({ workflowName: 'flow-one', draftSkillMd: skillDraft('flow-one') }),

@@ -130,9 +130,9 @@ export async function checkIndexBudgets(root: string): Promise<DriftFinding[]> {
 /** Directories where localisation matters (curated knowledge); machine-written
  *  (anatomy) and transient (pulse) trees are excluded, as is the root. */
 const HEURISTIC_DIRS = [
-  'cerebrum',
-  'cerebrum/rules',
-  'cerebrum/bugs',
+  'compass',
+  'compass/rules',
+  'compass/bugs',
   'atlas',
   'atlas/stakeholders',
   'atlas/decisions',
@@ -141,7 +141,7 @@ const HEURISTIC_DIRS = [
 
 /** Files `cortex init` itself creates — their presence is not "gained artefacts". */
 const INIT_SKELETON_FILES: Record<string, Set<string>> = {
-  cerebrum: new Set(['preferences.md', 'environment.md', 'do-not-repeat.md', 'decisions.md', 'standing-authorities.md']),
+  compass: new Set(['preferences.md', 'environment.md', 'do-not-repeat.md', 'standing-authorities.md']),
 };
 
 export function checkTemplateIdentical(root: string): DriftFinding[] {

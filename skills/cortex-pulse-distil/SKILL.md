@@ -33,7 +33,7 @@ exists only for humans at a terminal; it would spawn one).
 4. Write the candidates as a JSON array to a scratchpad file (your session
    scratchpad — never inside the project). Each candidate is exactly
    `{"pattern": string, "occurrences": number, "sessionIds": [string],
-   "proposedTarget": ".cortex/cerebrum/<file>.md", "proposedText": string,
+   "proposedTarget": ".cortex/compass/<file>.md", "proposedText": string,
    "confidence": string}`.
 5. Run `cortex pulse-distil --propose <that scratchpad file>`. The
    deterministic propose half applies the threshold, already-covered, and
@@ -43,5 +43,5 @@ exists only for humans at a terminal; it would spawn one).
    proposals, and the drop counts by reason from the report footer.
 
 **Never mutate anything outside `.cortex/pulse/`.** Never write into
-`.cortex/cerebrum/` — proposals flow through `cortex pulse-list` /
+`.cortex/compass/` — proposals flow through `cortex pulse-list` /
 `cortex pulse-accept` (propose-don't-mutate).

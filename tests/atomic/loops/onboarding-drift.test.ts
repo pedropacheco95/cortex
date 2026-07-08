@@ -64,10 +64,10 @@ describe('signal (b): _index.md missing a §7.1 heading (via check.index-shape)'
   it('flags an index missing "Read this when:" and names the file', () => {
     const root = tmp('heading');
     makeCortexProject(root);
-    writeAt(root, '.cortex/cerebrum/_index.md', "# Cerebrum\n\n**What's here:** stuff.\n\n**How to navigate:** around.\n");
+    writeAt(root, '.cortex/compass/_index.md', "# Compass\n\n**What's here:** stuff.\n\n**How to navigate:** around.\n");
     const findings = checkIndexHeadings(root);
     expect(findings).toHaveLength(1);
-    expect(findings[0]?.finding).toContain('.cortex/cerebrum/_index.md');
+    expect(findings[0]?.finding).toContain('.cortex/compass/_index.md');
     expect(findings[0]?.finding).toContain('Read this when:');
     expect(findings[0]?.finding).toContain('check.index-shape');
   });
@@ -75,7 +75,7 @@ describe('signal (b): _index.md missing a §7.1 heading (via check.index-shape)'
   it('a well-shaped index is silent', () => {
     const root = tmp('heading-ok');
     makeCortexProject(root);
-    writeAt(root, '.cortex/cerebrum/_index.md', CORTEX_INDEXES['cerebrum'] as string);
+    writeAt(root, '.cortex/compass/_index.md', CORTEX_INDEXES['compass'] as string);
     expect(checkIndexHeadings(root)).toEqual([]);
   });
 });
@@ -131,12 +131,12 @@ describe('signal (d): template-identical index in a grown directory (heuristic)'
     expect(checkTemplateIdentical(root)).toEqual([]);
   });
 
-  it("init's own cerebrum skeleton leaves do not count as gained artefacts", () => {
+  it("init's own compass skeleton leaves do not count as gained artefacts", () => {
     const root = tmp('skeleton');
     makeCortexProject(root);
-    writeAt(root, '.cortex/cerebrum/_index.md', CORTEX_INDEXES['cerebrum'] as string);
-    writeAt(root, '.cortex/cerebrum/preferences.md', '# Preferences\n');
-    writeAt(root, '.cortex/cerebrum/environment.md', '# Environment\n');
+    writeAt(root, '.cortex/compass/_index.md', CORTEX_INDEXES['compass'] as string);
+    writeAt(root, '.cortex/compass/preferences.md', '# Preferences\n');
+    writeAt(root, '.cortex/compass/environment.md', '# Environment\n');
     expect(checkTemplateIdentical(root)).toEqual([]);
   });
 });

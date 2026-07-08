@@ -76,7 +76,7 @@ ISO-8601. Every path in `sources:` MUST resolve.
 
 ## 4. Atlas-only write boundary
 
-Write **only inside `atlas/`**. **Never** write to `cerebrum`, `anatomy`,
+Write **only inside `atlas/`**. **Never** write to `compass`, `anatomy`,
 `specs`, or `pulse`. If you spot a rule candidate (a durable engineering
 convention the project should adopt), do NOT write it anywhere — list it in your
 closing summary as a **suggestion for the human** only. Rule candidates are

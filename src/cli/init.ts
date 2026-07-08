@@ -27,9 +27,8 @@ import {
   SCHEDULED_TASKS,
   claudeMdBlock,
   scheduledTaskSkillMd,
-  CEREBRUM_ENVIRONMENT_TEMPLATE,
-  CEREBRUM_DO_NOT_REPEAT_TEMPLATE,
-  CEREBRUM_DECISIONS_TEMPLATE,
+  COMPASS_ENVIRONMENT_TEMPLATE,
+  COMPASS_DO_NOT_REPEAT_TEMPLATE,
   pulseDismissedTemplate,
 } from './templates.js';
 // Schema §9.1 project scoping for the Rule 13 task writer (core-cli.task-scoping).
@@ -128,11 +127,12 @@ function writeSkeleton(root: string, force: boolean, nowIso: string): void {
     fs.writeFileSync(configPath, JSON.stringify(CONFIG_DEFAULTS, null, 2) + '\n', 'utf-8');
   }
 
-  // Cerebrum skeleton leaves (preserved if present — curated knowledge).
-  const cerebrum = path.join(cortexDir, 'cerebrum');
-  writeIfAbsent(path.join(cerebrum, 'environment.md'), CEREBRUM_ENVIRONMENT_TEMPLATE, false);
-  writeIfAbsent(path.join(cerebrum, 'do-not-repeat.md'), CEREBRUM_DO_NOT_REPEAT_TEMPLATE, false);
-  writeIfAbsent(path.join(cerebrum, 'decisions.md'), CEREBRUM_DECISIONS_TEMPLATE, false);
+  // Compass skeleton leaves (preserved if present — curated knowledge).
+  // No decisions.md: decisions are single-homed to atlas/decisions/ (schema §4.2,
+  // addendum §A2.1) — compass never scaffolds a decisions artefact.
+  const compass = path.join(cortexDir, 'compass');
+  writeIfAbsent(path.join(compass, 'environment.md'), COMPASS_ENVIRONMENT_TEMPLATE, false);
+  writeIfAbsent(path.join(compass, 'do-not-repeat.md'), COMPASS_DO_NOT_REPEAT_TEMPLATE, false);
 
   // Pulse rejection memory (persists; preserved if present).
   writeIfAbsent(path.join(cortexDir, 'pulse', 'dismissed.md'), pulseDismissedTemplate(nowIso), false);
@@ -327,7 +327,7 @@ function draftPreferences(root: string, nowIso: string): { facts: string[] } {
   }
 
   const content = `---
-kind: cerebrum-preferences
+kind: compass-preferences
 generated: ${nowIso}
 confidence: EXTRACTED
 status: draft
@@ -342,7 +342,7 @@ status: draft
 ${facts.length > 0 ? facts.map((f) => `- ${f}`).join('\n') : '- (no stack facts could be extracted)'}
 `;
 
-  const prefsPath = path.join(root, '.cortex', 'cerebrum', 'preferences.md');
+  const prefsPath = path.join(root, '.cortex', 'compass', 'preferences.md');
   writeIfAbsent(prefsPath, content, false); // curated once reviewed — never overwritten
   return { facts };
 }
@@ -391,7 +391,7 @@ function migrateBugs(root: string, nowIso: string): { migrated: string[] } {
   if (!fs.existsSync(legacyPath)) return { migrated: [] };
 
   const raw = fs.readFileSync(legacyPath, 'utf-8');
-  if (raw.includes('cortex init') && raw.includes('.cortex/cerebrum/bugs/')) {
+  if (raw.includes('cortex init') && raw.includes('.cortex/compass/bugs/')) {
     return { migrated: [] }; // already migrated (deprecation marker in place)
   }
 
@@ -399,7 +399,7 @@ function migrateBugs(root: string, nowIso: string): { migrated: string[] } {
   const entries = parts.filter((p) => p.startsWith('## '));
   if (entries.length === 0) return { migrated: [] };
 
-  const bugsDir = path.join(root, '.cortex', 'cerebrum', 'bugs');
+  const bugsDir = path.join(root, '.cortex', 'compass', 'bugs');
   fs.mkdirSync(bugsDir, { recursive: true });
 
   // Monotonic numbering: continue after the highest existing B-NNN.
@@ -459,7 +459,7 @@ ${body ? body + '\n\n' : ''}> Migrated from the legacy root \`bugs.md\` by \`cor
 
 This legacy bug ledger was migrated by \`cortex init\` on ${nowIso}.
 
-The bug ledger now lives at \`.cortex/cerebrum/bugs/\` — one file per bug
+The bug ledger now lives at \`.cortex/compass/bugs/\` — one file per bug
 (\`B-NNN-<slug>.md\`, cortex-schema.md §4.3). Do not add entries here.
 `,
     'utf-8',
@@ -794,7 +794,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   lines.push(
     `Skills installed: ${skills.installed}${skills.preserved > 0 ? ` (${skills.preserved} existing bundle(s) preserved)` : ''}`,
   );
-  lines.push(`Preferences drafted: .cortex/cerebrum/preferences.md (${prefs.facts.length} fact(s); draft — review before accepting)`);
+  lines.push(`Preferences drafted: .cortex/compass/preferences.md (${prefs.facts.length} fact(s); draft — review before accepting)`);
   lines.push(`Hooks registered in .claude/settings.json: ${registeredHooks.join(', ')}${preRead ? '' : ' (Read pair off per cortex.config.json hooks.preRead)'}`);
   switch (gitHookState) {
     case 'skipped-no-git':
@@ -832,7 +832,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   lines.push(`CLAUDE.md: managed cortex block ${claudeMdState}.`);
   lines.push(
     migration.migrated.length > 0
-      ? `Migration: bugs.md → .cortex/cerebrum/bugs/ (${migration.migrated.length} bug(s): ${migration.migrated.join(', ')}); deprecation marker left at bugs.md.`
+      ? `Migration: bugs.md → .cortex/compass/bugs/ (${migration.migrated.length} bug(s): ${migration.migrated.join(', ')}); deprecation marker left at bugs.md.`
       : 'Migration: none needed.',
   );
   if (specTrees.specsScaffolded || specTrees.businessScaffolded) {

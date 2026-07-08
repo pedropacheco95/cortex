@@ -4,9 +4,9 @@
  * §7.2 specs index, §8 CLAUDE.md managed block, §10.1 config defaults.
  */
 
-export const SCHEMA_VERSION = '2.0';
+export const SCHEMA_VERSION = '3.0';
 
-export const PRESENT_MODULES = 'anatomy, cerebrum, atlas, insight, pulse';
+export const PRESENT_MODULES = 'anatomy, compass, atlas, insight, pulse';
 
 /** Schema §10.1 defaults, verbatim. `hooks.preRead` governs the Read pair
  *  (PreRead + PostRead) and defaults TRUE; init writes it explicitly on fresh
@@ -44,7 +44,7 @@ knowledge layer.
 
 **What's here:**
 - \`anatomy/\` — per-file index of the codebase (purpose, tokens, spec links). Open before navigating unfamiliar code.
-- \`cerebrum/\` — rules, preferences, decisions, and the bug ledger. Open before writes and for "why" questions.
+- \`compass/\` — rules, preferences, and the bug ledger. Open before writes and for "why" questions.
 - \`atlas/\` — stakeholders, narrative decisions, domain terms, raw sources. Open for project context.
 - \`pulse/\` — transient loop outputs and suggestions. Open when reviewing proposals.
 - \`cortex.config.json\` — schema version and module config.
@@ -65,7 +65,7 @@ estimate the cost of reading it — before opening unfamiliar files.
 **How to navigate:** find the file's row in \`files.md\`; follow \`spec_links\` to the
 dev specs that govern it; use \`graph.json\` to walk imports before editing.
 `,
-  'cerebrum': `# Cerebrum — index
+  'compass': `# Compass — index
 
 **Read this when:** the user asks "why" about a convention or decision, before you
 propose a write that touches governed files, or when triaging a bug.
@@ -74,14 +74,13 @@ propose a write that touches governed files, or when triaging a bug.
 - \`rules/\` — one file per rule (R-NNN). Match a write's path against each rule's \`governs\`.
 - \`bugs/\` — the bug ledger (B-NNN), classified by the seven-type taxonomy.
 - \`preferences.md\`, \`environment.md\` — project conventions and operational pointers.
-- \`decisions.md\` — ADRs; each cross-links to \`atlas/decisions/\`.
 - \`do-not-repeat.md\` — index of recurring-mistake rules.
 
 **How to navigate:** from a rule, follow \`source:\` to the atlas decision or bug that
 justifies it; follow \`governs:\` to the files it constrains; follow \`related_specs:\`
 to the specs it touches.
 `,
-  'cerebrum/bugs': `# Bug ledger — index
+  'compass/bugs': `# Bug ledger — index
 
 **Read this when:** a bug is reported, a test fails unexpectedly, or you need to know
 whether a failure mode has been seen before.
@@ -92,7 +91,7 @@ whether a failure mode has been seen before.
 **How to navigate:** follow \`affects:\` to the rule, file, or spec involved; follow
 \`related_specs:\` to the governing specs. IDs are monotonic and never reused.
 `,
-  'cerebrum/rules': `# Rules — index
+  'compass/rules': `# Rules — index
 
 **Read this when:** you are about to write or edit project files — check whether a
 rule's \`governs\` glob matches the target path first.
@@ -115,7 +114,7 @@ why, or what a domain term means.
 - \`sources/\` — raw materials (gitignored; may be sensitive).
 
 **How to navigate:** from a decision, follow \`sources:\` to raw material and
-\`cerebrum_rules:\` to rules derived from it; \`supersedes:\` walks decision history.
+\`compass_rules:\` to rules derived from it; \`supersedes:\` walks decision history.
 `,
   'atlas/stakeholders': `# Stakeholders — index
 
@@ -136,7 +135,7 @@ a rule — before proposing to change any of them.
 **What's here:**
 - \`YYYY-MM-DD-<slug>.md\` — one dated narrative per decision: what was chosen and why.
 
-**How to navigate:** follow \`cerebrum_rules:\` to the rules a decision produced,
+**How to navigate:** follow \`compass_rules:\` to the rules a decision produced,
 \`supersedes:\` to the decision it replaced, and \`sources:\` to the raw material.
 `,
   'atlas/domain': `# Domain terms — index
@@ -188,7 +187,7 @@ export const INSIGHT_INDEX_TEMPLATE = `# Insight — index
 
 **Read this when:** you need conceptual orientation — how things relate, what a
 domain cluster contains, or how setup/testing/deploy actually work here. Insight
-is **ungated**: useful immediately, **not human-reviewed**. For enforced rules, cerebrum.
+is **ungated**: useful immediately, **not human-reviewed**. For enforced rules, compass.
 
 **What's here:**
 - \`map/*.md\` — observed project knowledge (setup, testing, deploy, conventions, …).
@@ -266,12 +265,12 @@ export function claudeMdBlock(projectName: string): string {
 Cortex is active on **${projectName}**. The knowledge layer lives in \`.cortex/\`:
 
 - \`anatomy/\` — per-file map (purpose, tokens, governing specs). What each file is.
-- \`cerebrum/\` — rules, decisions, preferences, and the bug ledger. The "why" and the "must".
+- \`compass/\` — rules, preferences, and the bug ledger. The "must".
 - \`atlas/\` — stakeholders, decisions (narrative), domain terms, source materials.
 - \`insight/\` — ungated, queryable inferred/observed knowledge layer (\`cortex insight\` to query).
 
 **Protocol:** before working a task, read the relevant \`_index.md\` first — they are
-prompts that tell you what to read and when. For "why" questions, grep \`cerebrum/\` and
+prompts that tell you what to read and when. For "why" questions, grep \`compass/\` and
 \`atlas/\`. For unfamiliar terms, check \`atlas/domain/\`. Follow frontmatter
 cross-references (the citation graph) to trace any claim to its source.
 
@@ -305,13 +304,13 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     name: 'hygiene',
     description: 'Nightly hygiene scan of the Cortex knowledge layer; writes a report to .cortex/pulse/.',
     requiredSkills: ['cortex-pulse-hygiene'],
-    body: 'Invoke the `cortex-pulse-hygiene` skill: read `.cortex/_index.md`, then audit every Cortex artefact for staleness, broken cross-references, and budget overruns. Write `hygiene-report.md` to `.cortex/pulse/` with schema-valid frontmatter. Propose only — never edit cerebrum, anatomy, atlas, or the spec trees directly.',
+    body: 'Invoke the `cortex-pulse-hygiene` skill: read `.cortex/_index.md`, then audit every Cortex artefact for staleness, broken cross-references, and budget overruns. Write `hygiene-report.md` to `.cortex/pulse/` with schema-valid frontmatter. Propose only — never edit compass, anatomy, atlas, or the spec trees directly.',
   },
   {
     name: 'distil',
-    description: 'Distil recurring session corrections into cerebrum rule candidates in .cortex/pulse/.',
+    description: 'Distil recurring session corrections into compass rule candidates in .cortex/pulse/.',
     requiredSkills: ['cortex-pulse-distil'],
-    body: 'Invoke the `cortex-pulse-distil` skill: review recent session history for corrections the user made more than the configured threshold. Draft rule candidates (R-NNN shape, schema §4.2) into `.cortex/pulse/rule-candidates.md` for human approval. Never write into `.cortex/cerebrum/` directly.',
+    body: 'Invoke the `cortex-pulse-distil` skill: review recent session history for corrections the user made more than the configured threshold. Draft rule candidates (R-NNN shape, schema §4.2) into `.cortex/pulse/rule-candidates.md` for human approval. Never write into `.cortex/compass/` directly.',
   },
   {
     name: 'skill-suggest',
@@ -327,9 +326,9 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
   },
   {
     name: 'rule-decay',
-    description: 'Flag stale or unused cerebrum rules for retirement review; report to .cortex/pulse/.',
+    description: 'Flag stale or unused compass rules for retirement review; report to .cortex/pulse/.',
     requiredSkills: ['cortex-loop-rule-decay'],
-    body: 'Invoke the `cortex-loop-rule-decay` skill: audit `.cortex/cerebrum/rules/` for rules whose `governs` globs no longer match files, whose sources vanished, or that have not fired in a long time. Write a retirement-candidate report to `.cortex/pulse/` — never retire a rule yourself.',
+    body: 'Invoke the `cortex-loop-rule-decay` skill: audit `.cortex/compass/rules/` for rules whose `governs` globs no longer match files, whose sources vanished, or that have not fired in a long time. Write a retirement-candidate report to `.cortex/pulse/` — never retire a rule yourself.',
   },
   {
     name: 'atlas-staleness',
@@ -365,11 +364,11 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     name: 'test-runner',
     description: 'Run the four-layer test cascade and triage failures into the bug ledger workflow.',
     requiredSkills: ['cortex-loop-test-runner'],
-    body: 'Invoke the `cortex-loop-test-runner` skill: run the test suites (atomic, spec, journey, scenario) with pnpm. Triage failures: classify each per the seven-type taxonomy and draft bug entries for `.cortex/cerebrum/bugs/` via the writer/verifier flow this loop is governed by.',
+    body: 'Invoke the `cortex-loop-test-runner` skill: run the test suites (atomic, spec, journey, scenario) with pnpm. Triage failures: classify each per the seven-type taxonomy and draft bug entries for `.cortex/compass/bugs/` via the writer/verifier flow this loop is governed by.',
   },
   {
     name: 'bug-triage',
-    description: 'Triage open bugs in .cortex/cerebrum/bugs/: classify, prioritise, and propose fixes.',
+    description: 'Triage open bugs in .cortex/compass/bugs/: classify, prioritise, and propose fixes.',
     requiredSkills: ['cortex-loop-bug-triage', 'specflow-bugs'],
     body: 'Invoke the `cortex-loop-bug-triage` skill: run `cortex loop-bug-triage --collect`, classify every worklist bug in-session against the seven-type taxonomy using the `specflow-bugs` skill\'s diagnostic discipline, write the results JSON to a scratchpad, then run `cortex loop-bug-triage --report <file>`. Fill-only (loops.bug-triage Rule 3): absent type/severity/proposed_fix fields on open bugs are filled; present fields are never overwritten — divergences land in `.cortex/pulse/bug-triage.md` for human review.',
   },
@@ -409,27 +408,19 @@ unless your task explicitly owns another write path.
 `;
 }
 
-/** Skeleton contents for cerebrum leaf files created empty by init. */
-export const CEREBRUM_ENVIRONMENT_TEMPLATE = `# Environment
+/** Skeleton contents for compass leaf files created empty by init. */
+export const COMPASS_ENVIRONMENT_TEMPLATE = `# Environment
 
 Operational pointers only — aliases, profile names, tool locations. **Never secrets.**
 
 (nothing recorded yet)
 `;
 
-export const CEREBRUM_DO_NOT_REPEAT_TEMPLATE = `# Do not repeat
+export const COMPASS_DO_NOT_REPEAT_TEMPLATE = `# Do not repeat
 
 Index of recurring-mistake rules. Each entry points at a rule in \`rules/\`.
 
 (nothing recorded yet)
-`;
-
-export const CEREBRUM_DECISIONS_TEMPLATE = `# Decisions (ADR index)
-
-Architecture decision records. Each entry cross-links to the narrative decision in
-\`../atlas/decisions/\`.
-
-(no decisions recorded yet)
 `;
 
 /**

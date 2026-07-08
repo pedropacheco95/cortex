@@ -4,7 +4,7 @@
  * `pulse-accept <S-NNN>` applies one verbatim, `pulse-reject <S-NNN>` records a
  * windowed dismissal. Discovery spans ALL `.cortex/pulse/*.md` reports (§4.5
  * single S-namespace; Rule 2) — a duplicate id across files is a hard error
- * (Rule 4b). Accept targets must lie inside `.cortex/cerebrum/` or be a NEW
+ * (Rule 4b). Accept targets must lie inside `.cortex/compass/` or be a NEW
  * `.claude/skills/<name>/SKILL.md` (Rule 4). Deterministic Core (R-001):
  * fs/path only — no LLM, no network, no subprocess.
  */
@@ -23,13 +23,12 @@ import { planPromotion } from './promote.js';
 
 const DEFAULT_DISMISSED_WINDOW_DAYS = 90;
 
-/** Cerebrum core files (schema §1) created on accept if absent; every other
+/** Compass core files (schema §1) created on accept if absent; every other
  *  target MUST already exist (Rule 4). */
-const CEREBRUM_CORE_FILES = new Set([
+const COMPASS_CORE_FILES = new Set([
   'preferences.md',
   'environment.md',
   'do-not-repeat.md',
-  'decisions.md',
   'standing-authorities.md',
 ]);
 
@@ -566,10 +565,10 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
         return 1;
       }
     } else if (suggestion.payloadKind === 'addition') {
-      // Append requires the target to exist, except a cerebrum core file (created).
-      const cerebrumRoot = path.resolve(root, '.cortex', 'cerebrum');
-      const relFromCerebrum = path.relative(cerebrumRoot, targetAbs);
-      const isCore = CEREBRUM_CORE_FILES.has(relFromCerebrum);
+      // Append requires the target to exist, except a compass core file (created).
+      const compassRoot = path.resolve(root, '.cortex', 'compass');
+      const relFromCompass = path.relative(compassRoot, targetAbs);
+      const isCore = COMPASS_CORE_FILES.has(relFromCompass);
       if (!exists && !isCore) {
         console.error(`Target file does not exist: ${target}`);
         return 1;

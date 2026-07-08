@@ -38,7 +38,7 @@ Every directory in `.specflow/specs-business/` and `.specflow/specs/` (root, eve
 
 When the project has a `.cortex/` directory:
 
-- **Read `.cortex/cerebrum/preferences.md` (when present) before proposing stack or
+- **Read `.cortex/compass/preferences.md` (when present) before proposing stack or
   convention defaults** in Phases 1-2. Recorded stack choices, formatting conventions,
   and tooling preferences seed the recommendation; never contradict a recorded
   preference without flagging it to the user.
@@ -50,7 +50,7 @@ When the project has a `.cortex/` directory:
   gaps/refresh loops — there is nothing to `cortex insight query` on a blank project.
   Name it as a module that populates later; when it does, insight is
   **ungated/unreviewed** — confirm any hit against the gated layers
-  (cerebrum/atlas/`RULES.md`) before it drives a decision.
+  (compass/atlas/`RULES.md`) before it drives a decision.
 
 ## The Six Phases
 

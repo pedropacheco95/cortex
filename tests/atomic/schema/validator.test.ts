@@ -171,7 +171,7 @@ describe('check.rule: rule missing title → fires', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('rule without title fires check.rule', async () => {
-    const rulesDir = path.join(tmpDir, '.cortex', 'cerebrum', 'rules');
+    const rulesDir = path.join(tmpDir, '.cortex', 'compass', 'rules');
     fs.mkdirSync(rulesDir, { recursive: true });
     fs.writeFileSync(path.join(rulesDir, 'R-001.md'), `---
 id: R-001
@@ -193,7 +193,7 @@ describe('check.bug: bug with invalid type → fires', () => {
   afterAll(() => cleanup(tmpDir));
 
   it('bug with invalid type fires check.bug', async () => {
-    const bugsDir = path.join(tmpDir, '.cortex', 'cerebrum', 'bugs');
+    const bugsDir = path.join(tmpDir, '.cortex', 'compass', 'bugs');
     fs.mkdirSync(bugsDir, { recursive: true });
     fs.writeFileSync(path.join(bugsDir, 'B-001.md'), `---
 id: B-001
@@ -428,7 +428,7 @@ describe('check.hook-config: settings.json missing PreRead → fires', () => {
   it('config has preRead:true but settings.json has no PreRead hook', async () => {
     // Update config to enable preRead
     const configPath = path.join(tmpDir, '.cortex', 'cortex.config.json');
-    fs.writeFileSync(configPath, JSON.stringify({ schemaVersion: '2.0', hooks: { preRead: true }, loop: { enabled: false } }));
+    fs.writeFileSync(configPath, JSON.stringify({ schemaVersion: '3.0', hooks: { preRead: true }, loop: { enabled: false } }));
     // Create settings.json without PreRead hook
     const claudeDir = path.join(tmpDir, '.claude');
     fs.mkdirSync(claudeDir, { recursive: true });
@@ -530,16 +530,16 @@ implements: ../../specs-business/schema/contributor-trusts-project-knowledge.bus
   });
 });
 
-describe('check.layout: .cortex/cerebrum/ missing _index.md → fires', () => {
+describe('check.layout: .cortex/compass/ missing _index.md → fires', () => {
   let tmpDir: string;
   beforeAll(() => { tmpDir = makeTmpFixture('layout'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('missing _index.md in cerebrum/ fires error', async () => {
-    const indexPath = path.join(tmpDir, '.cortex', 'cerebrum', '_index.md');
+  it('missing _index.md in compass/ fires error', async () => {
+    const indexPath = path.join(tmpDir, '.cortex', 'compass', '_index.md');
     fs.unlinkSync(indexPath);
     const report = await validate(tmpDir);
-    const v = report.violations.find((v) => (v.check === 'check.layout' || v.check === 'check.index-present') && v.location.path.includes('cerebrum'));
+    const v = report.violations.find((v) => (v.check === 'check.layout' || v.check === 'check.index-present') && v.location.path.includes('compass'));
     expect(v).toBeDefined();
   });
 });
@@ -565,7 +565,7 @@ describe('schema §4.3: seven-type bug taxonomy accepted (slugged filename)', ()
   afterAll(() => cleanup(tmpDir));
 
   it('conformant bug with type layer-drift / status triaged → no check.bug violations', async () => {
-    const bugsDir = path.join(tmpDir, '.cortex', 'cerebrum', 'bugs');
+    const bugsDir = path.join(tmpDir, '.cortex', 'compass', 'bugs');
     fs.writeFileSync(path.join(bugsDir, 'B-001-layer-drift-example.md'), `---
 id: B-001
 title: Example drift bug
@@ -584,7 +584,7 @@ affects:
   });
 
   it('legacy enum value (type: logic) → check.bug error', async () => {
-    const bugsDir = path.join(tmpDir, '.cortex', 'cerebrum', 'bugs');
+    const bugsDir = path.join(tmpDir, '.cortex', 'compass', 'bugs');
     fs.writeFileSync(path.join(bugsDir, 'B-002-legacy-enum.md'), `---
 id: B-002
 title: Legacy enum value
@@ -609,7 +609,7 @@ describe('check.rule-governs-resolves: rule glob with 0 matches → warning', ()
   afterAll(() => cleanup(tmpDir));
 
   it('slugged rule file with unmatched governs glob fires warning, not error', async () => {
-    const rulesDir = path.join(tmpDir, '.cortex', 'cerebrum', 'rules');
+    const rulesDir = path.join(tmpDir, '.cortex', 'compass', 'rules');
     fs.writeFileSync(path.join(rulesDir, 'R-001-no-such-files.md'), `---
 id: R-001
 title: Governs nothing yet

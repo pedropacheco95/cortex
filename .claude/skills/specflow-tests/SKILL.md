@@ -39,9 +39,9 @@ spawns have even less context — they see only the test code, nothing else.
 When the project has a `.cortex/` directory, read the knowledge layer before generating
 (skip this section cleanly when `.cortex/` is absent):
 
-1. **Cerebrum rules become test assertions (design §8.4 bridge 1).** Before generating
-   tests for a spec, read the cerebrum rules that apply to it: the rule IDs in the
-   spec's `governed_by:` frontmatter plus any `.cortex/cerebrum/rules/R-*.md` whose
+1. **Compass rules become test assertions (design §8.4 bridge 1).** Before generating
+   tests for a spec, read the compass rules that apply to it: the rule IDs in the
+   spec's `governed_by:` frontmatter plus any `.cortex/compass/rules/R-*.md` whose
    `governs` globs match the spec's governed files. **Incorporate each rule's `check:`
    predicate into the generated atomic and spec tests** — the predicate (regex / grep /
    AST pattern with `expect: absent|present`) becomes an executed assertion over the
@@ -58,9 +58,9 @@ When the project has a `.cortex/` directory, read the knowledge layer before gen
    specflow-verify loop expects to find it.
 5. **Insight leads (when `.cortex/insight/` exists).** Before generating, run
    `cortex insight query testing` (or the spec's domain) to surface testing conventions
-   recorded in the ungated layer. Insight is **ungated/unreviewed** — the gated cerebrum
+   recorded in the ungated layer. Insight is **ungated/unreviewed** — the gated compass
    rules and their `check:` predicates (step 1) still govern; treat any hit as a lead to
-   confirm against the gated layers (cerebrum/atlas/`RULES.md`) before it drives a
+   confirm against the gated layers (compass/atlas/`RULES.md`) before it drives a
    decision, never as authoritative. Insight only supplements.
 
 ## How It Works: Five Phases

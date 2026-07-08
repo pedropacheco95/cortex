@@ -103,13 +103,13 @@ describe('AC compiler.2: four top groups with natural children', () => {
       scannableFixture(root);
       await scan(root);
       const c = readConstellation(root);
-      expect(c.groups.map((g) => g.id).sort()).toEqual(['anatomy', 'atlas', 'cerebrum', 'specs']);
+      expect(c.groups.map((g) => g.id).sort()).toEqual(['anatomy', 'atlas', 'compass', 'specs']);
       expect(c.groups).toHaveLength(4);
       const anatomyChildren = c.groups.find((g) => g.id === 'anatomy')?.children.map((ch) => ch.label);
       expect(anatomyChildren).toContain('src/schema');
       expect(anatomyChildren).toContain('src/cli');
-      expect(c.groups.find((g) => g.id === 'cerebrum')?.children).toContainEqual({
-        id: 'cerebrum:rules',
+      expect(c.groups.find((g) => g.id === 'compass')?.children).toContainEqual({
+        id: 'compass:rules',
         label: 'rules',
       });
       expect(c.groups.find((g) => g.id === 'specs')?.children).toContainEqual({
@@ -299,7 +299,7 @@ describe('AC compiler.10: empty surfaces compile, orphans survive', () => {
     makeCortexProject(root);
     writeFilesMd(root, [filesRow('src/lonely.ts', 42)]);
     const c = await compile(root);
-    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'cerebrum', 'specs']);
+    expect(c.groups.map((g) => g.id)).toEqual(['anatomy', 'atlas', 'compass', 'specs']);
     expect(c.groups.find((g) => g.id === 'atlas')?.children).toEqual([]);
     expect(c.groups.find((g) => g.id === 'specs')?.children).toEqual([]);
     expect(c.nodes.filter((n) => n.module === 'atlas')).toEqual([]);

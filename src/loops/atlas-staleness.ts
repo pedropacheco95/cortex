@@ -111,7 +111,7 @@ export async function scanAtlasStaleness(root: string, nowMs = Date.now()): Prom
   if (scan.empty) return scan;
 
   // Citation map: resolved target (absolute path) → citer labels. Citers are
-  // cerebrum rules (source:) and other atlas entries (sources:/supersedes:).
+  // compass rules (source:) and other atlas entries (sources:/supersedes:).
   const citedBy = new Map<string, string[]>();
   const cite = (target: string | undefined, citer: string): void => {
     if (!target) return;
@@ -120,7 +120,7 @@ export async function scanAtlasStaleness(root: string, nowMs = Date.now()): Prom
     citedBy.set(target, list);
   };
 
-  const rulesDir = path.join(root, '.cortex', 'cerebrum', 'rules');
+  const rulesDir = path.join(root, '.cortex', 'compass', 'rules');
   if (fs.existsSync(rulesDir)) {
     for (const filename of fs.readdirSync(rulesDir).filter((f) => /^R-\d{3,}.*\.md$/.test(f)).sort()) {
       const ruleFile = path.join(rulesDir, filename);
@@ -178,7 +178,7 @@ export async function scanAtlasStaleness(root: string, nowMs = Date.now()): Prom
     }
   }
 
-  // (c) dead cross-refs — sources:/supersedes: (path or id) and cerebrum_rules: (id).
+  // (c) dead cross-refs — sources:/supersedes: (path or id) and compass_rules: (id).
   for (const entry of entries) {
     for (const key of ['sources', 'supersedes'] as const) {
       for (const ref of asStringList(entry.data[key])) {
@@ -187,9 +187,9 @@ export async function scanAtlasStaleness(root: string, nowMs = Date.now()): Prom
         }
       }
     }
-    for (const ref of asStringList(entry.data['cerebrum_rules'])) {
+    for (const ref of asStringList(entry.data['compass_rules'])) {
       if (!resolveId(index, ref)) {
-        scan.deadLinks.push({ from: entry.id, key: 'cerebrum_rules', ref });
+        scan.deadLinks.push({ from: entry.id, key: 'compass_rules', ref });
       }
     }
   }

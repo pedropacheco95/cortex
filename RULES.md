@@ -40,7 +40,7 @@ A hook may surface a warning but must never fail, block, or stall a session.
 
 ## 7. Loops and pulse write ONLY to `.cortex/pulse/` and propose changes for human approval.
 
-They never mutate cerebrum/anatomy/atlas/specs directly. Sole exception: the test-runner, which writes code behind a writer/verifier split.
+They never mutate compass/anatomy/atlas/specs directly. Sole exception: the test-runner, which writes code behind a writer/verifier split.
 
 **Why:** the persistence layer stays a curated artefact.
 
@@ -66,7 +66,7 @@ CLAUDE.md Cortex section <400 tokens, each `_index.md` <300, SessionStart inject
 
 **Why:** scaffolding is read every session; tokens must buy grounding.
 
-## 12. `environment.md` and cerebrum hold pointers, never secrets.
+## 12. `environment.md` and compass hold pointers, never secrets.
 
 Store aliases and profile names only — no credentials.
 
@@ -84,7 +84,7 @@ Never "here are the specs, build it all."
 
 ## 15. Separate regenerable working state from durable knowledge in git.
 
-`.cortex/anatomy/`, `.cortex/atlas/sources/`, and `.cortex/pulse/` are gitignored (regenerable/sensitive/transient); `.cortex/cerebrum/` and atlas (minus sources) are committable durable knowledge.
+`.cortex/anatomy/`, `.cortex/atlas/sources/`, and `.cortex/pulse/` are gitignored (regenerable/sensitive/transient); `.cortex/compass/` and atlas (minus sources) are committable durable knowledge.
 
 **Why:** separate regenerable working state from durable project knowledge.
 

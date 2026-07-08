@@ -77,7 +77,7 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
 
   it('.cortex/ matches the schema §1 layout with an _index.md in every directory', () => {
     const dirs = [
-      '', 'anatomy', 'cerebrum', 'cerebrum/bugs', 'cerebrum/rules',
+      '', 'anatomy', 'compass', 'compass/bugs', 'compass/rules',
       'atlas', 'atlas/stakeholders', 'atlas/decisions', 'atlas/domain', 'atlas/sources',
       'pulse',
     ];
@@ -94,7 +94,7 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
 
   it('cortex.config.json declares the current schemaVersion', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
-    expect(config.schemaVersion).toBe('2.0');
+    expect(config.schemaVersion).toBe('3.0');
   });
 
   it('self-validation reports conformant and exit code is 0', async () => {
@@ -483,7 +483,7 @@ The cart total is off by one cent when discounts stack.
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
   it('creates B-001-*.md and B-002-*.md conforming to schema §4.3', () => {
-    const bugsDir = path.join(root, '.cortex', 'cerebrum', 'bugs');
+    const bugsDir = path.join(root, '.cortex', 'compass', 'bugs');
     const files = fs.readdirSync(bugsDir).filter((f) => /^B-\d{3}-/.test(f)).sort();
     expect(files).toHaveLength(2);
     expect(files[0]).toMatch(/^B-001-login-button-crashes-on-safari\.md$/);
@@ -506,7 +506,7 @@ The cart total is off by one cent when discounts stack.
   it('root bugs.md now contains only a deprecation marker pointing at the new location', () => {
     const content = fs.readFileSync(path.join(root, 'bugs.md'), 'utf-8');
     expect(content).toContain('DEPRECATED');
-    expect(content).toContain('.cortex/cerebrum/bugs/');
+    expect(content).toContain('.cortex/compass/bugs/');
     expect(content).not.toContain('Login button crashes');
   });
 });

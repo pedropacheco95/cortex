@@ -106,7 +106,7 @@ export function applyPreset(constellation: Constellation, preset: string, domain
 
   const counters = {
     anatomy: nodes.filter((n) => n.module === 'anatomy').length,
-    cerebrum: nodes.filter((n) => n.module === 'rule' || n.module === 'bug' || n.module === 'cerebrum').length,
+    compass: nodes.filter((n) => n.module === 'rule' || n.module === 'bug' || n.module === 'compass').length,
     atlas: nodes.filter((n) => n.module === 'atlas').length,
     specs: nodes.filter((n) => n.module === 'spec-dev' || n.module === 'spec-business').length,
     edges: edges.length,

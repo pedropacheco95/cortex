@@ -6,7 +6,7 @@
  * are queried read-only via execFile.
  *
  * v1 checks (Rule 2): (a) orphan local branches, (b) stale open PRs via gh,
- * (c) anatomy drift both directions, (d) cerebrum dead references (reusing
+ * (c) anatomy drift both directions, (d) compass dead references (reusing
  * the validator's resolution logic), (e) spec/anatomy orphans, (f) aged
  * TODO/FIXME comments. Mid-conversation drop-off detection is deferred to
  * the agentic layer (Rule 5) and named as such in the footer.
@@ -17,7 +17,7 @@ import { execFile } from 'child_process';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
 import { buildIndex, resolveId, resolveRelativePath } from '../schema/index-build.js';
-import { globMatchesNothing } from '../schema/checks/cerebrum.js';
+import { globMatchesNothing } from '../schema/checks/compass.js';
 import { splitDataRowCells } from '../anatomy/files-md.js';
 import { hasExcludedSegment, buildIgnoreFilter } from '../anatomy/exclude.js';
 import { gitExec, isGitRepo, gitLastCommitEpoch } from '../loops/git-info.js';
@@ -179,13 +179,13 @@ export async function checkAnatomyDrift(root: string): Promise<HygieneSection> {
 }
 
 // ---------------------------------------------------------------------------
-// (d) cerebrum dead references — rule source:/governs: that no longer resolve
+// (d) compass dead references — rule source:/governs: that no longer resolve
 //     (reuses the validator's resolution logic: index-build + globMatchesNothing)
 // ---------------------------------------------------------------------------
 
-export async function checkCerebrumDeadRefs(root: string): Promise<HygieneSection> {
-  const title = 'Cerebrum dead references';
-  const rulesDir = path.join(root, '.cortex', 'cerebrum', 'rules');
+export async function checkCompassDeadRefs(root: string): Promise<HygieneSection> {
+  const title = 'Compass dead references';
+  const rulesDir = path.join(root, '.cortex', 'compass', 'rules');
   if (!fs.existsSync(rulesDir)) return { title, findings: [] };
 
   const index = await buildIndex(root);
@@ -339,7 +339,7 @@ export async function runHygiene(root = '.', opts: HygieneOptions = {}): Promise
     await checkOrphanBranches(absRoot, nowMs),
     await checkStalePrs(absRoot, opts.ghBin ?? 'gh', nowMs),
     await checkAnatomyDrift(absRoot),
-    await checkCerebrumDeadRefs(absRoot),
+    await checkCompassDeadRefs(absRoot),
     await checkSpecOrphans(absRoot),
     await checkAgedTodos(absRoot, nowMs),
   ];

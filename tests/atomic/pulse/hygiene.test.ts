@@ -22,7 +22,7 @@ import {
   checkOrphanBranches,
   checkStalePrs,
   checkAnatomyDrift,
-  checkCerebrumDeadRefs,
+  checkCompassDeadRefs,
   checkSpecOrphans,
   checkAgedTodos,
   ORPHAN_BRANCH_DAYS,
@@ -178,45 +178,45 @@ describe('check (c): anatomy drift, both directions', () => {
 });
 
 // ===========================================================================
-describe('check (d): cerebrum dead references (validator resolution logic)', () => {
+describe('check (d): compass dead references (validator resolution logic)', () => {
   it('names a rule whose source points at a deleted file, with the dead path', async () => {
-    const root = tmp('cerebrum-source');
+    const root = tmp('compass-source');
     writeAt(root, 'src/app.ts', 'export {};\n');
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-101-dead-source.md',
+      '.cortex/compass/rules/R-101-dead-source.md',
       ruleMd('R-101', { source: ['../../../deleted-doc.md'], governs: ['src/**/*.ts'] }),
     );
-    const section = await checkCerebrumDeadRefs(root);
+    const section = await checkCompassDeadRefs(root);
     expect(section.findings).toHaveLength(1);
     expect(section.findings[0]).toContain('R-101');
     expect(section.findings[0]).toContain('deleted-doc.md');
   });
 
   it('names a rule whose governs glob matches nothing on disk', async () => {
-    const root = tmp('cerebrum-governs');
+    const root = tmp('compass-governs');
     writeAt(root, 'README.md', '# t\n');
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-102-dead-governs.md',
+      '.cortex/compass/rules/R-102-dead-governs.md',
       ruleMd('R-102', { source: ['../../../README.md'], governs: ['src/vanished/**/*.ts'] }),
     );
-    const section = await checkCerebrumDeadRefs(root);
+    const section = await checkCompassDeadRefs(root);
     expect(section.findings).toHaveLength(1);
     expect(section.findings[0]).toContain('R-102');
     expect(section.findings[0]).toContain('src/vanished/**/*.ts');
   });
 
   it('a healthy rule (resolving source, matching governs) is silent', async () => {
-    const root = tmp('cerebrum-healthy');
+    const root = tmp('compass-healthy');
     writeAt(root, 'README.md', '# t\n');
     writeAt(root, 'src/app.ts', 'export {};\n');
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-103-healthy.md',
+      '.cortex/compass/rules/R-103-healthy.md',
       ruleMd('R-103', { source: ['../../../README.md'], governs: ['src/**/*.ts'] }),
     );
-    const section = await checkCerebrumDeadRefs(root);
+    const section = await checkCompassDeadRefs(root);
     expect(section.findings).toEqual([]);
   });
 });

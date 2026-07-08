@@ -3,7 +3,7 @@ name: cortex-loop-rule-decay
 description: >-
   Weekly rule-obsolescence review for a Cortex project. Use for the scheduled
   rule-decay task, or when the user says "run the rule-decay loop", "which
-  rules are stale", or "audit the cerebrum rules". Invokes
+  rules are stale", or "audit the compass rules". Invokes
   `cortex loop-rule-decay` and summarises .cortex/pulse/rule-candidates.md.
 ---
 

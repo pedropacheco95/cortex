@@ -17,7 +17,7 @@ This project was onboarded to Specflow from an existing codebase. Specs are now 
 - **Folder overviews:** every directory in both trees contains an `_overview.md` explaining what the folder is, what it covers, and why the grouping exists. When you add or rename a folder, update its overview AND its parent's overview in the same change.
 - `link-map.md` is the human-readable bidirectional coverage view (business → dev and the unmapped-dev list).
 - `build-order.md` defines the sequence for implementing remaining draft specs.
-- `.cortex/cerebrum/bugs/` (the bug ledger, one `B-NNN-<slug>.md` per bug) holds known bugs discovered during onboarding (spec-code delta) — never a root `bugs.md`.
+- `.cortex/compass/bugs/` (the bug ledger, one `B-NNN-<slug>.md` per bug) holds known bugs discovered during onboarding (spec-code delta) — never a root `bugs.md`.
 - `corrections.md` documents all human corrections made during onboarding.
 
 When changing behaviour: update the **dev spec** first; if the change affects the user-visible outcome, also update the **business spec** in the same PR. The two trees should never drift.

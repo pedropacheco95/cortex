@@ -107,7 +107,7 @@ function fixBranches(root: string): string[] {
 }
 
 function bugFiles(root: string): string[] {
-  const dir = path.join(root, '.cortex', 'cerebrum', 'bugs');
+  const dir = path.join(root, '.cortex', 'compass', 'bugs');
   return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort() : [];
 }
 
@@ -246,7 +246,7 @@ describe('AC3: Budget exhaustion → case file, suppression armed, no PR', () =>
 
       const bugs = bugFiles(sb.root);
       expect(bugs).toHaveLength(1);
-      const raw = fs.readFileSync(path.join(sb.root, '.cortex', 'cerebrum', 'bugs', bugs[0] as string), 'utf-8');
+      const raw = fs.readFileSync(path.join(sb.root, '.cortex', 'compass', 'bugs', bugs[0] as string), 'utf-8');
       expect(bugs[0]).toMatch(/^B-001-/);
       expect(raw).toContain('type: wrong-rule');
       expect(raw).toContain('status: open');
@@ -295,7 +295,7 @@ describe('AC4: Open case file suppresses retries; resolution re-arms', () => {
       expect(report2.body).toContain('skipped');
 
       // Edit the entry to status: resolved → the next run attempts it again.
-      const bugPath = path.join(sb.root, '.cortex', 'cerebrum', 'bugs', bug);
+      const bugPath = path.join(sb.root, '.cortex', 'compass', 'bugs', bug);
       fs.writeFileSync(bugPath, fs.readFileSync(bugPath, 'utf-8').replace('status: open', 'status: resolved'), 'utf-8');
       const aux3 = tmp('suppress-aux3');
       const rec3 = path.join(aux3, 'rec3');

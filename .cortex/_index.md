@@ -5,7 +5,7 @@ knowledge layer.
 
 **What's here:**
 - `anatomy/` — per-file index of the codebase (purpose, tokens, spec links). Open before navigating unfamiliar code.
-- `cerebrum/` — rules, preferences, decisions, and the bug ledger. Open before writes and for "why" questions.
+- `compass/` — rules, preferences, and the bug ledger. Open before writes and for "why" questions.
 - `atlas/` — stakeholders, narrative decisions, domain terms, raw sources. Open for project context.
 - `pulse/` — transient loop outputs and suggestions. Open when reviewing proposals.
 - `cortex.config.json` — schema version and module config.

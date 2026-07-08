@@ -347,7 +347,7 @@ describe('degradation (Rule 6)', () => {
   it('empty rules/ directory → silent exit 0', async () => {
     const root = tmp('norules');
     makeCortexProject(root);
-    fs.mkdirSync(path.join(root, '.cortex', 'cerebrum', 'rules'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
     const result = await run(writeStdin(root, path.join(root, 'src/a.ts'), 'x'));
     expect(result).toEqual({ exitCode: 0, stdout: '' });
   });

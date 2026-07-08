@@ -46,7 +46,7 @@ window that works independently and returns results when done.
 Agent tool call:
   prompt: "You have the specflow-onboard-codebase skill. Run the full 8-phase onboarding
            against [scope]. Write ALL output — .specflow/specs/, .specflow/specs-business/, _overview.md files,
-           bug ledger files (cerebrum/bugs/B-NNN-*.md), proposed-notes.md,
+           bug ledger files (compass/bugs/B-NNN-*.md), proposed-notes.md,
            onboarding-scratch/atoms/ — to
            onboarding-scratch/pass-a/. Do not write anything outside that directory."
 ```
@@ -116,7 +116,7 @@ diff <(find onboarding-scratch/pass-a/specs -type d | sort) \
      <(find onboarding-scratch/pass-b/specs -type d | sort)
 
 # Compare bug ledgers
-diff -r onboarding-scratch/pass-a/cerebrum/bugs onboarding-scratch/pass-b/cerebrum/bugs
+diff -r onboarding-scratch/pass-a/compass/bugs onboarding-scratch/pass-b/compass/bugs
 
 # Compare business spec lists
 ls onboarding-scratch/pass-a/specs-business/**/*.business.md
@@ -128,7 +128,7 @@ Categorize every item into one of three buckets:
 #### 2a. Convergence (high confidence)
 
 Items where all passes agree. Identified by: same file exists in all 3 pass directories,
-same domain folders, same bug flagged in all 3 passes' `cerebrum/bugs/` ledgers. These go
+same domain folders, same bug flagged in all 3 passes' `compass/bugs/` ledgers. These go
 directly into the final output without further investigation.
 
 Read the convergent files from any one pass (they agree, so it doesn't matter which).
@@ -208,7 +208,7 @@ by:
 3. **Write investigation-resolved items** based on the verdicts
 4. **Merge the bug ledgers** — include only bugs that are either convergent (all passes
    agree) or confirmed by investigation, filing the confirmed set in the project's
-   `.cortex/cerebrum/bugs/` ledger (cortex-schema §4.3). Do not include dismissed bugs.
+   `.cortex/compass/bugs/` ledger (cortex-schema §4.3). Do not include dismissed bugs.
 5. **Merge investigation trails** — combine proposed-notes.md from all passes plus the
    disagreement investigation records
 6. **Produce a unified build order** as a phased remediation plan
@@ -281,7 +281,7 @@ project-root/
 │   ├── pass-a/                            # raw output, retained for reference
 │   │   ├── .specflow/specs/
 │   │   ├── .specflow/specs-business/
-│   │   ├── cerebrum/bugs/
+│   │   ├── compass/bugs/
 │   │   └── proposed-notes.md
 │   ├── pass-b/
 │   │   └── ...

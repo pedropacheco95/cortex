@@ -65,7 +65,7 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     if (typeof filePath !== 'string' || filePath.length === 0) return silent();
 
     // Rule 6: missing .cortex/ or empty rules/ → zero-overhead silence.
-    const rulesDir = path.join(root, '.cortex', 'cerebrum', 'rules');
+    const rulesDir = path.join(root, '.cortex', 'compass', 'rules');
     if (!fs.existsSync(rulesDir)) return silent();
     let ruleFiles: string[];
     try {
@@ -90,7 +90,7 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     let malformedCount = 0;
 
     for (const ruleFile of ruleFiles) {
-      const ruleRel = `.cortex/cerebrum/rules/${ruleFile}`;
+      const ruleRel = `.cortex/compass/rules/${ruleFile}`;
       let data: Record<string, unknown>;
       let body: string;
       try {

@@ -58,6 +58,6 @@ This loop is the JSON producer. It writes **only** `insight/map/graph.json`,
    node / edge / cluster counts.
 
 **Never mutate anything outside `insight/map/`'s three JSON files.** Never write
-prose `.md` in `map/` (that is the gaps loop's lane), never touch cerebrum,
+prose `.md` in `map/` (that is the gaps loop's lane), never touch compass,
 anatomy, atlas, or the spec trees. This loop maintains machine-owned ungated
 state directly and proposes nothing (schema Decision 13).

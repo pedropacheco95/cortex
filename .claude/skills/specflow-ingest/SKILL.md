@@ -42,7 +42,7 @@ When the project has a `.cortex/` directory:
   layer already covers the material — avoid re-capturing what the gaps loop already
   recorded; stabilized insight graduates via the promotion path (v2 design §3.7), not by
   re-ingest. Insight is **ungated/unreviewed** — treat any hit as a lead to confirm
-  against the gated layers (cerebrum/atlas/`RULES.md`) before it drives a decision,
+  against the gated layers (compass/atlas/`RULES.md`) before it drives a decision,
   never as authoritative.
 
 ## How It Works: Six Phases

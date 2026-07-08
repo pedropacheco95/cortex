@@ -55,7 +55,7 @@ function makeProject(
   const root = tmp(label);
   const pulseDir = path.join(root, '.cortex', 'pulse');
   fs.mkdirSync(pulseDir, { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
   if (files.suggestions !== undefined) {
     fs.writeFileSync(path.join(pulseDir, 'suggestions.md'), files.suggestions, 'utf-8');
   }
@@ -106,9 +106,9 @@ describe('pulse-list shows pending only', () => {
     const root = makeProject('list-pending', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'Add pnpm note', '.cortex/cerebrum/preferences.md', 'Always use pnpm.') +
-        entry('S-002', 'Accepted one', '.cortex/cerebrum/environment.md', 'Already applied.', 'accepted') +
-        entry('S-003', 'Dismissed one', '.cortex/cerebrum/decisions.md', 'Snoozed for now.'),
+        entry('S-001', 'Add pnpm note', '.cortex/compass/preferences.md', 'Always use pnpm.') +
+        entry('S-002', 'Accepted one', '.cortex/compass/environment.md', 'Already applied.', 'accepted') +
+        entry('S-003', 'Dismissed one', '.cortex/compass/decisions.md', 'Snoozed for now.'),
       dismissed: `---
 kind: pulse-dismissed
 generated: 2026-07-01T00:00:00Z
@@ -127,7 +127,7 @@ loop: cortex-init
     const text = stdout();
     expect(text).toContain('S-001');
     expect(text).toContain('Add pnpm note');
-    expect(text).toContain('.cortex/cerebrum/preferences.md');
+    expect(text).toContain('.cortex/compass/preferences.md');
     expect(text).toContain('Always use pnpm.');
     expect(text).not.toContain('S-002');
     expect(text).not.toContain('S-003');
@@ -139,7 +139,7 @@ describe('Expired dismissal resurfaces', () => {
     const root = makeProject('list-expired', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-003', 'Dismissed one', '.cortex/cerebrum/decisions.md', 'Resurfaced text.'),
+        entry('S-003', 'Dismissed one', '.cortex/compass/decisions.md', 'Resurfaced text.'),
       dismissed: `---
 kind: pulse-dismissed
 generated: 2026-07-01T00:00:00Z
@@ -165,15 +165,15 @@ describe('Accept applies the block verbatim', () => {
     const root = makeProject('accept-verbatim', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'Chrome profile', '.cortex/cerebrum/environment.md', 'Chrome profile: profile-X'),
-      extra: { '.cortex/cerebrum/environment.md': '# Environment\n\nOperational pointers only.\n' },
+        entry('S-001', 'Chrome profile', '.cortex/compass/environment.md', 'Chrome profile: profile-X'),
+      extra: { '.cortex/compass/environment.md': '# Environment\n\nOperational pointers only.\n' },
     });
 
     const before = snapshotTree(root);
     const code = await pulseCli('pulse-accept', ['S-001'], root);
     expect(code).toBe(0);
 
-    const envPath = path.join(root, '.cortex', 'cerebrum', 'environment.md');
+    const envPath = path.join(root, '.cortex', 'compass', 'environment.md');
     const env = fs.readFileSync(envPath, 'utf-8');
     expect(env.endsWith('Chrome profile: profile-X')).toBe(true);
     // Separated by exactly one blank line from the prior content.
@@ -188,7 +188,7 @@ describe('Accept applies the block verbatim', () => {
     // No other file changed (only environment.md and suggestions.md may move).
     const after = snapshotTree(root);
     const allowed = new Set([
-      path.join('.cortex', 'cerebrum', 'environment.md'),
+      path.join('.cortex', 'compass', 'environment.md'),
       path.join('.cortex', 'pulse', 'suggestions.md'),
     ]);
     const keys = new Set([...before.keys(), ...after.keys()]);
@@ -199,8 +199,8 @@ describe('Accept applies the block verbatim', () => {
   });
 });
 
-describe('Non-cerebrum target refused', () => {
-  it('exits 1 naming the path and changes nothing when the target is outside .cortex/cerebrum/', async () => {
+describe('Non-compass target refused', () => {
+  it('exits 1 naming the path and changes nothing when the target is outside .cortex/compass/', async () => {
     const root = makeProject('refuse-target', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -215,11 +215,11 @@ describe('Non-cerebrum target refused', () => {
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('refuses a `..` escape out of .cortex/cerebrum/', async () => {
+  it('refuses a `..` escape out of .cortex/compass/', async () => {
     const root = makeProject('refuse-escape', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-002', 'Escape', '.cortex/cerebrum/../../etc/evil.md', 'nope'),
+        entry('S-002', 'Escape', '.cortex/compass/../../etc/evil.md', 'nope'),
     });
     const before = snapshotTree(root);
     const code = await pulseCli('pulse-accept', ['S-002'], root);
@@ -233,7 +233,7 @@ describe('Reject records the window', () => {
     const root = makeProject('reject-window', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'To reject', '.cortex/cerebrum/preferences.md', 'some text'),
+        entry('S-001', 'To reject', '.cortex/compass/preferences.md', 'some text'),
       config: { schemaVersion: '1.0', pulse: { dismissedWindowDays: 30 } },
     });
 
@@ -268,7 +268,7 @@ describe('Deciding twice is safe', () => {
     const root = makeProject('decide-twice', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'Already', '.cortex/cerebrum/preferences.md', 'text', 'accepted'),
+        entry('S-001', 'Already', '.cortex/compass/preferences.md', 'text', 'accepted'),
     });
 
     const before = snapshotTree(root);
@@ -286,7 +286,7 @@ describe('Deciding twice is safe', () => {
     const root = makeProject('decide-twice-r', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'Already', '.cortex/cerebrum/preferences.md', 'text', 'rejected'),
+        entry('S-001', 'Already', '.cortex/compass/preferences.md', 'text', 'rejected'),
     });
     const before = snapshotTree(root);
     expect(await pulseCli('pulse-reject', ['S-001'], root)).toBe(0);
@@ -301,7 +301,7 @@ describe('Unknown id errors', () => {
     const root = makeProject('unknown', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'Present', '.cortex/cerebrum/preferences.md', 'text'),
+        entry('S-001', 'Present', '.cortex/compass/preferences.md', 'text'),
     });
     const code = await pulseCli('pulse-accept', ['S-999'], root);
     expect(code).toBe(1);
@@ -322,13 +322,13 @@ orphan block
 
 ## S-002: No block
 
-**Target:** .cortex/cerebrum/preferences.md
+**Target:** .cortex/compass/preferences.md
 
 **Proposed addition:**
 
 (no fenced block here)
 
-${entry('S-003', 'Good one', '.cortex/cerebrum/preferences.md', 'valid text')}`,
+${entry('S-003', 'Good one', '.cortex/compass/preferences.md', 'valid text')}`,
     });
 
     const code = await pulseCli('pulse-list', [], root);
@@ -383,7 +383,7 @@ orphan block
 describe('Discovery spans all pulse reports', () => {
   it('pulse-list and pulse-accept both find S-004 proposed inside rule-candidates.md, and accept applies its block', async () => {
     const root = makeProject('discovery', {
-      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'In suggestions', '.cortex/cerebrum/preferences.md', 'text one'),
+      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'In suggestions', '.cortex/compass/preferences.md', 'text one'),
       extra: {
         '.cortex/pulse/rule-candidates.md':
           `---
@@ -394,8 +394,8 @@ loop: cortex-loop-rule-decay
 
 # Rule retirement candidates
 
-` + entry('S-004', 'From another loop', '.cortex/cerebrum/environment.md', 'Discovered across files.'),
-        '.cortex/cerebrum/environment.md': '# Environment\n',
+` + entry('S-004', 'From another loop', '.cortex/compass/environment.md', 'Discovered across files.'),
+        '.cortex/compass/environment.md': '# Environment\n',
       },
     });
 
@@ -404,7 +404,7 @@ loop: cortex-loop-rule-decay
     expect(stdout()).toContain('S-004');
 
     expect(await pulseCli('pulse-accept', ['S-004'], root)).toBe(0);
-    const env = fs.readFileSync(path.join(root, '.cortex', 'cerebrum', 'environment.md'), 'utf-8');
+    const env = fs.readFileSync(path.join(root, '.cortex', 'compass', 'environment.md'), 'utf-8');
     expect(env.endsWith('Discovered across files.')).toBe(true);
     // The status annotation lands in the report the section came from.
     const rcFile = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'rule-candidates.md'), 'utf-8');
@@ -415,7 +415,7 @@ loop: cortex-loop-rule-decay
 
   it("dismissed.md's own S-NNN sections are rejection memory, never discovered as proposals", async () => {
     const root = makeProject('discovery-dismissed', {
-      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'Real one', '.cortex/cerebrum/preferences.md', 'text'),
+      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'Real one', '.cortex/compass/preferences.md', 'text'),
       dismissed: `---
 kind: pulse-dismissed
 generated: 2026-07-01T00:00:00Z
@@ -481,7 +481,7 @@ describe('Skill proposal accepted to a new skill only', () => {
 describe('Duplicate id across files errors', () => {
   function makeDuplicateProject(label: string): string {
     return makeProject(label, {
-      suggestions: SUGGESTIONS_HEADER + entry('S-006', 'First copy', '.cortex/cerebrum/preferences.md', 'text A'),
+      suggestions: SUGGESTIONS_HEADER + entry('S-006', 'First copy', '.cortex/compass/preferences.md', 'text A'),
       extra: {
         '.cortex/pulse/skill-suggestions.md':
           `---
@@ -492,9 +492,9 @@ loop: cortex-loop-skill-suggest
 
 # Skill suggestions
 
-` + entry('S-006', 'Second copy', '.cortex/cerebrum/environment.md', 'text B'),
-        '.cortex/cerebrum/preferences.md': '# Preferences\n',
-        '.cortex/cerebrum/environment.md': '# Environment\n',
+` + entry('S-006', 'Second copy', '.cortex/compass/environment.md', 'text B'),
+        '.cortex/compass/preferences.md': '# Preferences\n',
+        '.cortex/compass/environment.md': '# Environment\n',
       },
     });
   }
@@ -528,7 +528,7 @@ loop: cortex-loop-skill-suggest
 describe('Reject records the suggestion title (rejection memory text, pulse.distil Rule 3c)', () => {
   it('the dismissed.md section heading carries the rejected suggestion title', async () => {
     const root = makeProject('reject-title', {
-      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'use pnpm not npm', '.cortex/cerebrum/preferences.md', 'Always pnpm.'),
+      suggestions: SUGGESTIONS_HEADER + entry('S-001', 'use pnpm not npm', '.cortex/compass/preferences.md', 'Always pnpm.'),
     });
     expect(await pulseCli('pulse-reject', ['S-001'], root)).toBe(0);
     const dismissed = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'dismissed.md'), 'utf-8');
@@ -536,31 +536,31 @@ describe('Reject records the suggestion title (rejection memory text, pulse.dist
   });
 });
 
-describe('Cerebrum core files are created if absent (Rule 4)', () => {
+describe('Compass core files are created if absent (Rule 4)', () => {
   it('accept targeting an absent core file (standing-authorities.md) creates it with the block', async () => {
     const root = makeProject('core-create', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'New authority', '.cortex/cerebrum/standing-authorities.md', 'May bump patch versions.'),
+        entry('S-001', 'New authority', '.cortex/compass/standing-authorities.md', 'May bump patch versions.'),
     });
 
     const code = await pulseCli('pulse-accept', ['S-001'], root);
     expect(code).toBe(0);
-    const target = path.join(root, '.cortex', 'cerebrum', 'standing-authorities.md');
+    const target = path.join(root, '.cortex', 'compass', 'standing-authorities.md');
     expect(fs.existsSync(target)).toBe(true);
     expect(fs.readFileSync(target, 'utf-8')).toBe('May bump patch versions.');
   });
 
-  it('accept targeting an absent NON-core cerebrum file exits 1 naming the path, nothing changed', async () => {
+  it('accept targeting an absent NON-core compass file exits 1 naming the path, nothing changed', async () => {
     const root = makeProject('non-core-absent', {
       suggestions:
         SUGGESTIONS_HEADER +
-        entry('S-001', 'Nonexistent', '.cortex/cerebrum/notes/scratch.md', 'text'),
+        entry('S-001', 'Nonexistent', '.cortex/compass/notes/scratch.md', 'text'),
     });
     const before = snapshotTree(root);
     const code = await pulseCli('pulse-accept', ['S-001'], root);
     expect(code).toBe(1);
-    expect(stderr()).toContain('.cortex/cerebrum/notes/scratch.md');
+    expect(stderr()).toContain('.cortex/compass/notes/scratch.md');
     expect(snapshotTree(root)).toEqual(before);
   });
 });
@@ -619,12 +619,12 @@ ${PAYLOAD}
     expect(stdout()).toContain('Done.');
   });
 
-  it('accept to a cerebrum core file lands the payload byte-exact too', async () => {
-    const root = makeProject('b003-cerebrum', {
-      suggestions: SUGGESTIONS_HEADER + fencedEntry('S-032', '.cortex/cerebrum/preferences.md'),
+  it('accept to a compass core file lands the payload byte-exact too', async () => {
+    const root = makeProject('b003-compass', {
+      suggestions: SUGGESTIONS_HEADER + fencedEntry('S-032', '.cortex/compass/preferences.md'),
     });
     expect(await pulseCli('pulse-accept', ['S-032'], root)).toBe(0);
-    const target = fs.readFileSync(path.join(root, '.cortex', 'cerebrum', 'preferences.md'), 'utf-8');
+    const target = fs.readFileSync(path.join(root, '.cortex', 'compass', 'preferences.md'), 'utf-8');
     expect(target).toBe(PAYLOAD);
   });
 });

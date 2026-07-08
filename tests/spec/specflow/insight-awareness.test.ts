@@ -43,7 +43,7 @@ const EXCLUDED = [
 
 /** The standardized ungated-trust caveat phrasing pinned for this pass (Rule 2). */
 const CAVEAT_UNGATED = 'ungated/unreviewed';
-const CAVEAT_GATED_LAYERS = 'the gated layers (cerebrum/atlas/`RULES.md`)';
+const CAVEAT_GATED_LAYERS = 'the gated layers (compass/atlas/`RULES.md`)';
 const CAVEAT_DECISION = 'before it drives a decision';
 
 /** SKILL.md body, whitespace-normalized so line-wrapped phrases match cleanly. */

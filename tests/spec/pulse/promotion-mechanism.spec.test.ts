@@ -51,7 +51,7 @@ function makeProject(
   const root = tmp(label);
   const pulseDir = path.join(root, '.cortex', 'pulse');
   fs.mkdirSync(pulseDir, { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
     JSON.stringify({ schemaVersion: '2.0', pulse: { dismissedWindowDays: 90 } }, null, 2),
@@ -88,7 +88,7 @@ const INSIGHT_PROSE = (topic: string, body: string): string =>
 // AC: each type accepts to the right target with the right operation
 // ---------------------------------------------------------------------------
 describe('Each type accepts to the right target with the right operation', () => {
-  it('S-050 rule-candidate appends to .cortex/cerebrum/preferences.md', async () => {
+  it('S-050 rule-candidate appends to .cortex/compass/preferences.md', async () => {
     const root = makeProject('s050', {
       suggestions:
         HEADER +
@@ -96,7 +96,7 @@ describe('Each type accepts to the right target with the right operation', () =>
 
 **Type:** rule-candidate
 **Source:** distil; sessions s1
-**Target:** .cortex/cerebrum/preferences.md
+**Target:** .cortex/compass/preferences.md
 
 **Proposed addition:**
 
@@ -104,16 +104,16 @@ describe('Each type accepts to the right target with the right operation', () =>
 Always use pnpm, never npm.
 \`\`\`
 `,
-      extra: { '.cortex/cerebrum/preferences.md': '# Preferences\n\nExisting note.\n' },
+      extra: { '.cortex/compass/preferences.md': '# Preferences\n\nExisting note.\n' },
     });
 
     expect(await pulseCli('pulse-accept', ['S-050'], root)).toBe(0);
-    const prefs = fs.readFileSync(path.join(root, '.cortex', 'cerebrum', 'preferences.md'), 'utf-8');
+    const prefs = fs.readFileSync(path.join(root, '.cortex', 'compass', 'preferences.md'), 'utf-8');
     expect(prefs).toContain('Existing note.\n\nAlways use pnpm, never npm.');
     expect(prefs.endsWith('Always use pnpm, never npm.')).toBe(true);
   });
 
-  it('S-051 gated-layer-update byte-range-replaces in a cerebrum rule file', async () => {
+  it('S-051 gated-layer-update byte-range-replaces in a compass rule file', async () => {
     const RULE = `---
 id: R-014
 title: No camelCase columns
@@ -130,7 +130,7 @@ Columns MUST be snake_case in old style.
 
 **Type:** gated-layer-update
 **Source:** insight-gaps; sessions s2
-**Target:** .cortex/cerebrum/rules/R-014-no-camelcase-columns.md
+**Target:** .cortex/compass/rules/R-014-no-camelcase-columns.md
 
 **Proposed edit:**
 
@@ -146,12 +146,12 @@ replacement:
 Columns MUST be snake_case; camelCase is a check.rule error.
 \`\`\`
 `,
-      extra: { '.cortex/cerebrum/rules/R-014-no-camelcase-columns.md': RULE },
+      extra: { '.cortex/compass/rules/R-014-no-camelcase-columns.md': RULE },
     });
 
     expect(await pulseCli('pulse-accept', ['S-051'], root)).toBe(0);
     const rule = fs.readFileSync(
-      path.join(root, '.cortex', 'cerebrum', 'rules', 'R-014-no-camelcase-columns.md'),
+      path.join(root, '.cortex', 'compass', 'rules', 'R-014-no-camelcase-columns.md'),
       'utf-8',
     );
     expect(rule).toContain('Columns MUST be snake_case; camelCase is a check.rule error.');
@@ -240,7 +240,7 @@ describe('An ambiguous edit refuses', () => {
 
 **Type:** gated-layer-update
 **Source:** insight-gaps; sessions s5
-**Target:** .cortex/cerebrum/rules/R-020-x.md
+**Target:** .cortex/compass/rules/R-020-x.md
 
 **Proposed edit:**
 
@@ -257,7 +257,7 @@ changed line
 \`\`\`
 `,
       extra: {
-        '.cortex/cerebrum/rules/R-020-x.md': '# R-020\n\nduplicated line\n\nmiddle\n\nduplicated line\n',
+        '.cortex/compass/rules/R-020-x.md': '# R-020\n\nduplicated line\n\nmiddle\n\nduplicated line\n',
       },
     });
 
@@ -412,7 +412,7 @@ text
 \`\`\`
 `;
     const root = makeProject('s058', {
-      suggestions: HEADER + SECTION('first copy', '.cortex/cerebrum/preferences.md'),
+      suggestions: HEADER + SECTION('first copy', '.cortex/compass/preferences.md'),
       extra: {
         '.cortex/pulse/rule-candidates.md':
           `---
@@ -423,7 +423,7 @@ loop: cortex-loop-rule-decay
 
 # Rule candidates
 
-` + SECTION('second copy', '.cortex/cerebrum/environment.md'),
+` + SECTION('second copy', '.cortex/compass/environment.md'),
       },
     });
 
@@ -442,7 +442,7 @@ loop: cortex-loop-rule-decay
 
 **Type:** rule-candidate
 **Source:** distil; sessions s12
-**Target:** .cortex/cerebrum/preferences.md
+**Target:** .cortex/compass/preferences.md
 
 **Proposed addition:**
 

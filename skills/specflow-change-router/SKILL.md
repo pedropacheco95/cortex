@@ -52,13 +52,13 @@ When the project has a `.cortex/` directory, classification includes the knowled
 
 - As part of classification, grep the module indexes alongside the spec tree:
   `.cortex/anatomy/files.md` (which files and specs the request maps to, via the purpose
-  lines and `spec_links` column), `.cortex/cerebrum/_index.md` and
-  `.cortex/cerebrum/rules/` (is the request already governed by a rule — is it a rule
+  lines and `spec_links` column), `.cortex/compass/_index.md` and
+  `.cortex/compass/rules/` (is the request already governed by a rule — is it a rule
   change rather than a spec change?), and `.cortex/atlas/_index.md` (does a recorded
   decision or stakeholder context reframe the request?).
 - **Bug-shaped reports route toward the ledger flow (cortex-schema §4.3):** diagnosis
   goes through specflow-bugs, and the bug is filed as
-  `.cortex/cerebrum/bugs/B-NNN-<slug>.md` — never a root `bugs.md` — so the daily
+  `.cortex/compass/bugs/B-NNN-<slug>.md` — never a root `bugs.md` — so the daily
   bug-triage loop finds it.
 
 ## How to Use This Skill
@@ -128,7 +128,7 @@ Something is broken — behavior contradicts an existing **developer spec's** ac
 4. If no criterion covers this case → reclassify as Spec Gap (Category 5)
 5. Check `implements:` link — does the linked business spec still describe correct behavior? Usually yes (the business outcome is fine; it was the implementation that drifted). If the bug suggests the business spec was always wrong about reality, also flag drift (Category 8).
 6. Write the missing test, fix code, run regression for the domain, and file the bug in
-   the `.cortex/cerebrum/bugs/` ledger (via specflow-bugs)
+   the `.cortex/compass/bugs/` ledger (via specflow-bugs)
 
 **Layer:** usually Dev-only. Overview impact: usually none.
 

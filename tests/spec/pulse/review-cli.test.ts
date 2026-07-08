@@ -55,7 +55,7 @@ loop: cortex-loop-skill-suggest
 
 ## S-001: Chrome profile
 
-**Target:** .cortex/cerebrum/environment.md
+**Target:** .cortex/compass/environment.md
 
 **Proposed addition:**
 
@@ -65,7 +65,7 @@ Chrome profile: profile-X
 
 ## S-002: Second suggestion
 
-**Target:** .cortex/cerebrum/preferences.md
+**Target:** .cortex/compass/preferences.md
 
 **Proposed addition:**
 
@@ -78,7 +78,7 @@ function makeProject(label: string): string {
   const root = tmp(label);
   const pulseDir = path.join(root, '.cortex', 'pulse');
   fs.mkdirSync(pulseDir, { recursive: true });
-  fs.mkdirSync(path.join(root, '.cortex', 'cerebrum'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
   fs.writeFileSync(path.join(pulseDir, 'suggestions.md'), SUGGESTIONS, 'utf-8');
   fs.writeFileSync(
     path.join(root, '.cortex', 'cortex.config.json'),
@@ -86,7 +86,7 @@ function makeProject(label: string): string {
     'utf-8',
   );
   fs.writeFileSync(
-    path.join(root, '.cortex', 'cerebrum', 'environment.md'),
+    path.join(root, '.cortex', 'compass', 'environment.md'),
     '# Environment\n\nOperational pointers only.\n',
     'utf-8',
   );
@@ -109,7 +109,7 @@ describe('pulse.review-cli integrated slice (through cortex CLI run())', () => {
     expect(await run(['pulse-accept', 'S-001'])).toBe(0);
 
     const env = fs.readFileSync(
-      path.join(root, '.cortex', 'cerebrum', 'environment.md'),
+      path.join(root, '.cortex', 'compass', 'environment.md'),
       'utf-8',
     );
     expect(env.endsWith('Chrome profile: profile-X')).toBe(true);
@@ -117,7 +117,7 @@ describe('pulse.review-cli integrated slice (through cortex CLI run())', () => {
 
     const after = snapshotTree(root);
     const allowed = new Set([
-      path.join('.cortex', 'cerebrum', 'environment.md'),
+      path.join('.cortex', 'compass', 'environment.md'),
       path.join('.cortex', 'pulse', 'suggestions.md'),
     ]);
     const keys = new Set([...before.keys(), ...after.keys()]);

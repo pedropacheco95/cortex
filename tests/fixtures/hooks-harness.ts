@@ -37,7 +37,7 @@ export function makeCortexProject(
   };
   fs.writeFileSync(path.join(cortexDir, 'cortex.config.json'), JSON.stringify(config, null, 2) + '\n');
   fs.writeFileSync(path.join(cortexDir, '_index.md'), '# Cortex — index\n\n**Read this when:** always.\n');
-  for (const m of opts.modules ?? ['anatomy', 'cerebrum', 'atlas', 'pulse']) {
+  for (const m of opts.modules ?? ['anatomy', 'compass', 'atlas', 'pulse']) {
     fs.mkdirSync(path.join(cortexDir, m), { recursive: true });
   }
 }
@@ -52,9 +52,9 @@ export function writeHygieneReport(root: string, generatedIso: string, summary: 
   return p;
 }
 
-/** Write a cerebrum rule file with raw frontmatter YAML lines. */
+/** Write a compass rule file with raw frontmatter YAML lines. */
 export function writeRule(root: string, filename: string, frontmatter: string, body = ''): string {
-  const p = path.join(root, '.cortex', 'cerebrum', 'rules', filename);
+  const p = path.join(root, '.cortex', 'compass', 'rules', filename);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, `---\n${frontmatter.trim()}\n---\n\n${body}`);
   return p;

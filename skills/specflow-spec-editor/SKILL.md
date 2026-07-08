@@ -44,8 +44,8 @@ from one of these sources:
 When the project has a `.cortex/` directory:
 
 - **Check `governed_by:` before editing.** When a dev spec carries `governed_by:`
-  (cerebrum rule IDs, design §8.4 bridge 1), read the referenced
-  `.cortex/cerebrum/rules/R-*.md` files before modifying the spec — an edit must not
+  (compass rule IDs, design §8.4 bridge 1), read the referenced
+  `.cortex/compass/rules/R-*.md` files before modifying the spec — an edit must not
   contradict a governing rule without flagging it, and every rule reference must still
   resolve after the edit.
 - **Run `cortex validate` after modifications.** The validator is the mechanical

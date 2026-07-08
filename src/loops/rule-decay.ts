@@ -1,6 +1,6 @@
 /**
  * `cortex loop-rule-decay` — weekly rule-obsolescence review (spec
- * loops.rule-decay, design §11.4 item 5). Reviews every ACTIVE cerebrum rule
+ * loops.rule-decay, design §11.4 item 5). Reviews every ACTIVE compass rule
  * for decay signals and writes retirement candidates to
  * `.cortex/pulse/rule-candidates.md` — nothing else. Propose-don't-mutate:
  * a human retires a rule by editing `status: retired`; this loop never does.
@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import { buildIndex, resolveId, resolveRelativePath } from '../schema/index-build.js';
-import { globMatchesNothing } from '../schema/checks/cerebrum.js';
+import { globMatchesNothing } from '../schema/checks/compass.js';
 import { gitLastCommitEpoch } from './git-info.js';
 import { writePulseReport } from './report.js';
 
@@ -37,7 +37,7 @@ export interface RuleDecayScan {
 }
 
 export async function scanRuleDecay(root: string, nowMs = Date.now()): Promise<RuleDecayScan> {
-  const rulesDir = path.join(root, '.cortex', 'cerebrum', 'rules');
+  const rulesDir = path.join(root, '.cortex', 'compass', 'rules');
   const scan: RuleDecayScan = { candidates: [], retiredSkipped: [], reviewed: 0 };
   if (!fs.existsSync(rulesDir)) return scan;
 

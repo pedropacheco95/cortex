@@ -40,7 +40,7 @@ describe('pointer payload (Rule 2, schema §5)', () => {
     const env = parseEnvelope(stdout);
     expect(env.hookEventName).toBe('SessionStart');
     expect(env.additionalContext).toContain('Cortex is active (schema 1.0). See .cortex/_index.md.');
-    expect(env.additionalContext).toContain('Modules: anatomy, cerebrum, atlas, pulse.');
+    expect(env.additionalContext).toContain('Modules: anatomy, compass, atlas, pulse.');
   });
 
   it('lists only the module directories actually present', async () => {

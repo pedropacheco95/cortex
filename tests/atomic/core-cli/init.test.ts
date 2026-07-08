@@ -121,7 +121,7 @@ describe('Rule 3: skeleton', () => {
   it('cortex.config.json carries the exact §10.1 defaults', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect(config).toEqual({
-      schemaVersion: '2.0',
+      schemaVersion: '3.0',
       anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
       // preRead defaults TRUE and is written explicitly (§10.1: the Read pair
       // is on by default; the config self-documents).
@@ -144,7 +144,7 @@ describe('Rule 3: skeleton', () => {
       return found;
     };
     const indexes = walk(path.join(root, '.cortex'));
-    expect(indexes.length).toBe(12); // root + anatomy + cerebrum(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (map/ carries none, §4.10.3)
+    expect(indexes.length).toBe(12); // root + anatomy + compass(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (map/ carries none, §4.10.3)
     for (const idx of indexes) {
       const content = fs.readFileSync(idx, 'utf-8');
       expect(content, idx).toContain('Read this when:');
@@ -180,9 +180,9 @@ describe('Rule 3: skeleton', () => {
 
   it('CLAUDE.md was created with the v-versioned managed block', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
-    expect(content).toContain('<!-- cortex:start v2.0 -->');
+    expect(content).toContain('<!-- cortex:start v3.0 -->');
     expect(content).toContain('<!-- cortex:end -->');
-    expect(content).toContain('Modules present: anatomy, cerebrum, atlas, insight, pulse. Schema: 2.0.');
+    expect(content).toContain('Modules present: anatomy, compass, atlas, insight, pulse. Schema: 3.0.');
   });
 });
 
@@ -228,7 +228,7 @@ describe('Rule 7: preferences draft', () => {
       );
       fs.writeFileSync(path.join(root, 'tsconfig.json'), JSON.stringify({ compilerOptions: { strict: true, module: 'NodeNext' } }));
       await init(root, { noLlm: true, home, ...DARWIN });
-      const content = fs.readFileSync(path.join(root, '.cortex', 'cerebrum', 'preferences.md'), 'utf-8');
+      const content = fs.readFileSync(path.join(root, '.cortex', 'compass', 'preferences.md'), 'utf-8');
       expect(content).toContain('DRAFT');
       expect(content).toContain('not accepted rules');
       expect(content).toContain('pnpm@9.0.0');
@@ -246,7 +246,7 @@ describe('Rule 7: preferences draft', () => {
     try {
       const result = await init(root, { noLlm: true, home, ...DARWIN });
       expect(result.exitCode).toBe(0);
-      expect(fs.existsSync(path.join(root, '.cortex', 'cerebrum', 'preferences.md'))).toBe(true);
+      expect(fs.existsSync(path.join(root, '.cortex', 'compass', 'preferences.md'))).toBe(true);
     } finally {
       cleanTmp(root); cleanTmp(home);
     }
@@ -257,7 +257,7 @@ describe('Rule 7: preferences draft', () => {
     const home = makeTmpDir('prefs3-home');
     try {
       await init(root, { noLlm: true, home, ...DARWIN });
-      const prefsPath = path.join(root, '.cortex', 'cerebrum', 'preferences.md');
+      const prefsPath = path.join(root, '.cortex', 'compass', 'preferences.md');
       const curated = '# Reviewed preferences\n\n- humans approved this\n';
       fs.writeFileSync(prefsPath, curated);
       await init(root, { noLlm: true, force: true, home, ...DARWIN });

@@ -65,7 +65,7 @@ export const SPA_HTML = `<!doctype html>
 
   function renderCounters(c) {
     countersEl.textContent = c
-      ? 'anatomy ' + c.anatomy + ' \\u00b7 cerebrum ' + c.cerebrum + ' \\u00b7 atlas ' + c.atlas +
+      ? 'anatomy ' + c.anatomy + ' \\u00b7 compass ' + c.compass + ' \\u00b7 atlas ' + c.atlas +
         ' \\u00b7 specs ' + c.specs + ' \\u00b7 edges ' + c.edges
       : '';
   }

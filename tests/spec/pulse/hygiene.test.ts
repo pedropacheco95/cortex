@@ -124,12 +124,12 @@ describe('AC: Anatomy drift both directions', () => {
 });
 
 // ===========================================================================
-describe('AC: Cerebrum dead reference caught', () => {
+describe('AC: Compass dead reference caught', () => {
   it('names the rule and the dead source path', async () => {
-    const root = makeCleanProject('cerebrum');
+    const root = makeCleanProject('compass');
     writeAt(
       root,
-      '.cortex/cerebrum/rules/R-201-dead.md',
+      '.cortex/compass/rules/R-201-dead.md',
       ruleMd('R-201', { source: ['../../../docs/deleted.md'], governs: ['src/**/*.ts'] }),
     );
     await runHygiene(root, { ghBin: emptyGhStub() });

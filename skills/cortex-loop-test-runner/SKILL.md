@@ -53,4 +53,4 @@ writer/verifier harness — you never edit project code directly.
 **The working tree is inviolate** (spec Rule 8): fixes live on
 `cortex/test-fix-*` branches built in fresh worktrees; the loop's only other
 writes are `.cortex/pulse/test-failures.md`, the worklist dotfile, and NEW
-`.cortex/cerebrum/bugs/` case files. Never edit an existing ledger entry.
+`.cortex/compass/bugs/` case files. Never edit an existing ledger entry.

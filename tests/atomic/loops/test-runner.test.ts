@@ -217,13 +217,13 @@ describe('B-number allocation', () => {
   it('a missing or empty ledger allocates B-001', () => {
     const root = tmp('bnum-empty');
     expect(nextBugNumber(root)).toBe(1);
-    fs.mkdirSync(path.join(root, '.cortex', 'cerebrum', 'bugs'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.cortex', 'compass', 'bugs'), { recursive: true });
     expect(nextBugNumber(root)).toBe(1);
   });
 
   it('allocates max existing + 1, ignoring non-B files', () => {
     const root = tmp('bnum');
-    const bugs = path.join(root, '.cortex', 'cerebrum', 'bugs');
+    const bugs = path.join(root, '.cortex', 'compass', 'bugs');
     fs.mkdirSync(bugs, { recursive: true });
     fs.writeFileSync(path.join(bugs, 'B-002-old.md'), 'x', 'utf-8');
     fs.writeFileSync(path.join(bugs, 'B-010-newer.md'), 'x', 'utf-8');
@@ -237,7 +237,7 @@ describe('B-number allocation', () => {
 // ---------------------------------------------------------------------------
 
 function seedBug(root: string, filename: string, opts: { status: string; affects: string[]; marker: boolean }): void {
-  const bugs = path.join(root, '.cortex', 'cerebrum', 'bugs');
+  const bugs = path.join(root, '.cortex', 'compass', 'bugs');
   fs.mkdirSync(bugs, { recursive: true });
   const id = (/^B-\d+/.exec(filename) ?? ['B-999'])[0];
   fs.writeFileSync(
@@ -269,7 +269,7 @@ describe('suppression matching', () => {
     seedBug(root, 'B-004-sample.md', { status: 'open', affects: [TEST_PATH, 'demo.sample'], marker: true });
     expect(findSuppressingBug(root, TEST_PATH)).toEqual({
       id: 'B-004',
-      file: path.join('.cortex', 'cerebrum', 'bugs', 'B-004-sample.md'),
+      file: path.join('.cortex', 'compass', 'bugs', 'B-004-sample.md'),
     });
   });
 

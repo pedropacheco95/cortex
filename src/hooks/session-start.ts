@@ -27,7 +27,7 @@ export interface HookRunOptions {
 /** Budget: schema §5 / RULES.md rule 11 — payload under 100 tokens (chars/4). */
 const MAX_PAYLOAD_CHARS = 396;
 const DEFAULT_FRESHNESS_HOURS = 48;
-const MODULE_DIRS = ['anatomy', 'cerebrum', 'atlas', 'pulse'];
+const MODULE_DIRS = ['anatomy', 'compass', 'atlas', 'pulse'];
 const HOOK_NAME = 'session-start';
 
 function silent(): HookRunResult {
