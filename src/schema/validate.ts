@@ -19,7 +19,13 @@ import { checkHookConfig } from './checks/hooks.js';
 import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
 import { checkConstellation } from './checks/constellation.js';
-import { checkInsightIndex, checkInsightProse, checkInsightGraph, checkInsightOwnership } from './checks/insight.js';
+import {
+  checkInsightIndex,
+  checkInsightEntry,
+  checkInsightScopeRegistry,
+  checkInsightLedger,
+  checkInsightGraph,
+} from './checks/insight.js';
 import { checkArchiveLayout, checkArchiveMetadata, checkArchiveType } from './checks/archive.js';
 
 export interface ValidateOptions {
@@ -135,11 +141,14 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   // constellation.json check (§4.9 — only when the file exists)
   allViolations.push(...checkConstellation(root));
 
-  // Insight-module checks (§4.10, §7.4) — run when the insight/ module is present
+  // Insight-module checks (§4.10 v3, §7.4) — each tolerant of an absent
+  // insight/ module. v2's check.insight-prose / check.insight-ownership are
+  // REMOVED (Appendix A); check.insight-entry replaces the former.
   allViolations.push(...checkInsightIndex(root));
-  allViolations.push(...checkInsightProse(root));
+  allViolations.push(...checkInsightEntry(root));
+  allViolations.push(...checkInsightScopeRegistry(root));
+  allViolations.push(...checkInsightLedger(root));
   allViolations.push(...checkInsightGraph(root));
-  allViolations.push(...checkInsightOwnership(root));
 
   // Archive-module checks (§4.4, new at v3.0) — tolerant of an absent archive/
   allViolations.push(...checkArchiveLayout(root));

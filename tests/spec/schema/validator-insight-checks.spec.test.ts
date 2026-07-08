@@ -1,15 +1,20 @@
 /**
- * Spec-level tests — schema.validator-insight-checks (schema §4.10.1/.2/.3,
- * §4.5.1/.2, §7.4). The four new insight checks + the extended check.pulse,
- * exercised through the registered validator (validate()) over tmp fixture
- * .cortex trees. Deterministic Core (R-001); read-only over the tree.
+ * Spec-level tests — the v3 insight validator checks (schema §4.10.2–§4.10.6,
+ * §7.4) plus the extended check.pulse (§4.5.1/.2), exercised through the
+ * registered validator (validate()) over tmp fixture .cortex trees.
+ * check.insight-entry / -scope-registry / -ledger / -graph replace v2's
+ * check.insight-prose / check.insight-ownership (Appendix A, REMOVED).
+ * Deterministic Core (R-001); read-only over the tree.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { validate } from '../../../src/schema/validate.js';
 import { makeTmpDir, cleanTmp, makeCortexProject } from '../../fixtures/hooks-harness.js';
+import { INSIGHT_INDEX_TEMPLATE } from '../../../src/cli/templates.js';
 import type { Violation } from '../../../src/schema/types.js';
+
+const SHA = 'a1b3c5d7e9f102132435465768798a9bacbdcedfe0f1023344556677889900aa';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -21,35 +26,17 @@ afterEach(() => {
   while (dirs.length > 0) cleanTmp(dirs.pop() as string);
 });
 
-/** A minimal 3.0 project with an insight/ module directory + compliant index. */
+/** A minimal 3.0 project with a v3 insight/ module + the locked index. */
 function makeInsightProject(root: string): void {
   makeCortexProject(root, {
     config: { schemaVersion: '3.0' },
     modules: ['anatomy', 'compass', 'atlas', 'pulse', 'insight'],
   });
-  writeInsightIndex(
-    root,
-    `# Insight — index
-
-**Read this when:** you need conceptual orientation. Insight is **ungated**:
-useful immediately, **not human-reviewed** — treat claims as unreviewed.
-
-**What's here:**
-- \`map/*.md\` — observed project knowledge.
-
-**How to navigate:** \`cortex insight query <topic>\` first.
-`,
-  );
+  writeInsight(root, '_index.md', INSIGHT_INDEX_TEMPLATE);
 }
 
-function writeInsightIndex(root: string, body: string): void {
-  const p = path.join(root, '.cortex', 'insight', '_index.md');
-  fs.mkdirSync(path.dirname(p), { recursive: true });
-  fs.writeFileSync(p, body, 'utf-8');
-}
-
-function writeMapFile(root: string, name: string, content: string): void {
-  const p = path.join(root, '.cortex', 'insight', 'map', name);
+function writeInsight(root: string, rel: string, content: string): void {
+  const p = path.join(root, '.cortex', 'insight', rel);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, content, 'utf-8');
 }
@@ -66,127 +53,308 @@ async function violationsFor(root: string, check: string): Promise<Violation[]> 
 }
 
 // ---------------------------------------------------------------------------
-// check.insight-prose (§4.10.1, §4.10.4)
+// check.insight-entry (§4.10.2)
 // ---------------------------------------------------------------------------
 
-describe('check.insight-prose', () => {
-  it('flags a malformed corrections log (item missing _now:_) with a warning', async () => {
-    const root = tmp('prose-bad-corrections');
-    makeInsightProject(root);
-    writeMapFile(
-      root,
-      'testing.md',
-      `---
-kind: insight-prose
-updated: 2026-07-05T10:00:00Z
+const GOOD_L3 = `---
+path: src/auth/session.ts
+extracted_at: 2026-07-07T14:00:00Z
+extraction_level: 3
+size_lines: 620
+size_tokens: 5400
+centrality: high
+built_at_commit: 9f2c1ab
+source_sha256: ${SHA}
 ---
 
-# Testing
+## Purpose
 
-The suite runs via vitest.
+Session-token lifecycle.
 
-## Corrections
+## Main players
 
-- **2026-07-04** — _was:_ "tests use jest" · _why:_ user corrected · sessions: s1
-`,
-    );
-    const v = await violationsFor(root, 'check.insight-prose');
-    const warnings = v.filter((x) => x.severity === 'warning' && x.location.path.endsWith('testing.md'));
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.clause).toBe('§4.10.1');
+- \`validateToken\` (L40–L120) — critical.
+
+## Connections
+
+Uses:
+- src/util/log.ts: logging
+`;
+
+describe('check.insight-entry', () => {
+  it('a well-formed L3 entry under anatomy/ produces no violation', async () => {
+    const root = tmp('entry-clean');
+    makeInsightProject(root);
+    writeInsight(root, 'anatomy/src/auth/session.ts.md', GOOD_L3);
+    expect(await violationsFor(root, 'check.insight-entry')).toEqual([]);
   });
 
-  it('a well-formed corrections sibling produces no violation', async () => {
-    const root = tmp('prose-clean-corrections');
+  it('errors, naming the field, on bad frontmatter (sha + centrality)', async () => {
+    const root = tmp('entry-bad-fm');
     makeInsightProject(root);
-    writeMapFile(
+    writeInsight(
       root,
-      'setup.md',
-      `---
-kind: insight-prose
-updated: 2026-07-05T10:00:00Z
----
-
-# Setup
-
-Run pnpm install.
-
-## Corrections
-
-- **2026-07-04** — _was:_ "uses npm" · _now:_ "uses pnpm" · _why:_ user corrected · sessions: s1
-`,
+      'anatomy/src/x.ts.md',
+      GOOD_L3.replace(`source_sha256: ${SHA}`, 'source_sha256: nope').replace('centrality: high', 'centrality: extreme'),
     );
-    expect(await violationsFor(root, 'check.insight-prose')).toEqual([]);
+    const errors = (await violationsFor(root, 'check.insight-entry')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('source_sha256'))).toBe(true);
+    expect(errors.some((e) => e.message.includes('centrality'))).toBe(true);
+    expect(errors[0]?.clause).toBe('§4.10.2');
   });
 
-  it('errors, naming the field, when frontmatter omits kind: insight-prose', async () => {
-    const root = tmp('prose-missing-kind');
+  it('errors on an L3 entry missing a required section', async () => {
+    const root = tmp('entry-missing-section');
     makeInsightProject(root);
-    writeMapFile(
-      root,
-      'deploy.md',
-      `---
-updated: 2026-07-05T10:00:00Z
----
+    writeInsight(root, 'anatomy/src/x.ts.md', GOOD_L3.replace('## Main players', '## Cast'));
+    const errors = (await violationsFor(root, 'check.insight-entry')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('Main players'))).toBe(true);
+  });
 
-# Deploy
-
-Deploy via the release script.
-`,
-    );
-    const errors = (await violationsFor(root, 'check.insight-prose')).filter((v) => v.severity === 'error');
+  it('validates entries under scopes/<scope>/anatomy/ too', async () => {
+    const root = tmp('entry-scoped');
+    makeInsightProject(root);
+    writeInsight(root, 'scopes/auth/anatomy/src/x.ts.md', GOOD_L3.replace(`source_sha256: ${SHA}`, 'source_sha256: bad'));
+    const errors = (await violationsFor(root, 'check.insight-entry')).filter((v) => v.severity === 'error');
     expect(errors).toHaveLength(1);
-    expect(errors[0]?.message.toLowerCase()).toContain('kind');
+    expect(errors[0]?.location.path).toContain(path.join('scopes', 'auth', 'anatomy'));
+  });
+
+  it('legacy insight/map/ presence is a single warning, never an error', async () => {
+    const root = tmp('entry-legacy-map');
+    makeInsightProject(root);
+    writeInsight(root, 'map/setup.md', 'not validated against v3');
+    const v = await violationsFor(root, 'check.insight-entry');
+    expect(v.filter((x) => x.severity === 'error')).toEqual([]);
+    const warnings = v.filter((x) => x.severity === 'warning');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]?.message).toContain('interim dogfood');
+  });
+
+  it('tolerates an absent insight module', async () => {
+    const root = tmp('entry-absent');
+    makeCortexProject(root, { config: { schemaVersion: '3.0' }, modules: ['compass', 'atlas', 'pulse'] });
+    expect(await violationsFor(root, 'check.insight-entry')).toEqual([]);
   });
 });
 
 // ---------------------------------------------------------------------------
-// check.insight-graph (§4.10.2)
+// check.insight-scope-registry (§4.10.3)
 // ---------------------------------------------------------------------------
 
-describe('check.insight-graph', () => {
-  it('errors on a bad node id and an empty rationale', async () => {
-    const root = tmp('graph-bad');
+describe('check.insight-scope-registry', () => {
+  it('a well-formed registry whose paths resolve produces no violation', async () => {
+    const root = tmp('registry-clean');
     makeInsightProject(root);
-    writeMapFile(
+    fs.mkdirSync(path.join(root, 'src/auth'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/shared/notifications'), { recursive: true });
+    writeInsight(
       root,
-      'graph.json',
-      JSON.stringify({
-        schemaVersion: '2.0',
-        generated: '2026-07-05T10:00:00Z',
-        rebuild: 'full',
-        nodes: [{ id: 'not-a-valid-id', module: 'anatomy', label: 'x' }],
-        edges: [
-          { from: 'not-a-valid-id', to: 'not-a-valid-id', kind: 'mentions-same-entity', confidence: 'medium', rationale: '' },
-        ],
-      }),
+      'scope-registry.yaml',
+      `schemaVersion: "3.0"
+built_at_commit: 9f2c1ab
+scopes:
+  auth:
+    path: src/auth
+    depends_on: [notifications]
+  notifications:
+    path: src/shared/notifications
+    depends_on: []
+    shared_by: [auth]
+`,
     );
-    const errors = (await violationsFor(root, 'check.insight-graph')).filter((v) => v.severity === 'error');
-    expect(errors.some((e) => e.message.includes('node id'))).toBe(true);
-    expect(errors.some((e) => e.message.toLowerCase().includes('rationale'))).toBe(true);
+    expect(await violationsFor(root, 'check.insight-scope-registry')).toEqual([]);
   });
 
-  it('a well-formed graph passes clean', async () => {
+  it('errors on a depends_on cycle', async () => {
+    const root = tmp('registry-cycle');
+    makeInsightProject(root);
+    fs.mkdirSync(path.join(root, 'src/a'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/b'), { recursive: true });
+    writeInsight(
+      root,
+      'scope-registry.yaml',
+      `schemaVersion: "3.0"
+built_at_commit: 9f2c1ab
+scopes:
+  a:
+    path: src/a
+    depends_on: [b]
+  b:
+    path: src/b
+    depends_on: [a]
+`,
+    );
+    const errors = (await violationsFor(root, 'check.insight-scope-registry')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('cycle'))).toBe(true);
+  });
+
+  it('errors on a scope path that does not resolve to a directory', async () => {
+    const root = tmp('registry-badpath');
+    makeInsightProject(root);
+    writeInsight(
+      root,
+      'scope-registry.yaml',
+      `schemaVersion: "3.0"
+built_at_commit: 9f2c1ab
+scopes:
+  auth:
+    path: src/ghost
+    depends_on: []
+`,
+    );
+    const errors = (await violationsFor(root, 'check.insight-scope-registry')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('src/ghost'))).toBe(true);
+  });
+
+  it('shared_by/depends_on asymmetry is a warning, not an error', async () => {
+    const root = tmp('registry-asym');
+    makeInsightProject(root);
+    fs.mkdirSync(path.join(root, 'src/auth'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'src/shared/notifications'), { recursive: true });
+    writeInsight(
+      root,
+      'scope-registry.yaml',
+      `schemaVersion: "3.0"
+built_at_commit: 9f2c1ab
+scopes:
+  auth:
+    path: src/auth
+    depends_on: []
+  notifications:
+    path: src/shared/notifications
+    depends_on: []
+    shared_by: [auth]
+`,
+    );
+    const v = await violationsFor(root, 'check.insight-scope-registry');
+    expect(v.filter((x) => x.severity === 'error')).toEqual([]);
+    expect(v.filter((x) => x.severity === 'warning')).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// check.insight-ledger (§4.10.4, §4.10.5) — one check, both index files
+// ---------------------------------------------------------------------------
+
+describe('check.insight-ledger', () => {
+  it('well-formed ledger.json + reverse-index.json produce no violation', async () => {
+    const root = tmp('ledger-clean');
+    makeInsightProject(root);
+    writeInsight(
+      root,
+      'ledger.json',
+      JSON.stringify({
+        schemaVersion: '3.0',
+        built_at_commit: '9f2c1ab',
+        entries: { 'src/auth/session.ts': { source_sha256: SHA, built_at_commit: '9f2c1ab', extraction_level: 3 } },
+      }),
+    );
+    writeInsight(
+      root,
+      'reverse-index.json',
+      JSON.stringify({
+        schemaVersion: '3.0',
+        built_at_commit: '9f2c1ab',
+        referenced_by: { 'element:src/auth/session.ts#validateToken': ['concept:authentication', 'edge:x-01'] },
+      }),
+    );
+    expect(await violationsFor(root, 'check.insight-ledger')).toEqual([]);
+  });
+
+  it('errors on a bad ledger entry (hash + level), clause §4.10.4', async () => {
+    const root = tmp('ledger-bad');
+    makeInsightProject(root);
+    writeInsight(
+      root,
+      'ledger.json',
+      JSON.stringify({
+        schemaVersion: '3.0',
+        built_at_commit: '9f2c1ab',
+        entries: { 'src/x.ts': { source_sha256: 'short', built_at_commit: '9f2c1ab', extraction_level: 5 } },
+      }),
+    );
+    const errors = (await violationsFor(root, 'check.insight-ledger')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('source_sha256') && e.clause === '§4.10.4')).toBe(true);
+    expect(errors.some((e) => e.message.includes('extraction_level'))).toBe(true);
+  });
+
+  it('errors on malformed reverse-index ids, clause §4.10.5', async () => {
+    const root = tmp('reverse-bad');
+    makeInsightProject(root);
+    writeInsight(
+      root,
+      'reverse-index.json',
+      JSON.stringify({
+        schemaVersion: '3.0',
+        built_at_commit: '9f2c1ab',
+        referenced_by: { 'not-a-node-id': ['file:src/x.ts'] },
+      }),
+    );
+    const errors = (await violationsFor(root, 'check.insight-ledger')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.clause === '§4.10.5' && e.message.includes('node id'))).toBe(true);
+    expect(errors.some((e) => e.clause === '§4.10.5' && e.message.includes('edge'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// check.insight-graph (§4.10.6) — redefined for the v3 shapes
+// ---------------------------------------------------------------------------
+
+function graphWith(edge: Record<string, unknown>): string {
+  return JSON.stringify({
+    schemaVersion: '3.0',
+    generated: '2026-07-07T14:05:00Z',
+    built_at_commit: '9f2c1ab',
+    nodes: [
+      { id: 'concept:authentication', kind: 'concept', label: 'authentication' },
+      { id: 'file:src/auth/session.ts', kind: 'file', label: 'session.ts' },
+    ],
+    edges: [
+      {
+        id: 'edge:e1',
+        source: 'file:src/auth/session.ts',
+        target: 'concept:authentication',
+        edge_type: 'implements-concept',
+        confidence: 'stated',
+        evidence: 'stated in the module header',
+        confirmed_at_commit: '9f2c1ab',
+        ...edge,
+      },
+    ],
+  });
+}
+
+describe('check.insight-graph', () => {
+  it('a well-formed v3 trio passes clean', async () => {
     const root = tmp('graph-clean');
     makeInsightProject(root);
-    writeMapFile(
+    writeInsight(root, 'graph.json', graphWith({}));
+    writeInsight(
       root,
-      'graph.json',
+      'tags.json',
       JSON.stringify({
-        schemaVersion: '2.0',
-        generated: '2026-07-05T10:00:00Z',
-        rebuild: 'full',
-        nodes: [
-          { id: 'anatomy:src/pulse/review.ts', module: 'anatomy', label: 'review.ts' },
-          { id: 'spec:insight.cli', module: 'spec', label: 'insight.cli' },
-        ],
-        edges: [
+        schemaVersion: '3.0',
+        generated: '2026-07-07T14:05:00Z',
+        built_at_commit: '9f2c1ab',
+        vocabulary: [{ tag: 'authentication', kind: 'concern', aliases: ['auth'] }],
+        assignments: { 'file:src/auth/session.ts': ['authentication'] },
+      }),
+    );
+    writeInsight(
+      root,
+      'clusters.json',
+      JSON.stringify({
+        schemaVersion: '3.0',
+        generated: '2026-07-07T14:05:00Z',
+        built_at_commit: '9f2c1ab',
+        clusters: [
           {
-            from: 'anatomy:src/pulse/review.ts',
-            to: 'spec:insight.cli',
-            kind: 'mentions-same-entity',
-            confidence: 'medium',
-            rationale: 'both concern the review flow',
+            id: 'cluster:auth-core',
+            label: 'Auth core',
+            members: ['file:src/auth/session.ts'],
+            rationale: 'co-located auth primitives',
+            scope: 'global',
           },
         ],
       }),
@@ -194,67 +362,92 @@ describe('check.insight-graph', () => {
     expect(await violationsFor(root, 'check.insight-graph')).toEqual([]);
   });
 
-  it('warns (not errors) on a dangling edge endpoint', async () => {
-    const root = tmp('graph-dangling');
+  it('errors on empty evidence, a non-enum edge_type, and a float confidence', async () => {
+    const root = tmp('graph-bad-edge');
     makeInsightProject(root);
-    writeMapFile(
+    writeInsight(root, 'graph.json', graphWith({ evidence: '', edge_type: 'related-to', confidence: 0.85 }));
+    const errors = (await violationsFor(root, 'check.insight-graph')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('evidence'))).toBe(true);
+    expect(errors.some((e) => e.message.includes('edge_type'))).toBe(true);
+    expect(errors.some((e) => e.message.includes('confidence'))).toBe(true);
+    expect(errors[0]?.clause).toBe('§4.10.6');
+  });
+
+  it('errors on a v2-grammar node id (constellation-borrowed ids are gone)', async () => {
+    const root = tmp('graph-v2-id');
+    makeInsightProject(root);
+    writeInsight(
       root,
       'graph.json',
       JSON.stringify({
-        schemaVersion: '2.0',
-        generated: '2026-07-05T10:00:00Z',
-        rebuild: 'full',
-        nodes: [{ id: 'spec:insight.cli', module: 'spec', label: 'insight.cli' }],
-        edges: [
-          {
-            from: 'spec:insight.cli',
-            to: 'spec:insight.gaps-loop',
-            kind: 'semantically-related',
-            confidence: 'low',
-            rationale: 'both about insight loops',
-          },
-        ],
+        schemaVersion: '3.0',
+        generated: '2026-07-07T14:05:00Z',
+        built_at_commit: '9f2c1ab',
+        nodes: [{ id: 'spec:insight.cli', kind: 'file', label: 'x' }],
+        edges: [],
       }),
     );
+    const errors = (await violationsFor(root, 'check.insight-graph')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('node id'))).toBe(true);
+  });
+
+  it('warns (not errors) on a dangling edge endpoint', async () => {
+    const root = tmp('graph-dangling');
+    makeInsightProject(root);
+    writeInsight(root, 'graph.json', graphWith({ target: 'concept:billing' }));
     const v = await violationsFor(root, 'check.insight-graph');
     expect(v.every((x) => x.severity !== 'error')).toBe(true);
     const warnings = v.filter((x) => x.severity === 'warning');
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]?.message).toContain('spec:insight.gaps-loop');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// check.insight-ownership (§4.10.3)
-// ---------------------------------------------------------------------------
-
-describe('check.insight-ownership', () => {
-  it('errors on an out-of-lane extension and an unexpected .json basename', async () => {
-    const root = tmp('ownership-bad');
-    makeInsightProject(root);
-    writeMapFile(root, 'notes.txt', 'loose notes');
-    writeMapFile(root, 'extra.json', '{}');
-    const errors = (await violationsFor(root, 'check.insight-ownership')).filter((v) => v.severity === 'error');
-    expect(errors.some((e) => e.message.includes('notes.txt'))).toBe(true);
-    expect(errors.some((e) => e.message.includes('extra.json'))).toBe(true);
+    expect(warnings.some((w) => w.message.includes('concept:billing') && w.message.includes('dangling'))).toBe(true);
   });
 
-  it('a clean map/ (setup.md + the three json) passes', async () => {
-    const root = tmp('ownership-clean');
+  it('flags non-total-ordered serialization as a warning', async () => {
+    const root = tmp('graph-unordered');
     makeInsightProject(root);
-    writeMapFile(root, 'setup.md', `---\nkind: insight-prose\nupdated: 2026-07-05T10:00:00Z\n---\n\n# Setup\n`);
-    writeMapFile(root, 'graph.json', JSON.stringify({ schemaVersion: '2.0', generated: '2026-07-05T10:00:00Z', rebuild: 'full', nodes: [], edges: [] }));
-    writeMapFile(root, 'tags.json', JSON.stringify({ schemaVersion: '2.0', generated: '2026-07-05T10:00:00Z', tags: {} }));
-    writeMapFile(root, 'clusters.json', JSON.stringify({ schemaVersion: '2.0', generated: '2026-07-05T10:00:00Z', clusters: [] }));
-    expect(await violationsFor(root, 'check.insight-ownership')).toEqual([]);
+    writeInsight(
+      root,
+      'graph.json',
+      JSON.stringify({
+        schemaVersion: '3.0',
+        generated: '2026-07-07T14:05:00Z',
+        built_at_commit: '9f2c1ab',
+        nodes: [
+          { id: 'file:src/z.ts', kind: 'file', label: 'z.ts' },
+          { id: 'file:src/a.ts', kind: 'file', label: 'a.ts' },
+        ],
+        edges: [],
+      }),
+    );
+    const v = await violationsFor(root, 'check.insight-graph');
+    expect(v.filter((x) => x.severity === 'error')).toEqual([]);
+    expect(v.some((x) => x.severity === 'warning' && x.message.includes('total-ordered'))).toBe(true);
   });
 
-  it('errors on a map/_index.md', async () => {
-    const root = tmp('ownership-index');
+  it('errors on an assignment referencing a tag not in the vocabulary', async () => {
+    const root = tmp('tags-unknown');
     makeInsightProject(root);
-    writeMapFile(root, '_index.md', '# nope\n');
-    const errors = (await violationsFor(root, 'check.insight-ownership')).filter((v) => v.severity === 'error');
-    expect(errors.some((e) => e.message.includes('_index.md'))).toBe(true);
+    writeInsight(
+      root,
+      'tags.json',
+      JSON.stringify({
+        schemaVersion: '3.0',
+        generated: '2026-07-07T14:05:00Z',
+        built_at_commit: '9f2c1ab',
+        vocabulary: [{ tag: 'authentication', kind: 'concern' }],
+        assignments: { 'file:src/auth/session.ts': ['jwt'] },
+      }),
+    );
+    const errors = (await violationsFor(root, 'check.insight-graph')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.message.includes('"jwt"'))).toBe(true);
+  });
+
+  it('validates scope-local scopes/<scope>/graph.json too', async () => {
+    const root = tmp('graph-scoped');
+    makeInsightProject(root);
+    writeInsight(root, 'scopes/auth/graph.json', graphWith({ evidence: '' }));
+    const errors = (await violationsFor(root, 'check.insight-graph')).filter((v) => v.severity === 'error');
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.location.path).toContain(path.join('scopes', 'auth', 'graph.json'));
   });
 });
 
@@ -370,22 +563,20 @@ a candidate rule
 });
 
 // ---------------------------------------------------------------------------
-// check.insight-index (§7.4)
+// check.insight-index (§7.4) — redefined for the v3 verbs
 // ---------------------------------------------------------------------------
 
 describe('check.insight-index', () => {
   it('warns when the trust-model line is absent', async () => {
     const root = tmp('index-no-trust');
     makeInsightProject(root);
-    // Overwrite with an index that has the shape but no ungated/unreviewed line.
-    writeInsightIndex(
+    // Overwrite with an index that lacks the ungated/unreviewed + CLI lines.
+    writeInsight(
       root,
-      `# Insight — index
+      '_index.md',
+      `# Insight
 
-**Read this when:** you need conceptual orientation about the project.
-
-**What's here:**
-- \`map/*.md\` — observed project knowledge.
+Per-file understanding of the codebase.
 `,
     );
     const v = (await violationsFor(root, 'check.insight-index')).filter((x) => x.severity === 'warning');
@@ -393,9 +584,18 @@ describe('check.insight-index', () => {
     expect(v[0]?.clause).toBe('§7.4');
   });
 
-  it('a compliant index produces no violation', async () => {
+  it('the locked v3 template produces no violation', async () => {
     const root = tmp('index-ok');
-    makeInsightProject(root); // makeInsightProject writes a compliant index
+    makeInsightProject(root); // writes INSIGHT_INDEX_TEMPLATE
     expect(await violationsFor(root, 'check.insight-index')).toEqual([]);
+  });
+
+  it('the locked template is exempt from the §7.1 heading warnings (check.index-shape)', async () => {
+    const root = tmp('index-shape-exempt');
+    makeInsightProject(root);
+    const v = (await violationsFor(root, 'check.index-shape')).filter((x) =>
+      x.location.path.includes(path.join('insight', '_index.md')),
+    );
+    expect(v).toEqual([]);
   });
 });

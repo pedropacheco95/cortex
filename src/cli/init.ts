@@ -138,8 +138,10 @@ function writeSkeleton(root: string, force: boolean, nowIso: string): void {
   // Pulse rejection memory (persists; preserved if present).
   writeIfAbsent(path.join(cortexDir, 'pulse', 'dismissed.md'), pulseDismissedTemplate(nowIso), false);
 
-  // Insight module (§4.10, §7.4) — committed, NOT gitignored. Creates
-  // insight/_index.md + the empty flat map/; seeds no prose or JSON.
+  // Insight module (§4.10.1, §7.4 — v3) — committed, NOT gitignored. Creates
+  // insight/_index.md (the §5.13 active prompt) + the empty flat-layout
+  // anatomy/ and concepts/; seeds no entries or JSON. Scoped layout
+  // (scopes/ + scope-registry.yaml) is the extract skill's to add.
   scaffoldInsight(cortexDir);
 
   // Archive module (§4.4, new at v3.0) — mixed git policy per-artefact within

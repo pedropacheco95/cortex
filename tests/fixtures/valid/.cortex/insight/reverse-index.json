@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "3.0",
+  "built_at_commit": "9f2c1ab",
+  "referenced_by": {
+    "element:src/auth/session.ts#validateToken": [
+      "concept:authentication",
+      "edge:implements-concept:file:src/auth/session.ts->concept:authentication"
+    ]
+  }
+}

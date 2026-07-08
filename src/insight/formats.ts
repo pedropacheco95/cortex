@@ -1,9 +1,14 @@
 /**
- * Insight module formats — the shape definitions and deterministic parse/guard
- * helpers for the ungated `insight/` layer (spec insight.module-contract;
- * cortex-schema.md §4.10). This is the single source of truth the CLI
- * (insight.cli), the loops (insight.refresh-loop / insight.gaps-loop), and the
- * validator (schema.validator-insight-checks) all build against.
+ * LEGACY v2.0 insight formats — SUPERSEDED at schema 3.0 (build-order-v3 step
+ * 5b). The v2 `insight/map/` concept-map contract these shapes implement was
+ * replaced wholesale by the v3 per-file understanding layer (see ./entry.ts
+ * and ./storage.ts; cortex-schema.md §4.10 v3.0).
+ *
+ * This module is retained ONLY for the sanctioned interim v2 consumers
+ * (design §8.4): the v2 query CLI (./cli.ts, ./query.ts — retired at step
+ * 5c), the v2 refresh/gaps loops (./refresh.ts, ./gaps.ts — retired at step
+ * 5e), and the constellation insight overlay. No v3 code may import from
+ * here. The validator no longer registers checks against these shapes.
  *
  * Pure module: NO fs, NO LLM (R-001). Callers read files; these helpers only
  * inspect already-in-memory content (an object or a raw string).

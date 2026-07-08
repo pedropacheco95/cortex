@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "3.0",
+  "generated": "2026-07-07T14:05:00Z",
+  "built_at_commit": "9f2c1ab",
+  "nodes": [
+    {
+      "id": "concept:authentication",
+      "kind": "concept",
+      "label": "authentication"
+    },
+    {
+      "id": "element:src/auth/session.ts#validateToken",
+      "kind": "element",
+      "label": "validateToken"
+    },
+    {
+      "id": "file:src/auth/session.ts",
+      "kind": "file",
+      "label": "session.ts"
+    },
+    {
+      "id": "file:src/util/log.ts",
+      "kind": "file",
+      "label": "log.ts"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:implements-concept:file:src/auth/session.ts->concept:authentication",
+      "source": "file:src/auth/session.ts",
+      "target": "concept:authentication",
+      "edge_type": "implements-concept",
+      "confidence": "stated",
+      "evidence": "session.ts explicitly implements the token-issuance half of authentication",
+      "confirmed_at_commit": "9f2c1ab"
+    },
+    {
+      "id": "edge:imports:file:src/auth/session.ts->file:src/util/log.ts",
+      "source": "file:src/auth/session.ts",
+      "target": "file:src/util/log.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: session.ts imports log from src/util/log.ts",
+      "confirmed_at_commit": "9f2c1ab"
+    }
+  ]
+}

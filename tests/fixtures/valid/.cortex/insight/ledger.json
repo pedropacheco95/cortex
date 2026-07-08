@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "3.0",
+  "built_at_commit": "9f2c1ab",
+  "entries": {
+    "src/auth/session.ts": {
+      "source_sha256": "a1b3c5d7e9f102132435465768798a9bacbdcedfe0f1023344556677889900aa",
+      "built_at_commit": "9f2c1ab",
+      "extraction_level": 3
+    },
+    "src/util/log.ts": {
+      "source_sha256": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "built_at_commit": "9f2c1ab",
+      "extraction_level": 2
+    }
+  }
+}

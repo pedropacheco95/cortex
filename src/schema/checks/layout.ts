@@ -10,7 +10,7 @@ export function checkLayout(root: string): Violation[] {
     return violations; // .cortex is optional; if absent, no layout violations
   }
 
-  const expectedDirs = ['anatomy', 'compass', 'atlas', 'pulse'];
+  const expectedDirs = ['anatomy', 'compass', 'atlas', 'insight', 'pulse'];
   for (const dir of expectedDirs) {
     const dirPath = path.join(cortexDir, dir);
     if (fs.existsSync(dirPath)) {
@@ -60,15 +60,24 @@ export function checkIndexPresent(root: string): Violation[] {
 
   if (!fs.existsSync(cortexDir)) return violations;
 
-  // §4.10.3: `insight/map/` deliberately carries NO `_index.md` (the module
-  // index one level up fully describes it; check.insight-ownership enforces its
-  // absence). Exempt it from the every-dir _index.md requirement.
-  const insightMap = path.join(cortexDir, 'insight', 'map');
+  // §4.10.1 (v3): insight's content directories are data trees, not navigable
+  // module indexes — the schema §1 layout lists an `_index.md` only at the
+  // insight module root. Exempt the whole `anatomy/`, `concepts/`, and
+  // `scopes/` subtrees (per-file entries path-mirror the source tree). The
+  // legacy v2 `insight/map/` stays exempt too — tolerated on disk as interim
+  // dogfood (design §8.4) until the v3 extraction replaces it.
+  const insightRoot = path.join(cortexDir, 'insight');
+  const insightDataRoots = [
+    path.join(insightRoot, 'anatomy'),
+    path.join(insightRoot, 'concepts'),
+    path.join(insightRoot, 'scopes'),
+    path.join(insightRoot, 'map'),
+  ];
   // §4.4: `archive/documents/` (and every `<slug>/`, `<slug>/extracted/` below
   // it) and `archive/types/` are data directories, not navigable module
   // indexes — the schema §1 layout tree lists no `_index.md` anywhere under
   // either (only `archive/_index.md` itself is required). Exempt the whole
-  // `documents/` subtree and the `types/` directory, mirroring insight/map/.
+  // `documents/` subtree and the `types/` directory, mirroring insight's data trees.
   const archiveDocuments = path.join(cortexDir, 'archive', 'documents');
   const archiveTypes = path.join(cortexDir, 'archive', 'types');
 
@@ -76,7 +85,7 @@ export function checkIndexPresent(root: string): Violation[] {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     const hasIndex = entries.some((e) => e.isFile() && e.name === '_index.md');
     const exempt =
-      dir === insightMap ||
+      insightDataRoots.some((d) => dir === d || dir.startsWith(d + path.sep)) ||
       dir === archiveTypes ||
       dir === archiveDocuments ||
       dir.startsWith(archiveDocuments + path.sep);
@@ -106,11 +115,18 @@ export function checkIndexShape(root: string): Violation[] {
 
   if (!fs.existsSync(cortexDir)) return violations;
 
+  // §7.4 (v3): `insight/_index.md` is LOCKED template text (design §5.13) that
+  // deliberately does not carry the §7.1 `Read this when:` / `What's here:`
+  // headings — its shape is owned by check.insight-index instead. Exempt it
+  // from the two heading checks (the <300-token budget still applies).
+  const insightIndex = path.join(cortexDir, 'insight', '_index.md');
+
   function walkDir(dir: string): void {
     const indexPath = path.join(dir, '_index.md');
     if (fs.existsSync(indexPath)) {
       const content = fs.readFileSync(indexPath, 'utf-8');
-      if (!content.includes('Read this when:')) {
+      const headingExempt = indexPath === insightIndex;
+      if (!headingExempt && !content.includes('Read this when:')) {
         violations.push({
           severity: 'warning',
           check: 'check.index-shape',
@@ -119,7 +135,7 @@ export function checkIndexShape(root: string): Violation[] {
           message: `_index.md missing "Read this when:" heading`,
         });
       }
-      if (!content.includes("What's here:")) {
+      if (!headingExempt && !content.includes("What's here:")) {
         violations.push({
           severity: 'warning',
           check: 'check.index-shape',

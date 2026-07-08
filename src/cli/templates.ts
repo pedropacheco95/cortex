@@ -181,27 +181,37 @@ suggestion entries carry S-NNN IDs referenced by \`dismissed.md\`.
 };
 
 /**
- * §7.4 `insight/_index.md` — the ungated-module active prompt. Follows the §7.1
- * shape (`Read this when:` / `What's here:` / `How to navigate:`, <300 tok) with
- * the module-specific requirement (spec insight.module-contract Rule 2): it names
- * insight as ungated/unreviewed and points at `cortex insight` as the query
- * surface. `insight/map/` itself carries NO `_index.md` (§4.10.3) — this one index
- * describes both the prose (`.md`) and inferred (`.json`) content.
+ * §7.4 `insight/_index.md` — the ungated-module active prompt, v3.0. LOCKED
+ * template text (design §5.13; schema §7.4 reproduces it verbatim, under the
+ * RULES 11 <300-token budget). It states the trust model — inferred, not
+ * curated; context, not authority; gated layer wins — and points at the
+ * `cortex insight file/concept/element` CLI as the query surface. Note the
+ * locked text deliberately does NOT carry the §7.1 `Read this when:` /
+ * `What's here:` headings — check.index-shape exempts this one file (see
+ * src/schema/checks/layout.ts); check.insight-index owns its shape instead.
  */
-export const INSIGHT_INDEX_TEMPLATE = `# Insight — index
+export const INSIGHT_INDEX_TEMPLATE = `# Insight — inferred codebase understanding (ungated)
 
-**Read this when:** you need conceptual orientation — how things relate, what a
-domain cluster contains, or how setup/testing/deploy actually work here. Insight
-is **ungated**: useful immediately, **not human-reviewed**. For enforced rules, compass.
+This module holds Cortex's inferred understanding of THIS codebase:
+per-file entries (purpose, main players, insights, file map,
+connections), concepts, and the semantic graph. Inferred, not
+curated — context, not authority. Where insight conflicts with a
+compass rule or a spec, the gated layer wins.
 
-**What's here:**
-- \`map/*.md\` — observed project knowledge (setup, testing, deploy, conventions, …).
-- \`map/graph.json\`, \`tags.json\`, \`clusters.json\` — the inferred concept map. Query
-  via CLI; never hand-edit.
+Query it; don't read these files directly:
+- cortex insight file <path>     — the rich per-file entry
+- cortex insight concept <name>  — how a concept lives in the code
+- cortex insight element <query> — a function / class / constant
 
-**How to navigate:** \`cortex insight query <topic>\` first; \`cortex insight
-neighbors <node-id>\` to walk relations; \`cortex insight list\` to see everything.
-Treat claims here as unreviewed — trace load-bearing ones before relying on them.
+Before substantive work on a file, query its insight entry; before
+cross-file or concept-touching changes, query the concept
+(see the "Cortex Insight" block in CLAUDE.md).
+
+Layout: per-file entries under anatomy/ (or scopes/<scope>/anatomy/
+when scoped); concepts under concepts/; the semantic graph in
+graph.json / tags.json / clusters.json; the scope tree in
+scope-registry.yaml. Kept current by the insight-refresh loops
+(fast / daily / full) and enriched by cortex-loop-session-observe.
 `;
 
 /**

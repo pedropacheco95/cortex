@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "3.0",
+  "generated": "2026-07-07T14:05:00Z",
+  "built_at_commit": "9f2c1ab",
+  "vocabulary": [
+    {
+      "tag": "authentication",
+      "kind": "concern",
+      "aliases": [
+        "auth"
+      ]
+    },
+    {
+      "tag": "logging",
+      "kind": "concern"
+    }
+  ],
+  "assignments": {
+    "file:src/auth/session.ts": [
+      "authentication"
+    ],
+    "file:src/util/log.ts": [
+      "logging"
+    ]
+  }
+}

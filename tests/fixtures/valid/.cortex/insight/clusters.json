@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "3.0",
+  "generated": "2026-07-07T14:05:00Z",
+  "built_at_commit": "9f2c1ab",
+  "clusters": [
+    {
+      "id": "cluster:auth-core",
+      "label": "Auth core",
+      "members": [
+        "file:src/auth/session.ts"
+      ],
+      "rationale": "co-located auth primitives sharing the token lifecycle",
+      "scope": "global"
+    }
+  ]
+}

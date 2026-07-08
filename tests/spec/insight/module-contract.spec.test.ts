@@ -1,8 +1,12 @@
 /**
- * Spec tests for insight.module-contract — one describe per Acceptance Criterion.
- * Covers init scaffolding, the ungated-trust-model index, the config block, and
- * the prose + JSON format guards. Runs against fresh tmp dirs, never the live
- * repo. Every test executes under `pnpm test`.
+ * Spec tests for insight.module-contract (v2) — updated at build-order-v3 step
+ * 5b to the v3 storage contract where the v2 expectations were superseded:
+ * init now scaffolds the v3 flat layout (anatomy/ + concepts/, no map/) and
+ * the locked §7.4 v3 _index.md. The v2 prose/JSON format-guard describes are
+ * retained: they exercise the LEGACY formats module (src/insight/formats.ts)
+ * that the interim v2 consumers (refresh/gaps/cli — design §8.4) still build
+ * against until steps 5c/5e retire them. Runs against fresh tmp dirs, never
+ * the live repo. Every test executes under `pnpm test`.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'fs';
@@ -48,18 +52,23 @@ describe('AC: init scaffolds the insight module committed', () => {
     cleanTmp(home);
   });
 
-  it('creates insight/_index.md and the empty flat map/ dir', () => {
+  it('creates insight/_index.md and the empty flat anatomy/ + concepts/ dirs (v3 — no map/)', () => {
     const insightDir = path.join(root, '.cortex', 'insight');
     expect(fs.existsSync(path.join(insightDir, '_index.md'))).toBe(true);
-    const mapDir = path.join(insightDir, 'map');
-    expect(fs.existsSync(mapDir)).toBe(true);
-    expect(fs.statSync(mapDir).isDirectory()).toBe(true);
-    // map/ is empty — no seeded prose or JSON.
-    expect(fs.readdirSync(mapDir)).toHaveLength(0);
+    for (const dir of ['anatomy', 'concepts']) {
+      const p = path.join(insightDir, dir);
+      expect(fs.existsSync(p)).toBe(true);
+      expect(fs.statSync(p).isDirectory()).toBe(true);
+      // Empty — no seeded entries, concepts, or JSON (extraction owns first content).
+      expect(fs.readdirSync(p)).toHaveLength(0);
+    }
+    // The v2 map/ is no longer scaffolded for new projects.
+    expect(fs.existsSync(path.join(insightDir, 'map'))).toBe(false);
   });
 
-  it('map/ carries no _index.md of its own', () => {
-    expect(fs.existsSync(path.join(root, '.cortex', 'insight', 'map', '_index.md'))).toBe(false);
+  it('anatomy/ and concepts/ carry no _index.md of their own', () => {
+    expect(fs.existsSync(path.join(root, '.cortex', 'insight', 'anatomy', '_index.md'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cortex', 'insight', 'concepts', '_index.md'))).toBe(false);
   });
 
   it('.gitignore does NOT list .cortex/insight/ (committed, not gitignored)', () => {
@@ -84,24 +93,24 @@ describe('AC: init scaffolds the insight module committed', () => {
 // AC: The index states the ungated trust model
 // ---------------------------------------------------------------------------
 
-describe('AC: insight/_index.md states the ungated trust model', () => {
-  it('carries the §7.1 active-prompt headings', () => {
-    expect(INSIGHT_INDEX_TEMPLATE).toContain('Read this when:');
-    expect(INSIGHT_INDEX_TEMPLATE).toContain("What's here:");
-  });
-
-  it('names insight as ungated/unreviewed', () => {
+describe('AC: insight/_index.md states the ungated trust model (v3 locked template, §7.4)', () => {
+  it('names insight as ungated and inferred-not-curated', () => {
     expect(INSIGHT_INDEX_TEMPLATE.toLowerCase()).toContain('ungated');
-    expect(INSIGHT_INDEX_TEMPLATE.toLowerCase()).toContain('not human-reviewed');
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('Inferred, not');
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('the gated layer wins');
   });
 
-  it('references cortex insight as the query surface', () => {
-    expect(INSIGHT_INDEX_TEMPLATE).toContain('cortex insight');
+  it('references the v3 cortex insight verbs as the query surface', () => {
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('cortex insight file <path>');
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('cortex insight concept <name>');
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('cortex insight element <query>');
   });
 
-  it('describes the prose(.md)/inferred(.json) split in map/', () => {
-    expect(INSIGHT_INDEX_TEMPLATE).toContain('map/*.md');
-    expect(INSIGHT_INDEX_TEMPLATE).toContain('graph.json');
+  it('describes the v3 layout — anatomy/ entries, concepts/, the JSON trio, scope registry', () => {
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('anatomy/');
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('concepts/');
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('graph.json / tags.json / clusters.json');
+    expect(INSIGHT_INDEX_TEMPLATE).toContain('scope-registry.yaml');
   });
 });
 

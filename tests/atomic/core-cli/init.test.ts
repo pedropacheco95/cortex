@@ -160,12 +160,21 @@ describe('Rule 3: skeleton', () => {
       return found;
     };
     const indexes = walk(path.join(root, '.cortex'));
-    expect(indexes.length).toBe(13); // root + anatomy + compass(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (map/ carries none, §4.10.3) + archive (documents/, types/ carry none, §4.4)
+    expect(indexes.length).toBe(13); // root + anatomy + compass(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (anatomy/, concepts/ carry none, §4.10.1 v3) + archive (documents/, types/ carry none, §4.4)
+    const insightIndex = path.join(root, '.cortex', 'insight', '_index.md');
     for (const idx of indexes) {
       const content = fs.readFileSync(idx, 'utf-8');
-      expect(content, idx).toContain('Read this when:');
-      expect(content, idx).toContain("What's here:");
-      expect(content, idx).toContain('How to navigate:');
+      if (idx === insightIndex) {
+        // §7.4 v3: insight/_index.md is LOCKED template text (design §5.13)
+        // without the §7.1 headings — its shape is asserted by the
+        // storage-format/module-contract tests + check.insight-index.
+        expect(content, idx).toContain('(ungated)');
+        expect(content, idx).toContain('cortex insight file <path>');
+      } else {
+        expect(content, idx).toContain('Read this when:');
+        expect(content, idx).toContain("What's here:");
+        expect(content, idx).toContain('How to navigate:');
+      }
       // soft <300-token budget (≈ chars/4)
       expect(content.length / 4, `${idx} over token budget`).toBeLessThan(300);
     }
