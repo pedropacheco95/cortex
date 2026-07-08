@@ -64,16 +64,16 @@ describe("AC2: two same-named projects don't collide", () => {
   }, TEST_TIMEOUT * 2);
   afterAll(() => { cleanTmp(tmp); cleanTmp(home); });
 
-  it('the home holds two disjoint 12-task sets, each attributable by prefix', () => {
+  it('the home holds two disjoint task sets, each attributable by prefix', () => {
     expect(resultA.exitCode).toBe(0);
     expect(resultB.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
-    expect(dirs).toHaveLength(24);
+    expect(dirs).toHaveLength(28);
     const ofA = dirs.filter((d) => isOwnScopedTask(rootA, d));
     const ofB = dirs.filter((d) => isOwnScopedTask(rootB, d));
-    expect(ofA).toHaveLength(12);
-    expect(ofB).toHaveLength(12);
+    expect(ofA).toHaveLength(14);
+    expect(ofB).toHaveLength(14);
     expect(ofA.filter((d) => ofB.includes(d))).toHaveLength(0);
     // Same slug (the Desktop-scannable part), disambiguated by the path hash.
     expect(projectTaskSlug(rootA)).toBe('api');
@@ -81,8 +81,8 @@ describe("AC2: two same-named projects don't collide", () => {
     expect(projectTaskHash(rootA)).not.toBe(projectTaskHash(rootB));
   });
 
-  it('zero overwrites: the second init wrote all twelve fresh (nothing preserved) and every frontmatter name matches its dir', () => {
-    expect(resultB.summary).toMatch(/Scheduled tasks: 12 written/);
+  it('zero overwrites: the second init wrote all fresh (nothing preserved) and every frontmatter name matches its dir', () => {
+    expect(resultB.summary).toMatch(/Scheduled tasks: 14 written/);
     expect(resultB.summary).not.toMatch(/preserved/);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     for (const dir of fs.readdirSync(base)) {
@@ -165,13 +165,13 @@ describe('AC4: --partial recognises only its own project', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(otherRoot); cleanTmp(home); });
 
-  it("registered/preserved counts reflect only this project's tasks (11 written + 1 preserved = 12 packaged loops)", () => {
-    // Since specflow.cortex-awareness Rule 3 the packaged skills cover all
-    // twelve tasks, so --partial registers the full set.
+  it("registered/preserved counts reflect only this project's tasks (13 written + 1 preserved = 14 packaged loops)", () => {
+    // Since specflow.cortex-awareness Rule 3 the packaged skills cover every
+    // task, so --partial registers the full set.
     expect(result.exitCode).toBe(0);
-    expect(result.summary).toContain('Scheduled tasks (--partial): 11 written');
+    expect(result.summary).toContain('Scheduled tasks (--partial): 13 written');
     expect(result.summary).toContain('1 existing preserved');
-    expect(result.summary).toContain('12 loops registered');
+    expect(result.summary).toContain('14 loops registered');
   });
 
   it('the foreign entries and the unrelated user task are byte-untouched', () => {

@@ -88,7 +88,7 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
       expect(installedDirs, `missing bundle ${name}`).toContain(name);
       expect(fs.existsSync(path.join(root, '.claude', 'skills', name, 'SKILL.md')), `${name}/SKILL.md`).toBe(true);
     }
-    // The cortex bundles are still there too (the full 22-skill set, design §13 step 4).
+    // The cortex bundles are still there too (the full 24-skill set, design §13 step 4).
     expect(installedDirs).toContain('cortex-ingest');
     expect(installedDirs).toContain('cortex-pulse-hygiene');
     expect(installedDirs).toEqual(fs.readdirSync(PKG_SKILLS).sort());
@@ -116,13 +116,13 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
     }
   });
 
-  it('the summary installed count reflects the full packaged set (11 cortex + 11 specflow = 22)', () => {
+  it('the summary installed count reflects the full packaged set (13 cortex + 11 specflow = 24)', () => {
     expect(result.exitCode).toBe(0);
     const bundleCount = fs.readdirSync(PKG_SKILLS, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
-    expect(bundleCount).toBe(22);
+    expect(bundleCount).toBe(24);
     const m = /Skills installed: (\d+)/.exec(result.summary);
     expect(m).not.toBeNull();
-    expect(Number(m?.[1])).toBe(22);
+    expect(Number(m?.[1])).toBe(24);
   });
 });
 

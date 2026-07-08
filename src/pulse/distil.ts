@@ -309,6 +309,50 @@ function readCerebrumNormalised(root: string): string {
   return normaliseText(chunks.join('\n'));
 }
 
+/**
+ * Insight-prose corpus for the already-covered filter's v2 extension (design
+ * §6, spec insight.gaps-loop Rule 7): each `insight/map/*.md` file's normalised
+ * content, project-relative path retained. A candidate already present in
+ * insight prose is proposed as a `promotion` of that file — not fresh cerebrum
+ * text (the graduation path: gaps captures once, distil later detects the
+ * repetition and proposes promotion).
+ */
+interface InsightProseFile {
+  rel: string;
+  norm: string;
+}
+
+function readInsightProse(root: string): InsightProseFile[] {
+  const dir = path.join(root, '.cortex', 'insight', 'map');
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const out: InsightProseFile[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+    try {
+      out.push({
+        rel: `.cortex/insight/map/${entry.name}`,
+        norm: normaliseText(fs.readFileSync(path.join(dir, entry.name), 'utf-8')),
+      });
+    } catch {
+      /* unreadable file covers nothing */
+    }
+  }
+  return out;
+}
+
+/** The insight file whose prose already contains `text` (Rule 7), or null. */
+function insightFileCovering(prose: InsightProseFile[], text: string): string | null {
+  const norm = normaliseText(text);
+  if (norm === '') return null;
+  for (const file of prose) if (file.norm.includes(norm)) return file.rel;
+  return null;
+}
+
 export interface ProposeCounts {
   received: number;
   proposed: number;
@@ -323,6 +367,8 @@ interface ProposalDraft {
   id: string;
   source: string;
   candidate: DistilCandidate;
+  /** Rule 7: when set, the insight file this candidate graduates FROM (→ `promotion`). */
+  promoteFrom?: string;
 }
 
 function distilSectionText(p: ProposalDraft): string {
@@ -330,10 +376,15 @@ function distilSectionText(p: ProposalDraft): string {
   // §4.5 fence grammar (B-003): the outer fence is strictly longer than any
   // backtick run inside the payload.
   const fence = chooseOuterFence(p.candidate.proposedText);
+  // Rule 7 — a pattern already in insight prose graduates via a `promotion`
+  // (referencing the insight file in Source), not a fresh rule-candidate.
+  const isPromotion = p.promoteFrom !== undefined;
+  const source = isPromotion ? `distil (already in insight ${p.promoteFrom}; ${p.source})` : p.source;
   return [
     `## ${p.id}: ${title}`,
     '',
-    `**Source:** ${p.source}`,
+    ...(isPromotion ? ['**Type:** promotion'] : []),
+    `**Source:** ${source}`,
     `**Target:** ${p.candidate.proposedTarget}`,
     `**Pattern:** ${p.candidate.pattern}`,
     `**Occurrences:** ${p.candidate.occurrences}`,
@@ -411,11 +462,16 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
   };
 
   const cerebrum = readCerebrumNormalised(root);
+  const insightProse = readInsightProse(root);
   const dismissals = readUnexpiredDismissals(root, now.getTime());
   const suggestionsPath = path.join(root, '.cortex', 'pulse', SUGGESTIONS_FILE);
   const pending = readPendingSections(suggestionsPath);
 
-  const passing: DistilCandidate[] = [];
+  interface Passing {
+    candidate: DistilCandidate;
+    promoteFrom?: string;
+  }
+  const passing: Passing[] = [];
   for (const raw of rawList) {
     const candidate = validateDistilCandidate(raw);
     if (candidate === null) {
@@ -434,7 +490,10 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
       counts.dismissed++;
       continue;
     }
-    passing.push(candidate);
+    // Rule 7 (v2 design §6): already in insight prose → propose a `promotion` of
+    // that file, not a fresh rule-candidate.
+    const promoteFrom = insightFileCovering(insightProse, candidate.proposedText);
+    passing.push(promoteFrom !== null ? { candidate, promoteFrom } : { candidate });
   }
 
   // Carry-forward (Rule 6): match still-pending prior sections by normalised
@@ -442,7 +501,7 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
   const drafts: (ProposalDraft | null)[] = [];
   const usedPriorIds = new Set<string>();
   let freshCount = 0;
-  for (const candidate of passing) {
+  for (const { candidate, promoteFrom } of passing) {
     const norm = normaliseText(candidate.pattern);
     const prior = pending.find(
       (p) => !usedPriorIds.has(p.id) && normaliseText(p.fields['pattern'] ?? p.title) === norm,
@@ -454,6 +513,7 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
         id: prior.id,
         source: prior.source ?? `distil (sessions: ${candidate.sessionIds.join(', ')})`,
         candidate,
+        ...(promoteFrom !== undefined ? { promoteFrom } : {}),
       });
     } else {
       freshCount++;
@@ -466,11 +526,12 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
   for (let i = 0; i < passing.length; i++) {
     let draft = drafts[i];
     if (draft === null || draft === undefined) {
-      const candidate = passing[i] as DistilCandidate;
+      const { candidate, promoteFrom } = passing[i] as Passing;
       draft = {
         id: freshIds[freshIdx++] as string,
         source: `distil (sessions: ${candidate.sessionIds.join(', ')})`,
         candidate,
+        ...(promoteFrom !== undefined ? { promoteFrom } : {}),
       };
     }
     sections.push(distilSectionText(draft));

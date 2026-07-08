@@ -52,10 +52,10 @@ describe('exit-code precedence: validation failure wins over auth failure', () =
     root = makeTmpDir('prec-proj');
     home = makeTmpDir('prec-home');
     binDir = makeTmpDir('prec-bin');
-    // A pre-existing specs/ tree that init must not touch (Rule 8) and that
+    // A pre-existing .specflow/specs/ tree that init must not touch (Rule 8) and that
     // fails check.specs-index → self-validation error.
-    fs.mkdirSync(path.join(root, 'specs'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'specs', '_index.md'), 'broken index with no required sections\n');
+    fs.mkdirSync(path.join(root, '.specflow', 'specs'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.specflow', 'specs', '_index.md'), 'broken index with no required sections\n');
     writeUndocumentedFiles(root, 1);
   });
   afterAll(() => { cleanTmp(root); cleanTmp(home); cleanTmp(binDir); });
@@ -121,12 +121,13 @@ describe('Rule 3: skeleton', () => {
   it('cortex.config.json carries the exact §10.1 defaults', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect(config).toEqual({
-      schemaVersion: '1.0',
+      schemaVersion: '2.0',
       anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
       // preRead defaults TRUE and is written explicitly (§10.1: the Read pair
       // is on by default; the config self-documents).
       hooks: { preRead: true },
       pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
+      insight: { clusterCarryOverJaccard: 0.5, promotionMinAgeDays: 14, promotionMinObservations: 2 },
       harness: { maxIterations: 3 },
       loop: { enabled: false },
     });
@@ -143,7 +144,7 @@ describe('Rule 3: skeleton', () => {
       return found;
     };
     const indexes = walk(path.join(root, '.cortex'));
-    expect(indexes.length).toBe(11); // root + anatomy + cerebrum(+bugs,rules) + atlas(+3 subdirs,sources) + pulse
+    expect(indexes.length).toBe(12); // root + anatomy + cerebrum(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (map/ carries none, §4.10.3)
     for (const idx of indexes) {
       const content = fs.readFileSync(idx, 'utf-8');
       expect(content, idx).toContain('Read this when:');
@@ -161,15 +162,15 @@ describe('Rule 3: skeleton', () => {
     expect(data['loop']).toBeTruthy();
   });
 
-  it('scaffolded specs/_index.md has the §7.2 sections', () => {
-    const content = fs.readFileSync(path.join(root, 'specs', '_index.md'), 'utf-8');
+  it('scaffolded .specflow/specs/_index.md has the §7.2 sections', () => {
+    const content = fs.readFileSync(path.join(root, '.specflow', 'specs', '_index.md'), 'utf-8');
     for (const section of ['Read this when:', '## Domains', '## Dependency Graph', '## Build Order']) {
       expect(content).toContain(section);
     }
   });
 
   it('scaffolded _overview.md files have the §7.3 headings', () => {
-    for (const p of [path.join(root, 'specs', '_overview.md'), path.join(root, 'specs-business', '_overview.md')]) {
+    for (const p of [path.join(root, '.specflow', 'specs', '_overview.md'), path.join(root, '.specflow', 'specs-business', '_overview.md')]) {
       const content = fs.readFileSync(p, 'utf-8');
       expect(content).toContain('## What this is');
       expect(content).toContain('## What it covers');
@@ -179,9 +180,9 @@ describe('Rule 3: skeleton', () => {
 
   it('CLAUDE.md was created with the v-versioned managed block', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
-    expect(content).toContain('<!-- cortex:start v1.0 -->');
+    expect(content).toContain('<!-- cortex:start v2.0 -->');
     expect(content).toContain('<!-- cortex:end -->');
-    expect(content).toContain('Modules present: anatomy, cerebrum, atlas, pulse. Schema: 1.0.');
+    expect(content).toContain('Modules present: anatomy, cerebrum, atlas, insight, pulse. Schema: 2.0.');
   });
 });
 
@@ -411,10 +412,12 @@ describe('Rule 17: task→skill mapping owned by the task definitions', () => {
     'specflow-verify': ['specflow-tests'],
     'test-runner': ['cortex-loop-test-runner'],
     'bug-triage': ['cortex-loop-bug-triage', 'specflow-bugs'],
+    'insight-refresh': ['cortex-loop-insight-refresh'],
+    'insight-gaps': ['cortex-loop-insight-gaps'],
   };
 
-  it('all twelve tasks declare ≥1 required skill matching the design skill names', () => {
-    expect(SCHEDULED_TASKS).toHaveLength(12);
+  it('all tasks declare ≥1 required skill matching the design skill names', () => {
+    expect(SCHEDULED_TASKS).toHaveLength(14);
     expect(SCHEDULED_TASKS.map((t) => t.name).sort()).toEqual(Object.keys(EXPECTED_MAPPING).sort());
     for (const task of SCHEDULED_TASKS) {
       expect(task.requiredSkills.length, `${task.name} declares no required skill`).toBeGreaterThanOrEqual(1);
@@ -448,7 +451,7 @@ describe('Rule 15: summary names every change and the Desktop reminder', () => {
       expect(s).toMatch(/Preferences drafted/);
       expect(s).toMatch(/Hooks registered/);
       expect(s).toMatch(/Git hook:/);
-      expect(s).toMatch(/Scheduled tasks: 12 written/);
+      expect(s).toMatch(/Scheduled tasks: 14 written/);
       expect(s).toMatch(/CLAUDE\.md: managed cortex block/);
       expect(s).toMatch(/Migration:/);
       expect(s).toMatch(/Spec trees:/);

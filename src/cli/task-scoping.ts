@@ -15,7 +15,7 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 
 /**
- * Internal short id → canonical task name (schema §9.1, the twelve
+ * Internal short id → canonical task name (schema §9.1, the fourteen
  * Cortex-managed tasks). Keys are the `SCHEDULED_TASKS` internal ids
  * (templates.ts); values are the full §9.1 canonical identities.
  */
@@ -32,9 +32,11 @@ export const CANONICAL_TASK_NAMES: Readonly<Record<string, string>> = {
   'specflow-verify': 'specflow-verify',
   'test-runner': 'cortex-loop-test-runner',
   'bug-triage': 'cortex-loop-bug-triage',
+  'insight-refresh': 'cortex-loop-insight-refresh',
+  'insight-gaps': 'cortex-loop-insight-gaps',
 };
 
-/** The twelve §9.1 canonical task names (suffix set for recognition). */
+/** The fourteen §9.1 canonical task names (suffix set for recognition). */
 const CANONICAL_SET: ReadonlySet<string> = new Set(Object.values(CANONICAL_TASK_NAMES));
 
 /**

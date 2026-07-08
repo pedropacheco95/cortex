@@ -42,6 +42,8 @@ const PACKAGED_LOOP_SKILLS = [
   'cortex-loop-anatomy-refresh',
   'cortex-loop-atlas-staleness',
   'cortex-loop-bug-triage',
+  'cortex-loop-insight-gaps',
+  'cortex-loop-insight-refresh',
   'cortex-loop-onboarding-drift',
   'cortex-loop-rule-decay',
   'cortex-loop-skill-suggest',
@@ -54,7 +56,7 @@ const PACKAGED_LOOP_SKILLS = [
   'specflow-tests',
 ];
 const PACKAGED_LOOP_TASKS = [
-  'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'onboarding-drift', 'rule-decay', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
+  'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-gaps', 'insight-refresh', 'onboarding-drift', 'rule-decay', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
 ];
 
 // ---------------------------------------------------------------------------
@@ -92,7 +94,7 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
 
   it('cortex.config.json declares the current schemaVersion', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
-    expect(config.schemaVersion).toBe('1.0');
+    expect(config.schemaVersion).toBe('2.0');
   });
 
   it('self-validation reports conformant and exit code is 0', async () => {
@@ -348,7 +350,7 @@ describe('AC9: auth failure named specifically, exit 3, everything else complete
     // hooks
     expect(fs.existsSync(path.join(root, '.claude', 'settings.json'))).toBe(true);
     // scheduled tasks
-    expect(fs.readdirSync(path.join(home, '.claude', 'scheduled-tasks'))).toHaveLength(12);
+    expect(fs.readdirSync(path.join(home, '.claude', 'scheduled-tasks'))).toHaveLength(14);
     // CLAUDE.md managed block
     expect(fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8')).toContain('<!-- cortex:start');
     // self-validation ran and was conformant (otherwise exit would be 1)
@@ -523,10 +525,10 @@ describe('AC13: spec trees scaffolded only when absent', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('specs/_index.md, specs/_overview.md, and specs-business/_overview.md exist as skeletons', () => {
-    expect(fs.existsSync(path.join(root, 'specs', '_index.md'))).toBe(true);
-    expect(fs.existsSync(path.join(root, 'specs', '_overview.md'))).toBe(true);
-    expect(fs.existsSync(path.join(root, 'specs-business', '_overview.md'))).toBe(true);
+  it('.specflow/specs/_index.md, .specflow/specs/_overview.md, and .specflow/specs-business/_overview.md exist as skeletons', () => {
+    expect(fs.existsSync(path.join(root, '.specflow', 'specs', '_index.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.specflow', 'specs', '_overview.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.specflow', 'specs-business', '_overview.md'))).toBe(true);
   });
 
   it('summary recommends specflow-onboard-codebase (and init did not run it)', () => {
@@ -535,7 +537,7 @@ describe('AC13: spec trees scaffolded only when absent', () => {
   });
 });
 
-describe('AC13: existing specs/ content is byte-identical after init', () => {
+describe('AC13: existing .specflow/specs/ content is byte-identical after init', () => {
   let root: string;
   let home: string;
   const indexContent = `# My specs\n\nRead this when: always.\n\n## Domains\n\n- core\n\n## Dependency Graph\n\n(none)\n\n## Build Order\n\n(none)\n\ncustom trailing line\n`;
@@ -543,17 +545,17 @@ describe('AC13: existing specs/ content is byte-identical after init', () => {
   beforeAll(async () => {
     root = makeTmpDir('ac13b-proj');
     home = makeTmpDir('ac13b-home');
-    fs.mkdirSync(path.join(root, 'specs'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'specs', '_index.md'), indexContent);
-    fs.writeFileSync(path.join(root, 'specs', 'notes.md'), notesContent);
+    fs.mkdirSync(path.join(root, '.specflow', 'specs'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.specflow', 'specs', '_index.md'), indexContent);
+    fs.writeFileSync(path.join(root, '.specflow', 'specs', 'notes.md'), notesContent);
     await init(root, { noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('existing specs/ files are byte-identical and no skeleton was overlaid', () => {
-    expect(fs.readFileSync(path.join(root, 'specs', '_index.md'), 'utf-8')).toBe(indexContent);
-    expect(fs.readFileSync(path.join(root, 'specs', 'notes.md'), 'utf-8')).toBe(notesContent);
-    expect(fs.existsSync(path.join(root, 'specs', '_overview.md'))).toBe(false); // tree untouched
+  it('existing .specflow/specs/ files are byte-identical and no skeleton was overlaid', () => {
+    expect(fs.readFileSync(path.join(root, '.specflow', 'specs', '_index.md'), 'utf-8')).toBe(indexContent);
+    expect(fs.readFileSync(path.join(root, '.specflow', 'specs', 'notes.md'), 'utf-8')).toBe(notesContent);
+    expect(fs.existsSync(path.join(root, '.specflow', 'specs', '_overview.md'))).toBe(false); // tree untouched
   });
 });
 
@@ -570,10 +572,10 @@ describe('AC14: twelve scheduled task definitions written to the stubbed home', 
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it("~/.claude/scheduled-tasks contains twelve dirs under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
+  it("~/.claude/scheduled-tasks contains every dir under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
-    expect(dirs).toHaveLength(12);
+    expect(dirs).toHaveLength(14);
     const expected = SCHEDULED_TASKS
       .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t.name]!))
       .sort();
@@ -608,7 +610,7 @@ describe('AC14: twelve scheduled task definitions written to the stubbed home', 
 // AC15: --partial with no extra loop skills → only the packaged loop tasks register
 // (Rule 4 installs the shipped loop bundles, so their tasks are always
 // registrable — pulse.hygiene Rule 1, loops.* Rule 1. Since
-// specflow.cortex-awareness Rule 3 the packaged set covers ALL twelve tasks,
+// specflow.cortex-awareness Rule 3 the packaged set covers ALL fourteen tasks,
 // so nothing is ever skipped for a missing packaged skill.)
 // ---------------------------------------------------------------------------
 describe('AC15: --partial with no extra loop skills → only the packaged loop tasks register', () => {
@@ -624,7 +626,7 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('~/.claude/scheduled-tasks gains exactly the twelve packaged loop tasks (scoped names, §9.1) and exit code is 0', () => {
+  it('~/.claude/scheduled-tasks gains exactly the fourteen packaged loop tasks (scoped names, §9.1) and exit code is 0', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const expected = PACKAGED_LOOP_TASKS
@@ -644,8 +646,8 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
     expect(claudeMd).toContain('<!-- cortex:end -->');
   });
 
-  it('summary states "12 loops registered" and skips nothing — the packaged skills cover every task', () => {
-    expect(result.summary).toContain('12 loops registered');
+  it('summary states "14 loops registered" and skips nothing — the packaged skills cover every task', () => {
+    expect(result.summary).toContain('14 loops registered');
     const skippedTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => PACKAGED_LOOP_SKILLS.includes(s)),
     );
@@ -674,7 +676,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('all twelve tasks are written under scoped names (seeded pair adds nothing beyond the packaged set)', () => {
+  it('all fourteen tasks are written under scoped names (seeded pair adds nothing beyond the packaged set)', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const expected = PACKAGED_LOOP_TASKS
@@ -683,7 +685,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
     expect(fs.readdirSync(base).sort()).toEqual(expected);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-lint'), 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-verify'), 'SKILL.md'))).toBe(true);
-    expect(result.summary).toContain('12 loops registered');
+    expect(result.summary).toContain('14 loops registered');
   });
 
   it('no task is skipped — every required skill is packaged', () => {
@@ -715,11 +717,11 @@ describe('AC17: default mode → all twelve written, no lacking-skill warning', 
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('all twelve task directories are written', () => {
+  it('all task directories are written', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.readdirSync(base)).toHaveLength(12);
-    expect(result.summary).toMatch(/Scheduled tasks: 12 written/);
+    expect(fs.readdirSync(base)).toHaveLength(14);
+    expect(result.summary).toMatch(/Scheduled tasks: 14 written/);
   });
 
   it('summary carries no lacking-skill warning — every registered task has its packaged skill', () => {

@@ -250,15 +250,6 @@ export async function run(argv: string[]): Promise<number> {
       return 1;
     }
   }
-
-  // `cortex insight query|get|neighbors|list [--json]` — the deterministic,
-  // read-only query surface over `.cortex/insight/map/` (insight.cli Rule 1,
-  // §4.10.5). No LLM at query time, no network, no writes.
-  if (argv[0] === 'insight') {
-    const { insightCli } = await import('../insight/cli.js');
-    return insightCli(argv[1], argv.slice(2));
-  }
-
   // `cortex loop-insight-refresh [--collect|--apply <file>|--no-llm]` — the
   // inferred-map maintainer (insight.refresh-loop Rule 1; collect/judge/apply).
   // Writes only insight/map/{graph,tags,clusters}.json + its watermark.
@@ -271,6 +262,23 @@ export async function run(argv: string[]): Promise<number> {
       return await runRefresh('.', { ...rest, ...(file !== undefined ? { applyFile: file } : {}) });
     } catch (err) {
       console.error(`cortex loop-insight-refresh: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+
+  // `cortex loop-insight-gaps [--collect|--propose <file>|--no-llm]` — the
+  // daily session-observation capturer (insight.gaps-loop Rule 1;
+  // collect/judge/propose). Writes only insight/map/*.md prose (+ the one
+  // insight/_index.md file-list line) and pulse proposals for gated material.
+  if (argv[0] === 'loop-insight-gaps') {
+    const flags = parseLoopFlags('loop-insight-gaps', argv.slice(1), '--propose', 'classification');
+    if (flags === null) return 1;
+    try {
+      const { runGaps } = await import('../insight/gaps.js');
+      const { file, ...rest } = flags;
+      return await runGaps('.', { ...rest, ...(file !== undefined ? { proposeFile: file } : {}) });
+    } catch (err) {
+      console.error(`cortex loop-insight-gaps: ${(err as Error).message}`);
       return 1;
     }
   }
@@ -298,6 +306,14 @@ export async function run(argv: string[]): Promise<number> {
       console.error(`cortex constellation: ${(err as Error).message}`);
       return 1;
     }
+  }
+
+  // `cortex insight query|get|neighbors|list [--json]` — the deterministic,
+  // read-only query surface over `.cortex/insight/map/` (insight.cli Rule 1,
+  // §4.10.5). No LLM at query time, no network, no writes.
+  if (argv[0] === 'insight') {
+    const { insightCli } = await import('../insight/cli.js');
+    return insightCli(argv[1], argv.slice(2));
   }
 
   // `cortex tasks rename` — move legacy-named scheduled tasks in

@@ -34,6 +34,8 @@ const CANONICALS = [
   'specflow-verify',
   'cortex-loop-test-runner',
   'cortex-loop-bug-triage',
+  'cortex-loop-insight-refresh',
+  'cortex-loop-insight-gaps',
 ];
 
 // ---------------------------------------------------------------------------
@@ -109,7 +111,7 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
     expect(Object.keys(CANONICAL_TASK_NAMES).sort()).toEqual(SCHEDULED_TASKS.map((t) => t.name).sort());
   });
 
-  it('its values are exactly the twelve §9.1 canonical names', () => {
+  it('its values are exactly the fourteen §9.1 canonical names', () => {
     expect(Object.values(CANONICAL_TASK_NAMES).sort()).toEqual([...CANONICALS].sort());
   });
 
@@ -127,6 +129,8 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
       'specflow-verify': 'specflow-verify',
       'test-runner': 'cortex-loop-test-runner',
       'bug-triage': 'cortex-loop-bug-triage',
+      'insight-refresh': 'cortex-loop-insight-refresh',
+      'insight-gaps': 'cortex-loop-insight-gaps',
     });
   });
 });
@@ -135,16 +139,16 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
 // legacyTaskNames — both unscoped families
 // ---------------------------------------------------------------------------
 describe('legacyTaskNames: the internal short ids AND the unscoped canonical names', () => {
-  it('contains every internal id and every canonical name, deduped (22 total)', () => {
+  it('contains every internal id and every canonical name, deduped (26 total)', () => {
     for (const id of Object.keys(CANONICAL_TASK_NAMES)) {
       expect(legacyTaskNames, id).toContain(id);
     }
     for (const canonical of CANONICALS) {
       expect(legacyTaskNames, canonical).toContain(canonical);
     }
-    // 12 ids + 12 canonicals − 2 shared (specflow-lint, specflow-verify).
+    // 14 ids + 14 canonicals − 2 shared (specflow-lint, specflow-verify).
     expect(new Set(legacyTaskNames).size).toBe(legacyTaskNames.length);
-    expect(legacyTaskNames).toHaveLength(22);
+    expect(legacyTaskNames).toHaveLength(26);
   });
 });
 
