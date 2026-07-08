@@ -10,12 +10,19 @@ depends_on:
 implements: ../../specs-business/insight/assistant-has-project-knowledge-when-working.business.md
 governed_by:
   - R-001
-governs:
-  - "src/insight/refresh.ts"
-  - "skills/cortex-loop-insight-refresh/**"
 ---
 
 # Insight Refresh Loop — the inferred-map maintainer
+
+> **SUPERSEDED at v3 (build-order-v3 step 5e; design §8.3, §9).** The v2
+> concept-map maintainer this spec describes is retired:
+> `src/insight/refresh.ts` and `skills/cortex-loop-insight-refresh/` are
+> deleted and the scheduled task is deregistered (the former `governs:`
+> targets no longer exist, so the list is removed). Its replacement is the
+> three-tier `cortex-loop-insight-refresh-{fast,daily,full}` system (spec
+> `insight.refresh-loops`, drafted in `support_documents/v3-spec-drafts/`,
+> implemented in `src/insight/refresh-{fast,daily,full}.ts` +
+> `src/insight/significance.ts`). Retained for lineage.
 
 ## Intent
 

@@ -32,9 +32,20 @@ export const CANONICAL_TASK_NAMES: Readonly<Record<string, string>> = {
   'specflow-verify': 'specflow-verify',
   'test-runner': 'cortex-loop-test-runner',
   'bug-triage': 'cortex-loop-bug-triage',
-  'insight-refresh': 'cortex-loop-insight-refresh',
-  'insight-gaps': 'cortex-loop-insight-gaps',
+  'insight-refresh-daily': 'cortex-loop-insight-refresh-daily',
+  'insight-refresh-full': 'cortex-loop-insight-refresh-full',
 };
+
+/**
+ * Canonical names deregistered at v3 (build-order-v3 step 5e, design §8.3):
+ * the v2 insight pair. `cortex init` removes this project's scoped task dirs
+ * for these; `cortex-loop-insight-refresh-fast` never appears here — it is
+ * the git post-commit hook, not a scheduled task (schema §9.1).
+ */
+export const RETIRED_CANONICAL_TASK_NAMES: readonly string[] = [
+  'cortex-loop-insight-refresh',
+  'cortex-loop-insight-gaps',
+];
 
 /** The fourteen §9.1 canonical task names (suffix set for recognition). */
 const CANONICAL_SET: ReadonlySet<string> = new Set(Object.values(CANONICAL_TASK_NAMES));

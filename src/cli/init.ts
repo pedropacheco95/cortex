@@ -33,7 +33,7 @@ import {
   pulseDismissedTemplate,
 } from './templates.js';
 // Schema §9.1 project scoping for the Rule 13 task writer (core-cli.task-scoping).
-import { CANONICAL_TASK_NAMES, scopedTaskName } from './task-scoping.js';
+import { CANONICAL_TASK_NAMES, RETIRED_CANONICAL_TASK_NAMES, scopedTaskName } from './task-scoping.js';
 // Schema §2.3 re-rooted spec trees (specflow.reorg).
 import { specsRoot, businessRoot, SPECS_REL, BUSINESS_REL } from '../paths.js';
 
@@ -581,7 +581,26 @@ function mergeSettings(root: string, preRead: boolean): string[] {
 /** The exact command the installed post-commit hook calls (Rule 12) — the
  *  CLI's `anatomy-refresh-fast` branch must dispatch this exact string. */
 export const GIT_HOOK_INVOCATION = 'cortex anatomy-refresh-fast';
-const GIT_HOOK_SNIPPET = `\n# Cortex: fast deterministic anatomy refresh after each commit (never triggers the LLM subprocess)\n${GIT_HOOK_INVOCATION} >/dev/null 2>&1 || true\n`;
+/** The insight fast tier's post-commit invocation (insight.refresh-loops;
+ *  schema §9.1: `cortex-loop-insight-refresh-fast` is the git hook, not a
+ *  scheduled task). Installed ALONGSIDE the anatomy invocation until
+ *  build-order-v3 step 7 retires anatomy and consolidates the hook. */
+export const INSIGHT_GIT_HOOK_INVOCATION = 'cortex insight-refresh-fast';
+
+const GIT_HOOK_SNIPPETS: ReadonlyArray<{ invocation: string; comment: string }> = [
+  {
+    invocation: GIT_HOOK_INVOCATION,
+    comment: '# Cortex: fast deterministic anatomy refresh after each commit (never triggers the LLM subprocess)',
+  },
+  {
+    invocation: INSIGHT_GIT_HOOK_INVOCATION,
+    comment: '# Cortex: fast deterministic insight change-flagging after each commit (no LLM, no extraction)',
+  },
+];
+
+function gitHookSnippet(entry: { invocation: string; comment: string }): string {
+  return `\n${entry.comment}\n${entry.invocation} >/dev/null 2>&1 || true\n`;
+}
 
 function installGitHook(root: string): 'created' | 'appended' | 'already-installed' | 'skipped-no-git' {
   const gitDir = path.join(root, '.git');
@@ -592,18 +611,20 @@ function installGitHook(root: string): 'created' | 'appended' | 'already-install
   const hookPath = path.join(hooksDir, 'post-commit');
 
   if (fs.existsSync(hookPath)) {
-    const existing = fs.readFileSync(hookPath, 'utf-8');
-    if (existing.includes(GIT_HOOK_INVOCATION)) {
-      fs.chmodSync(hookPath, 0o755);
-      return 'already-installed';
+    let content = fs.readFileSync(hookPath, 'utf-8');
+    let appended = false;
+    for (const entry of GIT_HOOK_SNIPPETS) {
+      if (content.includes(entry.invocation)) continue;
+      const sep = content.endsWith('\n') ? '' : '\n';
+      content = content + sep + gitHookSnippet(entry);
+      appended = true;
     }
-    const sep = existing.endsWith('\n') ? '' : '\n';
-    fs.writeFileSync(hookPath, existing + sep + GIT_HOOK_SNIPPET, 'utf-8');
+    if (appended) fs.writeFileSync(hookPath, content, 'utf-8');
     fs.chmodSync(hookPath, 0o755);
-    return 'appended';
+    return appended ? 'appended' : 'already-installed';
   }
 
-  fs.writeFileSync(hookPath, `#!/bin/sh${GIT_HOOK_SNIPPET}`, 'utf-8');
+  fs.writeFileSync(hookPath, `#!/bin/sh${GIT_HOOK_SNIPPETS.map(gitHookSnippet).join('')}`, 'utf-8');
   fs.chmodSync(hookPath, 0o755);
   return 'created';
 }
@@ -624,6 +645,8 @@ interface ScheduledTasksResult {
   skipped: TaskSkillGap[];
   /** Default mode: tasks registered anyway whose required skill is currently absent. */
   lacking: TaskSkillGap[];
+  /** Retired canonical tasks (schema §9.1 deregistration) removed for THIS project. */
+  retired: string[];
 }
 
 /** A required skill is "present" iff it exists as a directory in <root>/.claude/skills/. */
@@ -640,6 +663,16 @@ function writeScheduledTasks(home: string, force: boolean, root: string, partial
   let preserved = 0;
   const skipped: TaskSkillGap[] = [];
   const lacking: TaskSkillGap[] = [];
+  const retired: string[] = [];
+  // §9.1 deregistration: retired canonical tasks are removed under THIS
+  // project's scoped names only (other projects' entries are never touched).
+  for (const canonical of RETIRED_CANONICAL_TASK_NAMES) {
+    const retiredDir = path.join(baseDir, scopedTaskName(root, canonical));
+    if (fs.existsSync(retiredDir)) {
+      fs.rmSync(retiredDir, { recursive: true, force: true });
+      retired.push(canonical);
+    }
+  }
   for (const task of SCHEDULED_TASKS) {
     const missingSkills = missingRequiredSkills(root, task.requiredSkills);
     if (missingSkills.length > 0) {
@@ -665,7 +698,7 @@ function writeScheduledTasks(home: string, force: boolean, root: string, partial
     fs.writeFileSync(skillPath, scheduledTaskSkillMd(task, scoped), 'utf-8');
     written++;
   }
-  return { written, preserved, skipped, lacking };
+  return { written, preserved, skipped, lacking, retired };
 }
 
 // ---------------------------------------------------------------------------
@@ -811,10 +844,10 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
       lines.push('Git hook: skipped — not a git repository.');
       break;
     case 'already-installed':
-      lines.push('Git hook: .git/hooks/post-commit already contains the anatomy-refresh-fast invocation.');
+      lines.push('Git hook: .git/hooks/post-commit already contains the anatomy-refresh-fast and insight-refresh-fast invocations.');
       break;
     default:
-      lines.push(`Git hook: anatomy-refresh-fast ${gitHookState} in .git/hooks/post-commit (executable).`);
+      lines.push(`Git hook: anatomy-refresh-fast + insight-refresh-fast ${gitHookState} in .git/hooks/post-commit (executable).`);
       break;
   }
   if (partial) {
@@ -838,6 +871,9 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
           '. They will degrade politely when they fire; run `cortex init --partial` to register only tasks whose skills are present.',
       );
     }
+  }
+  if (tasks.retired.length > 0) {
+    lines.push(`Scheduled tasks retired (schema §9.1 deregistration): ${tasks.retired.join(', ')}.`);
   }
   lines.push(`CLAUDE.md: managed cortex block ${claudeMdState}.`);
   lines.push(

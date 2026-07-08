@@ -11,12 +11,18 @@ depends_on:
 implements: ../../specs-business/insight/corrections-and-memory-reach-persistence.business.md
 governed_by:
   - R-001
-governs:
-  - "src/insight/gaps.ts"
-  - "skills/cortex-loop-insight-gaps/**"
 ---
 
 # Insight Gaps Loop — the session-observation capturer
+
+> **SUPERSEDED at v3 (build-order-v3 step 5e; design §8.3, §9).** The v2
+> mechanism this spec describes — the five-gap-signal classification writing
+> `insight/map/*.md` prose — is retired: `src/insight/gaps.ts` and
+> `skills/cortex-loop-insight-gaps/` are deleted and the scheduled task is
+> deregistered (the former `governs:` targets no longer exist, so the list is
+> removed). The session-observation ROLE survives and re-homes to
+> `cortex-loop-session-observe` (build-order-v3 step 6), which will carry its
+> own spec. Retained for lineage.
 
 ## Intent
 

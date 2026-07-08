@@ -27,7 +27,6 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import matter from 'gray-matter';
 import type { Violation } from '../types.js';
 import { parseEntry } from '../../insight/entry.js';
 import {
@@ -41,9 +40,6 @@ import {
   orderingIssues,
   isNodeId,
 } from '../../insight/storage.js';
-// Legacy (v2.0, superseded): kept exported below for the interim v2 gaps-loop
-// tests only — NOT registered in the validator.
-import { parseProseFrontmatter, PROMOTED_TRAILER_PATTERN } from '../../insight/formats.js';
 
 function insightDir(root: string): string {
   return path.join(root, '.cortex', 'insight');
@@ -364,123 +360,4 @@ export function checkInsightGraph(root: string): Violation[] {
   }
 
   return violations;
-}
-
-// ---------------------------------------------------------------------------
-// LEGACY (v2.0, superseded at 3.0) — check.insight-prose survives ONLY as an
-// unregistered helper for the interim v2 gaps-loop tests (design §8.4); the
-// validator no longer runs it (Appendix A: REMOVED). check.insight-ownership
-// is removed outright (the map/ write-lane rule is obsolete, §4.10.1).
-// ---------------------------------------------------------------------------
-
-const ISO_DATE_BOLD = /\*\*\d{4}-\d{2}-\d{2}\*\*/;
-
-/** @deprecated v2.0 `insight/map/*.md` prose check — unregistered legacy. */
-export function checkInsightProse(root: string): Violation[] {
-  const violations: Violation[] = [];
-  const mapDir = path.join(insightDir(root), 'map');
-  if (!fs.existsSync(mapDir)) return violations;
-
-  const mdFiles = fs
-    .readdirSync(mapDir, { withFileTypes: true })
-    .filter((e) => e.isFile() && e.name.endsWith('.md') && e.name !== '_index.md')
-    .map((e) => path.join(mapDir, e.name));
-
-  for (const filePath of mdFiles) {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-
-    const fm = parseProseFrontmatter(raw);
-    if (!fm.ok) {
-      for (const err of fm.errors ?? []) {
-        violations.push({
-          severity: 'error',
-          check: 'check.insight-prose',
-          clause: '§4.10.1',
-          location: { path: filePath },
-          message: err,
-        });
-      }
-    }
-
-    const body = matter(raw).content;
-    const lines = body.split('\n');
-
-    const correctionHeadings: number[] = [];
-    lines.forEach((l, i) => {
-      if (/^##\s+Corrections\s*$/.test(l.trim())) correctionHeadings.push(i);
-    });
-
-    if (correctionHeadings.length > 1) {
-      violations.push({
-        severity: 'warning',
-        check: 'check.insight-prose',
-        clause: '§4.10.1',
-        location: { path: filePath },
-        message: `more than one "## Corrections" heading (${correctionHeadings.length}) — at most one per file`,
-      });
-    }
-
-    if (correctionHeadings.length >= 1) {
-      const start = correctionHeadings[0]! + 1;
-      let end = lines.length;
-      for (let i = start; i < lines.length; i++) {
-        if (/^#{1,2}\s/.test(lines[i]!)) {
-          end = i;
-          break;
-        }
-      }
-      const items = groupListItems(lines.slice(start, end));
-      for (const item of items) {
-        const hasDate = ISO_DATE_BOLD.test(item);
-        const hasWas = item.includes('_was:_');
-        const hasNow = item.includes('_now:_');
-        if (!hasDate || !hasWas || !hasNow) {
-          const missing = [
-            !hasDate ? '**<iso-date>**' : null,
-            !hasWas ? '_was:_' : null,
-            !hasNow ? '_now:_' : null,
-          ]
-            .filter(Boolean)
-            .join(', ');
-          violations.push({
-            severity: 'warning',
-            check: 'check.insight-prose',
-            clause: '§4.10.1',
-            location: { path: filePath },
-            message: `malformed "## Corrections" entry — missing marker(s): ${missing}`,
-          });
-        }
-      }
-    }
-
-    for (const line of lines) {
-      const t = line.trim();
-      if (t.startsWith('_(promoted') && !PROMOTED_TRAILER_PATTERN.test(t)) {
-        violations.push({
-          severity: 'warning',
-          check: 'check.insight-prose',
-          clause: '§4.10.4',
-          location: { path: filePath },
-          message: 'malformed promoted trailer — expected `_(promoted <iso-date> → <path> via S-NNN)_`',
-        });
-      }
-    }
-  }
-
-  return violations;
-}
-
-function groupListItems(lines: string[]): string[] {
-  const items: string[] = [];
-  let current: string[] | null = null;
-  for (const line of lines) {
-    if (/^\s*[-*]\s+/.test(line)) {
-      if (current) items.push(current.join('\n'));
-      current = [line];
-    } else if (current !== null) {
-      current.push(line);
-    }
-  }
-  if (current) items.push(current.join('\n'));
-  return items;
 }

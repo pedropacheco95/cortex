@@ -320,6 +320,15 @@ describe('parseScopeRegistry', () => {
     expect(scopeRegistryAsymmetries(result.value!)).toEqual([]);
   });
 
+  it('tolerates an all-decimal unquoted built_at_commit (YAML numeric coercion), coerced to string', () => {
+    // A short sha like 8449872 is all-decimal ~2.8% of the time; unquoted it
+    // YAML-parses as a number. Same tolerance as schemaVersion (5e regression).
+    const numericSha = REGISTRY_YAML.replace('built_at_commit: 9f2c1ab', 'built_at_commit: 8449872');
+    const result = parseScopeRegistry(numericSha);
+    expect(result.ok).toBe(true);
+    expect(result.value?.built_at_commit).toBe('8449872');
+  });
+
   it('AC: a depends_on cycle is an error', () => {
     const cyclic = `schemaVersion: "3.0"
 built_at_commit: 9f2c1ab

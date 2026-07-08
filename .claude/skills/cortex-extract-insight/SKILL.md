@@ -136,7 +136,8 @@ Write two durable/transient records:
 
    ```yaml
    schemaVersion: "3.0"
-   built_at_commit: <BUILT_AT_COMMIT>
+   built_at_commit: "<BUILT_AT_COMMIT>"   # QUOTE it — an all-digit or 9989e80-style
+                                          # sha would YAML-coerce to a number
    scopes:
      <scope-id>:
        path: <project-relative dir>       # required, must resolve

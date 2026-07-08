@@ -237,16 +237,19 @@ describe('specflow-ingest (Moderate): cortex-ingest sibling boundary both ways, 
     expect(s).toMatch(/^## Cortex [Aa]wareness$/m);
   });
 
-  it('hands the memory-shaped remainder to cortex-ingest (which preserves sources in atlas)', () => {
-    expect(s).toContain('`cortex-ingest`');
-    expect(s).toContain('.cortex/atlas/sources/');
+  it('hands the memory-shaped remainder to cortex-archive-ingest (which preserves the source under archive/)', () => {
+    // The sibling was `cortex-ingest` at v2; its atlas-only ingestion re-homed
+    // into `cortex-archive-ingest` (v3 archive module), which stores sources
+    // under .cortex/archive/documents/<slug>/ instead of atlas/sources/.
+    expect(s).toContain('`cortex-archive-ingest`');
+    expect(s).toContain('.cortex/archive/documents/');
     expect(s).toMatch(/requirement-shaped/);
     expect(s).toMatch(/memory-shaped/);
   });
 
   it('the boundary runs in both directions', () => {
     expect(s).toMatch(/both directions/);
-    expect(s).toMatch(/when `cortex-ingest` encounters\s+requirement-shaped material, it hands off here/);
+    expect(s).toMatch(/when `cortex-archive-ingest` encounters\s+requirement-shaped material, it hands off here/);
   });
 
   it('business specs are proposed alongside atlas cross-references (bridge 2)', () => {

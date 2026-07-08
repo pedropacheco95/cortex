@@ -67,9 +67,11 @@ extraction_level: 2                # 2 or 3
 size_lines: 620                    # integer, line count of the source
 size_tokens: 5400                  # integer, estimate (~bytes/4 is fine)
 centrality: high                   # high | medium | low — from the SCOPE-LOCAL ranking
-built_at_commit: <sha>             # the ONE value the orchestrator captured at run start
-source_sha256: <64 lowercase hex>  # sha256 of the SOURCE FILE BODY (shasum -a 256),
----                                #   never of the entry itself
+built_at_commit: "<sha>"           # the ONE value the orchestrator captured at run
+                                   #   start — QUOTE it (a sha like 9989e80 would
+                                   #   otherwise YAML-coerce to a number)
+source_sha256: "<64 lowercase hex>" # sha256 of the SOURCE FILE BODY (shasum -a 256),
+---                                #   never of the entry itself — quoted
 ```
 
 Map centrality from the scope-local degree ranking: top tier → `high`

@@ -39,11 +39,12 @@ const DARWIN = { platform: 'darwin' as const };
  * tasks are always registrable under --partial.
  */
 const PACKAGED_LOOP_SKILLS = [
+  'cortex-extract-insight',
   'cortex-loop-anatomy-refresh',
   'cortex-loop-atlas-staleness',
   'cortex-loop-bug-triage',
-  'cortex-loop-insight-gaps',
-  'cortex-loop-insight-refresh',
+  'cortex-loop-insight-refresh-daily',
+  'cortex-loop-insight-refresh-full',
   'cortex-loop-onboarding-drift',
   'cortex-loop-rule-decay',
   'cortex-loop-skill-suggest',
@@ -56,7 +57,7 @@ const PACKAGED_LOOP_SKILLS = [
   'specflow-tests',
 ];
 const PACKAGED_LOOP_TASKS = [
-  'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-gaps', 'insight-refresh', 'onboarding-drift', 'rule-decay', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
+  'anatomy-refresh-deep', 'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-refresh-daily', 'insight-refresh-full', 'onboarding-drift', 'rule-decay', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
 ];
 
 // ---------------------------------------------------------------------------

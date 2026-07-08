@@ -20,7 +20,9 @@ import {
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
-/** The twelve §9.1 canonical task names, pinned verbatim. */
+/** The fourteen §9.1 canonical task names, pinned verbatim (v3: the v2
+ *  insight pair is deregistered; the daily/full insight-refresh tiers
+ *  register; the fast tier is the git hook, never a scheduled task). */
 const CANONICALS = [
   'cortex-pulse-hygiene',
   'cortex-pulse-distil',
@@ -34,8 +36,8 @@ const CANONICALS = [
   'specflow-verify',
   'cortex-loop-test-runner',
   'cortex-loop-bug-triage',
-  'cortex-loop-insight-refresh',
-  'cortex-loop-insight-gaps',
+  'cortex-loop-insight-refresh-daily',
+  'cortex-loop-insight-refresh-full',
 ];
 
 // ---------------------------------------------------------------------------
@@ -129,8 +131,8 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
       'specflow-verify': 'specflow-verify',
       'test-runner': 'cortex-loop-test-runner',
       'bug-triage': 'cortex-loop-bug-triage',
-      'insight-refresh': 'cortex-loop-insight-refresh',
-      'insight-gaps': 'cortex-loop-insight-gaps',
+      'insight-refresh-daily': 'cortex-loop-insight-refresh-daily',
+      'insight-refresh-full': 'cortex-loop-insight-refresh-full',
     });
   });
 });

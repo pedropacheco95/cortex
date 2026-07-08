@@ -336,8 +336,11 @@ Modules present: ${PRESENT_MODULES}. Schema: ${SCHEMA_VERSION}.
 
 /**
  * The Desktop scheduled tasks (design §13 step 12, init Rules 13 & 17; schema
- * §9.1 canonical set — fourteen at v2.0 with `cortex-loop-insight-refresh` and
- * `cortex-loop-insight-gaps`).
+ * §9.1 canonical set — fourteen registered here: the v2 insight pair is
+ * deregistered at v3, replaced by `cortex-loop-insight-refresh-daily` and
+ * `cortex-loop-insight-refresh-full`; the fast tier is the git post-commit
+ * hook, not a scheduled task. `cortex-loop-session-observe` registers at
+ * build-order-v3 step 6; `anatomy-refresh-deep` deregisters at step 7).
  * `requiredSkills` declares the skill(s) the task's prompt body invokes — the
  * task→skill mapping is owned here, by the task definitions themselves. Each
  * skill named in `requiredSkills` is named verbatim in `body`; `--partial`
@@ -426,16 +429,16 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     body: 'Invoke the `cortex-loop-bug-triage` skill: run `cortex loop-bug-triage --collect`, classify every worklist bug in-session against the seven-type taxonomy using the `specflow-bugs` skill\'s diagnostic discipline, write the results JSON to a scratchpad, then run `cortex loop-bug-triage --report <file>`. Fill-only (loops.bug-triage Rule 3): absent type/severity/proposed_fix fields on open bugs are filled; present fields are never overwritten — divergences land in `.cortex/pulse/bug-triage.md` for human review.',
   },
   {
-    name: 'insight-refresh',
-    description: 'Rebuild the inferred concept map (insight/map/{graph,tags,clusters}.json) over the shared node set.',
-    requiredSkills: ['cortex-loop-insight-refresh'],
-    body: 'Invoke the `cortex-loop-insight-refresh` skill: run `cortex loop-insight-refresh --collect`, derive per-node tags, typed confidence-carrying edges, and domain clusters over the worklist node set in-session (explainable inference only — every edge and cluster carries a non-empty rationale, no embeddings), write the derivation JSON to a scratchpad, then run `cortex loop-insight-refresh --apply <file>`. Writes only the three `insight/map/*.json` files (schema §4.10.2/.3) — never prose `.md`, never anything gated.',
+    name: 'insight-refresh-daily',
+    description: 'Daily insight refresh: significance triage on flagged files, L2/L3 re-extraction, L4 neighbourhood updates.',
+    requiredSkills: ['cortex-loop-insight-refresh-daily', 'cortex-extract-insight'],
+    body: 'Invoke the `cortex-loop-insight-refresh-daily` skill: run `cortex loop-insight-refresh --daily --collect`, triage the uncertain files in-session (the Core structural filter has already ruled out cosmetic changes), re-extract L2 for real changes and L3 for significant ones via the `cortex-extract-insight` skill in dirty-only mode, re-verify the surfaced stale references and confidence-aged edges, then run `cortex loop-insight-refresh --daily --apply`. Writes only `.cortex/insight/` (machine-owned, ungated — schema §4.10, Decision 13) plus the pulse report — never gated content, never a pulse proposal.',
   },
   {
-    name: 'insight-gaps',
-    description: 'Capture the day\'s session observations into insight/map/*.md prose; route gated material to .cortex/pulse/.',
-    requiredSkills: ['cortex-loop-insight-gaps'],
-    body: 'Invoke the `cortex-loop-insight-gaps` skill: run `cortex loop-insight-gaps --collect`, classify the day\'s transcripts against the five gap signals in-session (schema §4.10), write the classification JSON to a scratchpad, then run `cortex loop-insight-gaps --propose <file>`. Signals 1–3 and 4-in-insight are direct prose writes to `insight/map/*.md` (ungated, with provenance and, for corrections, a `## Corrections` log rewritten in place); signals 4-in-gated and 5 become `gated-layer-update`/`user-directed-capture` pulse proposals — never a direct gated write. Writes only `.md` in `map/` (plus the one file-list line in `insight/_index.md`).',
+    name: 'insight-refresh-full',
+    description: 'Weekly ground-truth L4 regeneration of the insight graph, tags, and clusters over all scopes.',
+    requiredSkills: ['cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
+    body: 'Invoke the `cortex-loop-insight-refresh-full` skill: run `cortex loop-insight-refresh --full --collect`, re-run cross-scope L4 unification via the `cortex-extract-insight` skill over every scope (deterministic regeneration discipline: stable ids, total-ordered serialization; a legitimate shrink from deleted files is sanctioned on this ground-truth pass), then run `cortex loop-insight-refresh --full --report`. Writes only `.cortex/insight/` plus the pulse report — never gated content, never a pulse proposal.',
   },
 ];
 

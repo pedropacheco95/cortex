@@ -21,10 +21,12 @@
  * with `cortex loop-anatomy-refresh --fast` as its identical design-§15
  * alias (spec anatomy.refresh-fast, Rule 1), and
  * `cortex loop-anatomy-refresh --deep [--collect|--apply <f>|--no-llm]`
- * (spec anatomy.refresh-deep, Rule 1), the inferred-map maintainer
- * `cortex loop-insight-refresh [--collect|--apply <f>|--no-llm]`
- * (spec insight.refresh-loop, Rule 1) — the JSON producer for
- * `insight/map/{graph,tags,clusters}.json`, the code-writing test-runner loop
+ * (spec anatomy.refresh-deep, Rule 1), the three insight-refresh tiers
+ * `cortex insight-refresh-fast` (the git post-commit hook string, with
+ * `cortex loop-insight-refresh --fast` as its alias) plus
+ * `cortex loop-insight-refresh --daily [--collect|--apply]` and
+ * `cortex loop-insight-refresh --full [--collect|--report]`
+ * (spec insight.refresh-loops, Rule 1 each), the code-writing test-runner loop
  * `cortex loop-test-runner [--tier ...|--trigger ...|--collect|`
  * `--fix-stage <f>|--no-llm]` with its design-§15 manual alias
  * `cortex test-run` (spec loops.test-runner, Rule 1), plus
@@ -250,37 +252,61 @@ export async function run(argv: string[]): Promise<number> {
       return 1;
     }
   }
-  // `cortex loop-insight-refresh [--collect|--apply <file>|--no-llm]` — the
-  // inferred-map maintainer (insight.refresh-loop Rule 1; collect/judge/apply).
-  // Writes only insight/map/{graph,tags,clusters}.json + its watermark.
+  // `cortex insight-refresh-fast` — the exact command the installed git
+  // post-commit hook calls for the insight fast tier (insight.refresh-loops
+  // Rule 1; schema §9.1 — cortex-loop-insight-refresh-fast is the git hook,
+  // not a scheduled task). Hook-safe: degrades internally, always exits 0.
+  if (argv[0] === 'insight-refresh-fast') {
+    const { runInsightRefreshFast } = await import('../insight/refresh-fast.js');
+    return await runInsightRefreshFast('.');
+  }
+  // `cortex loop-insight-refresh --fast|--daily|--full [...]` — the three v3
+  // insight-refresh tiers (insight.refresh-loops Rule 1). --fast dispatches
+  // identically to `insight-refresh-fast`; --daily is collect/judge/apply
+  // (the judgment middle is the shipped daily skill); --full is
+  // collect/regenerate/report (the regeneration middle is the full skill).
+  // The v2 `cortex loop-insight-refresh [--collect|--apply <f>]` node-set
+  // maintainer is retired (design §8.3) — a tier flag is now required.
   if (argv[0] === 'loop-insight-refresh') {
-    const flags = parseLoopFlags('loop-insight-refresh', argv.slice(1), '--apply', 'derivation');
-    if (flags === null) return 1;
+    const rest = argv.slice(1);
+    const fast = rest.includes('--fast');
+    const daily = rest.includes('--daily');
+    const full = rest.includes('--full');
+    if (Number(fast) + Number(daily) + Number(full) !== 1) {
+      console.error(
+        'cortex loop-insight-refresh: exactly one of --fast, --daily, or --full is required ' +
+          '(the v2 tierless form is retired — schema §9.1, design §8.3).',
+      );
+      return 1;
+    }
     try {
-      const { runRefresh } = await import('../insight/refresh.js');
-      const { file, ...rest } = flags;
-      return await runRefresh('.', { ...rest, ...(file !== undefined ? { applyFile: file } : {}) });
+      if (fast) {
+        const { runInsightRefreshFast } = await import('../insight/refresh-fast.js');
+        return await runInsightRefreshFast('.');
+      }
+      const collect = rest.includes('--collect');
+      if (daily) {
+        const { runRefreshDaily } = await import('../insight/refresh-daily.js');
+        return await runRefreshDaily('.', { collect, apply: rest.includes('--apply') });
+      }
+      const { runRefreshFull } = await import('../insight/refresh-full.js');
+      return await runRefreshFull('.', { collect, report: rest.includes('--report') });
     } catch (err) {
       console.error(`cortex loop-insight-refresh: ${(err as Error).message}`);
       return 1;
     }
   }
 
-  // `cortex loop-insight-gaps [--collect|--propose <file>|--no-llm]` — the
-  // daily session-observation capturer (insight.gaps-loop Rule 1;
-  // collect/judge/propose). Writes only insight/map/*.md prose (+ the one
-  // insight/_index.md file-list line) and pulse proposals for gated material.
+  // `cortex loop-insight-gaps` — RETIRED at v3 (design §8.3, §9): the v2
+  // session-observation mechanism is gone; its role re-homes to
+  // `cortex-loop-session-observe` (build-order-v3 step 6). Pointed message so
+  // the verb never falls through to `cortex init <target>`.
   if (argv[0] === 'loop-insight-gaps') {
-    const flags = parseLoopFlags('loop-insight-gaps', argv.slice(1), '--propose', 'classification');
-    if (flags === null) return 1;
-    try {
-      const { runGaps } = await import('../insight/gaps.js');
-      const { file, ...rest } = flags;
-      return await runGaps('.', { ...rest, ...(file !== undefined ? { proposeFile: file } : {}) });
-    } catch (err) {
-      console.error(`cortex loop-insight-gaps: ${(err as Error).message}`);
-      return 1;
-    }
+    console.error(
+      'cortex loop-insight-gaps: retired in v3 — the session-observation role moved to ' +
+        'cortex-loop-session-observe (design §9); the five-gap-signal mechanism no longer exists.',
+    );
+    return 1;
   }
 
   // `cortex constellation [--port N]` — localhost-only read-only renderer

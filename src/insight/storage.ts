@@ -15,8 +15,9 @@
  * shape error, not a tolerated extra.
  *
  * The v2.0 concept-map formats (`insight/map/`) are superseded — their
- * legacy definitions remain in ./formats.ts only for the sanctioned interim
- * v2 consumers (design §8.4) until build-order-v3 steps 5c/5e retire them.
+ * legacy definitions remain in ./formats.ts only for the remaining v2
+ * constellation-overlay consumers (design §8.4; that preset retires at
+ * build-order-v3 step 10/open). The v2 refresh/gaps loops retired at 5e.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -191,6 +192,15 @@ export interface LedgerFile {
   schemaVersion: string;
   built_at_commit: string;
   entries: Record<string, LedgerEntry>;
+  /** OPTIONAL (insight.refresh-loops, 5e-ii): concept/edge ids invalidated by
+   *  the reverse-dependency index, awaiting re-verification by the daily/full
+   *  loop. Absent means none. */
+  stale?: string[];
+  /** OPTIONAL (insight.refresh-loops, 5e-ii): the last N refresh-cycle head
+   *  commits, most recent first — the confidence-aging window. An
+   *  inferred/ambiguous edge whose `confirmed_at_commit` is not in this list
+   *  (once N cycles exist) is surfaced for re-verification. */
+  cycle_commits?: string[];
 }
 
 /** §4.10.5 — the reverse-dependency index. */
@@ -456,6 +466,24 @@ export function parseLedger(input: unknown): ParseResult<LedgerFile> {
     }
   }
 
+  // Optional 5e-ii fields (insight.refresh-loops): validated when present.
+  if (obj['stale'] !== undefined) {
+    const stale = obj['stale'];
+    if (!Array.isArray(stale)) {
+      errors.push('"stale" must be an array of concept/edge ids when present');
+    } else {
+      stale.forEach((m, i) => {
+        if (!isConceptOrEdgeId(m)) errors.push(`stale[${i}]: not a well-formed concept:<slug> or edge:… id`);
+      });
+    }
+  }
+  if (obj['cycle_commits'] !== undefined) {
+    const cycles = obj['cycle_commits'];
+    if (!Array.isArray(cycles) || cycles.some((c) => typeof c !== 'string' || c === '')) {
+      errors.push('"cycle_commits" must be an array of non-empty commit strings when present');
+    }
+  }
+
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, value: obj as unknown as LedgerFile };
 }
@@ -503,7 +531,10 @@ export function parseScopeRegistry(raw: string): ParseResult<ScopeRegistry> {
   if (typeof data['schemaVersion'] !== 'string' && typeof data['schemaVersion'] !== 'number') {
     errors.push('missing "schemaVersion"');
   }
-  if (typeof data['built_at_commit'] !== 'string' || data['built_at_commit'] === '') {
+  // Tolerate YAML numeric coercion (same tolerance as schemaVersion): an
+  // all-decimal short sha (e.g. 8449872) parses as a number when unquoted.
+  const builtAtCommit = data['built_at_commit'];
+  if ((typeof builtAtCommit !== 'string' && typeof builtAtCommit !== 'number') || builtAtCommit === '') {
     errors.push('missing or non-string "built_at_commit"');
   }
 
@@ -551,7 +582,7 @@ export function parseScopeRegistry(raw: string): ParseResult<ScopeRegistry> {
   if (errors.length > 0) return { ok: false, errors };
   const value: ScopeRegistry = {
     schemaVersion: String(data['schemaVersion']),
-    built_at_commit: data['built_at_commit'] as string,
+    built_at_commit: String(data['built_at_commit']),
     scopes: scopes as unknown as Record<string, ScopeEntry>,
   };
   return { ok: true, value };
@@ -695,6 +726,10 @@ export function serializeLedger(ledger: LedgerFile): string {
     schemaVersion: ledger.schemaVersion,
     built_at_commit: ledger.built_at_commit,
     entries,
+    // Optional 5e-ii fields: `stale` total-ordered; `cycle_commits` kept in
+    // recency order (the order IS the aging window).
+    ...(ledger.stale !== undefined ? { stale: sortedStrings(ledger.stale) } : {}),
+    ...(ledger.cycle_commits !== undefined ? { cycle_commits: [...ledger.cycle_commits] } : {}),
   });
 }
 
