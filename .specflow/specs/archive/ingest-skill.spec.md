@@ -1,12 +1,14 @@
 ---
 id: archive.ingest-skill
-status: draft
+status: implemented
 depends_on:
   - migration.compass-rename
 implements: ../../specs-business/archive/documents-are-captured-and-authoritative.business.md
 governed_by: []
 governs:
-  - ".claude/skills/cortex-archive-ingest/**"
+  - "src/archive/formats.ts"
+  - "src/archive/scaffold.ts"
+  - "skills/cortex-archive-ingest/**"
   - ".cortex/archive/**"
 ---
 

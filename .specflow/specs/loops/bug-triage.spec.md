@@ -8,7 +8,7 @@ depends_on:
 governs:
   - "src/loops/bug-triage.ts"
   - "skills/cortex-loop-bug-triage/**"
-implements: ../../specs-business/cerebrum/developer-gets-bugs-triaged-without-asking.business.md
+implements: ../../specs-business/compass/developer-gets-bugs-triaged-without-asking.business.md
 governed_by:
   - R-001
 ---

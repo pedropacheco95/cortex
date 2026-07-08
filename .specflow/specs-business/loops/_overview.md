@@ -34,4 +34,4 @@ What deliberately does not belong here is the ongoing, interactive upkeep of kno
 - Engineering specs that implement these outcomes: `../../specs/loops/`
 - The interactive self-maintenance that keeps knowledge honest: `../pulse/`
 - The memory these runs draw on and contribute to: `../atlas/`
-- The conventions that guide and constrain the runs: `../cerebrum/`
+- The conventions that guide and constrain the runs: `../compass/`

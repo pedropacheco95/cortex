@@ -13,18 +13,18 @@ The project knowledge base, following the Karpathy LLM Wiki pattern. It is the n
 _Planned (not yet written):_
 
 - `stakeholders/` — who the project serves
-- `decisions/` — human-readable narrative decisions, cross-linked to cerebrum
+- `decisions/` — human-readable narrative decisions, cross-linked to compass
 - `domain/` — problem-domain terms and glossary
 - `sources/` — raw transcripts, RFPs, PDFs, and design docs
 
 ## Why it's grouped this way
 
-Atlas holds the narrative *why* and the raw source material behind the project. The enforcement view of decisions — the machine-checkable, write-time-enforced version — lives in `cerebrum/`; atlas holds the human-readable story those records summarise. Code structure lives in `anatomy/`, not here; atlas is for non-code sources.
+Atlas holds the narrative *why* and the raw source material behind the project. The enforcement view of decisions — the machine-checkable, write-time-enforced version — lives in `compass/`; atlas holds the human-readable story those records summarise. Code structure lives in `anatomy/`, not here; atlas is for non-code sources.
 
 Keeping raw sources here (rather than scattered) gives every other domain a single place to cite when a convention, rule, or spec needs to point back to its origin.
 
 ## Related groups
 
 - Business outcomes for this domain: `../../specs-business/atlas/`
-- Enforcement view of decisions: `../cerebrum/`
+- Enforcement view of decisions: `../compass/`
 - Code structure (not narrative): `../anatomy/`

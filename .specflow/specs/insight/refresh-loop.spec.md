@@ -20,7 +20,7 @@ governed_by:
 > deleted and the scheduled task is deregistered (the former `governs:`
 > targets no longer exist, so the list is removed). Its replacement is the
 > three-tier `cortex-loop-insight-refresh-{fast,daily,full}` system (spec
-> `insight.refresh-loops`, drafted in `support_documents/v3-spec-drafts/`,
+> `insight.refresh-loops`, promoted into this domain,
 > implemented in `src/insight/refresh-{fast,daily,full}.ts` +
 > `src/insight/significance.ts`). Retained for lineage.
 

@@ -1,12 +1,13 @@
 ---
 id: insight.storage-format
-status: draft
+status: implemented
 depends_on: []
 implements: ../../specs-business/insight/assistant-understands-codebase.business.md
 governed_by:
   - R-001
 governs:
-  - "src/insight/formats.ts"
+  - "src/insight/storage.ts"
+  - "src/insight/entry.ts"
   - "src/insight/scaffold.ts"
 ---
 

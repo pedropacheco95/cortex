@@ -1,6 +1,6 @@
 ---
-id: provenance.every-rule-traces
-status: draft
+id: provenance.every-rule-traces-to-its-source
+status: implemented
 implemented_by:
   - ../../specs/provenance/frontmatter-check.spec.md
 ---

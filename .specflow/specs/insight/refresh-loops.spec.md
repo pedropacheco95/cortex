@@ -1,6 +1,6 @@
 ---
 id: insight.refresh-loops
-status: draft
+status: implemented
 depends_on:
   - insight.storage-format
   - insight.extract-skill
@@ -11,6 +11,7 @@ governs:
   - "src/insight/refresh-fast.ts"
   - "src/insight/refresh-daily.ts"
   - "src/insight/refresh-full.ts"
+  - "src/insight/significance.ts"
   - "skills/cortex-loop-insight-refresh-daily/**"
   - "skills/cortex-loop-insight-refresh-full/**"
 ---

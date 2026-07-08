@@ -1,6 +1,6 @@
 ---
 id: insight.session-observe
-status: draft
+status: implemented
 depends_on:
   - insight.extract-skill
   - insight.storage-format

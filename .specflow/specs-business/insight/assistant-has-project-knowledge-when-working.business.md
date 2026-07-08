@@ -3,7 +3,6 @@ id: insight.assistant-has-project-knowledge-when-working
 status: implemented
 implemented_by:
   - ../../specs/insight/module-contract.spec.md
-  - ../../specs/insight/cli.spec.md
   - ../../specs/insight/refresh-loop.spec.md
 ---
 
@@ -47,3 +46,4 @@ The AI assistant working a task on a Cortex-managed project — and, through it,
 ## Notes
 
 - The value is complementary by construction: the reviewed layers are right but slow, this layer is fast but fallible, and each covers the other's failure mode. Content that stabilizes here can later graduate into the reviewed layers — that path is a separate outcome (see the corrections-and-memory outcome in this folder).
+- **v3 note (spec promotion, 2026-07-08):** the codebase-understanding half of this outcome is superseded by `insight.assistant-understands-codebase` — the v3 insight rebuild replaced the concept-map-over-curated-artefacts layer this outcome described with per-file understanding of the source code itself. The v2 query CLI dev spec was replaced in place by the v3 `insight.cli` (which now implements the successor outcome), so it no longer appears in `implemented_by:` here; the remaining implementers (`insight.module-contract`, `insight.refresh-loop`) are SUPERSEDED-bannered v2 lineage, retained for history.

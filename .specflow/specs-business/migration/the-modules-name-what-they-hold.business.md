@@ -1,6 +1,6 @@
 ---
-id: migration.modules-name-what-they-hold
-status: draft
+id: migration.the-modules-name-what-they-hold
+status: implemented
 implemented_by:
   - ../../specs/migration/compass-rename.spec.md
   - ../../specs/migration/decisions-single-home.spec.md

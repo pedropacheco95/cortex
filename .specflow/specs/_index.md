@@ -6,8 +6,8 @@
 
 - `schema/` — the `cortex-schema.md` contract and the schema validator
 - `core-cli/` — the deterministic Node.js CLI binary surface
-- `anatomy/` — the native code-structure scanner and its artefacts
-- `cerebrum/` — write-time enforcement layer and the unified bug ledger
+- `anatomy/` — the native code-structure scanner (SUPERSEDED at v3 — absorbed into `insight/`; specs retained for lineage)
+- `compass/` — write-time enforcement layer and the unified bug ledger (renamed from `cerebrum/` at v3)
 - `atlas/` — the project knowledge base
 - `hooks/` — Claude Code hooks and the git post-commit hook
 - `scaffolding/` — CLAUDE.md and `_index.md` prompt templates
@@ -15,6 +15,10 @@
 - `loops/` — the thirteen Cortex loops and shared loop infrastructure
 - `constellation/` — the read-only graph compiler and renderer
 - `specflow/` — the absorbed spec-and-test lineage
+- `insight/` — the ungated codebase-understanding layer (v3: L1 pass, storage contract, query CLI, extraction skill, refresh loops, session-observe)
+- `archive/` — ingested source documents and the one type-routed ingestion skill
+- `provenance/` — `derives_from:` frontmatter, `check.provenance`, and the backward-traversal index
+- `migration/` — the v3 module migration (compass rename, decisions single-home)
 
 ## Dependency Graph
 
@@ -46,6 +50,16 @@ Current edges (`A → depends on B`):
 - `loops.test-runner` → `loops.writer-verifier`, `loops.bug-triage`, `schema.validator`, `core-cli.init`
 - `specflow.cortex-awareness` → `core-cli.init`, `schema.validator`
 
+v3 edges (`build-order-v3.md`):
+
+- `migration.decisions-single-home` → `migration.compass-rename`
+- `archive.ingest-skill` → `migration.compass-rename`
+- `provenance.frontmatter-check` → `archive.ingest-skill`, `migration.compass-rename`
+- `insight.cli` → `insight.storage-format`
+- `insight.extract-skill` → `insight.storage-format`, `insight.cli`, `insight.l1-structural`
+- `insight.refresh-loops` → `insight.storage-format`, `insight.extract-skill`
+- `insight.session-observe` → `insight.extract-skill`, `insight.storage-format`, `provenance.frontmatter-check`
+
 ## Build Order
 
 Following the design doc's §16.2 implementation order:
@@ -68,4 +82,17 @@ Following the design doc's §16.2 implementation order:
 16. `core-cli.task-scoping` — implemented (multi-project blocker cleared)
 17. `loops.test-runner` — implemented (design §16.2 step 28 — all thirteen loops live)
 18. `specflow.cortex-awareness` — implemented (design §16.2 step 29 — **v1.0 internal complete**)
-19. _(v1.0 internal complete. Next: bug-triage + specflow-lint/verify scheduling as one three-loop round; then **anatomy-refresh fast/deep — prioritized: the fast tier is the load-bearing loop for anatomy freshness, since drift is the default state on active projects between scans (hygiene caught it this round; the fast loop should own it)**; test-runner last, on its harness)_
+19. _(v1.0 internal complete; the v2 foundation — schema 2.0, the `.specflow/` reorg, the v2 insight module now superseded — followed per build-order-v2.)_
+
+### v3 (build-order-v3.md — the codebase-understanding round; all steps shipped)
+
+1. Schema 3.0 addendum — shipped (contract document, folded into `cortex-schema.md`)
+2. `migration.compass-rename` (2a), `migration.decisions-single-home` (2b) — implemented
+3. `archive.ingest-skill` (module 3a + skill 3b) — implemented
+4. `provenance.frontmatter-check` — implemented
+5. Insight rebuild: `insight.l1-structural` (5a), `insight.storage-format` (5b), `insight.cli` (5c), `insight.extract-skill` (5d), `insight.refresh-loops` (5e) — implemented
+6. `insight.session-observe` — implemented
+7. Anatomy deprecation — shipped (consumers re-pointed to insight; `.cortex/anatomy/` removed; the `anatomy/` specs SUPERSEDED-bannered)
+8. Skill integrations — shipped (the `cortex insight` enrichment pass across the specflow-* skills)
+9. Ingestion re-home — shipped (`cortex-ingest` folded into `cortex-archive-ingest` as the atlas extraction strategy)
+10. Constellation insight preset — deferred (design §11 Q2 open; not built)

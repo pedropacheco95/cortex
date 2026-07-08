@@ -1,6 +1,6 @@
 ---
-id: archive.documents-authoritative
-status: draft
+id: archive.documents-are-captured-and-authoritative
+status: implemented
 implemented_by:
   - ../../specs/archive/ingest-skill.spec.md
 ---

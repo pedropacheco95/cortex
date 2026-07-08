@@ -2,8 +2,8 @@
 id: insight.cli
 status: implemented
 depends_on:
-  - insight.module-contract
-implements: ../../specs-business/insight/assistant-has-project-knowledge-when-working.business.md
+  - insight.storage-format
+implements: ../../specs-business/insight/assistant-understands-codebase.business.md
 governed_by:
   - R-001
 governs:
@@ -11,74 +11,106 @@ governs:
   - "src/insight/query.ts"
 ---
 
-# Insight Query CLI
+# Insight Query CLI — `cortex insight file/concept/element`
 
 ## Intent
 
-The four `cortex insight` commands are the single query surface both Claude and humans use to pull from the ungated layer (schema §4.10.5, v2 design §7.1): `query <topic>` (lexical search across prose, tags, and cluster labels), `get <file>` (a `map/`-relative file verbatim), `neighbors <node-id>` (graph traversal with `--kind`/`--depth`), and `list` (every insight file and cluster). Every command is deterministic Core with `--json`. Built deliberately **before** the producer loops (consumers-before-producers, v2 design §13): the CLI is testable against hand-authored `map/` fixtures and becomes the verification surface the loops use. Query spends no LLM at query time — the judgment was spent at write time turning meaning into tags — so a miss is an honest miss, not a reason to add semantic search (R-001; schema §4.10.5).
+This spec defines the `cortex insight` query surface for v3 — implements addendum §A5.1 (superseding schema §4.10.5). Three deterministic subcommands — `file`, `concept`, `element` — read the pre-extracted shapes fixed by `insight.storage-format` and return them at the grain asked for. This spec supersedes v2's `query | get | neighbors | list` verbs entirely: v2 queried a concept-map over curated artefacts, v3 queries a codebase-understanding layer over source-code entities, and the verb change reflects that difference (design §5.6). All three subcommands are deterministic Core reading files already on disk — **no LLM runs at query time** (RULES 3); the judgment was spent at extraction time by `insight.extract-skill`. There is deliberately no `cortex insight ask` in v3 — natural-language questions are answered by Claude in-session over these three primitives, not by a subprocess (design §5.6, addendum §A5.1).
 
 ## Entities
 
-- **READS:** `insight/map/*.md` (prose files and their H2 headings/content); `insight/map/graph.json`, `tags.json`, `clusters.json`. Nothing outside `insight/map/`.
-- **WRITES:** nothing — the CLI is strictly read-only over the module.
-- **CREATES:** nothing on disk; stdout only (a human table by default, the structured object under `--json`).
+- **READS:** the shapes owned by `insight.storage-format` — per-file entries under `anatomy/` or `scopes/<scope>/anatomy/`; `concepts/` files (scope-local and global); `graph.json`/`tags.json`/`clusters.json` (scope-local and cross-scope); `scope-registry.yaml` when present.
+- **WRITES:** nothing — this is a read-only query surface.
+- **CREATES:** nothing on disk; each subcommand's only output is its returned payload (human-readable text, or structured JSON under `--json`).
 
 ## Rules
 
-1. **Commands (schema §4.10.5).** `cortex insight query <topic>`, `cortex insight get <file>`, `cortex insight neighbors <node-id>`, `cortex insight list` — all support `--json`. Exit codes: 0 on success (including an honest empty result); 1 on an unknown file (`get`), an unknown node-id (`neighbors`), or a malformed `map/` artefact.
-2. **`query` is lexical and grouped.** `query <topic>` matches the topic case-insensitively against prose file names and section content, node tags (`tags.json`), and cluster labels (`clusters.json`), and returns grouped output — matching prose sections, matching nodes (by tag), matching clusters. No LLM, no ranking model, no embeddings; a topic that matches nothing returns an empty grouped result and exit 0.
-3. **`get` returns verbatim.** `get <file>` takes a `map/`-relative name (e.g. `setup.md`, `graph.json`) and returns its contents verbatim; an unknown name is exit 1 naming the file. It never reformats prose or re-serializes JSON.
-4. **`neighbors` walks the graph.** `neighbors <node-id>` returns the subgraph reachable from the node, with each edge's `confidence` and `rationale`. `--kind <edge-kind>` filters to one of the closed `graph.json` edge kinds; `--depth <n>` (default 1) bounds the walk. An unknown node-id is exit 1; a node with no matching edges returns the node alone (honest empty neighborhood), exit 0.
-5. **`list` enumerates everything.** `list` names all `map/*.md` prose files and all clusters from `clusters.json` (the orientation command `insight/_index.md` points at). This is the command `insight.module-contract`'s scaffolding is verified through before the validator checks land.
-6. **`--json` is stable.** Each command's `--json` emits a stable, deterministically-ordered structured object; identical `map/` input + identical arguments → byte-identical `--json` output (the payload text is asserted by this spec's tests, not by the validator — schema §4.10.5).
-7. **Deterministic Core** (R-001): no LLM at query time, no network, no subprocess, no writes.
+1. **`cortex insight file <path>` (addendum §A5.1, design §5.6).** Returns the rich per-file entry (`insight.storage-format` §A4.2) for the given project-relative source path — the full L3 entry when one exists (`Purpose`, `Main players`, `Insights`, `File map` if present, `Connections`, `Query pointers`), or the lighter L2 entry (`Purpose`, `Connections` only) when the file was extracted at L2. The command resolves the path under either layout transparently: it checks `scope-registry.yaml` for a scoped module and locates the entry under the owning scope's `anatomy/`, or under top-level `anatomy/` for a flat module — the caller never needs to know or specify which.
+2. **`cortex insight concept <name>` (addendum §A5.1, design §5.6).** Returns which files touch the named concept, how each implements it, and related concepts — sourced from the `concepts/` files and the `implements-concept`/`co-clustered` edges in the relevant `graph.json` (scope-local plus cross-scope, unified transparently). A concept name with no matching concept file or graph node returns an explicit "no such concept" result, never a silently empty success.
+3. **`cortex insight element <query>` (addendum §A5.1, design §5.6).** Returns an atomic element (function, class, key constant) — matched against the `## Main players` sections that L3 extraction produces (`insight.storage-format` §A4.2) — with its description, its connections, and its follow-up query pointers. When the query matches no L3 main player, the command returns an explicit **"no rich entry"** result naming the file the element lives in (resolved via L1/L2 structural data), rather than an empty result or an error — the element remains discoverable through `cortex insight file <that-path>` even without its own rich entry.
+4. **The scoped/flat difference is invisible to the caller (design §5.8).** All three subcommands accept the same arguments and produce the same response shape whether the underlying module is scoped or flat; the command layer is responsible for locating the right scope internally and unifying scope-local with cross-scope results where relevant (`concept` and `element` in particular may need to merge a scope-local `graph.json` with the cross-scope one).
+5. **`--json` on every subcommand (addendum §A5.1).** All three subcommands accept `--json` and emit a stable, structured payload suitable for programmatic consumption; without the flag, each emits a human-readable rendering of the same underlying data — the two modes are never different queries, only different renderings of one result.
+6. **Deterministic Core, no LLM at query time (RULES 3, addendum §A5.1).** Every subcommand is pure file I/O over the shapes `insight.storage-format` defines plus deterministic matching/lookup logic — no subcommand imports or calls an LLM SDK. The reasoning over what a query result *means* happens in the calling Claude Code session, not inside the CLI.
+7. **Supersedes v2 verbs (design §5.6, addendum §A5.1).** `cortex insight query|get|neighbors|list` (schema §4.10.5) are retired in v3 and MUST NOT be exposed; `file`, `concept`, `element` are the complete v3 verb set. There is no `cortex insight ask` — an attempt to invoke it should fail as an unknown subcommand, not silently degrade to a different verb.
+8. **Absent module returns an explicit miss, not an error crash (build-order-v3 spine convention).** When `.cortex/insight/` does not exist at all (extraction never ran), each subcommand returns an explicit "no insight data for this project" result rather than throwing.
 
 ## Acceptance Criteria
 
-### query returns grouped hits across both content types
+### `file` returns the rich L3 entry for a known path
 
-- **Given** a fixture `map/` with `setup.md` containing an H2 "## Authentication", `tags.json` tagging `spec:insight.cli` with `["authentication"]`, and `clusters.json` with `cluster:authentication`
-- **When** `cortex insight query authentication` runs
-- **Then** the grouped output contains the `setup.md` "## Authentication" section, the node `spec:insight.cli` (matched by tag), and `cluster:authentication`
+- **Given** a flat-layout module with an L3 entry at `anatomy/src/auth/session.ts.md` for `src/auth/session.ts`
+- **When** `cortex insight file src/auth/session.ts` runs
+- **Then** the output includes the `Purpose`, `Main players`, `Insights`, and `Connections` content from that entry
 
-### query miss is honest and exits 0
+### `file` returns the lighter L2 entry when that's all that exists
 
-- **Given** the same fixture
-- **When** `cortex insight query nonexistent-concept` runs
-- **Then** the output is an empty grouped result and the exit code is 0 (a miss is a miss, not an error)
+- **Given** a module with only an L2 entry (`extraction_level: 2`) for `src/utils/format-date.ts`, carrying `Purpose` and `Connections` only
+- **When** `cortex insight file src/utils/format-date.ts` runs
+- **Then** the output includes `Purpose` and `Connections` and does not error or fabricate a `Main players` section
 
-### get returns a file verbatim
+### `file` resolves transparently across scoped and flat layouts
 
-- **Given** `map/graph.json` in the fixture
-- **When** `cortex insight get graph.json` runs
-- **Then** stdout is the file's bytes verbatim, and `cortex insight get missing.md` exits 1 naming `missing.md`
+- **Given** two otherwise-identical fixture modules — one scoped (the entry for `src/auth/session.ts` living under `scopes/auth/anatomy/src/auth/session.ts.md`) and one flat (the same entry under top-level `anatomy/src/auth/session.ts.md`)
+- **When** `cortex insight file src/auth/session.ts` runs against each
+- **Then** both return the identical entry content, and the caller's invocation is identical in both cases
 
-### neighbors walks by kind to a bounded depth
+### `concept` returns touching files and related concepts
 
-- **Given** `graph.json` with edges `spec:insight.cli --semantically-related-> anatomy:src/insight/query.ts` and `anatomy:src/insight/query.ts --mentions-same-entity-> spec:insight.module-contract`
-- **When** `cortex insight neighbors spec:insight.cli --kind semantically-related --depth 1` runs
-- **Then** the subgraph contains `anatomy:src/insight/query.ts` with the edge's `confidence` and `rationale`, and not `spec:insight.module-contract` (depth 1, wrong kind at hop 2)
-- **And** `--depth 2` without `--kind` reaches `spec:insight.module-contract`
+- **Given** a `concepts/authentication.md` file and a `graph.json` with an `implements-concept` edge from `file:src/auth/session.ts` to `concept:authentication`, and a `co-clustered` edge linking `concept:authentication` to `concept:authorization`
+- **When** `cortex insight concept authentication` runs
+- **Then** the output names `src/auth/session.ts` as a file touching the concept and lists `authorization` as a related concept
 
-### neighbors on an unknown node errors
+### `concept` reports an explicit miss for an unknown concept
 
-- **When** `cortex insight neighbors spec:does-not-exist` runs
-- **Then** exit code 1 naming the unknown node-id, and no output subgraph
+- **Given** a module with no `concepts/permissions.md` file and no graph node for `concept:permissions`
+- **When** `cortex insight concept permissions` runs
+- **Then** the output explicitly states no such concept was found — it is not an empty success and not a crash
 
-### list enumerates prose files and clusters
+### `element` returns a main player with its connections
 
-- **Given** the fixture with `setup.md`, `testing.md`, and `clusters.json` holding `cluster:authentication` and `cluster:pulse-gate`
-- **When** `cortex insight list` runs
-- **Then** the output names `setup.md`, `testing.md`, `cluster:authentication`, and `cluster:pulse-gate`
+- **Given** an L3 entry for `src/auth/session.ts` whose `## Main players` names `validateToken` (lines 40–68) with a short description
+- **When** `cortex insight element validateToken` runs
+- **Then** the output includes `validateToken`'s description, its line range, and its connections/follow-up pointers
 
-### --json is deterministic
+### `element` returns "no rich entry" for a non-main-player, still pointing at its file
 
-- **Given** an unchanged fixture `map/`
-- **When** `cortex insight query authentication --json` runs twice
-- **Then** the two outputs are byte-identical
+- **Given** a function `formatTimestamp` that exists in `src/utils/format-date.ts` but was not named as a main player during L3 extraction
+- **When** `cortex insight element formatTimestamp` runs
+- **Then** the output explicitly states no rich entry exists for `formatTimestamp`, and names `src/utils/format-date.ts` as the file where it can be found via `cortex insight file`
+
+### `--json` emits structured output equivalent to the default rendering
+
+- **Given** the same fixture used in "`file` returns the rich L3 entry for a known path"
+- **When** `cortex insight file src/auth/session.ts --json` runs
+- **Then** the output is valid JSON containing the same `Purpose`/`Main players`/`Insights`/`Connections` content as fields, not prose text
+- **And** running the same command without `--json` produces a human-readable rendering of that identical underlying data
+
+### Query-time execution makes no LLM call
+
+- **Given** any of the three subcommands run against a populated fixture module
+- **When** the command executes
+- **Then** no LLM SDK is imported or invoked by the command's code path — the result is produced entirely from files already on disk
+
+### v2's retired verbs are not exposed
+
+- **Given** the v3 `cortex insight` command
+- **When** `cortex insight query`, `cortex insight get`, `cortex insight neighbors`, or `cortex insight list` is invoked
+- **Then** each is rejected as an unknown subcommand — none silently maps to `file`, `concept`, or `element`
+
+### `cortex insight ask` does not exist
+
+- **Given** the v3 `cortex insight` command
+- **When** `cortex insight ask "how does auth work here?"` is invoked
+- **Then** it is rejected as an unknown subcommand — no subprocess-based natural-language answer is produced
+
+### An absent insight module returns an explicit miss
+
+- **Given** a project with no `.cortex/insight/` directory at all
+- **When** `cortex insight file src/auth/session.ts` runs
+- **Then** the output explicitly states there is no insight data for this project, rather than throwing an unhandled error
 
 ## Notes
 
-- Consumers-before-producers is deliberate (v2 design §13): this CLI is verifiable against hand-authored fixtures and is what the two loops verify their writes through, so it lands before either producer.
-- Query is pull-only, never a hook-injection mechanism (schema §4.10.5, §5, v2 design §7.4): insight is surfaced when the scaffolding (CLAUDE.md protocol, `insight/_index.md`, skill steps) says the question warrants it.
-- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).
+- The exact text/formatting of each subcommand's human-readable payload is asserted by this spec's own tests, not by `insight.storage-format`'s validator (carried convention from schema §4.10.5) — the validator checks the shapes on disk; this spec checks what the CLI does with them.
+- Merge behaviour for `concept`/`element` queries that span a scoped module's scope-local and cross-scope graphs (Rule 4) is asserted here at the acceptance-criteria level only for the single-scope case above; a criterion covering a concept split across two sibling scopes is deferred to the implementation pass as an open item, since exercising it needs a populated two-scope fixture this draft doesn't construct.
+- Journey-layer tests are deferred pending the test-runner loop, per the project-wide convention established for the v2 insight specs.

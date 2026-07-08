@@ -1,12 +1,13 @@
 ---
 id: provenance.frontmatter-check
-status: draft
+status: implemented
 depends_on:
   - archive.ingest-skill
   - migration.compass-rename
 implements: ../../specs-business/provenance/every-rule-traces-to-its-source.business.md
 governed_by: []
 governs:
+  - "src/schema/provenance-index.ts"
   - ".cortex/compass/rules/**"
   - ".specflow/specs/**"
   - ".specflow/specs-business/**"

@@ -2,26 +2,28 @@
 
 ## What this is
 
-The outcomes of the ungated knowledge layer: the project knowledge Claude needs while it works — setup, conventions, testing, deploy, and an inferred map of how everything relates — kept queryable through one command instead of re-investigated every session, and the path by which corrections and "remember this" requests reach durable project memory.
+The outcomes of the ungated understanding layer: the assistant behaves like it already knows the codebase — what each file is for, what matters inside it, and how the pieces connect — because a persistent, queryable, inferred understanding builds up once and keeps itself current, instead of being re-derived from scratch every session. Alongside it, the path by which corrections and "remember this" requests reach durable project memory on the right terms.
 
 ## What it covers
 
 **Outcomes written:**
 
-- **The assistant has the project knowledge it needs, right when it's working** — one query surface returns the setup quirks, conventions, and concept map a session would otherwise re-derive; it stays useful immediately because it never waits on a review gate.
+- **The assistant behaves like it already knows this codebase** — point Cortex at a project and a per-file, per-concept understanding of the source code builds up, survives across sessions, stays current as the code moves, and is honest about what it doesn't richly know. This is the v3 outcome; it supersedes the codebase-understanding half of the earlier project-knowledge outcome below.
+
+- **The assistant has the project knowledge it needs, right when it's working** — the v2-era outcome: one query surface for setup quirks, conventions, and an inferred concept map. Its codebase-understanding half is superseded by the outcome above; retained for the history of what shipped.
 
 - **Corrections and memory requests reach persistence cleanly** — when the user corrects the assistant or says "remember this", that reaches durable knowledge on the right terms: ungated notes updated in place with an audit trail, gated knowledge changed only through the review gate, and stabilized notes graduating into the curated layers on the user's say-so.
 
 ## Why it's grouped this way
 
-This group exists because the review gate that makes the curated knowledge trustworthy also makes it slow, and three kinds of knowledge had nowhere to live in the meantime: what a reader would *infer* about how the project hangs together, what sessions *observe* but never write down, and knowledge *in transit* toward the gate. Insight holds all three as a complementary, ungated layer — fast but fallible where the curated layers are right but slow — and owns the discipline that keeps a fast layer honest: traceability instead of a gate, and a one-way promotion path when ungated content earns its way in.
+This group exists because the review gate that makes curated knowledge trustworthy also makes it slow, and the largest body of knowledge a project has — what its own source code means — was never going to be hand-curated at all. Insight holds the inferred understanding as a complementary, ungated layer: fast and immediately useful where the curated layers are right but slow, honest about being unreviewed, and disciplined about the boundary — nothing here overrules a reviewed rule or spec, and nothing crosses into the curated layers except through the human review gate.
 
-What deliberately does not belong here is enforcement or review authority: nothing in insight is ever treated as gated, and nothing crosses into the curated layers except through the human review gate. That boundary is the whole point of keeping the two layers distinct.
+What deliberately does not belong here is enforcement or review authority: nothing in insight is ever treated as gated. That boundary is the whole point of keeping the two layers distinct.
 
 ## Related groups
 
 - Engineering specs that implement these outcomes: `../../specs/insight/`
 - The review gate corrections and promotions flow through: `../pulse/`
-- The curated layers insight feeds and complements: `../cerebrum/`, and the atlas via `../../specs/atlas/`
-- The inferred map's viewer overlay: `../constellation/`
+- The curated layers insight feeds and complements: `../compass/`, and the atlas via `../../specs/atlas/`
+- The traceability discipline session-borne enrichment carries: `../provenance/`
 - The sessions the observation loop reads back: `../loops/`

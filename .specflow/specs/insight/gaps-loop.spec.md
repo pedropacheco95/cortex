@@ -21,8 +21,8 @@ governed_by:
 > `skills/cortex-loop-insight-gaps/` are deleted and the scheduled task is
 > deregistered (the former `governs:` targets no longer exist, so the list is
 > removed). The session-observation ROLE survives and re-homes to
-> `cortex-loop-session-observe` (build-order-v3 step 6), which will carry its
-> own spec. Retained for lineage.
+> `cortex-loop-session-observe` (build-order-v3 step 6), whose spec is
+> `insight.session-observe` (this domain). Retained for lineage.
 
 ## Intent
 

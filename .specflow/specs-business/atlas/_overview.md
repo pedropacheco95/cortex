@@ -26,6 +26,6 @@ What deliberately does not belong here is the active enforcement of rules — th
 ## Related groups
 
 - Engineering specs that implement these outcomes: `../../specs/atlas/`
-- The conventions whose origins are recorded here: `../cerebrum/`
+- The conventions whose origins are recorded here: `../compass/`
 - The map of the code this history explains: `../anatomy/`
 - The visible view that makes this memory navigable: `../constellation/`

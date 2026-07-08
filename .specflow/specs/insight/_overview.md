@@ -2,32 +2,34 @@
 
 ## What this is
 
-The engineering specs for the `.cortex/insight/` module (schema §4.10): the ungated, queryable project-knowledge layer holding inferred structure (a concept map of nodes, tags, edges, and clusters) and observed-but-unreviewed context (setup/testing/deploy/conventions prose). It covers the module's file contracts, its four-command query CLI, its two producer loops with disjoint write lanes, and the promotion pipeline that graduates stabilized content into the gated layers through the existing pulse gate.
+The engineering specs for the `.cortex/insight/` module at v3: the ungated, queryable **codebase-understanding layer**. Insight moved at v3 from a concept-map over curated artefacts to a leveled (L1–L4), optionally scoped, per-file understanding of the source code itself — what each file is for, its main players, its non-obvious quirks, and how it connects to the rest of the codebase, including connections no import statement reveals. It covers the storage contract, the deterministic L1 structural pass, the three-verb query CLI, the extraction skill that builds the layer, the three refresh loops that keep it current, and the session-observe loop that enriches it from how sessions actually went.
 
 ## What it covers
 
-**Specs written:**
+**v3 specs (current):**
 
-- `insight.module-contract` — the module skeleton and formats: `insight/_index.md` (the ungated-trust-model prompt, §7.4), the flat `map/` directory, the `insight-prose` `.md` contract with its provenance trailer and `## Corrections` log (§4.10.1), the three inferred JSON files (§4.10.2), the `cortex.config.json` `insight` block, and `cortex init` scaffolding it committed.
+- `insight.l1-structural` — the deterministic Core structural pass: tree-sitter parse, import/export graph, sizes, centrality with mechanical hubs excluded, skip-lists as pre-triage.
+- `insight.storage-format` — the on-disk contract: scoped vs. flat layouts, the per-file understanding entry, `scope-registry.yaml`, the staleness ledger, the reverse-dependency index, and the `graph.json`/`tags.json`/`clusters.json` shapes with closed edge-type and confidence-tier enums.
+- `insight.cli` — the three deterministic query verbs `cortex insight file|concept|element`, all `--json`, no LLM at query time; the scoped/flat difference invisible to the caller.
+- `insight.extract-skill` — `cortex-extract-insight`, the plan-not-pipeline initial extraction: L1 consumption, scope planning, parallel per-scope L2/L3 execution, cross-scope L4 unification, checkpointed resumability.
+- `insight.refresh-loops` — the fast (post-commit, deterministic), daily (hybrid significance triage), and full (weekly ground-truth L4) maintenance loops, plus reverse-dependency invalidation, confidence-aging, and scope-scoped invalidation.
+- `insight.session-observe` — `cortex-loop-session-observe`: type-routed session observation — ungated observations enrich per-file entries directly with session provenance; conventions and decisions become typed pulse proposals.
 
-- `insight.cli` — the four deterministic commands `cortex insight query|get|neighbors|list` (§4.10.5): lexical query over prose + tags + cluster labels, node-graph traversal, all `--json`, no LLM at query time.
+**v2 lineage (SUPERSEDED-bannered, retained for history):**
 
-- `insight.refresh-loop` — `cortex-loop-insight-refresh`, the JSON producer: deterministic bookends around agentic tag/edge/cluster judgment, cluster-id carry-over, determinism + carry-over of unchanged rationale text, write-lane enforcement (`.json` only).
-
-- `insight.gaps-loop` — `cortex-loop-insight-gaps`, the prose + proposal producer: the five gap signals routed to direct prose writes (ungated) or typed pulse proposals (gated), distil coordination, write-lane enforcement (`.md` only).
-
-- `insight.promotion-mechanism` — the typed pulse gate and promotion accept path (§4.5.1/§4.5.2/§4.10.4): the five `**Type:**` values, the three payload shapes including the new byte-exact `edit`, extended `Target:` roots, and the promoted-marking side effect.
-
-- `constellation.insight-preset` — the sixth constellation preset (§4.9): a serve-time overlay of `map/graph.json` + `clusters.json` over the curated graph, dashed inferred edges and cluster background regions, curated staying the default.
+- `insight.module-contract` — the v2 `map/` layout and its three JSON contracts, replaced by `insight.storage-format`.
+- `insight.refresh-loop` / `insight.gaps-loop` — the v2 producer pair, replaced by `insight.refresh-loops` and `insight.session-observe`.
+- `insight.promotion-mechanism` — **survives**: the typed pulse gate and promotion accept path, still the mechanism by which stabilized ungated content graduates into the gated layers (archive-era producers feed the same gate).
 
 ## Why it's grouped this way
 
-The module is a single durable unit with one audience surface (the query CLI) and two disjoint producers; its defining property is that it is *ungated* — useful immediately, never having passed the human review gate, never carrying write-time enforcement authority. Grouping its contract, CLI, loops, and promotion path together keeps that trust boundary in one place. The typed-pulse-gate and constellation-preset specs live partly outside this domain (they extend `pulse/` and `constellation/`), but their insight-specific behaviour is specified here because insight is what makes them load-bearing.
+The module is a single durable unit with one audience surface (the query CLI) and a strict producer split: extraction writes first content, the refresh loops maintain it, session-observe enriches it — all against one storage contract. Its defining property is unchanged from v2: it is *ungated* — inferred, useful immediately, never carrying enforcement authority; where insight conflicts with a compass rule or a spec, the gated layer wins. Grouping the contract, the CLI, the producers, and the surviving promotion path together keeps that trust boundary in one place. Anatomy's role (the per-file map) was absorbed here at v3 — the `anatomy/` name survives as the per-file-entry directory inside insight.
 
 ## Related groups
 
 - Business outcomes for this domain: `../../specs-business/insight/`
-- The contract these specs implement: `../schema/` (§4.10, §4.5.1/§4.5.2, §4.9)
-- The review gate promotions and corrections flow through: `../pulse/`
-- The shared session-reading layer the gaps loop reads: `../loops/`
-- The node-id grammar and compiler the map reuses: `../constellation/`
+- The contract these specs implement: `../schema/` (schema §4.10 as superseded by the v3 addendum §A4/§A5)
+- The review gate promotions and typed proposals flow through: `../pulse/`
+- The provenance forms session enrichment carries: `../provenance/`
+- The superseded per-file map this module absorbed: `../anatomy/`
+- The shared session-reading layer session-observe reads: `../loops/`

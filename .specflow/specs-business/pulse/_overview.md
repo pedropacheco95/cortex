@@ -31,4 +31,4 @@ What deliberately does not belong here is the unattended, multi-run automation t
 - Engineering specs that implement these outcomes: `../../specs/pulse/`
 - The unattended runs that build on captured learning: `../loops/`
 - The map kept current by this watchfulness: `../anatomy/`
-- The conventions and memory it proposes updates to: `../cerebrum/`
+- The conventions and memory it proposes updates to: `../compass/`

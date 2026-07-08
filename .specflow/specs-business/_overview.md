@@ -6,7 +6,7 @@ This is the stakeholder-facing tree. It describes what Cortex does and why it ma
 
 ## What it covers
 
-Cortex helps a developer (and the AI assistant working alongside them) genuinely understand a codebase — its structure, its rules, its history, and its intended behaviour — so that work stays grounded and knowledge compounds instead of evaporating. The outcomes are organised into eleven groups:
+Cortex helps a developer (and the AI assistant working alongside them) genuinely understand a codebase — its structure, its rules, its history, and its intended behaviour — so that work stays grounded and knowledge compounds instead of evaporating. The outcomes are organised into fifteen groups:
 
 - **A single, stable contract** — every part of the system and every contributor agrees on how project knowledge is shaped and named, so artefacts compose instead of drifting.
 - **A fast, predictable command-line tool** — set Cortex up in one step and run everyday operations without surprises or waiting on an AI.
@@ -19,6 +19,10 @@ Cortex helps a developer (and the AI assistant working alongside them) genuinely
 - **Knowledge that compounds across autonomous runs** — unattended work builds on what previous runs learned instead of starting cold.
 - **Visible proof the project is understood** — anyone can open a navigable map and see the project is understood in a structured, traceable way.
 - **Confidence that the product does what it should** — every intended behaviour is specified, traceable from outcome to test, and verified.
+- **An assistant that already understands the codebase** — a persistent, queryable, inferred understanding of the source code itself builds up and keeps itself current, so no session starts cold.
+- **Every authoritative document captured, once** — client specs, transcripts, and contracts enter through one pipeline, kept verbatim forever, with superseded versions preserved.
+- **Every rule traces to its authority** — ask why a rule exists and the answer is one hop away; ask what depends on a changed source and the full list comes back.
+- **Modules named for what they hold** — anyone reading the knowledge layer can tell what each part is for from its name, and every fact lives in exactly one place.
 
 Each outcome is linked to the engineering specs that deliver it, so a reader can move sideways from "what we promise" to "how it's built".
 

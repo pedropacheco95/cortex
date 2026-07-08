@@ -8,15 +8,15 @@ The self-maintenance process: two loops, Hygiene (fast, mostly deterministic, da
 
 **Specs written:**
 
-- `pulse.review-cli` — the human gate: `pulse-list` / `pulse-accept` / `pulse-reject`, verbatim application to cerebrum-only targets, dismissal memory with the configurable window.
+- `pulse.review-cli` — the human gate: `pulse-list` / `pulse-accept` / `pulse-reject`, verbatim application to compass-only targets, dismissal memory with the configurable window.
 
-- `pulse.hygiene` — the daily deterministic sweep: orphan branches, PR staleness (gh-optional), anatomy drift, cerebrum dead refs, spec orphans, aged TODOs → `pulse/hygiene-report.md` (always-write); drop-off detection deferred to the agentic layer.
+- `pulse.hygiene` — the daily deterministic sweep: orphan branches, PR staleness (gh-optional), anatomy drift, compass dead refs, spec orphans, aged TODOs → `pulse/hygiene-report.md` (always-write); drop-off detection deferred to the agentic layer.
 
 - `pulse.distil` — weekly said-things miner: deterministic collect/propose bookends around an agentic pattern judgment; threshold + covered + dismissed filters; single-S-namespace proposals with session provenance.
 
 _Planned (not yet written):_
 
-- Hygiene: orphan branches, stale PRs, drop-offs, anatomy drift, cerebrum dead refs, spec orphans, and aged TODOs → `pulse/hygiene-report.md`
+- Hygiene: orphan branches, stale PRs, drop-offs, anatomy drift, compass dead refs, spec orphans, and aged TODOs → `pulse/hygiene-report.md`
 - Distil: extracting recurring patterns from session transcripts → `pulse/suggestions.md`
 - The propose-don't-mutate guarantee (writes confined to `.cortex/pulse/`)
 
@@ -31,4 +31,4 @@ These two loops predate and seed the broader loop family, which is why they keep
 - Business outcomes for this domain: `../../specs-business/pulse/`
 - The wider loop family and shared substrate: `../loops/`
 - Pulse review CLI (accept/reject): `../core-cli/`
-- Reads from anatomy, cerebrum, and specs: `../anatomy/`, `../cerebrum/`
+- Reads from anatomy, compass, and specs: `../anatomy/`, `../compass/`

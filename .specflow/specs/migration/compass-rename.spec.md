@@ -1,16 +1,14 @@
 ---
 id: migration.compass-rename
-status: draft
+status: implemented
 depends_on: []
 implements: ../../specs-business/migration/the-modules-name-what-they-hold.business.md
 governed_by: []
 governs:
   - "src/schema/**/*.ts"
   - "src/cli/**/*.ts"
-  - "src/scaffold/**/*.ts"
   - ".claude/skills/**/*.md"
   - "CLAUDE.md"
-  - "loop.md"
 ---
 
 # `cerebrum` → `compass` — the module rename

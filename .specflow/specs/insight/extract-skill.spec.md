@@ -1,6 +1,6 @@
 ---
 id: insight.extract-skill
-status: draft
+status: implemented
 depends_on:
   - insight.storage-format
   - insight.cli

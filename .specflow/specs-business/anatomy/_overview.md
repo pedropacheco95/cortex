@@ -28,6 +28,6 @@ What deliberately does not belong here is judgement about whether the code is ri
 ## Related groups
 
 - Engineering specs that implement these outcomes: `../../specs/anatomy/`
-- The conventions applied on top of the map: `../cerebrum/`
+- The conventions applied on top of the map: `../compass/`
 - The memory of why the code is the way it is: `../atlas/`
 - The visible, navigable view of the project: `../constellation/`

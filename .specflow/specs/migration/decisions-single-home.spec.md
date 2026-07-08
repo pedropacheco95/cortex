@@ -1,6 +1,6 @@
 ---
 id: migration.decisions-single-home
-status: draft
+status: implemented
 depends_on:
   - migration.compass-rename
 implements: ../../specs-business/migration/the-modules-name-what-they-hold.business.md
@@ -23,7 +23,7 @@ v1/v2 carried `atlas/decisions/` and `cerebrum/decisions.md` as "the same data, 
 
 - **READS:** `.cortex/cerebrum/decisions.md` (left in place, untouched, by `migration.compass-rename`'s rule 2); `.cortex/atlas/decisions/*.md` (the sole home this spec confirms); every `.cortex/compass/rules/R-NNN-*.md` file, to detect which ones inline decision text that duplicates a `cerebrum/decisions.md` entry.
 - **WRITES:** the compass rule files whose bodies inlined decision text — each such rule's frontmatter gains a `provenance:` list entry and its body's inlined copy is replaced by a citation pointer; the corresponding `atlas/decisions/<slug>.md` files — each gains (or already carries) a `compass_rules:` list entry naming the rule(s) that cite it (the field renamed from `cerebrum_rules`, addendum §A2.2).
-- **CREATES:** a new `atlas/decisions/<slug>.md` entry for any decision that existed in `cerebrum/decisions.md` but had no corresponding atlas entry — reconciliation, not just deletion, so consolidating the duplicate never loses a fact (business rule 4 of `migration.modules-name-what-they-hold`).
+- **CREATES:** a new `atlas/decisions/<slug>.md` entry for any decision that existed in `cerebrum/decisions.md` but had no corresponding atlas entry — reconciliation, not just deletion, so consolidating the duplicate never loses a fact (business rule 4 of `migration.the-modules-name-what-they-hold`).
 - **DELETES:** `.cortex/cerebrum/decisions.md` (the file this spec removes; it never transits through `compass/decisions.md` — see `migration.compass-rename` rule 2 and its Notes).
 
 ## Rules

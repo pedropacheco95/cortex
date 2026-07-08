@@ -1,5 +1,5 @@
 ---
-id: cerebrum.developer-gets-bugs-triaged-without-asking
+id: compass.developer-gets-bugs-triaged-without-asking
 status: implemented
 implemented_by:
   - ../../specs/loops/bug-triage.spec.md

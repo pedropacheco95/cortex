@@ -14,7 +14,7 @@ governs:
 
 > **SUPERSEDED at v3 (design §8.3; build-order-v3 steps 5b and 7).** The v2
 > `map/` layout and its three JSON contracts are replaced wholesale by the v3
-> storage contract (schema §4.10 — per-file entries, ledger, reverse index,
+> storage contract, spec `insight.storage-format` (this domain; schema §4.10 — per-file entries, ledger, reverse index,
 > the new graph/tags/clusters shapes, owned by `src/insight/storage.ts` /
 > `entry.ts`). The legacy formats module (`src/insight/formats.ts`) was kept
 > only for the v2 constellation overlay and is deleted with it at step 7 (the

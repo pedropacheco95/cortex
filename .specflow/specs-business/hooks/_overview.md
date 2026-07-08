@@ -23,6 +23,6 @@ What deliberately does not belong here is the content of the rules themselves or
 ## Related groups
 
 - Engineering specs that implement these outcomes: `../../specs/hooks/`
-- The conventions these guardrails surface: `../cerebrum/`
+- The conventions these guardrails surface: `../compass/`
 - The setup that makes the assistant aware of Cortex: `../scaffolding/`
 - The self-maintaining behaviour that feeds timely prompts: `../pulse/`

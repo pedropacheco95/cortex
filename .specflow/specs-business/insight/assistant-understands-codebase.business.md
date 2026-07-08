@@ -1,12 +1,13 @@
 ---
 id: insight.assistant-understands-codebase
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/insight/storage-format.spec.md
   - ../../specs/insight/cli.spec.md
   - ../../specs/insight/extract-skill.spec.md
   - ../../specs/insight/refresh-loops.spec.md
   - ../../specs/insight/session-observe.spec.md
+  - ../../specs/insight/l1-structural.spec.md
 ---
 
 # The assistant behaves like it already knows this codebase
@@ -54,4 +55,4 @@ The AI assistant working a task in a Cortex-managed project — and, through it,
 ## Notes
 
 - This outcome supersedes the v2 outcome of the same shape (`insight.assistant-has-project-knowledge-when-working`) for the codebase-understanding half of that promise; the corrections-and-promotion half (an unreviewed note graduating into reviewed knowledge) is out of scope here and is expected to be re-specified separately against the v3 layout once this substrate ships.
-- The four dev specs in `implemented_by:` split the promise: `insight.storage-format` fixes what the understanding looks like on disk; `insight.cli` is how it's asked for; `insight.extract-skill` is how it first comes into being; `insight.refresh-loops` is how it stays true over time.
+- The six dev specs in `implemented_by:` split the promise: `insight.l1-structural` is the deterministic structural raw material; `insight.storage-format` fixes what the understanding looks like on disk; `insight.cli` is how it's asked for; `insight.extract-skill` is how it first comes into being; `insight.refresh-loops` is how it stays true over time; `insight.session-observe` is how what sessions learn enriches it.
