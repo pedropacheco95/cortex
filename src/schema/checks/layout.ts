@@ -60,10 +60,15 @@ export function checkIndexPresent(root: string): Violation[] {
 
   if (!fs.existsSync(cortexDir)) return violations;
 
+  // §4.10.3: `insight/map/` deliberately carries NO `_index.md` (the module
+  // index one level up fully describes it; check.insight-ownership enforces its
+  // absence). Exempt it from the every-dir _index.md requirement.
+  const insightMap = path.join(cortexDir, 'insight', 'map');
+
   function walkDir(dir: string): void {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     const hasIndex = entries.some((e) => e.isFile() && e.name === '_index.md');
-    if (!hasIndex) {
+    if (!hasIndex && dir !== insightMap) {
       violations.push({
         severity: 'error',
         check: 'check.index-present',

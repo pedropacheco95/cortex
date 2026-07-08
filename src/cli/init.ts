@@ -11,6 +11,7 @@ import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 import * as readline from 'readline/promises';
 import { scan } from '../anatomy/scan.js';
+import { scaffoldInsight } from '../insight/scaffold.js';
 import { splitDataRowCells } from '../anatomy/files-md.js';
 import { validate } from '../schema/validate.js';
 // Rule 6 auth-failure detection, shared with the writer/verifier harness.
@@ -135,6 +136,10 @@ function writeSkeleton(root: string, force: boolean, nowIso: string): void {
 
   // Pulse rejection memory (persists; preserved if present).
   writeIfAbsent(path.join(cortexDir, 'pulse', 'dismissed.md'), pulseDismissedTemplate(nowIso), false);
+
+  // Insight module (§4.10, §7.4) — committed, NOT gitignored. Creates
+  // insight/_index.md + the empty flat map/; seeds no prose or JSON.
+  scaffoldInsight(cortexDir);
 }
 
 function readConfig(root: string): Record<string, unknown> {

@@ -87,7 +87,7 @@ export function checkConfig(root: string): ConfigResult {
   }
 
   // Check for unknown keys (§10.1 shape: schemaVersion, anatomy, hooks, pulse, harness, loop)
-  const knownKeys = ['schemaVersion', 'anatomy', 'hooks', 'pulse', 'harness', 'loop'];
+  const knownKeys = ['schemaVersion', 'anatomy', 'hooks', 'pulse', 'insight', 'harness', 'loop'];
   for (const key of Object.keys(config)) {
     if (!knownKeys.includes(key)) {
       violations.push({

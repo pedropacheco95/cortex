@@ -6,7 +6,7 @@
 
 export const SCHEMA_VERSION = '2.0';
 
-export const PRESENT_MODULES = 'anatomy, cerebrum, atlas, pulse';
+export const PRESENT_MODULES = 'anatomy, cerebrum, atlas, insight, pulse';
 
 /** Schema §10.1 defaults, verbatim. `hooks.preRead` governs the Read pair
  *  (PreRead + PostRead) and defaults TRUE; init writes it explicitly on fresh
@@ -16,6 +16,7 @@ export const CONFIG_DEFAULTS: Record<string, unknown> = {
   anatomy: { exclude: ['dist/**', 'node_modules/**'], enhancement: 'none' },
   hooks: { preRead: true },
   pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
+  insight: { clusterCarryOverJaccard: 0.5, promotionMinAgeDays: 14, promotionMinObservations: 2 },
   harness: { maxIterations: 3 },
   loop: { enabled: false },
 };
@@ -175,6 +176,30 @@ suggestion entries carry S-NNN IDs referenced by \`dismissed.md\`.
 `,
 };
 
+/**
+ * §7.4 `insight/_index.md` — the ungated-module active prompt. Follows the §7.1
+ * shape (`Read this when:` / `What's here:` / `How to navigate:`, <300 tok) with
+ * the module-specific requirement (spec insight.module-contract Rule 2): it names
+ * insight as ungated/unreviewed and points at `cortex insight` as the query
+ * surface. `insight/map/` itself carries NO `_index.md` (§4.10.3) — this one index
+ * describes both the prose (`.md`) and inferred (`.json`) content.
+ */
+export const INSIGHT_INDEX_TEMPLATE = `# Insight — index
+
+**Read this when:** you need conceptual orientation — how things relate, what a
+domain cluster contains, or how setup/testing/deploy actually work here. Insight
+is **ungated**: useful immediately, **not human-reviewed**. For enforced rules, cerebrum.
+
+**What's here:**
+- \`map/*.md\` — observed project knowledge (setup, testing, deploy, conventions, …).
+- \`map/graph.json\`, \`tags.json\`, \`clusters.json\` — the inferred concept map. Query
+  via CLI; never hand-edit.
+
+**How to navigate:** \`cortex insight query <topic>\` first; \`cortex insight
+neighbors <node-id>\` to walk relations; \`cortex insight list\` to see everything.
+Treat claims here as unreviewed — trace load-bearing ones before relying on them.
+`;
+
 /** §7.2 specs/_index.md skeleton — active prompt + dependency/build index. */
 export const SPECS_INDEX_TEMPLATE = `# Specs — engineering index
 
@@ -243,6 +268,7 @@ Cortex is active on **${projectName}**. The knowledge layer lives in \`.cortex/\
 - \`anatomy/\` — per-file map (purpose, tokens, governing specs). What each file is.
 - \`cerebrum/\` — rules, decisions, preferences, and the bug ledger. The "why" and the "must".
 - \`atlas/\` — stakeholders, decisions (narrative), domain terms, source materials.
+- \`insight/\` — ungated, queryable inferred/observed knowledge layer (\`cortex insight\` to query).
 
 **Protocol:** before working a task, read the relevant \`_index.md\` first — they are
 prompts that tell you what to read and when. For "why" questions, grep \`cerebrum/\` and

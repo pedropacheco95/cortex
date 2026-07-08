@@ -104,6 +104,7 @@ Cortex is active on **cortex**. The knowledge layer lives in `.cortex/`:
 - `anatomy/` — per-file map (purpose, tokens, governing specs). What each file is.
 - `cerebrum/` — rules, decisions, preferences, and the bug ledger. The "why" and the "must".
 - `atlas/` — stakeholders, decisions (narrative), domain terms, source materials.
+- `insight/` — ungated, queryable inferred/observed knowledge layer (`cortex insight` to query).
 
 **Protocol:** before working a task, read the relevant `_index.md` first — they are
 prompts that tell you what to read and when. For "why" questions, grep `cerebrum/` and
@@ -113,5 +114,5 @@ cross-references (the citation graph) to trace any claim to its source.
 Specs are the source of truth: `.specflow/specs-business/` (outcomes) and `.specflow/specs/` (implementation),
 linked by `implements:`/`implemented_by:`. Don't let the trees drift.
 
-Modules present: anatomy, cerebrum, atlas, pulse. Schema: 2.0.
+Modules present: anatomy, cerebrum, atlas, insight, pulse. Schema: 2.0.
 <!-- cortex:end -->
