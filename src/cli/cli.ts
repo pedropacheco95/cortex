@@ -3,6 +3,8 @@
  * Thin argv wrapper for `cortex init` (spec core-cli.init), the
  * `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
+ * `cortex insight query|get|neighbors|list [--json]` — the read-only insight
+ * query surface (spec insight.cli, Rule 1; §4.10.5),
  * `cortex validate [path] [--json]` (atlas.ingest-skill Rule 4 rider),
  * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1),
  * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), the deterministic
@@ -244,6 +246,14 @@ export async function run(argv: string[]): Promise<number> {
       console.error(`cortex loop-spec-drift: ${(err as Error).message}`);
       return 1;
     }
+  }
+
+  // `cortex insight query|get|neighbors|list [--json]` — the deterministic,
+  // read-only query surface over `.cortex/insight/map/` (insight.cli Rule 1,
+  // §4.10.5). No LLM at query time, no network, no writes.
+  if (argv[0] === 'insight') {
+    const { insightCli } = await import('../insight/cli.js');
+    return insightCli(argv[1], argv.slice(2));
   }
 
   // `cortex constellation [--port N]` — localhost-only read-only renderer
