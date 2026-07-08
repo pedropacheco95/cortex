@@ -19,6 +19,7 @@ import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
 import { checkConstellation } from './checks/constellation.js';
 import { checkInsightIndex, checkInsightProse, checkInsightGraph, checkInsightOwnership } from './checks/insight.js';
+import { checkArchiveLayout, checkArchiveMetadata, checkArchiveType } from './checks/archive.js';
 
 export interface ValidateOptions {
   scope?: 'project' | 'tree' | 'file';
@@ -134,6 +135,11 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...checkInsightProse(root));
   allViolations.push(...checkInsightGraph(root));
   allViolations.push(...checkInsightOwnership(root));
+
+  // Archive-module checks (§4.4, new at v3.0) — tolerant of an absent archive/
+  allViolations.push(...checkArchiveLayout(root));
+  allViolations.push(...checkArchiveMetadata(root));
+  allViolations.push(...checkArchiveType(root));
 
   // When scoped to a single file, filter violations to only those relevant to that file
   let filteredViolations = allViolations;

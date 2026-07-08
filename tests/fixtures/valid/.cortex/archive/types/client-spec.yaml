@@ -1,0 +1,15 @@
+id: client-spec
+label: Client specification
+classification:
+  extensions:
+    - .pdf
+    - .docx
+    - .md
+  hints:
+    - "requirement"
+    - "the client shall"
+extraction:
+  strategy: generic
+  outputs:
+    - kind: summary
+      path: extracted/summary.md

@@ -6,7 +6,7 @@
 
 export const SCHEMA_VERSION = '3.0';
 
-export const PRESENT_MODULES = 'anatomy, compass, atlas, insight, pulse';
+export const PRESENT_MODULES = 'anatomy, compass, atlas, archive, insight, pulse';
 
 /** Schema §10.1 defaults, verbatim. `hooks.preRead` governs the Read pair
  *  (PreRead + PostRead) and defaults TRUE; init writes it explicitly on fresh
@@ -21,13 +21,18 @@ export const CONFIG_DEFAULTS: Record<string, unknown> = {
   loop: { enabled: false },
 };
 
-/** Gitignore paths per schema Decision 1 (four: the three regenerable/sensitive/
- *  transient dirs + the compiled constellation, §4.9) — never a bare `.cortex/`. */
+/** Gitignore paths per schema Decision 1 (the three regenerable/sensitive/
+ *  transient dirs + the compiled constellation, §4.9) — never a bare `.cortex/`.
+ *  v3.0 amendment (Decision 1): `archive/` is a fifth, MIXED git policy within
+ *  the one module — only `documents/*\/source.<ext>` (the verbatim, possibly
+ *  sensitive raw source) is gitignored; `_index.md`, `register.md`,
+ *  `metadata.yaml`, `extracted/`, and `types/` are committed (schema §4.4). */
 export const GITIGNORE_LINES = [
   '.cortex/anatomy/',
   '.cortex/atlas/sources/',
   '.cortex/pulse/',
   '.cortex/constellation.json',
+  '.cortex/archive/documents/*/source.*',
 ];
 
 /**
@@ -199,6 +204,43 @@ neighbors <node-id>\` to walk relations; \`cortex insight list\` to see everythi
 Treat claims here as unreviewed — trace load-bearing ones before relying on them.
 `;
 
+/**
+ * §7.1 `archive/_index.md` — the archive-module active prompt (schema §4.4,
+ * §7.1 shape). No dedicated filled example is given in the schema itself
+ * (mirrors how `atlas/` has none) — this follows the same voice/shape as the
+ * compass/atlas/insight indexes above.
+ */
+export const ARCHIVE_INDEX_TEMPLATE = `# Archive — index
+
+**Read this when:** you need the verbatim source or structured extraction behind
+an ingested document (a client spec, contract, transcript, RFP, or similar) —
+before citing or re-deriving something that was already captured.
+
+**What's here:**
+- \`register.md\` — human-readable index of every ingested document, active and superseded.
+- \`documents/<slug>/\` — one dir per ingested document: \`source.<ext>\` (gitignored,
+  may be sensitive), \`metadata.yaml\` (kind, version, status), \`extracted/\` (structured content).
+- \`types/*.yaml\` — document-type schemas: classification hints + the extraction-output contract.
+
+**How to navigate:** start at \`register.md\` to find a document; open its
+\`metadata.yaml\` for \`kind\`/\`status\`/\`supersedes\`; read \`extracted/\` before the raw
+\`source.<ext>\`. A document's \`kind\` names the \`types/<kind>.yaml\` that shaped its extraction.
+`;
+
+/**
+ * `archive/register.md` — free markdown, no frontmatter contract beyond the
+ * general document header below (schema §4.4: "a committed, human-maintained
+ * index, not a transient loop report"). Updated by `cortex-archive-ingest`
+ * (build-order-v3 step 3b) on every ingestion or version update.
+ */
+export const ARCHIVE_REGISTER_TEMPLATE = `# Archive register
+
+One entry per ingested document — active and superseded. Updated by
+\`cortex-archive-ingest\` on every ingestion or version update.
+
+(no documents ingested yet)
+`;
+
 /** §7.2 specs/_index.md skeleton — active prompt + dependency/build index. */
 export const SPECS_INDEX_TEMPLATE = `# Specs — engineering index
 
@@ -267,6 +309,7 @@ Cortex is active on **${projectName}**. The knowledge layer lives in \`.cortex/\
 - \`anatomy/\` — per-file map (purpose, tokens, governing specs). What each file is.
 - \`compass/\` — rules, preferences, and the bug ledger. The "must".
 - \`atlas/\` — stakeholders, decisions (narrative), domain terms, source materials.
+- \`archive/\` — ingested source documents (client specs, transcripts, contracts) and their structured extractions.
 - \`insight/\` — ungated, queryable inferred/observed knowledge layer (\`cortex insight\` to query).
 
 **Protocol:** before working a task, read the relevant \`_index.md\` first — they are

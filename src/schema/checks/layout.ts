@@ -64,11 +64,23 @@ export function checkIndexPresent(root: string): Violation[] {
   // index one level up fully describes it; check.insight-ownership enforces its
   // absence). Exempt it from the every-dir _index.md requirement.
   const insightMap = path.join(cortexDir, 'insight', 'map');
+  // §4.4: `archive/documents/` (and every `<slug>/`, `<slug>/extracted/` below
+  // it) and `archive/types/` are data directories, not navigable module
+  // indexes — the schema §1 layout tree lists no `_index.md` anywhere under
+  // either (only `archive/_index.md` itself is required). Exempt the whole
+  // `documents/` subtree and the `types/` directory, mirroring insight/map/.
+  const archiveDocuments = path.join(cortexDir, 'archive', 'documents');
+  const archiveTypes = path.join(cortexDir, 'archive', 'types');
 
   function walkDir(dir: string): void {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     const hasIndex = entries.some((e) => e.isFile() && e.name === '_index.md');
-    if (!hasIndex && dir !== insightMap) {
+    const exempt =
+      dir === insightMap ||
+      dir === archiveTypes ||
+      dir === archiveDocuments ||
+      dir.startsWith(archiveDocuments + path.sep);
+    if (!hasIndex && !exempt) {
       violations.push({
         severity: 'error',
         check: 'check.index-present',

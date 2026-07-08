@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import { init } from '../../../src/cli/init.js';
+import { validate } from '../../../src/schema/validate.js';
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
 import { CANONICAL_TASK_NAMES, scopedTaskName, isOwnScopedTask } from '../../../src/cli/task-scoping.js';
 import {
@@ -74,14 +75,23 @@ describe('exit-code precedence: validation failure wins over auth failure', () =
 // Rule 2 — gitignore exactness
 // ---------------------------------------------------------------------------
 describe('Rule 2: gitignore', () => {
-  it('creates .gitignore with exactly the four paths and never a bare .cortex/', async () => {
+  it('creates .gitignore with exactly the five paths and never a bare .cortex/', async () => {
     const root = makeTmpDir('gi-proj');
     const home = makeTmpDir('gi-home');
     try {
       await init(root, { noLlm: true, home, ...DARWIN });
       const lines = fs.readFileSync(path.join(root, '.gitignore'), 'utf-8').split('\n').filter((l) => l.trim() !== '');
       expect(lines.sort()).toEqual(
-        ['.cortex/anatomy/', '.cortex/atlas/sources/', '.cortex/pulse/', '.cortex/constellation.json'].sort(),
+        [
+          '.cortex/anatomy/',
+          '.cortex/atlas/sources/',
+          '.cortex/pulse/',
+          '.cortex/constellation.json',
+          // v3.0 archive mixed-policy: only the raw per-document source is
+          // gitignored — _index.md/register.md/metadata.yaml/extracted/types
+          // are all committed (schema §4.4, Decision 1 v3.0 amendment).
+          '.cortex/archive/documents/*/source.*',
+        ].sort(),
       );
       expect(lines).not.toContain('.cortex/');
     } finally {
@@ -96,7 +106,13 @@ describe('Rule 2: gitignore', () => {
       await init(root, { noLlm: true, home, ...DARWIN });
       await init(root, { noLlm: true, force: true, home, ...DARWIN });
       const lines = fs.readFileSync(path.join(root, '.gitignore'), 'utf-8').split('\n').map((l) => l.trim());
-      for (const wanted of ['.cortex/anatomy/', '.cortex/atlas/sources/', '.cortex/pulse/', '.cortex/constellation.json']) {
+      for (const wanted of [
+        '.cortex/anatomy/',
+        '.cortex/atlas/sources/',
+        '.cortex/pulse/',
+        '.cortex/constellation.json',
+        '.cortex/archive/documents/*/source.*',
+      ]) {
         expect(lines.filter((l) => l === wanted)).toHaveLength(1);
       }
     } finally {
@@ -144,7 +160,7 @@ describe('Rule 3: skeleton', () => {
       return found;
     };
     const indexes = walk(path.join(root, '.cortex'));
-    expect(indexes.length).toBe(12); // root + anatomy + compass(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (map/ carries none, §4.10.3)
+    expect(indexes.length).toBe(13); // root + anatomy + compass(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (map/ carries none, §4.10.3) + archive (documents/, types/ carry none, §4.4)
     for (const idx of indexes) {
       const content = fs.readFileSync(idx, 'utf-8');
       expect(content, idx).toContain('Read this when:');
@@ -182,8 +198,53 @@ describe('Rule 3: skeleton', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(content).toContain('<!-- cortex:start v3.0 -->');
     expect(content).toContain('<!-- cortex:end -->');
-    expect(content).toContain('Modules present: anatomy, compass, atlas, insight, pulse. Schema: 3.0.');
+    expect(content).toContain('Modules present: anatomy, compass, atlas, archive, insight, pulse. Schema: 3.0.');
   });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 3 — archive module scaffolding (schema §4.4, new at v3.0)
+// ---------------------------------------------------------------------------
+describe('Rule 3: archive module scaffolding', () => {
+  let root: string;
+  let home: string;
+  beforeAll(async () => {
+    root = makeTmpDir('archive-proj');
+    home = makeTmpDir('archive-home');
+    await init(root, { noLlm: true, home, ...DARWIN });
+  }, TEST_TIMEOUT);
+  afterAll(() => { cleanTmp(root); cleanTmp(home); });
+
+  it('creates archive/_index.md, register.md, and empty documents/ + types/', () => {
+    const archiveDir = path.join(root, '.cortex', 'archive');
+    expect(fs.existsSync(path.join(archiveDir, '_index.md'))).toBe(true);
+    expect(fs.existsSync(path.join(archiveDir, 'register.md'))).toBe(true);
+    expect(fs.statSync(path.join(archiveDir, 'documents')).isDirectory()).toBe(true);
+    expect(fs.statSync(path.join(archiveDir, 'types')).isDirectory()).toBe(true);
+    expect(fs.readdirSync(path.join(archiveDir, 'documents'))).toEqual([]);
+    expect(fs.readdirSync(path.join(archiveDir, 'types'))).toEqual([]);
+  });
+
+  it('archive/_index.md follows the §7.1 active-prompt shape', () => {
+    const content = fs.readFileSync(path.join(root, '.cortex', 'archive', '_index.md'), 'utf-8');
+    expect(content).toContain('Read this when:');
+    expect(content).toContain("What's here:");
+    expect(content).toContain('How to navigate:');
+  });
+
+  it('the project self-validates clean with the freshly-scaffolded (empty) archive module', async () => {
+    const report = await validate(root, { root });
+    const archiveViolations = report.violations.filter((v) => v.check.startsWith('check.archive'));
+    expect(archiveViolations).toEqual([]);
+  });
+
+  it('an existing register.md is never overwritten, even with --force (Rule 16)', async () => {
+    const registerPath = path.join(root, '.cortex', 'archive', 'register.md');
+    const curated = '# Archive register\n\n- curated-entry — hand-edited\n';
+    fs.writeFileSync(registerPath, curated);
+    await init(root, { noLlm: true, force: true, home, ...DARWIN });
+    expect(fs.readFileSync(registerPath, 'utf-8')).toBe(curated);
+  }, TEST_TIMEOUT);
 });
 
 // ---------------------------------------------------------------------------

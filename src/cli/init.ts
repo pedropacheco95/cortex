@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import * as readline from 'readline/promises';
 import { scan } from '../anatomy/scan.js';
 import { scaffoldInsight } from '../insight/scaffold.js';
+import { scaffoldArchive } from '../archive/scaffold.js';
 import { splitDataRowCells } from '../anatomy/files-md.js';
 import { validate } from '../schema/validate.js';
 // Rule 6 auth-failure detection, shared with the writer/verifier harness.
@@ -140,6 +141,13 @@ function writeSkeleton(root: string, force: boolean, nowIso: string): void {
   // Insight module (§4.10, §7.4) — committed, NOT gitignored. Creates
   // insight/_index.md + the empty flat map/; seeds no prose or JSON.
   scaffoldInsight(cortexDir);
+
+  // Archive module (§4.4, new at v3.0) — mixed git policy per-artefact within
+  // the module (Decision 1 v3.0 amendment; GITIGNORE_LINES carries the one
+  // gitignored sub-glob). Creates archive/_index.md + register.md + the empty
+  // documents/ and types/; seeds no document or type file (scaffoldArchive's
+  // own doc comment records this as a judgment call).
+  scaffoldArchive(cortexDir);
 }
 
 function readConfig(root: string): Record<string, unknown> {

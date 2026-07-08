@@ -1,0 +1,5 @@
+id: archive.sample-client-spec
+kind: client-spec
+ingested_at: 2026-01-08T00:00:00Z
+version: "1.0"
+status: active
