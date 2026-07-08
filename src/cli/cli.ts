@@ -21,7 +21,10 @@
  * with `cortex loop-anatomy-refresh --fast` as its identical design-§15
  * alias (spec anatomy.refresh-fast, Rule 1), and
  * `cortex loop-anatomy-refresh --deep [--collect|--apply <f>|--no-llm]`
- * (spec anatomy.refresh-deep, Rule 1), the code-writing test-runner loop
+ * (spec anatomy.refresh-deep, Rule 1), the inferred-map maintainer
+ * `cortex loop-insight-refresh [--collect|--apply <f>|--no-llm]`
+ * (spec insight.refresh-loop, Rule 1) — the JSON producer for
+ * `insight/map/{graph,tags,clusters}.json`, the code-writing test-runner loop
  * `cortex loop-test-runner [--tier ...|--trigger ...|--collect|`
  * `--fix-stage <f>|--no-llm]` with its design-§15 manual alias
  * `cortex test-run` (spec loops.test-runner, Rule 1), plus
@@ -254,6 +257,22 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'insight') {
     const { insightCli } = await import('../insight/cli.js');
     return insightCli(argv[1], argv.slice(2));
+  }
+
+  // `cortex loop-insight-refresh [--collect|--apply <file>|--no-llm]` — the
+  // inferred-map maintainer (insight.refresh-loop Rule 1; collect/judge/apply).
+  // Writes only insight/map/{graph,tags,clusters}.json + its watermark.
+  if (argv[0] === 'loop-insight-refresh') {
+    const flags = parseLoopFlags('loop-insight-refresh', argv.slice(1), '--apply', 'derivation');
+    if (flags === null) return 1;
+    try {
+      const { runRefresh } = await import('../insight/refresh.js');
+      const { file, ...rest } = flags;
+      return await runRefresh('.', { ...rest, ...(file !== undefined ? { applyFile: file } : {}) });
+    } catch (err) {
+      console.error(`cortex loop-insight-refresh: ${(err as Error).message}`);
+      return 1;
+    }
   }
 
   // `cortex constellation [--port N]` — localhost-only read-only renderer

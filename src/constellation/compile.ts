@@ -163,11 +163,14 @@ function compareEdges(a: ConstellationEdge, b: ConstellationEdge): number {
 }
 
 /**
- * Compile the constellation for `root` and write `.cortex/constellation.json`.
- * Deterministic modulo the `generated` line (Rule 7). Missing surfaces are
- * tolerated — they compile to empty groups, never errors (Rule 9).
+ * Assemble the constellation for `root` in memory — the pure node/edge/group
+ * emission path, WITHOUT writing `.cortex/constellation.json`. Shared with the
+ * insight refresh loop (spec insight.refresh-loop), which reuses this to borrow
+ * the exact §4.9 node set (same ids) for its inferred graph — node identity is
+ * a join with the constellation, not a re-derivation (§4.10.2). Deterministic
+ * modulo the `generated` line (Rule 7); missing surfaces tolerated (Rule 9).
  */
-export async function compile(root: string): Promise<Constellation> {
+export async function assembleConstellation(root: string): Promise<Constellation> {
   const absRoot = path.resolve(root);
 
   // schemaVersion from cortex.config.json (Rule 2); tolerant fallback.
@@ -527,6 +530,19 @@ export async function compile(root: string): Promise<Constellation> {
     edges,
     counters,
   };
+
+  return constellation;
+}
+
+/**
+ * Compile the constellation for `root` and write `.cortex/constellation.json`.
+ * The public entry (invoked by `cortex scan` after anatomy emission); the
+ * assembly is delegated to `assembleConstellation` so consumers that only need
+ * the node set (insight refresh) can borrow it without the side-effect write.
+ */
+export async function compile(root: string): Promise<Constellation> {
+  const absRoot = path.resolve(root);
+  const constellation = await assembleConstellation(absRoot);
 
   // WRITES `.cortex/constellation.json` — nothing else, ever.
   const cortexDir = path.join(absRoot, '.cortex');
