@@ -56,12 +56,16 @@ When the project has a `.cortex/` directory, read the knowledge layer before gen
    `.cortex/pulse/verification-report.md` — never `tests/verification-report.md`. The
    pulse directory is where transient process outputs live and where the scheduled
    specflow-verify loop expects to find it.
-5. **Insight leads (when `.cortex/insight/` exists).** Before generating, run
-   `cortex insight query testing` (or the spec's domain) to surface testing conventions
-   recorded in the ungated layer. Insight is **ungated/unreviewed** — the gated compass
-   rules and their `check:` predicates (step 1) still govern; treat any hit as a lead to
-   confirm against the gated layers (compass/atlas/`RULES.md`) before it drives a
-   decision, never as authoritative. Insight only supplements.
+5. **Insight queries (when `.cortex/insight/` exists).** Before generating tests, run
+   `cortex insight concept <name>` for the domain under test (e.g.
+   `cortex insight concept testing` for recorded testing conventions, plus the spec's
+   own domain concept) and `cortex insight file <path>` for each module being tested —
+   the per-file entry (purpose, main players, connections) tells generation agents
+   what to exercise without whole-file reads. Both support `--json`. Insight is
+   inferred context, not authority — the gated compass rules and their `check:`
+   predicates (step 1) and the specs still govern; they win on conflict. If
+   `.cortex/insight/` is absent or a query returns nothing, generate without it —
+   never block on missing insight.
 
 ## How It Works: Five Phases
 

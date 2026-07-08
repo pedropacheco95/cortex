@@ -28,22 +28,25 @@ When the project has a `.cortex/` directory:
 - **The sibling boundary (both directions).** This skill owns requirement-shaped
   sources: material that changes what the product should do becomes spec change
   proposals. The memory-shaped remainder — stakeholders, decisions, domain terms, and
-  the verbatim source itself — is NOT dropped: hand it off to the `cortex-ingest`
-  skill, which preserves the source under `.cortex/atlas/sources/` and extracts
-  schema-conformant atlas entries. Conversely, when `cortex-ingest` encounters
+  the verbatim source itself — is NOT dropped: hand it off to the
+  `cortex-archive-ingest` skill, which preserves the source under
+  `.cortex/archive/documents/<slug>/` and extracts schema-conformant atlas entries
+  via its atlas strategy. Conversely, when `cortex-archive-ingest` encounters
   requirement-shaped material, it hands off here.
 - **Business specs alongside atlas cross-references (design §8.4 bridge 2).** A
   manifest entry that proposes a new business spec also names the
-  `.cortex/atlas/decisions/` entry it corresponds to (created via the `cortex-ingest`
-  handoff), so the outcome ("what user outcome we serve") and the decision ("why we
+  `.cortex/atlas/decisions/` entry it corresponds to (created via the
+  `cortex-archive-ingest` handoff), so the outcome ("what user outcome we serve") and the decision ("why we
   chose this approach") cross-reference each other.
-- **Check the ungated layer before re-capturing (when `.cortex/insight/` exists).** When
-  routing a source, run `cortex insight query` on its topic to see whether the ungated
-  layer already covers the material — avoid re-capturing what the gaps loop already
-  recorded; stabilized insight graduates via the promotion path (v2 design §3.7), not by
-  re-ingest. Insight is **ungated/unreviewed** — treat any hit as a lead to confirm
-  against the gated layers (compass/atlas/`RULES.md`) before it drives a decision,
-  never as authoritative.
+- **Query insight before proposing spec changes (when `.cortex/insight/` exists).**
+  Before a manifest entry proposes changing a spec, run `cortex insight file <path>`
+  on the code the spec governs and `cortex insight concept <name>` on the concept the
+  document touches — check whether the proposed change contradicts how the code
+  actually works per insight. A contradiction doesn't veto the proposal (the document
+  may be right and the code wrong); record it on the manifest entry as a conflict for
+  the human to resolve. Insight is inferred context, not authority — the gated layers
+  (compass rules, specs) win on conflict. If `.cortex/insight/` is absent or a query
+  returns nothing, propose without it — never block on missing insight.
 
 ## How It Works: Six Phases
 

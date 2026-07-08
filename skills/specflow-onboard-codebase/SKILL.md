@@ -119,11 +119,15 @@ bridge 5), build from the scanned anatomy instead of re-walking the tree:
   Phases 6 and 8 is filed as `.cortex/compass/bugs/B-NNN-<slug>.md` with the
   seven-type frontmatter — never a root `bugs.md` deliverable — so the daily bug-triage
   loop finds them.
-- **`cortex insight` is the ungated complement to the scanned anatomy.** Onboarding
-  populates specs/anatomy; the insight loops populate `insight/` later, so a fresh
-  onboard has an empty `map/` and nothing to query yet. When it fills, insight is
-  **ungated/unreviewed** — confirm any `cortex insight` hit against the gated layers
-  (compass/atlas/`RULES.md`) before it drives a decision, never as authoritative.
+- **Insight coordination (when `.cortex/insight/` exists).** If the project already
+  carries an insight layer, consult it rather than re-deriving understanding: run
+  `cortex insight file <path>` for a file's rich entry and
+  `cortex insight concept <name>` for how a concept lives in the code, and delegate
+  deep reads only where the entries are missing or too thin. Insight is inferred
+  context, not authority — confirm it against the gated layers (compass rules, specs)
+  before it drives a classification. A fresh onboard typically has no insight yet —
+  proceed without it, never block on its absence; full coordination with the
+  `cortex-extract-insight` skill is future work.
 
 ## The Eight Phases
 

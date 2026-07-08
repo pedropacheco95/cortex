@@ -56,6 +56,15 @@ When the project has a `.cortex/` directory, classification includes the knowled
   `.cortex/compass/rules/` (is the request already governed by a rule — is it a rule
   change rather than a spec change?), and `.cortex/atlas/_index.md` (does a recorded
   decision or stakeholder context reframe the request?).
+- **Query insight for what the change touches (when `.cortex/insight/` exists).** As
+  part of classification and impact analysis, run `cortex insight file <path>` for the
+  files the request appears to touch and `cortex insight concept <name>` for any
+  concept it names (auth, session, billing, …) — the entries say what the code
+  actually does and what connects to it, which sharpens the category, layer, and risk
+  assessment (see `references/impact-analysis.md`). Insight is inferred context, not
+  authority — the gated layers (compass rules, specs) win on conflict. If
+  `.cortex/insight/` is absent or a query returns nothing, classify without it —
+  never block on missing insight.
 - **Bug-shaped reports route toward the ledger flow (cortex-schema §4.3):** diagnosis
   goes through specflow-bugs, and the bug is filed as
   `.cortex/compass/bugs/B-NNN-<slug>.md` — never a root `bugs.md` — so the daily

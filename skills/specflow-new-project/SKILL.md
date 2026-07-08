@@ -46,8 +46,9 @@ When the project has a `.cortex/` directory:
   the project root (cortex-schema §2), with `_overview.md` in every folder of both
   trees and `.specflow/specs/_index.md` as the engineering index — the layout the phases below
   produce.
-- **`insight/` scaffolds empty.** The `insight/` module fills over time via the
-  gaps/refresh loops — there is nothing to `cortex insight query` on a blank project.
+- **`insight/` scaffolds empty.** The `insight/` module fills when an extraction
+  runs (`cortex-extract-insight`) and stays current via the refresh loops — there is
+  nothing to `cortex insight file/concept/element` on a blank project.
   Name it as a module that populates later; when it does, insight is
   **ungated/unreviewed** — confirm any hit against the gated layers
   (compass/atlas/`RULES.md`) before it drives a decision.

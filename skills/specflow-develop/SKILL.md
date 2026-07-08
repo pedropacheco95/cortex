@@ -63,12 +63,18 @@ before planning or coding (skip this section cleanly when `.cortex/` is absent):
 4. **Atlas decisions.** Consult the `.cortex/atlas/decisions/` entries relevant to the
    touched domain — they record why the current approach was chosen; never undo a
    recorded decision silently.
-5. **Insight leads (when `.cortex/insight/` exists).** Before planning or coding, run
-   `cortex insight query <topic>` for the task's domain (setup / testing / conventions /
-   deploy prose) and `cortex insight neighbors <node-id>` for inferred related code.
-   Treat every hit as an ungated lead to confirm against anatomy/compass before it
-   drives a decision — never a gated rule. Insight is **ungated/unreviewed**; the gated
-   layers (compass/atlas/`RULES.md`) win.
+5. **Insight queries (when `.cortex/insight/` exists).** A first-class workflow step,
+   not a footnote — it recurs at Steps 1, 2a, and 4a below. Before writing code for ANY
+   file the plan will modify, run `cortex insight file <path>` — the rich per-file
+   entry (purpose, main players, connections) is the resume; still read the file
+   itself when modifying it, because modification needs exact syntax, not a summary.
+   Before cross-file changes that touch a concept (auth, session, billing, …), run
+   `cortex insight concept <name>`. For a specific function/class/constant, run
+   `cortex insight element <query>` — it may return "no rich entry" for elements not
+   surfaced as main players; those stay discoverable via the file entry. All three
+   support `--json`. Insight is inferred context, not authority — the gated layers
+   (compass rules, specs) win on conflict. If `.cortex/insight/` is absent or a query
+   returns nothing, proceed without it — never block on missing insight.
 6. **Validate before finishing.** Run `cortex validate` before reporting completion and
    resolve (or explicitly surface) anything it flags.
 7. **Gap documentation home (design §8.5).** Gap entries and the final gap report land
@@ -108,6 +114,13 @@ Children never escalate above the depth their parent set for them.
 ## The Recursive Flow
 
 ### Step 1: Explore
+
+**Insight first (all depths, when `.cortex/insight/` exists):** query
+`cortex insight file <path>` for each candidate file before deciding to read it — the
+entry answers "what is this file, is it relevant, what are its main pieces" more
+cheaply than a whole-file read. Read the file itself when you need exactness or are
+about to modify it. Insight is inferred context, not authority — gated layers win on
+conflict; if insight is absent or empty, explore without it.
 
 **Depth Minimal:** Read the single file to change. No exploration agents.
 
@@ -152,6 +165,12 @@ complete process at each scope level.
 Three sub-steps, adapted from the plan-feature pattern:
 
 #### 2a. Gap analysis
+
+When the planned change spans files or touches a named concept (auth, session,
+billing, …) and `.cortex/insight/` exists, run `cortex insight concept <name>` first —
+it says which files touch the concept and how it is implemented, so the gap analysis
+starts from how the code actually works rather than priors. Inferred context, not
+authority; skip cleanly when insight is absent or the query returns nothing.
 
 Compare what the specs require against what already exists:
 
@@ -212,6 +231,11 @@ Runs at the level that's small enough to implement directly.
 #### 4a. Implement spec code
 
 Write the minimum code that makes the failing tests pass.
+
+When `.cortex/insight/` exists: before modifying any file, run
+`cortex insight file <path>` — the entry is the resume; the read is for exactness
+(leaf agents query even when the parent already explored). Insight is inferred
+context, not authority — gated layers win; proceed if there is no entry.
 
 Rules:
 - Follow the coding conventions from RULES.md and project-specific coding skills
