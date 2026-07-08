@@ -27,9 +27,13 @@ exists only for humans at a terminal; it would spawn one).
    cites the session ids it was seen in.
    **Skip explicit memory-commit utterances** ("remember this", "commit this
    to memory", "this should be a rule", "remember this for next time") — these
-   are signal-5 territory, already routed same-day by `cortex-loop-insight-gaps`
-   with the user's own words; proposing them here would double-propose (v2
-   design §6).
+   are session-observation territory, routed same-day by
+   `cortex-loop-session-observe` with the user's own words; proposing them
+   here would double-propose. Don't pre-filter against insight yourself: the
+   deterministic propose half reads the per-file insight entries (v3
+   `insight/anatomy/**` and `insight/scopes/<s>/anatomy/**`, plus v2
+   `insight/map/` prose) and emits any candidate already captured there as a
+   `promotion` of that file — the graduation path, not a fresh rule-candidate.
 4. Write the candidates as a JSON array to a scratchpad file (your session
    scratchpad — never inside the project). Each candidate is exactly
    `{"pattern": string, "occurrences": number, "sessionIds": [string],

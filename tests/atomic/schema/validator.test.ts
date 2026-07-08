@@ -236,6 +236,77 @@ date: "2024-01-01"
   });
 });
 
+describe('check.atlas B-006: raw atlas/sources/ material is exempt from the id requirement; .meta.md sidecars are validated', () => {
+  let tmpDir: string;
+  beforeAll(() => { tmpDir = makeTmpFixture('atlas-sources'); });
+  afterAll(() => cleanup(tmpDir));
+
+  function sourcesDir(): string {
+    const dir = path.join(tmpDir, '.cortex', 'atlas', 'sources');
+    fs.mkdirSync(dir, { recursive: true });
+    return dir;
+  }
+
+  it('frontmatter-less raw file under atlas/sources/ validates clean', async () => {
+    const rawPath = path.join(sourcesDir(), 'client-call.md');
+    fs.writeFileSync(rawPath, '# Raw captured call notes\n\nVerbatim ingested content, no frontmatter by design.\n');
+    const report = await validate(tmpDir);
+    const v = report.violations.find((v) => v.check === 'check.atlas' && v.location.path === rawPath);
+    expect(v).toBeUndefined();
+    fs.unlinkSync(rawPath);
+  });
+
+  it('sidecar missing kind and captured → errors on both keys', async () => {
+    const metaPath = path.join(sourcesDir(), 'client-call.meta.md');
+    fs.writeFileSync(metaPath, `---
+id: source.client-call
+---
+
+Sidecar with only an id.
+`);
+    const report = await validate(tmpDir);
+    const kindV = report.violations.find((v) => v.check === 'check.atlas' && v.location.path === metaPath && v.location.key === 'kind');
+    const capturedV = report.violations.find((v) => v.check === 'check.atlas' && v.location.path === metaPath && v.location.key === 'captured');
+    expect(kindV).toBeDefined();
+    expect(kindV!.severity).toBe('error');
+    expect(capturedV).toBeDefined();
+    fs.unlinkSync(metaPath);
+  });
+
+  it('sidecar with valid id, kind, and captured passes clean', async () => {
+    const metaPath = path.join(sourcesDir(), 'client-call.meta.md');
+    fs.writeFileSync(metaPath, `---
+id: source.client-call
+kind: transcript
+captured: 2026-07-08T00:00:00Z
+origin: "weekly client sync"
+---
+
+Structured sidecar for the raw capture.
+`);
+    const report = await validate(tmpDir);
+    const v = report.violations.find((v) => v.check === 'check.atlas' && v.location.path === metaPath);
+    expect(v).toBeUndefined();
+    fs.unlinkSync(metaPath);
+  });
+
+  it('sidecar with a non-enum kind and a bad id shape → errors', async () => {
+    const metaPath = path.join(sourcesDir(), 'client-call.meta.md');
+    fs.writeFileSync(metaPath, `---
+id: not-a-source-id
+kind: carrier-pigeon
+captured: 2026-07-08
+---
+`);
+    const report = await validate(tmpDir);
+    const idV = report.violations.find((v) => v.check === 'check.atlas' && v.location.path === metaPath && v.location.key === 'id');
+    const kindV = report.violations.find((v) => v.check === 'check.atlas' && v.location.path === metaPath && v.location.key === 'kind');
+    expect(idV).toBeDefined();
+    expect(kindV).toBeDefined();
+    fs.unlinkSync(metaPath);
+  });
+});
+
 describe('check.pulse: pulse artefact missing kind → warning fires', () => {
   let tmpDir: string;
   beforeAll(() => { tmpDir = makeTmpFixture('pulse'); });

@@ -5,13 +5,13 @@ source:
   - ../../../cortex-schema.md
   - ../../../cortex-design.md
 governs:
-  - "specs/**/*.spec.md"
+  - ".specflow/specs/**/*.spec.md"
 related_specs:
   - schema.validator
 confidence: STATED
 check:
   kind: regex
-  applies_to: "specs/**/*.spec.md"
+  applies_to: ".specflow/specs/**/*.spec.md"
   pattern: "implements:\\s*\\n\\s*-\\s"
   expect: absent
 ---
