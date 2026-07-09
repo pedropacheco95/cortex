@@ -28,7 +28,10 @@
  * `--fix-stage <f>|--no-llm]` with its design-§15 manual alias
  * `cortex test-run` (spec loops.test-runner, Rule 1), plus
  * `cortex tasks rename` — the one-time legacy→scoped scheduled-task
- * migration (core-cli.task-scoping Rule 4).
+ * migration (core-cli.task-scoping Rule 4) — and `cortex tasks
+ * register|verify` — writing/verifying this project's fourteen entries in
+ * the Desktop app's scheduled-tasks.json registry (core-cli.tasks-register,
+ * B-009 option 1).
  */
 import { init } from './init.js';
 
@@ -383,6 +386,11 @@ export async function run(argv: string[]): Promise<number> {
   // `cortex tasks rename` — move legacy-named scheduled tasks in
   // ~/.claude/scheduled-tasks/ to this project's §9.1 scoped names
   // (core-cli.task-scoping Rule 4; idempotent, exit 0).
+  // `cortex tasks register|verify` — upsert this project's fourteen entries
+  // into the Desktop app's scheduled-tasks.json registry / verify them
+  // (core-cli.tasks-register Rules 1-9; B-009 option 1). The real home and
+  // app-support roots are supplied ONLY here — the functions take them as
+  // parameters so tests run against fixtures.
   if (argv[0] === 'tasks') {
     if (argv[1] === 'rename') {
       const { tasksRename } = await import('./task-scoping.js');
@@ -391,7 +399,22 @@ export async function run(argv: string[]): Promise<number> {
       console.log(result.output);
       return result.exitCode;
     }
-    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename`.');
+    if (argv[1] === 'register' || argv[1] === 'verify') {
+      const { registerTasks, verifyTasks } = await import('./tasks-register.js');
+      const os = await import('os');
+      const path = await import('path');
+      const home = os.homedir();
+      const opts = {
+        projectRoot: process.cwd(),
+        home,
+        appSupportDir: path.join(home, 'Library', 'Application Support', 'Claude'),
+      };
+      const result = argv[1] === 'register' ? registerTasks(opts) : verifyTasks(opts);
+      if (result.exitCode === 0) console.log(result.output);
+      else console.error(result.output);
+      return result.exitCode;
+    }
+    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|register|verify`.');
     return 1;
   }
 

@@ -3,6 +3,7 @@ id: core-cli.developer-runs-cortex-on-every-project
 status: implemented
 implemented_by:
   - ../../specs/core-cli/task-scoping.spec.md
+  - ../../specs/core-cli/tasks-register.spec.md
 ---
 
 # A developer runs Cortex on every project without the projects colliding
@@ -21,10 +22,11 @@ Developers running Cortex on more than one project — which is the intended nor
 2. Two projects with the same folder name coexist — the fingerprint keeps them distinct, the name keeps them readable.
 3. Re-running setup on one project recognises only that project's tasks; other projects' schedules are invisible to it.
 4. A project from before the scoping change runs one rename command; its tasks move to the scoped names and a report says exactly what moved.
+5. One register command makes each project's upkeep real in the scheduling app itself — setup alone only stages the task prompts — and one verify command confirms every task is still live, because app updates have silently wiped schedules before.
 
 ## Business Rules
 
-1. A project only ever creates, overwrites, or counts its own tasks — everyone else's are ignored.
+1. A project only ever creates, overwrites, or counts its own tasks — everyone else's are ignored. That holds in the scheduling app's own task list too: registering one project's upkeep never disturbs another project's entries or the user's own.
 2. Task names stay human-scannable: project name first, fingerprint second, task identity last.
 3. The rename is explicit, reported, and idempotent — run twice, the second run moves nothing.
 4. Renaming changes registration identity only; what each task actually runs is untouched.

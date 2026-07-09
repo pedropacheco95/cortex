@@ -171,7 +171,7 @@ describe('AC4: --partial recognises only its own project', () => {
     expect(result.exitCode).toBe(0);
     expect(result.summary).toContain('Scheduled tasks (--partial): 13 written');
     expect(result.summary).toContain('1 existing preserved');
-    expect(result.summary).toContain('14 loops registered');
+    expect(result.summary).toContain('14 loop payloads on disk');
   });
 
   it('the foreign entries and the unrelated user task are byte-untouched', () => {

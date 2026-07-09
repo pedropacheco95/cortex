@@ -47,6 +47,7 @@ Current edges (`A → depends on B`):
 - `hooks.pre-read-writeback` → `core-cli.init`, `anatomy.scanner`
 - `hooks.post-read` → `core-cli.init`, `anatomy.scanner`, `hooks.pre-read-writeback`
 - `core-cli.task-scoping` → `core-cli.init`
+- `core-cli.tasks-register` → `core-cli.init`, `core-cli.task-scoping`
 - `loops.test-runner` → `loops.writer-verifier`, `loops.bug-triage`, `schema.validator`, `core-cli.init`
 - `specflow.cortex-awareness` → `core-cli.init`, `schema.validator`
 
@@ -96,3 +97,4 @@ Following the design doc's §16.2 implementation order:
 8. Skill integrations — shipped (the `cortex insight` enrichment pass across the specflow-* skills)
 9. Ingestion re-home — shipped (`cortex-ingest` folded into `cortex-archive-ingest` as the atlas extraction strategy)
 10. Constellation insight preset — deferred (design §11 Q2 open; not built)
+11. `core-cli.tasks-register` — implemented (B-009 resolution: real Desktop-app registry registration + verify)

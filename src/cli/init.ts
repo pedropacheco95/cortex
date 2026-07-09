@@ -597,12 +597,12 @@ function installGitHook(root: string): 'created' | 'appended' | 'already-install
 // Rules 13 & 17 — Desktop scheduled tasks (Rule 17: --partial skill gating)
 // ---------------------------------------------------------------------------
 
-interface TaskSkillGap {
+export interface TaskSkillGap {
   task: string;
   missingSkills: string[];
 }
 
-interface ScheduledTasksResult {
+export interface ScheduledTasksResult {
   written: number;
   preserved: number;
   /** Rule 17 (--partial): tasks not registered because a required skill is absent. */
@@ -621,7 +621,14 @@ function missingRequiredSkills(root: string, requiredSkills: string[]): string[]
   });
 }
 
-function writeScheduledTasks(home: string, force: boolean, root: string, partial: boolean): ScheduledTasksResult {
+/**
+ * Write the SKILL.md prompt PAYLOADS under `~/.claude/scheduled-tasks/` (and
+ * remove this project's retired scoped dirs). Payloads are NOT registration
+ * (B-009): the Desktop app never scans this directory — `cortex tasks
+ * register` (tasks-register.ts, which reuses this writer) upserts the app's
+ * own `scheduled-tasks.json` registry.
+ */
+export function writeScheduledTasks(home: string, force: boolean, root: string, partial: boolean): ScheduledTasksResult {
   const baseDir = path.join(home, '.claude', 'scheduled-tasks');
   let written = 0;
   let preserved = 0;
@@ -772,10 +779,10 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
       break;
   }
   if (partial) {
-    // Rule 17 summary: "N loops registered", each skipped task named with its missing skill.
+    // Rule 17 summary: "N loop payloads written", each skipped task named with its missing skill.
     const registered = SCHEDULED_TASKS.length - tasks.skipped.length;
     lines.push(
-      `Scheduled tasks (--partial): ${tasks.written} written to ${path.join(home, '.claude', 'scheduled-tasks')}${tasks.preserved > 0 ? `, ${tasks.preserved} existing preserved` : ''} — ${registered} loop${registered === 1 ? '' : 's'} registered${registered === 0 ? ' (skills not present)' : ''}.`,
+      `Scheduled tasks (--partial): ${tasks.written} written to ${path.join(home, '.claude', 'scheduled-tasks')}${tasks.preserved > 0 ? `, ${tasks.preserved} existing preserved` : ''} — ${registered} loop payload${registered === 1 ? '' : 's'} on disk${registered === 0 ? ' (skills not present)' : ''}.`,
     );
     for (const gap of tasks.skipped) {
       lines.push(`  Skipped task "${gap.task}" — missing skill ${gap.missingSkills.map((s) => `"${s}"`).join(', ')} (not in .claude/skills/).`);
@@ -785,11 +792,11 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
       `Scheduled tasks: ${tasks.written} written to ${path.join(home, '.claude', 'scheduled-tasks')}${tasks.preserved > 0 ? `, ${tasks.preserved} existing preserved` : ''} (${SCHEDULED_TASKS.length} total).`,
     );
     if (tasks.lacking.length > 0) {
-      // Rule 17 (default mode): warn which registered tasks currently lack their skill.
+      // Rule 17 (default mode): warn which written tasks currently lack their skill.
       lines.push(
-        `Warning: ${tasks.lacking.length} registered task(s) currently lack their skill in .claude/skills/: ` +
+        `Warning: ${tasks.lacking.length} written task(s) currently lack their skill in .claude/skills/: ` +
           tasks.lacking.map((gap) => `${gap.task} (needs ${gap.missingSkills.join(', ')})`).join(', ') +
-          '. They will degrade politely when they fire; run `cortex init --partial` to register only tasks whose skills are present.',
+          '. They will degrade politely when they fire; run `cortex init --partial` to write only tasks whose skills are present.',
       );
     }
   }
@@ -809,7 +816,11 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   } else {
     lines.push(`Spec trees: existing ${SPECS_REL}/ and ${BUSINESS_REL}/ left untouched.`);
   }
-  lines.push('Reminder: open the Claude Desktop app to confirm the scheduled task cadences.');
+  // B-009: payloads on disk are NOT registration — the Desktop app polls its
+  // own registry, which `cortex tasks register` writes.
+  lines.push(
+    'Reminder: task payloads are not yet registered with the Claude Desktop app — run `cortex tasks register` to write its registry (cadences applied from the canonical table) and `cortex tasks verify` to confirm.',
+  );
 
   if (errors.length > 0) {
     lines.push(`Self-validation: FAILED — ${errors.length} violation(s):`);

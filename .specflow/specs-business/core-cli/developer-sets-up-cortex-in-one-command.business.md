@@ -9,7 +9,7 @@ implemented_by:
 
 ## Outcome
 
-When this works, a developer points Cortex at a project, runs a single command, and walks away with a working knowledge layer: the code is mapped with a purpose line for every file, the project's conventions have a first draft, the assistant knows where everything lives from its very next session, safety nets are switched on, and the routine upkeep is scheduled. Setup is a minute of waiting, not an afternoon of wiring.
+When this works, a developer points Cortex at a project, runs a single command, and walks away with a working knowledge layer: the code is mapped with a purpose line for every file, the project's conventions have a first draft, the assistant knows where everything lives from its very next session, safety nets are switched on, and the routine upkeep is staged — one named follow-up command away from live. Setup is a minute of waiting, not an afternoon of wiring.
 
 ## Who this is for
 
@@ -20,8 +20,8 @@ Developers and freelancers bringing a project — new or existing — under Cort
 1. The developer opens a terminal in the project and runs the setup command.
 2. Cortex prepares its home in the project, maps the code, and fills in a description for every file — asking the assistant for help only on files the code itself doesn't explain.
 3. Cortex drafts a first pass at the project's conventions from what the project already declares about itself, marked for the developer's review.
-4. Cortex points the assistant at the knowledge layer, switches on the safety nets, and schedules the routine upkeep.
-5. The developer reads a summary naming everything that was set up or changed, plus the one manual confirmation left to do (approving the upkeep schedule in the desktop app).
+4. Cortex points the assistant at the knowledge layer, switches on the safety nets, and stages the routine upkeep's task prompts.
+5. The developer reads a summary naming everything that was set up or changed, plus the one follow-up left to do: running the register command that activates the staged upkeep in the scheduling app (and the verify command that confirms it took).
 6. If the project has no specifications yet, Cortex prepares the empty structure and recommends the guided way to fill it — it does not start that heavier work on its own.
 
 ## Business Rules
@@ -41,9 +41,9 @@ Developers and freelancers bringing a project — new or existing — under Cort
 ## Out of Scope
 
 - Filling the specification trees with content — that is a guided, deliberate activity, recommended but never auto-started by setup.
-- The ongoing upkeep itself — setup schedules it; the upkeep is its own outcome.
+- The ongoing upkeep itself — setup stages it and the register command activates it (`developer-runs-cortex-on-every-project`); the upkeep is its own outcome.
 - Non-code project knowledge (transcripts, briefs) — ingesting those is a separate outcome.
 
 ## Notes
 
-- The "one manual confirmation" (approving the upkeep schedule in the desktop app) exists because the desktop app owns that setting; setup prepares everything and reminds the developer.
+- The "one follow-up command" exists because the desktop app owns the real schedule registry and offers no supported way for setup to write it; setup prepares everything, and the summary names the register/verify pair that finishes the job (B-009 correction — the earlier "approve the schedule in the desktop app" confirmation described a flow the app never had).

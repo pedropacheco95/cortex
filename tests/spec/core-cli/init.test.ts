@@ -512,8 +512,8 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
     expect(claudeMd).toContain('<!-- cortex:end -->');
   });
 
-  it('summary states "14 loops registered" and skips nothing — the packaged skills cover every task', () => {
-    expect(result.summary).toContain('14 loops registered');
+  it('summary states "14 loop payloads on disk" and skips nothing — the packaged skills cover every task', () => {
+    expect(result.summary).toContain('14 loop payloads on disk');
     const skippedTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => PACKAGED_LOOP_SKILLS.includes(s)),
     );
@@ -551,7 +551,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
     expect(fs.readdirSync(base).sort()).toEqual(expected);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-lint'), 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-verify'), 'SKILL.md'))).toBe(true);
-    expect(result.summary).toContain('14 loops registered');
+    expect(result.summary).toContain('14 loop payloads on disk');
   });
 
   it('no task is skipped — every required skill is packaged', () => {
