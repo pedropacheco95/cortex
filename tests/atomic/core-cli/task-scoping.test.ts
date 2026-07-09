@@ -11,6 +11,7 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 import {
   CANONICAL_TASK_NAMES,
+  RETIRED_CANONICAL_TASK_NAMES,
   legacyTaskNames,
   projectTaskSlug,
   projectTaskHash,
@@ -25,26 +26,16 @@ import {
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
-/** The fourteen registered canonical task names, pinned verbatim (v3: the v2
- *  insight pair is deregistered; the daily/full insight-refresh tiers and
- *  session-observe (build-order-v3 step 6) register; the fast tier is the
- *  git hook, never a scheduled task; anatomy-refresh-deep deregistered at
- *  step 7, bringing the roster to the schema §9.1 fourteen). */
+/** The five registered canonical bundle names, pinned verbatim (v3.0
+ *  consolidation: the fourteen standalone loop registrations collapse into
+ *  five bundles — schema §9.1; skill-suggest retired outright, its lens
+ *  folded into pulse-distil). */
 const CANONICALS = [
-  'cortex-pulse-hygiene',
-  'cortex-pulse-distil',
-  'cortex-loop-skill-suggest',
-  'cortex-loop-rule-decay',
-  'cortex-loop-atlas-staleness',
-  'cortex-loop-onboarding-drift',
-  'cortex-loop-spec-drift',
-  'specflow-lint',
-  'specflow-verify',
-  'cortex-loop-test-runner',
-  'cortex-loop-bug-triage',
-  'cortex-loop-insight-refresh-daily',
-  'cortex-loop-insight-refresh-full',
-  'cortex-loop-session-observe',
+  'daily',
+  'weekly-curation',
+  'weekly-quality',
+  'test-runner',
+  'monthly-review',
 ];
 
 // ---------------------------------------------------------------------------
@@ -105,18 +96,16 @@ describe('projectTaskHash: SHA256-of-absolute-path first 6 hex', () => {
 // ---------------------------------------------------------------------------
 describe('scopedTaskName: <slug>-<canonical> (plain default form)', () => {
   it('assembles slug and canonical name, no hash', () => {
-    expect(scopedTaskName('/tmp/My Project', 'cortex-pulse-hygiene')).toBe(
-      'my-project-cortex-pulse-hygiene',
-    );
-    expect(scopedTaskName('/tmp/cortex', 'cortex-pulse-hygiene')).toBe('cortex-cortex-pulse-hygiene');
+    expect(scopedTaskName('/tmp/My Project', 'daily')).toBe('my-project-daily');
+    expect(scopedTaskName('/tmp/cortex', 'daily')).toBe('cortex-daily');
   });
 });
 
 describe('hashScopedTaskName: <slug>-<hash6>-<canonical> (collision fallback / legacy grammar)', () => {
   it('assembles slug, hash, and canonical name in order', () => {
     const root = '/tmp/My Project';
-    expect(hashScopedTaskName(root, 'cortex-pulse-hygiene')).toBe(
-      `my-project-${projectTaskHash(root)}-cortex-pulse-hygiene`,
+    expect(hashScopedTaskName(root, 'daily')).toBe(
+      `my-project-${projectTaskHash(root)}-daily`,
     );
   });
 });
@@ -132,8 +121,8 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
   it('plain dir absent → plain name', () => {
     const base = makeTmpDir('ts-res-absent');
     try {
-      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
-        'api-cortex-pulse-hygiene',
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'daily')).toBe(
+        'api-daily',
       );
     } finally {
       cleanTmp(base);
@@ -143,12 +132,12 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
   it('plain dir marker-owned by this project → plain name', () => {
     const base = makeTmpDir('ts-res-ours');
     try {
-      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      const dir = path.join(base, 'api-daily');
       fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-cortex-pulse-hygiene', '/tmp/work/api'), 'utf-8');
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-daily', '/tmp/work/api'), 'utf-8');
       expect(taskDirProjectRoot(dir)).toBe('/tmp/work/api');
-      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
-        'api-cortex-pulse-hygiene',
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'daily')).toBe(
+        'api-daily',
       );
     } finally {
       cleanTmp(base);
@@ -158,11 +147,11 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
   it('plain dir marker-owned by a DIFFERENT project → hash fallback', () => {
     const base = makeTmpDir('ts-res-foreign');
     try {
-      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      const dir = path.join(base, 'api-daily');
       fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-cortex-pulse-hygiene', '/tmp/personal/api'), 'utf-8');
-      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
-        hashScopedTaskName('/tmp/work/api', 'cortex-pulse-hygiene'),
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-daily', '/tmp/personal/api'), 'utf-8');
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'daily')).toBe(
+        hashScopedTaskName('/tmp/work/api', 'daily'),
       );
     } finally {
       cleanTmp(base);
@@ -172,15 +161,15 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
   it('plain dir without a marker (or without a SKILL.md) is claimed as ours — no positive mismatch, no fallback', () => {
     const base = makeTmpDir('ts-res-unmarked');
     try {
-      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      const dir = path.join(base, 'api-daily');
       fs.mkdirSync(dir, { recursive: true });
       expect(taskDirProjectRoot(dir)).toBeUndefined();
-      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
-        'api-cortex-pulse-hygiene',
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'daily')).toBe(
+        'api-daily',
       );
-      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-cortex-pulse-hygiene'), 'utf-8');
-      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
-        'api-cortex-pulse-hygiene',
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-daily'), 'utf-8');
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'daily')).toBe(
+        'api-daily',
       );
     } finally {
       cleanTmp(base);
@@ -196,26 +185,17 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
     expect(Object.keys(CANONICAL_TASK_NAMES).sort()).toEqual(SCHEDULED_TASKS.map((t) => t.name).sort());
   });
 
-  it('its values are exactly the fourteen §9.1 canonical names', () => {
+  it('its values are exactly the five §9.1 canonical bundle names', () => {
     expect(Object.values(CANONICAL_TASK_NAMES).sort()).toEqual([...CANONICALS].sort());
   });
 
-  it('pins each id→canonical row verbatim', () => {
+  it('pins each id→canonical row verbatim (bundle ids ARE their canonical names)', () => {
     expect(CANONICAL_TASK_NAMES).toEqual({
-      'hygiene': 'cortex-pulse-hygiene',
-      'distil': 'cortex-pulse-distil',
-      'skill-suggest': 'cortex-loop-skill-suggest',
-      'rule-decay': 'cortex-loop-rule-decay',
-      'atlas-staleness': 'cortex-loop-atlas-staleness',
-      'onboarding-drift': 'cortex-loop-onboarding-drift',
-      'spec-drift': 'cortex-loop-spec-drift',
-      'specflow-lint': 'specflow-lint',
-      'specflow-verify': 'specflow-verify',
-      'test-runner': 'cortex-loop-test-runner',
-      'bug-triage': 'cortex-loop-bug-triage',
-      'insight-refresh-daily': 'cortex-loop-insight-refresh-daily',
-      'insight-refresh-full': 'cortex-loop-insight-refresh-full',
-      'session-observe': 'cortex-loop-session-observe',
+      'daily': 'daily',
+      'weekly-curation': 'weekly-curation',
+      'weekly-quality': 'weekly-quality',
+      'test-runner': 'test-runner',
+      'monthly-review': 'monthly-review',
     });
   });
 });
@@ -224,16 +204,53 @@ describe('CANONICAL_TASK_NAMES: internal-id→canonical map (schema §9.1)', () 
 // legacyTaskNames — both unscoped families
 // ---------------------------------------------------------------------------
 describe('legacyTaskNames: the internal short ids AND the unscoped canonical names', () => {
-  it('contains every internal id and every canonical name, deduped (26 total)', () => {
+  it('contains every internal id and every canonical name, deduped (5 total — ids and canonicals coincide)', () => {
     for (const id of Object.keys(CANONICAL_TASK_NAMES)) {
       expect(legacyTaskNames, id).toContain(id);
     }
     for (const canonical of CANONICALS) {
       expect(legacyTaskNames, canonical).toContain(canonical);
     }
-    // 14 ids + 14 canonicals − 2 shared (specflow-lint, specflow-verify).
+    // 5 ids + 5 canonicals, all shared (the bundle grammar has no separate short id).
     expect(new Set(legacyTaskNames).size).toBe(legacyTaskNames.length);
-    expect(legacyTaskNames).toHaveLength(26);
+    expect(legacyTaskNames).toHaveLength(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RETIRED_CANONICAL_TASK_NAMES — both retirement generations, pinned verbatim
+// ---------------------------------------------------------------------------
+describe('RETIRED_CANONICAL_TASK_NAMES: pre-v3 deregistrations + the fourteen superseded standalones', () => {
+  it('pins the pre-v3 trio and ALL fourteen pre-consolidation loop canonicals', () => {
+    expect([...RETIRED_CANONICAL_TASK_NAMES].sort()).toEqual(
+      [
+        // (a) pre-v3 deregistrations.
+        'cortex-loop-insight-refresh',
+        'cortex-loop-insight-gaps',
+        'cortex-loop-anatomy-refresh-deep',
+        // (b) the fourteen standalone loop canonicals, superseded by the five bundles.
+        'cortex-pulse-hygiene',
+        'cortex-pulse-distil',
+        'cortex-loop-skill-suggest',
+        'cortex-loop-rule-decay',
+        'cortex-loop-atlas-staleness',
+        'cortex-loop-onboarding-drift',
+        'cortex-loop-spec-drift',
+        'specflow-lint',
+        'specflow-verify',
+        'cortex-loop-test-runner',
+        'cortex-loop-bug-triage',
+        'cortex-loop-insight-refresh-daily',
+        'cortex-loop-insight-refresh-full',
+        'cortex-loop-session-observe',
+      ].sort(),
+    );
+  });
+
+  it('never overlaps the live canonical set', () => {
+    for (const retired of RETIRED_CANONICAL_TASK_NAMES) {
+      expect(Object.values(CANONICAL_TASK_NAMES), retired).not.toContain(retired);
+    }
   });
 });
 
@@ -264,18 +281,18 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
   it("with a tasksDir, rejects a same-slug plain name whose marker names another project's root", () => {
     const base = makeTmpDir('ts-own-marker');
     try {
-      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      const dir = path.join(base, 'api-daily');
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(
         path.join(dir, 'SKILL.md'),
-        `---\nname: api-cortex-pulse-hygiene\n---\n\n<!-- cortex-project-root: ${other} -->\n\nbody\n`,
+        `---\nname: api-daily\n---\n\n<!-- cortex-project-root: ${other} -->\n\nbody\n`,
         'utf-8',
       );
-      expect(isOwnScopedTask(root, 'api-cortex-pulse-hygiene', base)).toBe(false);
-      expect(isOwnScopedTask(other, 'api-cortex-pulse-hygiene', base)).toBe(true);
+      expect(isOwnScopedTask(root, 'api-daily', base)).toBe(false);
+      expect(isOwnScopedTask(other, 'api-daily', base)).toBe(true);
       // Unmarked plain dirs stay claimable (no positive mismatch).
       fs.rmSync(path.join(dir, 'SKILL.md'));
-      expect(isOwnScopedTask(root, 'api-cortex-pulse-hygiene', base)).toBe(true);
+      expect(isOwnScopedTask(root, 'api-daily', base)).toBe(true);
     } finally {
       cleanTmp(base);
     }
@@ -283,16 +300,16 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
 
   it('rejects prefix-colliding user tasks whose suffix is not a canonical name', () => {
     expect(isOwnScopedTask(root, `${prefix}daily-report`)).toBe(false);
-    expect(isOwnScopedTask(root, `${prefix}cortex-pulse-hygiene-mine`)).toBe(false);
-    expect(isOwnScopedTask(root, `${prefix}hygiene`)).toBe(false); // internal id is not a canonical suffix
+    expect(isOwnScopedTask(root, `${prefix}daily-mine`)).toBe(false);
+    expect(isOwnScopedTask(root, `${prefix}weekly`)).toBe(false); // partial canonical is not a canonical suffix
     expect(isOwnScopedTask(root, prefix)).toBe(false); // empty suffix
     expect(isOwnScopedTask(root, 'api-daily-report')).toBe(false); // plain prefix, unknown suffix
-    expect(isOwnScopedTask(root, 'api-hygiene')).toBe(false); // internal id is not a canonical suffix
+    expect(isOwnScopedTask(root, 'api-weekly')).toBe(false); // partial canonical is not a canonical suffix
   });
 
   it('rejects unscoped legacy names and non-Cortex entries', () => {
     expect(isOwnScopedTask(root, 'hygiene')).toBe(false);
-    expect(isOwnScopedTask(root, 'cortex-pulse-hygiene')).toBe(false);
+    expect(isOwnScopedTask(root, 'daily')).toBe(false);
     expect(isOwnScopedTask(root, 'daily-report')).toBe(false);
     expect(isOwnScopedTask(root, '')).toBe(false);
   });
@@ -318,13 +335,13 @@ describe('tasksRename: mechanics', () => {
     const root = makeTmpDir('ts-tr-canon-root');
     try {
       const base = path.join(home, '.claude', 'scheduled-tasks');
-      const src = path.join(base, 'cortex-loop-test-runner');
+      const src = path.join(base, 'test-runner');
       fs.mkdirSync(src, { recursive: true });
       const tail = '\ndescription: "Run the cascade."\n---\n\n# test-runner\n\nInvoke the `cortex-loop-test-runner` skill.\n';
-      fs.writeFileSync(path.join(src, 'SKILL.md'), `---\nname: cortex-loop-test-runner${tail}`, 'utf-8');
+      fs.writeFileSync(path.join(src, 'SKILL.md'), `---\nname: test-runner${tail}`, 'utf-8');
 
       const r = tasksRename(home, root);
-      const scoped = scopedTaskName(root, 'cortex-loop-test-runner');
+      const scoped = scopedTaskName(root, 'test-runner');
       expect(r.exitCode).toBe(0);
       expect(fs.existsSync(src)).toBe(false);
       // Only the name: line changed and the marker was inserted after the
@@ -333,7 +350,7 @@ describe('tasksRename: mechanics', () => {
       expect(fs.readFileSync(path.join(base, scoped, 'SKILL.md'), 'utf-8')).toBe(
         `---\nname: ${scoped}${head}---\n\n<!-- cortex-project-root: ${path.resolve(root)} -->\n${body}`,
       );
-      expect(r.output).toContain(`Renamed "cortex-loop-test-runner" -> "${scoped}".`);
+      expect(r.output).toContain(`Renamed "test-runner" -> "${scoped}".`);
     } finally {
       cleanTmp(home); cleanTmp(root);
     }
@@ -344,16 +361,16 @@ describe('tasksRename: mechanics', () => {
     const root = makeTmpDir('ts-mig-root');
     try {
       const base = path.join(home, '.claude', 'scheduled-tasks');
-      const legacy = hashScopedTaskName(root, 'cortex-pulse-hygiene');
+      const legacy = hashScopedTaskName(root, 'daily');
       fs.mkdirSync(path.join(base, legacy), { recursive: true });
       const tail = '\ndescription: "Nightly."\n---\n\n# hygiene\n\nInvoke the `cortex-pulse-hygiene` skill.\n';
       fs.writeFileSync(path.join(base, legacy, 'SKILL.md'), `---\nname: ${legacy}${tail}`, 'utf-8');
       // A foreign project's hash-scoped dir must never move.
-      const foreign = hashScopedTaskName('/some/other/project', 'cortex-pulse-hygiene');
+      const foreign = hashScopedTaskName('/some/other/project', 'daily');
       fs.mkdirSync(path.join(base, foreign), { recursive: true });
 
       const lines = migrateHashScopedTaskDirs(home, root);
-      const plain = scopedTaskName(root, 'cortex-pulse-hygiene');
+      const plain = scopedTaskName(root, 'daily');
       expect(lines).toContain(`Renamed "${legacy}" -> "${plain}".`);
       expect(fs.existsSync(path.join(base, legacy))).toBe(false);
       expect(fs.existsSync(path.join(base, foreign))).toBe(true);
@@ -377,7 +394,7 @@ describe('tasksRename: mechanics', () => {
       fs.mkdirSync(rootB, { recursive: true });
       const base = path.join(home, '.claude', 'scheduled-tasks');
       // Project A owns the plain name.
-      const plain = scopedTaskName(rootA, 'cortex-pulse-hygiene');
+      const plain = scopedTaskName(rootA, 'daily');
       fs.mkdirSync(path.join(base, plain), { recursive: true });
       fs.writeFileSync(
         path.join(base, plain, 'SKILL.md'),
@@ -385,7 +402,7 @@ describe('tasksRename: mechanics', () => {
         'utf-8',
       );
       // Project B (same slug) has a legacy hash dir.
-      const legacyB = hashScopedTaskName(rootB, 'cortex-pulse-hygiene');
+      const legacyB = hashScopedTaskName(rootB, 'daily');
       fs.mkdirSync(path.join(base, legacyB), { recursive: true });
       fs.writeFileSync(path.join(base, legacyB, 'SKILL.md'), `---\nname: ${legacyB}\n---\n\nbody\n`, 'utf-8');
 
@@ -402,11 +419,11 @@ describe('tasksRename: mechanics', () => {
     const root = makeTmpDir('ts-tr-bare-root');
     try {
       const base = path.join(home, '.claude', 'scheduled-tasks');
-      fs.mkdirSync(path.join(base, 'distil'), { recursive: true });
+      fs.mkdirSync(path.join(base, 'weekly-curation'), { recursive: true });
       const r = tasksRename(home, root);
       expect(r.exitCode).toBe(0);
-      expect(fs.existsSync(path.join(base, 'distil'))).toBe(false);
-      expect(fs.existsSync(path.join(base, scopedTaskName(root, 'cortex-pulse-distil')))).toBe(true);
+      expect(fs.existsSync(path.join(base, 'weekly-curation'))).toBe(false);
+      expect(fs.existsSync(path.join(base, scopedTaskName(root, 'weekly-curation')))).toBe(true);
     } finally {
       cleanTmp(home); cleanTmp(root);
     }
@@ -419,9 +436,10 @@ describe('tasksRename: mechanics', () => {
       const base = path.join(home, '.claude', 'scheduled-tasks');
       const strangers = [
         'daily-report',
-        'hygienic', // near-miss of "hygiene"
-        'cortex-pulse-hygiene-extra', // canonical prefix, unknown name
-        scopedTaskName('/some/other/project', 'cortex-pulse-hygiene'), // already scoped (foreign)
+        'dailyish', // near-miss of "daily"
+        'daily-extra', // canonical prefix, unknown name
+        'cortex-pulse-hygiene-mine', // retired-canonical prefix, unknown name
+        scopedTaskName('/some/other/project', 'daily'), // already scoped (foreign)
       ];
       for (const name of strangers) {
         fs.mkdirSync(path.join(base, name), { recursive: true });
@@ -445,11 +463,11 @@ describe('tasksRename: mechanics', () => {
     try {
       const base = path.join(home, '.claude', 'scheduled-tasks');
       fs.mkdirSync(base, { recursive: true });
-      fs.writeFileSync(path.join(base, 'hygiene'), 'not a task dir\n', 'utf-8');
+      fs.writeFileSync(path.join(base, 'daily'), 'not a task dir\n', 'utf-8');
       const r = tasksRename(home, root);
       expect(r.exitCode).toBe(0);
       expect(r.output).toBe('Nothing to rename.');
-      expect(fs.readFileSync(path.join(base, 'hygiene'), 'utf-8')).toBe('not a task dir\n');
+      expect(fs.readFileSync(path.join(base, 'daily'), 'utf-8')).toBe('not a task dir\n');
     } finally {
       cleanTmp(home); cleanTmp(root);
     }

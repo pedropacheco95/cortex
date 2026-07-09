@@ -12,7 +12,7 @@
 - `hooks/` — Claude Code hooks and the git post-commit hook
 - `scaffolding/` — CLAUDE.md and `_index.md` prompt templates
 - `pulse/` — the Hygiene and Distil self-maintenance loops
-- `loops/` — the thirteen Cortex loops and shared loop infrastructure
+- `loops/` — the Cortex loops and shared loop infrastructure (scheduled as five task bundles; `loops.skill-suggest` superseded — folded into `pulse.distil`)
 - `constellation/` — the read-only graph compiler and renderer
 - `specflow/` — the absorbed spec-and-test lineage
 - `insight/` — the ungated codebase-understanding layer (v3: L1 pass, storage contract, query CLI, extraction skill, refresh loops, session-observe)
@@ -39,7 +39,7 @@ Current edges (`A → depends on B`):
 - `loops.rule-decay` / `loops.atlas-staleness` / `loops.onboarding-drift` → `core-cli.init`, `schema.validator`
 - `loops.spec-drift` → `core-cli.init`, `schema.validator`, `anatomy.scanner`
 - `pulse.distil` → `loops.session-reading`, `pulse.review-cli`, `core-cli.init`
-- `loops.skill-suggest` → `loops.session-reading`, `pulse.review-cli`, `pulse.distil`
+- `loops.skill-suggest` → (SUPERSEDED — retired as a standalone loop; its workflow-mining lens folded into `pulse.distil`; spec retained for lineage)
 - `loops.bug-triage` → `core-cli.init`, `schema.validator`, `pulse.review-cli`
 - `loops.lint-scheduled` / `loops.verify-scheduled` → `schema.validator`, `core-cli.init`
 - `anatomy.refresh-fast` → `anatomy.scanner`, `core-cli.init`
@@ -76,7 +76,7 @@ Following the design doc's §16.2 implementation order:
 9. `loops.session-reading` — implemented
 10. `loops.writer-verifier` — implemented
 11. `pulse.hygiene`, `loops.rule-decay`, `loops.atlas-staleness`, `loops.onboarding-drift`, `loops.spec-drift` — implemented
-12. `pulse.distil`, `loops.skill-suggest` — implemented
+12. `pulse.distil` — implemented (now also carrying the skill lens); `loops.skill-suggest` — SUPERSEDED (retired as a standalone loop; folded into `pulse.distil`, spec retained for lineage)
 13. `loops.bug-triage`, `loops.lint-scheduled`, `loops.verify-scheduled` — implemented
 14. `anatomy.refresh-fast`, `anatomy.refresh-deep` — implemented
 15. `hooks.pre-read-writeback`, `hooks.post-read` — implemented (design §16.2 step 27)

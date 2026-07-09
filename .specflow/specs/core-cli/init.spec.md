@@ -41,11 +41,11 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 10. **CLAUDE.md managed block (schema §8).** Insert or update the `<!-- cortex:start -->…<!-- cortex:end -->` block, creating `CLAUDE.md` if absent. Content outside the markers is never modified. Re-running updates only the block (idempotent).
 11. **Hooks registration (schema §5).** Merge the hook entries into `.claude/settings.json`, creating it if absent and preserving all unrelated keys. The PreRead hook entry is written iff `cortex.config.json` `hooks.preRead` is true. The result must satisfy `check.hook-config`.
 12. **Git post-commit hook.** If the project is a git repo: install the anatomy-refresh-fast invocation into `.git/hooks/post-commit`, **appending** to an existing hook file rather than replacing it (and making it executable). If not a git repo: skip with a notice.
-13. **Desktop scheduled-task payloads (design §13 step 12; corrected by B-009).** Write one `~/.claude/scheduled-tasks/<scoped-task-name>/SKILL.md` per scheduled loop — names project-scoped per schema §9.1 and `core-cli.task-scoping` (slug + path-hash + canonical task name; recognition, preserve, and overwrite logic all match only this project's prefix) — the fourteen of schema §9.1 at 3.0 — each `name`/`description` frontmatter plus the prompt body per schema §9-adjacent conventions. **These SKILL.md directories are prompt payloads only, not registration**: the Desktop app never scans `~/.claude/scheduled-tasks/` — its registry is its own in-memory-per-launch `scheduled-tasks.json`. Registration happens **in a Claude Desktop session via the `cortex-register-tasks` skill** (the app's own `mcp__scheduled-tasks__*` tools; `cortex tasks register` is only the guarded, app-closed direct-write fallback — spec `core-cli.tasks-register`). After writing payloads, init runs the read-only `registrationStatus` check against the registry (registry-not-found tolerated — the app may never have run) and, when any of the fourteen is unregistered, prints a clearly-formatted instruction block: open this folder in Claude Desktop (new session), say `run cortex-register-tasks`, then confirm with `cortex tasks verify`. When all fourteen are registered it prints the all-registered one-liner instead. Idempotent: existing task files are overwritten only with `--force`, otherwise left in place.
+13. **Desktop scheduled-task payloads (design §13 step 12; corrected by B-009).** Write one `~/.claude/scheduled-tasks/<scoped-task-name>/SKILL.md` per scheduled bundle — names project-scoped per schema §9.1 and `core-cli.task-scoping` (plain `<slug>-<canonical>` with hash fallback on collision, ownership marker stamped; recognition, preserve, and overwrite logic all match only this project's tasks) — the **five bundles** of schema §9.1 at 3.0 (`daily`, `weekly-curation`, `weekly-quality`, `test-runner`, `monthly-review`) — each `name`/`description` frontmatter plus the prompt body invoking the bundle's member loop skills in sequence, per schema §9-adjacent conventions. **These SKILL.md directories are prompt payloads only, not registration**: the Desktop app never scans `~/.claude/scheduled-tasks/` — its registry is its own in-memory-per-launch `scheduled-tasks.json`. Registration happens **in a Claude Desktop session via the `cortex-register-tasks` skill** (the app's own `mcp__scheduled-tasks__*` tools; `cortex tasks register` is only the guarded, app-closed direct-write fallback — spec `core-cli.tasks-register`). After writing payloads, init runs the read-only `registrationStatus` check against the registry (registry-not-found tolerated — the app may never have run) and, when any of the five is unregistered, prints a clearly-formatted instruction block: open this folder in Claude Desktop (new session), say `run cortex-register-tasks`, then confirm with `cortex tasks verify`. When all five are registered it prints the all-registered one-liner instead. Idempotent: existing task files are overwritten only with `--force`, otherwise left in place.
 14. **Self-validation.** After all steps, run `schema.validator` over the project. Init succeeds (exit 0) only if the report is conformant (zero errors); otherwise it prints the violations and exits 1. Warnings do not fail init.
 15. **Summary.** Print a summary naming every change made: files indexed (and how many purposes were filled inline vs left flagged), skills installed, preferences drafted, hooks registered, git hook state, scheduled task payloads written, CLAUDE.md updated, migrations performed, spec-tree state — plus the Rule 13 registration status: the open-Desktop-and-run-`cortex-register-tasks` instruction block when any task is unregistered (registry missing counts as all unregistered), or the all-registered one-liner otherwise (B-009 final mechanism). Exit codes: 0 success (including a degraded purpose pass, Rule 6), 1 self-validation failure, 2 preflight refusal, 3 complete-but-unauthenticated (Rule 6).
 16. **No silent destruction.** Every write to a pre-existing file is a merge or an append; the only overwrites are `--force`-gated. This rule wins over any step above if they conflict.
-17. **`--partial` mode.** With `--partial`, init writes a scheduled-task payload (Rule 13) **only if every skill its prompt invokes is present** in the project's `.claude/skills/`; tasks whose skills are absent are skipped, and the summary names each skipped task and the missing skill it needs. All other init behaviour is unchanged: `.cortex/` skeleton, scanner run, purpose pass, hooks registered, CLAUDE.md updated, git hook installed. This makes init usable while Cortex itself is under construction (loops land incrementally) and covers the v1.x case of users disabling optional loops. The task→skill mapping is owned by the task definitions themselves — each declares the skill(s) its prompt invokes. **Default (non-partial) mode is unchanged:** all fourteen task payloads are written regardless of skill presence — a task firing without its skill degrades politely in the Desktop session — but the summary warns which written tasks currently lack their skill and names `--partial` as the honest opt-in.
+17. **`--partial` mode.** With `--partial`, init writes a bundle payload (Rule 13) **only if every member-loop skill its prompt invokes is present** in the project's `.claude/skills/`; bundles missing any member skill are skipped, and the summary names each skipped bundle and the missing member skill it needs. All other init behaviour is unchanged: `.cortex/` skeleton, scanner run, purpose pass, hooks registered, CLAUDE.md updated, git hook installed. This makes init usable while Cortex itself is under construction (loops land incrementally) and covers the v1.x case of users disabling optional loops. The task→skill mapping is owned by the task definitions themselves — each declares the skill(s) its prompt invokes. **Default (non-partial) mode is unchanged:** all five bundle payloads are written regardless of member-skill presence — a bundle member firing without its skill degrades politely in the Desktop session, and the bundle's other members are failure-isolated from it — but the summary warns which written bundles currently lack a member skill and names `--partial` as the honest opt-in.
 
 ## Acceptance Criteria
 
@@ -141,37 +141,37 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **And** the summary recommends `specflow-onboard-codebase`
 - **And** given a project whose `specs/` already has content, that content is byte-identical after init
 
-### Fourteen scheduled task payloads written — payloads, not registration
+### Five scheduled task payloads written — payloads, not registration
 
 - **Given** a fresh init with a stubbed home directory
 - **When** `cortex init --no-llm` runs
-- **Then** `~/.claude/scheduled-tasks/` contains fourteen task directories under this project's scoped names (schema §9.1), each holding a `SKILL.md` with the scoped `name` and `description` frontmatter
-- **And** (no registry in the fixture, so all fourteen count as unregistered) the summary prints the instruction block: N of 14 not yet registered with the Desktop app, open this folder in Claude Desktop and say `run cortex-register-tasks`, then confirm with `cortex tasks verify`
-- **And** given a fixture registry in which all fourteen are registered and enabled, the summary prints the all-registered one-liner and no instruction block
+- **Then** `~/.claude/scheduled-tasks/` contains five task directories under this project's scoped bundle names (schema §9.1: `<slug>-daily`, `<slug>-weekly-curation`, `<slug>-weekly-quality`, `<slug>-test-runner`, `<slug>-monthly-review`), each holding a `SKILL.md` with the scoped `name` and `description` frontmatter and the ownership marker in the body
+- **And** (no registry in the fixture, so all five count as unregistered) the summary prints the instruction block: N of 5 not yet registered with the Desktop app, open this folder in Claude Desktop and say `run cortex-register-tasks`, then confirm with `cortex tasks verify`
+- **And** given a fixture registry in which all five are registered and enabled, the summary prints the all-registered one-liner and no instruction block
 - **And** re-running without `--force` leaves user-modified task files untouched
 
-### --partial writes payloads for exactly the tasks whose skills ship or are present
+### --partial writes payloads for exactly the bundles whose member skills all ship or are present
 
-- **Given** a fresh project and a package shipping the five loop skill bundles (installed by Rule 4 before the task check)
+- **Given** a fresh project and a package shipping every bundle member's loop skill (installed by Rule 4 before the bundle check)
 - **When** `cortex init --partial --no-llm --yes` runs
-- **Then** exactly the tasks whose invoked skills are now present get their payloads written — with the full packaged-skill census (all task-invoked skills shipping), that is all fourteen — exit code 0
+- **Then** exactly the bundles whose every member skill is now present get their payloads written — with the full packaged-skill census (all member skills shipping), that is all five — exit code 0
 - **And** the `.cortex/` skeleton, anatomy, hooks, and CLAUDE.md block are all complete
-- **And** the summary names each skipped task with the missing skill it needs
+- **And** the summary names each skipped bundle with the missing member skill it needs
 - _(Historical note: before any bundles shipped, this AC's premise was "zero loop skills → 0 task payloads" — superseded when the loop bundles began shipping with the package.)_
 
-### --partial with some skills present → only those tasks, skips named
+### --partial with only some member skills present → only fully-covered bundles, skips named
 
-- **Given** a project whose `.claude/skills/` contains `specflow-lint` and `specflow-tests` but no `cortex-*` loop skills
+- **Given** a project whose `.claude/skills/` contains `specflow-lint` and `specflow-tests` but not every member skill of any bundle
 - **When** `cortex init --partial --no-llm` runs
-- **Then** exactly the tasks whose invoked skills are present are written (including the `specflow-lint` and `specflow-verify` tasks)
-- **And** the summary names each skipped task with the missing skill it needs
+- **Then** only bundles whose every member skill is present are written; a bundle missing any member (e.g. `weekly-quality`, which also needs `cortex-loop-insight-refresh-full`) is skipped
+- **And** the summary names each skipped bundle with the missing member skill it needs
 
-### Default mode with missing skills → all fourteen written, warning names the gaps
+### Default mode with missing skills → all five written, warning names the gaps
 
 - **Given** the same project as above
 - **When** `cortex init --no-llm` runs without `--partial`
-- **Then** all fourteen task directories are written
-- **And** the summary warns which written tasks lack their skill and mentions `--partial`
+- **Then** all five bundle directories are written
+- **And** the summary warns which written bundles lack a member skill and mentions `--partial`
 
 ### Git hook appended, not clobbered
 

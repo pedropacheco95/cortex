@@ -1023,21 +1023,39 @@ test-runner's writer/verifier code path and bug-triage's fill-only classificatio
 
 ### 9.1 Desktop scheduled-task naming (project scoping)
 
-`~/.claude/scheduled-tasks/` is one global namespace per user, so every Cortex-managed task name MUST be project-scoped:
+`~/.claude/scheduled-tasks/` is one global namespace per user, so every Cortex-managed task name MUST be project-scoped. The default form is plain:
+
+```
+<project-slug>-<canonical-task-name>
+```
+
+with a **hash6 collision fallback** applied only when the plain name is already owned by a *different* project:
 
 ```
 <project-slug>-<short-hash>-<canonical-task-name>
 ```
 
 - **`project-slug`** — the project root's folder name, slugged: lowercased; every character outside `[a-z0-9-]` replaced with `-`; consecutive `-` collapsed; leading/trailing `-` trimmed; empty result → `project`.
-- **`short-hash`** — the first 6 hex chars of SHA256 of the project root's absolute path (resolved, no trailing slash). The slug alone collides across same-named folders (`~/work/api` vs `~/personal/api`); the hash guarantees uniqueness; the slug preserves at-a-glance scannability in the Desktop UI.
-- **`canonical-task-name`** — the task's full identity, applying to every Cortex-managed task regardless of lineage. At v3.0 (addendum A7.1, A7.2): `cortex-pulse-hygiene`, `cortex-pulse-distil`, `cortex-loop-skill-suggest`, `cortex-loop-rule-decay`, `cortex-loop-atlas-staleness`, `cortex-loop-onboarding-drift`, `cortex-loop-spec-drift`, `specflow-lint`, `specflow-verify`, `cortex-loop-test-runner`, `cortex-loop-bug-triage`, and — new at v3.0 — `cortex-loop-insight-refresh-daily`, `cortex-loop-insight-refresh-full`, `cortex-loop-session-observe`. **Fourteen scheduled tasks total at 3.0** (v2.0's `cortex-loop-anatomy-refresh-deep`, `cortex-loop-insight-refresh`, and `cortex-loop-insight-gaps` are deregistered; three new tasks are registered — same total count as 2.0, net zero). The fifteenth loop, `cortex-loop-insight-refresh-fast`, remains the **git post-commit hook** (replacing `anatomy-refresh-fast`), not a scheduled task.
+- **`canonical-task-name`** — the bundle's identity, applying to every Cortex-managed task. At v3.0, the former fourteen individual scheduled tasks are consolidated (owner-approved) into **five scheduled-task bundles**. Each bundle runs its **member loops sequentially, each member failure-isolated** — one member loop failing never aborts the others in the bundle:
 
-Example: a project at `/Users/me/dev/api` names its tasks `api-a3f2b1-cortex-pulse-hygiene`, `api-a3f2b1-specflow-lint`, ….
+  | Canonical | Cron | Model | Member loops (run sequentially, failure-isolated) |
+  |---|---|---|---|
+  | `daily` | `0 2 * * *` | `claude-sonnet-5` | pulse-hygiene, bug-triage, spec-drift, insight-refresh-daily, session-observe |
+  | `weekly-curation` | `0 4 * * 6` | `claude-opus-4-8` | pulse-distil (now also carrying the retired skill-suggest's workflow-mining lens), rule-decay |
+  | `weekly-quality` | `0 4 * * 0` | `claude-sonnet-5` | specflow-lint, specflow-verify, insight-refresh-full |
+  | `test-runner` | `0 6 * * 0` | `claude-sonnet-5` | test-runner alone (the only code-writing loop, kept isolated by design) |
+  | `monthly-review` | `0 6 1 * *` | `claude-sonnet-5` | atlas-staleness, onboarding-drift |
+
+  The git-hook loop `cortex-loop-insight-refresh-fast` remains the **git post-commit hook** (replacing `anatomy-refresh-fast`), not a scheduled task. `skill-suggest` is **retired entirely** as a standalone task (owner decision): its one workflow-mining judgment folds into `pulse-distil` as an extra lens (see `pulse.distil`), not its own task or a distinct bundle member.
+- **`short-hash`** — collision-fallback component only: the first 6 hex chars of SHA256 of the project root's absolute path (resolved, no trailing slash). Because the Desktop app derives the *displayed* task name from the id (dash→space, capitalize the first letter — e.g. `cortex-daily` displays as "Cortex daily"), the plain `<slug>-<canonical>` id doubles as the human-readable name; the hash is injected only on a proven collision so the common case stays scannable.
+- **Ownership marker.** Every payload SKILL.md Cortex writes at a plain name carries a deterministic ownership marker — an HTML comment `<!-- cortex-project-root: <resolved-root> -->` stamped in the body (deliberately not a frontmatter key: the Desktop app parses the frontmatter, and an unknown key risks rejection). Collision resolution requires a **positive mismatch**: the plain dir must already exist *and* carry a marker naming a **different** project root before the hash fallback engages; an unmarked plain dir is claimed as ours. Recognition of "this project's own tasks" (for preserve / overwrite / clean-up) matches the plain or hash-fallback name plus, for a plain match, a marker that is absent or names this root.
+- **Model pinning per bundle.** Each bundle's registry entry pins a `model` (the app's entry schema carries an optional `model` field): `claude-opus-4-8` for `weekly-curation` (the heavier curation/distillation judgment), `claude-sonnet-5` for the other four. Core owns the canonical→model assignment (the cadence/model table in `core-cli.tasks-register`); the skill never hardcodes it.
+
+Example: a project at `/Users/me/dev/api` names its tasks `api-daily`, `api-weekly-curation`, `api-weekly-quality`, `api-test-runner`, `api-monthly-review`; a second, same-named project colliding on a plain name falls back to `api-a3f2b1-daily`, ….
 
 **Payload vs. registration (B-009 correction; final mechanism).** A `~/.claude/scheduled-tasks/<scoped-name>/SKILL.md` directory is a prompt **payload** only — writing it registers nothing, because the Desktop app never scans that directory. **Registration** is an entry in the app's own registry, a `scheduled-tasks.json` under `~/Library/Application Support/Claude/claude-code-sessions/<uuid>/<uuid>/` (shape `{"scheduledTasks": [...], "recordedSkips": {...}}`; entries carry `id` = the scoped name, `cronExpression`, `enabled`, `filePath` = the absolute payload SKILL.md path, `createdAt` epoch ms, `cwd`, `useWorktree`, `permissionMode`) — a registry the app holds **in memory**, loaded once per launch and rewritten wholesale on every task event. The mechanism therefore has three parts: `cortex init` writes the payloads and prints the registration instructions; **registration itself happens in a Claude Desktop session via the `cortex-register-tasks` skill**, which reads `cortex tasks plan --json` (Core's authoritative plan) and drives the app's own internal `mcp__scheduled-tasks__*` MCP tools; `cortex tasks verify` detects silent loss. `cortex tasks register` — the direct registry write, upserting only the fields Cortex owns and preserving foreign entries and unknown fields verbatim — remains a **guarded fallback** that refuses to run while the Desktop app is running (in-memory clobber/wipe hazard; spec `core-cli.tasks-register`).
 
-**The task name is registration identity only** — the SKILL.md frontmatter `name:` carries the scoped name, but the prompt body invokes the *underlying skill* by its real name (`cortex-pulse-hygiene`, `specflow-lint`, …). Tooling recognises its own project's tasks by the `<slug>-<hash>-` prefix plus a canonical suffix, and ignores every other project's.
+**The task name is registration identity only** — the SKILL.md frontmatter `name:` carries the scoped bundle name, but the prompt body invokes each *member loop's underlying skill* by its real name (`cortex-pulse-hygiene`, `specflow-lint`, …), one after another. Tooling recognises its own project's tasks by the plain `<slug>-<canonical>` name (disambiguated by the ownership marker) or the `<slug>-<hash>-` fallback prefix plus a canonical suffix, and ignores every other project's.
 
 ---
 

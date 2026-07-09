@@ -12,8 +12,8 @@
  * `loop-spec-drift|loop-specflow-lint|loop-specflow-verify` (specs loops.*,
  * Rule 1 each), the two collect/judge/propose loops
  * `cortex pulse-distil [--collect|--propose <f>|--no-llm]` (spec pulse.distil,
- * Rule 1) and `cortex loop-skill-suggest [--propose <f>]`
- * (spec loops.skill-suggest, Rule 1), the collect/judge/report loop
+ * Rule 1 — now also carrying the retired skill-suggest loop's workflow-mining
+ * lens, emitting `skill-proposal` suggestions), the collect/judge/report loop
  * `cortex loop-bug-triage [--collect|--report <f>|--no-llm]`
  * (spec loops.bug-triage, Rule 1), the three insight-refresh tiers
  * `cortex insight-refresh-fast` — the exact string the installed git
@@ -29,9 +29,9 @@
  * `cortex test-run` (spec loops.test-runner, Rule 1), plus
  * `cortex tasks rename` — the one-time legacy→scoped scheduled-task
  * migration (core-cli.task-scoping Rule 4) — and `cortex tasks
- * register|verify` — writing/verifying this project's fourteen entries in
- * the Desktop app's scheduled-tasks.json registry (core-cli.tasks-register,
- * B-009 option 1).
+ * register|verify` — writing/verifying this project's five scheduled-task
+ * bundle entries in the Desktop app's scheduled-tasks.json registry
+ * (core-cli.tasks-register, B-009 option 1).
  */
 import { init } from './init.js';
 
@@ -140,19 +140,19 @@ export async function run(argv: string[]): Promise<number> {
       return 1;
     }
   }
-  // `cortex loop-skill-suggest [--propose <file>]` — the workflow-mining
-  // sibling (loops.skill-suggest Rule 1; same modes as pulse-distil).
+  // `cortex loop-skill-suggest` — RETIRED at v3.0 (owner decision): the
+  // standalone workflow-mining loop is gone. Its judgment folds into
+  // `cortex-pulse-distil` as an extra lens — a workflow-shaped cross-session
+  // pattern is emitted as a `skill-proposal` pulse suggestion on distil's
+  // existing collect/propose bookends. Pointed message so the verb never falls
+  // through to `cortex init <target>`.
   if (argv[0] === 'loop-skill-suggest') {
-    const flags = parseLoopFlags('loop-skill-suggest', argv.slice(1));
-    if (flags === null) return 1;
-    try {
-      const { runSkillSuggest } = await import('../loops/skill-suggest.js');
-      const { file, ...rest } = flags;
-      return await runSkillSuggest('.', { ...rest, ...(file !== undefined ? { proposeFile: file } : {}) });
-    } catch (err) {
-      console.error(`cortex loop-skill-suggest: ${(err as Error).message}`);
-      return 1;
-    }
+    console.error(
+      'cortex loop-skill-suggest: retired in v3 — skill-suggest has been folded into pulse-distil\'s ' +
+        'workflow-mining lens (workflow-shaped patterns become `skill-proposal` suggestions). ' +
+        'Run `cortex pulse-distil` instead (or the cortex-pulse-distil skill).',
+    );
+    return 1;
   }
   // `cortex loop-bug-triage [--collect|--report <file>|--no-llm]` — the daily
   // bug-ledger triage loop (loops.bug-triage Rule 1; collect/judge/report).

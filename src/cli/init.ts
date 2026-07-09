@@ -801,13 +801,13 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
       break;
   }
   if (partial) {
-    // Rule 17 summary: "N loop payloads written", each skipped task named with its missing skill.
+    // Rule 17 summary: "N bundle payloads written", each skipped bundle named with its missing skill.
     const registered = SCHEDULED_TASKS.length - tasks.skipped.length;
     lines.push(
-      `Scheduled tasks (--partial): ${tasks.written} written to ${path.join(home, '.claude', 'scheduled-tasks')}${tasks.preserved > 0 ? `, ${tasks.preserved} existing preserved` : ''} — ${registered} loop payload${registered === 1 ? '' : 's'} on disk${registered === 0 ? ' (skills not present)' : ''}.`,
+      `Scheduled tasks (--partial): ${tasks.written} written to ${path.join(home, '.claude', 'scheduled-tasks')}${tasks.preserved > 0 ? `, ${tasks.preserved} existing preserved` : ''} — ${registered} bundle payload${registered === 1 ? '' : 's'} on disk${registered === 0 ? ' (skills not present)' : ''}.`,
     );
     for (const gap of tasks.skipped) {
-      lines.push(`  Skipped task "${gap.task}" — missing skill ${gap.missingSkills.map((s) => `"${s}"`).join(', ')} (not in .claude/skills/).`);
+      lines.push(`  Skipped bundle "${gap.task}" — missing skill ${gap.missingSkills.map((s) => `"${s}"`).join(', ')} (not in .claude/skills/).`);
     }
   } else {
     lines.push(

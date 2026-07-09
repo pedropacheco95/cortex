@@ -27,10 +27,14 @@ import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
 const CANONICALS = Object.values(CANONICAL_TASK_NAMES);
 
-/** The five daily canonicals (cron day fields are all `*`). */
-const DAILIES = Object.entries(TASK_CADENCE)
-  .filter(([, cron]) => cron.split(' ').slice(2).join(' ') === '* * *')
-  .map(([name]) => name);
+/** Canonical bundle name → pinned model (v3.0 consolidation). */
+const MODELS: Record<string, string> = {
+  'daily': 'claude-sonnet-5',
+  'weekly-curation': 'claude-opus-4-8',
+  'weekly-quality': 'claude-sonnet-5',
+  'test-runner': 'claude-sonnet-5',
+  'monthly-review': 'claude-sonnet-5',
+};
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -111,8 +115,8 @@ const opts = (fx: Fixture) => ({ projectRoot: fx.root, home: fx.home, appSupport
 // ---------------------------------------------------------------------------
 // TASK_CADENCE — the cadence table as data
 // ---------------------------------------------------------------------------
-describe('TASK_CADENCE: fourteen entries, collision-free', () => {
-  it('has exactly the fourteen §9.1 canonical names as keys', () => {
+describe('TASK_CADENCE: five bundle entries, collision-free', () => {
+  it('has exactly the five §9.1 canonical bundle names as keys', () => {
     expect(Object.keys(TASK_CADENCE).sort()).toEqual([...CANONICALS].sort());
   });
 
@@ -122,18 +126,14 @@ describe('TASK_CADENCE: fourteen entries, collision-free', () => {
     }
   });
 
-  it('finds five dailies with no duplicate minute-of-day among them', () => {
-    expect(DAILIES.sort()).toEqual(
-      [
-        'cortex-pulse-hygiene',
-        'cortex-loop-bug-triage',
-        'cortex-loop-spec-drift',
-        'cortex-loop-insight-refresh-daily',
-        'cortex-loop-session-observe',
-      ].sort(),
-    );
-    const minutes = DAILIES.map((d) => TASK_CADENCE[d]!.split(' ').slice(0, 2).join(':'));
-    expect(new Set(minutes).size).toBe(DAILIES.length);
+  it('pins each bundle cadence verbatim', () => {
+    expect(TASK_CADENCE).toEqual({
+      'daily': '0 2 * * *',
+      'weekly-curation': '0 4 * * 6',
+      'weekly-quality': '0 4 * * 0',
+      'test-runner': '0 6 * * 0',
+      'monthly-review': '0 6 1 * *',
+    });
   });
 
   it('no two tasks share an identical cron expression at all', () => {
@@ -174,18 +174,19 @@ describe('discoverRegistryFiles: glob under claude-code-sessions/', () => {
 // registerTasks — upsert mechanics
 // ---------------------------------------------------------------------------
 describe('registerTasks: upsert into the app registry', () => {
-  it('adds the fourteen owned entries with every owned field set', () => {
+  it('adds the five owned bundle entries with every owned field set — model included', () => {
     const fx = makeFixture('add', defaultRegistry());
     try {
       const r = registerTasks(opts(fx));
       expect(r.exitCode).toBe(0);
       const reg = readRegistry(fx.registryFile);
-      expect(reg.scheduledTasks).toHaveLength(2 + 14);
+      expect(reg.scheduledTasks).toHaveLength(2 + 5);
       for (const canonical of CANONICALS) {
         const id = scopedTaskName(fx.root, canonical);
         const entry = reg.scheduledTasks.find((e) => e['id'] === id);
         expect(entry, canonical).toBeDefined();
         expect(entry!['cronExpression']).toBe(TASK_CADENCE[canonical]);
+        expect(entry!['model'], canonical).toBe(MODELS[canonical]);
         expect(entry!['enabled']).toBe(true);
         expect(entry!['filePath']).toBe(path.join(fx.home, '.claude', 'scheduled-tasks', id, 'SKILL.md'));
         expect(fs.existsSync(entry!['filePath'] as string), `payload for ${canonical}`).toBe(true);
@@ -194,7 +195,7 @@ describe('registerTasks: upsert into the app registry', () => {
         expect(entry!['permissionMode']).toBe(TASK_PERMISSION_MODE);
         expect(typeof entry!['createdAt']).toBe('number');
       }
-      expect(r.output).toMatch(/14 added, 0 updated/);
+      expect(r.output).toMatch(/5 added, 0 updated/);
     } finally {
       cleanFixture(fx);
     }
@@ -227,7 +228,7 @@ describe('registerTasks: upsert into the app registry', () => {
       expect(b).toHaveLength(1);
       expect(b[0]).toMatch(/^scheduled-tasks\.json\.cortex-backup-/);
       expect(fs.readFileSync(path.join(path.dirname(fx.registryFile), b[0]!), 'utf-8')).toBe(before);
-      // Payload roster: all 14 scoped dirs exist in the fake home.
+      // Payload roster: all 5 scoped bundle dirs exist in the fake home.
       const base = path.join(fx.home, '.claude', 'scheduled-tasks');
       expect(fs.readdirSync(base).sort()).toEqual(CANONICALS.map((c) => scopedTaskName(fx.root, c)).sort());
     } finally {
@@ -252,7 +253,7 @@ describe('registerTasks: upsert into the app registry', () => {
 
   it('updates an existing own entry in place: owned fields corrected, createdAt and unknown fields preserved, no duplicate', () => {
     const fx = makeFixture('update');
-    const id = scopedTaskName(fx.root, 'cortex-pulse-hygiene');
+    const id = scopedTaskName(fx.root, 'daily');
     const registry = defaultRegistry();
     (registry['scheduledTasks'] as unknown[]).push({
       id,
@@ -270,23 +271,26 @@ describe('registerTasks: upsert into the app registry', () => {
       const matches = reg.scheduledTasks.filter((e) => e['id'] === id);
       expect(matches).toHaveLength(1);
       const entry = matches[0]!;
-      expect(entry['cronExpression']).toBe(TASK_CADENCE['cortex-pulse-hygiene']);
+      expect(entry['cronExpression']).toBe(TASK_CADENCE['daily']);
+      expect(entry['model']).toBe(MODELS['daily']);
       expect(entry['enabled']).toBe(true);
       expect(entry['createdAt']).toBe(111);
       expect(entry['appOnlyField']).toBe('must-survive');
-      expect(r.output).toMatch(/13 added, 1 updated/);
+      expect(r.output).toMatch(/4 added, 1 updated/);
     } finally {
       cleanFixture(fx);
     }
   });
 
-  it("removes this project's retired scoped entries but never another project's", () => {
+  it("removes this project's retired scoped entries (pre-v3 AND the fourteen pre-consolidation loops) but never another project's", () => {
     const fx = makeFixture('retired');
     const ownRetired = scopedTaskName(fx.root, 'cortex-loop-anatomy-refresh-deep');
+    const ownRetiredLoop = scopedTaskName(fx.root, 'cortex-pulse-hygiene'); // one of the 14 superseded standalones
     const foreignRetired = scopedTaskName('/some/other/project', 'cortex-loop-anatomy-refresh-deep');
     const registry = defaultRegistry();
     (registry['scheduledTasks'] as unknown[]).push(
       { id: ownRetired, cronExpression: '0 1 * * *', enabled: true },
+      { id: ownRetiredLoop, cronExpression: '0 2 * * *', enabled: true },
       { id: foreignRetired, cronExpression: '0 1 * * *', enabled: true },
     );
     fs.mkdirSync(path.dirname(fx.registryFile), { recursive: true });
@@ -295,8 +299,9 @@ describe('registerTasks: upsert into the app registry', () => {
       registerTasks(opts(fx));
       const reg = readRegistry(fx.registryFile);
       expect(reg.scheduledTasks.some((e) => e['id'] === ownRetired)).toBe(false);
+      expect(reg.scheduledTasks.some((e) => e['id'] === ownRetiredLoop)).toBe(false);
       expect(reg.scheduledTasks.some((e) => e['id'] === foreignRetired)).toBe(true);
-      expect(reg.scheduledTasks).toHaveLength(2 + 1 + 14); // 2 foreign + foreign retired + own 14
+      expect(reg.scheduledTasks).toHaveLength(2 + 1 + 5); // 2 foreign + foreign retired + own 5 bundles
     } finally {
       cleanFixture(fx);
     }
@@ -329,7 +334,7 @@ describe('registerTasks: upsert into the app registry', () => {
       expect(r.output).toContain('Warning: 2 registry files found');
       expect(r.output).toContain(older);
       expect(fs.readFileSync(older, 'utf-8')).toBe(olderBytes); // ignored file untouched
-      expect(readRegistry(fx.registryFile).scheduledTasks).toHaveLength(16); // newest written
+      expect(readRegistry(fx.registryFile).scheduledTasks).toHaveLength(7); // newest written (2 foreign + 5 bundles)
     } finally {
       cleanFixture(fx);
     }
@@ -353,14 +358,14 @@ describe('registerTasks: upsert into the app registry', () => {
 // verifyTasks — per-task report + exit codes
 // ---------------------------------------------------------------------------
 describe('verifyTasks: report and exit codes', () => {
-  it('after register: all fourteen ok, exit 0', () => {
+  it('after register: all five ok, exit 0', () => {
     const fx = makeFixture('vok', defaultRegistry());
     try {
       registerTasks(opts(fx));
       const v = verifyTasks(opts(fx));
       expect(v.exitCode).toBe(0);
-      expect(v.output.split('\n').filter((l) => l.startsWith('ok   '))).toHaveLength(14);
-      expect(v.output).toContain('All 14 Cortex tasks registered');
+      expect(v.output.split('\n').filter((l) => l.startsWith('ok   '))).toHaveLength(5);
+      expect(v.output).toContain('All 5 Cortex bundles registered');
     } finally {
       cleanFixture(fx);
     }
@@ -371,9 +376,9 @@ describe('verifyTasks: report and exit codes', () => {
     try {
       registerTasks(opts(fx));
       const reg = readRegistry(fx.registryFile);
-      const idMissing = scopedTaskName(fx.root, 'cortex-pulse-hygiene');
-      const idDisabled = scopedTaskName(fx.root, 'cortex-pulse-distil');
-      const idDangling = scopedTaskName(fx.root, 'cortex-loop-test-runner');
+      const idMissing = scopedTaskName(fx.root, 'daily');
+      const idDisabled = scopedTaskName(fx.root, 'weekly-curation');
+      const idDangling = scopedTaskName(fx.root, 'test-runner');
       reg.scheduledTasks = reg.scheduledTasks.filter((e) => e['id'] !== idMissing);
       for (const e of reg.scheduledTasks) {
         if (e['id'] === idDisabled) e['enabled'] = false;
@@ -383,10 +388,10 @@ describe('verifyTasks: report and exit codes', () => {
 
       const v = verifyTasks(opts(fx));
       expect(v.exitCode).toBe(1);
-      expect(v.output).toContain('FAIL cortex-pulse-hygiene: not registered');
-      expect(v.output).toContain('FAIL cortex-pulse-distil: registered but disabled');
-      expect(v.output).toContain('FAIL cortex-loop-test-runner: registered but payload missing');
-      expect(v.output).toContain('3 of 14');
+      expect(v.output).toContain('FAIL daily: not registered');
+      expect(v.output).toContain('FAIL weekly-curation: registered but disabled');
+      expect(v.output).toContain('FAIL test-runner: registered but payload missing');
+      expect(v.output).toContain('3 of 5');
     } finally {
       cleanFixture(fx);
     }
@@ -397,13 +402,13 @@ describe('verifyTasks: report and exit codes', () => {
     try {
       registerTasks(opts(fx));
       const reg = readRegistry(fx.registryFile);
-      const id = scopedTaskName(fx.root, 'cortex-loop-spec-drift');
+      const id = scopedTaskName(fx.root, 'monthly-review');
       for (const e of reg.scheduledTasks) if (e['id'] === id) e['cronExpression'] = '7 7 * * *';
       fs.writeFileSync(fx.registryFile, JSON.stringify(reg, null, 2) + '\n', 'utf-8');
 
       const v = verifyTasks(opts(fx));
       expect(v.exitCode).toBe(0);
-      expect(v.output).toContain(`[cron drifted: expected "${TASK_CADENCE['cortex-loop-spec-drift']}"]`);
+      expect(v.output).toContain(`[cron drifted: expected "${TASK_CADENCE['monthly-review']}"]`);
     } finally {
       cleanFixture(fx);
     }
@@ -424,21 +429,24 @@ describe('verifyTasks: report and exit codes', () => {
 // ---------------------------------------------------------------------------
 // tasksPlan — the authoritative, read-only registration plan (Rule 10)
 // ---------------------------------------------------------------------------
-describe('tasksPlan: 14 entries, stable JSON shape, writes nothing', () => {
-  it('planTasks emits all fourteen with every plan field populated', () => {
+describe('tasksPlan: 5 bundle entries, stable JSON shape, writes nothing', () => {
+  it('planTasks emits all five with every plan field populated — the right model per bundle', () => {
     const fx = makeFixture('plan');
     try {
       const plan = planTasks({ projectRoot: fx.root, home: fx.home });
       expect(plan.planVersion).toBe(TASK_PLAN_VERSION);
       expect(plan.projectRoot).toBe(path.resolve(fx.root));
-      expect(plan.taskCount).toBe(14);
-      expect(plan.tasks).toHaveLength(14);
+      expect(plan.taskCount).toBe(5);
+      expect(plan.tasks).toHaveLength(5);
       const byCanonical = new Map(plan.tasks.map((t) => [t.canonical, t]));
+      // Model pinning: opus for the curation bundle, sonnet for the rest.
+      expect(byCanonical.get('weekly-curation')!.model).toBe('claude-opus-4-8');
       for (const canonical of CANONICALS) {
         const t = byCanonical.get(canonical)!;
         expect(t, canonical).toBeDefined();
         expect(t.id).toBe(scopedTaskName(fx.root, canonical));
         expect(t.cronExpression).toBe(TASK_CADENCE[canonical]);
+        expect(t.model, canonical).toBe(MODELS[canonical]);
         expect(t.cwd).toBe(path.resolve(fx.root));
         expect(t.enabled).toBe(true);
         expect(t.useWorktree).toBe(false);
@@ -460,7 +468,7 @@ describe('tasksPlan: 14 entries, stable JSON shape, writes nothing', () => {
       expect(parsed).toEqual(JSON.parse(JSON.stringify(planTasks({ projectRoot: fx.root, home: fx.home }))));
       expect(Object.keys(parsed).sort()).toEqual(['planVersion', 'projectRoot', 'taskCount', 'tasks']);
       expect(Object.keys(parsed.tasks[0]).sort()).toEqual(
-        ['canonical', 'cronExpression', 'cwd', 'description', 'enabled', 'id', 'payloadPath', 'permissionMode', 'useWorktree'],
+        ['canonical', 'cronExpression', 'cwd', 'description', 'enabled', 'id', 'model', 'payloadPath', 'permissionMode', 'useWorktree'],
       );
     } finally {
       cleanFixture(fx);
@@ -474,6 +482,7 @@ describe('tasksPlan: 14 entries, stable JSON shape, writes nothing', () => {
       expect(r.exitCode).toBe(0);
       for (const canonical of CANONICALS) {
         expect(r.output).toContain(scopedTaskName(fx.root, canonical));
+        expect(r.output).toContain(`model: ${MODELS[canonical]}`);
       }
       expect(r.output).toContain('run cortex-register-tasks');
       expect(r.output).toContain('cortex tasks verify');
@@ -512,7 +521,7 @@ describe('registerTasks guard: injected Desktop-app process check', () => {
     try {
       const r = registerTasks({ ...opts(fx), isDesktopAppRunning: () => false });
       expect(r.exitCode).toBe(0);
-      expect(readRegistry(fx.registryFile).scheduledTasks).toHaveLength(2 + 14);
+      expect(readRegistry(fx.registryFile).scheduledTasks).toHaveLength(2 + 5);
     } finally {
       cleanFixture(fx);
     }
@@ -523,12 +532,12 @@ describe('registerTasks guard: injected Desktop-app process check', () => {
 // registrationStatus — init's read-only summary check (Rule 12)
 // ---------------------------------------------------------------------------
 describe('registrationStatus: read-only registered-and-enabled check', () => {
-  it('no registry (app never ran) → registryFound false, all fourteen unregistered', () => {
+  it('no registry (app never ran) → registryFound false, all five unregistered', () => {
     const fx = makeFixture('rs-none');
     try {
       const s = registrationStatus(opts(fx));
       expect(s.registryFound).toBe(false);
-      expect(s.total).toBe(14);
+      expect(s.total).toBe(5);
       expect(s.unregistered.sort()).toEqual([...CANONICALS].sort());
     } finally {
       cleanFixture(fx);
@@ -541,10 +550,10 @@ describe('registrationStatus: read-only registered-and-enabled check', () => {
       registerTasks(opts(fx));
       expect(registrationStatus(opts(fx)).unregistered).toEqual([]);
       const reg = readRegistry(fx.registryFile);
-      const id = scopedTaskName(fx.root, 'cortex-pulse-hygiene');
+      const id = scopedTaskName(fx.root, 'daily');
       for (const e of reg.scheduledTasks) if (e['id'] === id) e['enabled'] = false;
       fs.writeFileSync(fx.registryFile, JSON.stringify(reg, null, 2) + '\n', 'utf-8');
-      expect(registrationStatus(opts(fx)).unregistered).toEqual(['cortex-pulse-hygiene']);
+      expect(registrationStatus(opts(fx)).unregistered).toEqual(['daily']);
     } finally {
       cleanFixture(fx);
     }
@@ -573,9 +582,11 @@ describe('cortex-register-tasks skill bundle', () => {
     expect(raw).toContain('mcp__scheduled-tasks__list_scheduled_tasks');
     expect(raw).toContain('cortex tasks plan --json');
     expect(raw).toContain('cortex tasks verify');
+    // v3.0: the plan's per-bundle model maps onto the create tool's optional model arg.
+    expect(raw).toContain("pass the plan's `model` straight through");
     // Never invents prompt content; never edits the registry file itself.
     expect(raw).toContain('Do NOT invent instructions/prompt content');
-    expect(raw).toMatch(/never write the app's `scheduled-tasks\.json`/i);
+    expect(raw).toMatch(/never write the app's\s+`scheduled-tasks\.json`/i);
   });
 });
 
@@ -587,7 +598,8 @@ describe('cadence table ↔ SCHEDULED_TASKS lock-step', () => {
     for (const task of SCHEDULED_TASKS) {
       const canonical = CANONICAL_TASK_NAMES[task.name]!;
       expect(TASK_CADENCE[canonical], task.name).toBeDefined();
+      expect(task.model, task.name).toBe(MODELS[canonical]);
     }
-    expect(SCHEDULED_TASKS).toHaveLength(14);
+    expect(SCHEDULED_TASKS).toHaveLength(5);
   });
 });

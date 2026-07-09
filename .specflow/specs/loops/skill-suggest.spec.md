@@ -5,15 +5,28 @@ depends_on:
   - loops.session-reading
   - pulse.review-cli
   - pulse.distil
-governs:
-  - "src/loops/skill-suggest.ts"
-  - "skills/cortex-loop-skill-suggest/**"
 implements: ../../specs-business/loops/developer-benefits-from-what-past-sessions-taught.business.md
 governed_by:
   - R-001
 ---
 
 # Skill-Suggest Loop
+
+> **SUPERSEDED (owner decision; consolidation round — same 5e banner style as the v3 lineage banners).**
+> `cortex-loop-skill-suggest` is **retired entirely** as a standalone loop and
+> scheduled task — not merged, killed. The one judgment worth keeping — spotting a
+> workflow-shaped (not rule-shaped) pattern repeated across sessions and worth
+> turning into a skill — folds into `pulse.distil` as one extra lens: when distil's
+> in-session pattern judgment finds a workflow-shaped repeated pattern, it proposes a
+> `skill-proposal`-typed pulse suggestion within its existing suggestions output
+> (see `../pulse/distil.spec.md`, Rule 9 and the skill-lens acceptance criterion). The
+> standalone task disappears from schema §9.1's task list (the fourteen individual
+> tasks consolidate to five bundles; distil now rides the `weekly-curation` bundle).
+> Its business outcome (`developer-benefits-from-what-past-sessions-taught`)
+> is served by `pulse.distil` going forward; the `implements:`/`implemented_by:` pair is
+> retained for lineage, as on every superseded spec. The former `governs:` targets
+> (`src/loops/skill-suggest.ts`, `skills/cortex-loop-skill-suggest/**`) are retired, so
+> the list is removed. Retained for lineage.
 
 ## Intent
 

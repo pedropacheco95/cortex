@@ -28,24 +28,24 @@ const DARWIN = { platform: 'darwin' as const };
 // AC1: Scoped name construction
 // ---------------------------------------------------------------------------
 describe('AC1: scoped name construction', () => {
-  it('project "My API_v2" → my-api-v2-cortex-pulse-hygiene (plain form, no hash)', () => {
+  it('project "My API_v2" → my-api-v2-daily (plain form, no hash)', () => {
     const parent = makeTmpDir('ts-ac1');
     try {
       const root = path.join(parent, 'My API_v2');
       fs.mkdirSync(root);
-      expect(scopedTaskName(root, 'cortex-pulse-hygiene')).toBe('my-api-v2-cortex-pulse-hygiene');
+      expect(scopedTaskName(root, 'daily')).toBe('my-api-v2-daily');
     } finally {
       cleanTmp(parent);
     }
   });
 
-  it('collision fallback form: my-api-v2-<h6>-cortex-pulse-hygiene, h6 = first 6 hex of SHA256(abs path)', () => {
+  it('collision fallback form: my-api-v2-<h6>-daily, h6 = first 6 hex of SHA256(abs path)', () => {
     const parent = makeTmpDir('ts-ac1b');
     try {
       const root = path.join(parent, 'My API_v2');
       fs.mkdirSync(root);
       const h6 = createHash('sha256').update(root).digest('hex').slice(0, 6);
-      expect(hashScopedTaskName(root, 'cortex-pulse-hygiene')).toBe(`my-api-v2-${h6}-cortex-pulse-hygiene`);
+      expect(hashScopedTaskName(root, 'daily')).toBe(`my-api-v2-${h6}-daily`);
       expect(h6).toMatch(/^[0-9a-f]{6}$/);
     } finally {
       cleanTmp(parent);
@@ -81,11 +81,11 @@ describe("AC2: two same-named projects don't collide", () => {
     expect(resultB.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
-    expect(dirs).toHaveLength(28); // 2 × the fourteen §9.1 canonical tasks
+    expect(dirs).toHaveLength(10); // 2 × the five §9.1 canonical bundles
     const ofA = dirs.filter((d) => isOwnScopedTask(rootA, d, base));
     const ofB = dirs.filter((d) => isOwnScopedTask(rootB, d, base));
-    expect(ofA).toHaveLength(14);
-    expect(ofB).toHaveLength(14);
+    expect(ofA).toHaveLength(5);
+    expect(ofB).toHaveLength(5);
     expect(ofA.filter((d) => ofB.includes(d))).toHaveLength(0);
     // Same slug (the Desktop-scannable part): A owns the plain names via the
     // ownership marker; B carries the §9.1 hash-fallback disambiguator.
@@ -101,7 +101,7 @@ describe("AC2: two same-named projects don't collide", () => {
   });
 
   it('zero overwrites: the second init wrote all fresh (nothing preserved) and every frontmatter name matches its dir', () => {
-    expect(resultB.summary).toMatch(/Scheduled tasks: 14 written/);
+    expect(resultB.summary).toMatch(/Scheduled tasks: 5 written/);
     expect(resultB.summary).not.toMatch(/preserved/);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     for (const dir of fs.readdirSync(base)) {
@@ -166,7 +166,7 @@ describe('AC4: --partial recognises only its own project', () => {
     base = path.join(home, '.claude', 'scheduled-tasks');
 
     // Another project's scoped tasks.
-    foreignDirs = ['cortex-pulse-hygiene', 'specflow-lint'].map((c) => scopedTaskName(otherRoot, c));
+    foreignDirs = ['daily', 'weekly-quality'].map((c) => scopedTaskName(otherRoot, c));
     for (const dir of foreignDirs) {
       fs.mkdirSync(path.join(base, dir), { recursive: true });
       fs.writeFileSync(path.join(base, dir, 'SKILL.md'), foreignRaw(dir), 'utf-8');
@@ -175,8 +175,8 @@ describe('AC4: --partial recognises only its own project', () => {
     fs.mkdirSync(path.join(base, 'daily-report'), { recursive: true });
     fs.writeFileSync(path.join(base, 'daily-report', 'SKILL.md'), unrelatedRaw, 'utf-8');
     // One of THIS project's tasks pre-exists, user-modified → preserved + counted.
-    const ownScoped = scopedTaskName(root, 'cortex-pulse-hygiene');
-    ownEdit = `---\nname: ${ownScoped}\ndescription: "user tuned"\n---\n\nmy tuned hygiene prompt\n`;
+    const ownScoped = scopedTaskName(root, 'daily');
+    ownEdit = `---\nname: ${ownScoped}\ndescription: "user tuned"\n---\n\nmy tuned daily-bundle prompt\n`;
     fs.mkdirSync(path.join(base, ownScoped), { recursive: true });
     fs.writeFileSync(path.join(base, ownScoped, 'SKILL.md'), ownEdit, 'utf-8');
 
@@ -184,13 +184,13 @@ describe('AC4: --partial recognises only its own project', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(otherRoot); cleanTmp(home); });
 
-  it("registered/preserved counts reflect only this project's tasks (13 written + 1 preserved = 14 packaged loops)", () => {
+  it("registered/preserved counts reflect only this project's tasks (4 written + 1 preserved = 5 packaged bundles)", () => {
     // Since specflow.cortex-awareness Rule 3 the packaged skills cover every
     // task, so --partial registers the full set.
     expect(result.exitCode).toBe(0);
-    expect(result.summary).toContain('Scheduled tasks (--partial): 13 written');
+    expect(result.summary).toContain('Scheduled tasks (--partial): 4 written');
     expect(result.summary).toContain('1 existing preserved');
-    expect(result.summary).toContain('14 loop payloads on disk');
+    expect(result.summary).toContain('5 bundle payloads on disk');
   });
 
   it('the foreign entries and the unrelated user task are byte-untouched', () => {
@@ -198,7 +198,7 @@ describe('AC4: --partial recognises only its own project', () => {
       expect(fs.readFileSync(path.join(base, dir, 'SKILL.md'), 'utf-8')).toBe(foreignRaw(dir));
     }
     expect(fs.readFileSync(path.join(base, 'daily-report', 'SKILL.md'), 'utf-8')).toBe(unrelatedRaw);
-    expect(fs.readFileSync(path.join(base, scopedTaskName(root, 'cortex-pulse-hygiene'), 'SKILL.md'), 'utf-8')).toBe(ownEdit);
+    expect(fs.readFileSync(path.join(base, scopedTaskName(root, 'daily'), 'SKILL.md'), 'utf-8')).toBe(ownEdit);
   });
 
   it('the summary never names foreign or unrelated entries', () => {
@@ -217,29 +217,29 @@ describe('AC5: rename migrates legacy tasks, idempotently', () => {
   let home: string;
   let base: string;
 
-  const hygieneBody = '\n# hygiene (Cortex scheduled task)\n\nInvoke the `cortex-pulse-hygiene` skill nightly.\n';
-  const hygieneRaw = `---\nname: hygiene\ndescription: "Nightly hygiene scan."\n---${hygieneBody}`;
-  const lintRaw = '---\nname: specflow-lint\ndescription: "Lint the spec trees."\n---\n\nRun the `specflow-lint` skill.\n';
+  const dailyBody = '\n# daily (Cortex scheduled task bundle)\n\nRun the daily bundle members in order.\n';
+  const dailyRaw = `---\nname: daily\ndescription: "Nightly daily bundle."\n---${dailyBody}`;
+  const qualityRaw = '---\nname: weekly-quality\ndescription: "Weekly quality bundle."\n---\n\nRun the weekly-quality bundle members.\n';
   const unrelatedRaw = '---\nname: daily-report\ndescription: "user task"\n---\n\nWrite my daily report.\n';
-  let scopedLintRaw: string;
+  let scopedQualityRaw: string;
 
   beforeAll(() => {
     root = makeTmpDir('ts-ac5-proj');
     home = makeTmpDir('ts-ac5-home');
     base = path.join(home, '.claude', 'scheduled-tasks');
-    // Legacy Cortex entries (internal short id + canonical-equal name).
-    fs.mkdirSync(path.join(base, 'hygiene'), { recursive: true });
-    fs.writeFileSync(path.join(base, 'hygiene', 'SKILL.md'), hygieneRaw, 'utf-8');
-    fs.mkdirSync(path.join(base, 'specflow-lint'), { recursive: true });
-    fs.writeFileSync(path.join(base, 'specflow-lint', 'SKILL.md'), lintRaw, 'utf-8');
+    // Legacy Cortex entries (unscoped canonical-equal bundle names).
+    fs.mkdirSync(path.join(base, 'daily'), { recursive: true });
+    fs.writeFileSync(path.join(base, 'daily', 'SKILL.md'), dailyRaw, 'utf-8');
+    fs.mkdirSync(path.join(base, 'weekly-quality'), { recursive: true });
+    fs.writeFileSync(path.join(base, 'weekly-quality', 'SKILL.md'), qualityRaw, 'utf-8');
     // An unrelated user task.
     fs.mkdirSync(path.join(base, 'daily-report'), { recursive: true });
     fs.writeFileSync(path.join(base, 'daily-report', 'SKILL.md'), unrelatedRaw, 'utf-8');
     // A pre-existing scoped target for one legacy entry → collision.
-    const scopedLint = scopedTaskName(root, 'specflow-lint');
-    scopedLintRaw = `---\nname: ${scopedLint}\ndescription: "already migrated"\n---\n\nalready-scoped body\n`;
-    fs.mkdirSync(path.join(base, scopedLint), { recursive: true });
-    fs.writeFileSync(path.join(base, scopedLint, 'SKILL.md'), scopedLintRaw, 'utf-8');
+    const scopedQuality = scopedTaskName(root, 'weekly-quality');
+    scopedQualityRaw = `---\nname: ${scopedQuality}\ndescription: "already migrated"\n---\n\nalready-scoped body\n`;
+    fs.mkdirSync(path.join(base, scopedQuality), { recursive: true });
+    fs.writeFileSync(path.join(base, scopedQuality, 'SKILL.md'), scopedQualityRaw, 'utf-8');
   });
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
@@ -247,21 +247,21 @@ describe('AC5: rename migrates legacy tasks, idempotently', () => {
     const r = tasksRename(home, root);
     expect(r.exitCode).toBe(0);
 
-    // hygiene moved: dir gone, scoped dir present, name: rewritten, ownership
+    // daily moved: dir gone, scoped dir present, name: rewritten, ownership
     // marker stamped after the frontmatter, body otherwise byte-identical.
-    const scopedHygiene = scopedTaskName(root, 'cortex-pulse-hygiene');
-    expect(fs.existsSync(path.join(base, 'hygiene'))).toBe(false);
-    const moved = fs.readFileSync(path.join(base, scopedHygiene, 'SKILL.md'), 'utf-8');
+    const scopedDaily = scopedTaskName(root, 'daily');
+    expect(fs.existsSync(path.join(base, 'daily'))).toBe(false);
+    const moved = fs.readFileSync(path.join(base, scopedDaily, 'SKILL.md'), 'utf-8');
     expect(moved).toBe(
-      `---\nname: ${scopedHygiene}\ndescription: "Nightly hygiene scan."\n---\n\n<!-- cortex-project-root: ${path.resolve(root)} -->${hygieneBody}`,
+      `---\nname: ${scopedDaily}\ndescription: "Nightly daily bundle."\n---\n\n<!-- cortex-project-root: ${path.resolve(root)} -->${dailyBody}`,
     );
-    expect(r.output).toContain(`Renamed "hygiene" -> "${scopedHygiene}".`);
+    expect(r.output).toContain(`Renamed "daily" -> "${scopedDaily}".`);
 
     // Collision skipped with a notice; both sides byte-untouched.
-    const scopedLint = scopedTaskName(root, 'specflow-lint');
-    expect(fs.readFileSync(path.join(base, 'specflow-lint', 'SKILL.md'), 'utf-8')).toBe(lintRaw);
-    expect(fs.readFileSync(path.join(base, scopedLint, 'SKILL.md'), 'utf-8')).toBe(scopedLintRaw);
-    expect(r.output).toContain(`Skipped "specflow-lint": target "${scopedLint}" already exists`);
+    const scopedQuality = scopedTaskName(root, 'weekly-quality');
+    expect(fs.readFileSync(path.join(base, 'weekly-quality', 'SKILL.md'), 'utf-8')).toBe(qualityRaw);
+    expect(fs.readFileSync(path.join(base, scopedQuality, 'SKILL.md'), 'utf-8')).toBe(scopedQualityRaw);
+    expect(r.output).toContain(`Skipped "weekly-quality": target "${scopedQuality}" already exists`);
 
     // Unrelated user task untouched and never mentioned.
     expect(fs.readFileSync(path.join(base, 'daily-report', 'SKILL.md'), 'utf-8')).toBe(unrelatedRaw);

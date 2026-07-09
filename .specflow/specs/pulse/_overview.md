@@ -22,7 +22,7 @@ _Planned (not yet written):_
 
 ## Why it's grouped this way
 
-Pulse owns the two original self-maintenance loops. The wider family of thirteen loops and the shared loop substrate live in `loops/`. Pulse's defining constraint is that it proposes rather than mutates: it only ever writes to `.cortex/pulse/`, leaving acceptance to the human-reviewed pulse CLI.
+Pulse owns the two original self-maintenance loops. The wider family of loops and the shared loop substrate live in `loops/` (scheduled as five task bundles per schema §9.1). Pulse's defining constraint is that it proposes rather than mutates: it only ever writes to `.cortex/pulse/`, leaving acceptance to the human-reviewed pulse CLI.
 
 These two loops predate and seed the broader loop family, which is why they keep their own domain rather than folding into `loops/`.
 

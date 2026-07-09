@@ -2,10 +2,12 @@
  * `cortex pulse-distil` — the weekly session-distillation loop (spec
  * pulse.distil, design §10.3). Two deterministic halves around an agentic
  * middle: `--collect` extracts this project's transcript messages since the
- * last run into `pulse/.session-corpus.json` (shared with skill-suggest,
- * design §11.5); `--propose <candidates.json>` deterministically filters the
- * judgment's candidates and writes §4.5 proposal sections to
- * `pulse/suggestions.md`. Bare `cortex pulse-distil` = collect → spawn the
+ * last run into `pulse/.session-corpus.json` (the shared corpus, also read by
+ * `cortex-loop-session-observe`, design §11.5); `--propose <candidates.json>`
+ * deterministically filters the judgment's candidates and writes §4.5 proposal
+ * sections to `pulse/suggestions.md` — rule-candidate/promotion additions plus,
+ * via the folded-in workflow-mining lens, `skill-proposal` new-skill files.
+ * Bare `cortex pulse-distil` = collect → spawn the
  * Claude CLI headless for the pattern judgment (core-cli.init Rule 6
  * subprocess boundary) → propose. The shipped skill runs the judgment
  * in-session instead — never a nested subprocess.
@@ -35,7 +37,7 @@ export const DISTIL_LAST_RUN_FILE = '.distil-last-run';
 export const SUGGESTIONS_FILE = 'suggestions.md';
 
 // ---------------------------------------------------------------------------
-// shared helpers (also consumed by loops.skill-suggest)
+// shared helpers (also consumed by insight.session-observe via the corpus)
 // ---------------------------------------------------------------------------
 
 /** Normalise free text for pattern matching: lowercase, collapsed whitespace. */
@@ -247,8 +249,18 @@ export function collectCorpus(root: string, opts: CollectOptions = {}): CollectR
 // propose — deterministic second half
 // ---------------------------------------------------------------------------
 
-/** Spec Rule 2 — the judgment output contract. */
+/**
+ * Spec Rule 2 — the judgment output contract. `type` is the workflow-mining
+ * lens folded in from the retired skill-suggest loop: absent (or
+ * `rule-candidate`) is the default rule/preference path (compass target);
+ * `skill-proposal` marks a workflow-shaped pattern whose target is a NEW
+ * `.claude/skills/<name>/SKILL.md` and whose `proposedText` is a complete
+ * draft SKILL.md (schema §4.5.1 skill-proposal type; src/pulse/types.ts).
+ */
+export type DistilCandidateType = 'rule-candidate' | 'skill-proposal';
+
 export interface DistilCandidate {
+  type: DistilCandidateType;
   pattern: string;
   occurrences: number;
   sessionIds: string[];
@@ -265,21 +277,32 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === 'string');
 }
 
+/** A skill-proposal Target is exactly a NEW `.claude/skills/<slug>/SKILL.md`
+ *  (the review CLI's SKILL root, src/pulse/types.ts; slug per skill dir rules). */
+const SKILL_PROPOSAL_TARGET_RE = /^\.claude\/skills\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\/SKILL\.md$/;
+
 /** Rule 2: validate one candidate's shape; malformed → null (skipped + counted). */
 export function validateDistilCandidate(raw: unknown): DistilCandidate | null {
   if (!isRecord(raw)) return null;
-  const { pattern, occurrences, sessionIds, proposedTarget, proposedText, confidence } = raw;
+  const { type, pattern, occurrences, sessionIds, proposedTarget, proposedText, confidence } = raw;
   if (typeof pattern !== 'string' || pattern.trim() === '') return null;
   if (typeof occurrences !== 'number' || !Number.isFinite(occurrences)) return null;
   if (!isStringArray(sessionIds)) return null;
   if (typeof proposedTarget !== 'string' || proposedTarget.trim() === '') return null;
-  // Rule 5: the Target must satisfy the review CLI's target roots — distil
-  // proposes compass additions only; a target the gate would refuse is a
-  // malformed judgment output.
-  if (!proposedTarget.startsWith('.cortex/compass/') || proposedTarget.includes('..')) return null;
   if (typeof proposedText !== 'string' || proposedText.trim() === '') return null;
   if (typeof confidence !== 'string' && typeof confidence !== 'number') return null;
-  return { pattern, occurrences, sessionIds, proposedTarget, proposedText, confidence };
+  // Rule 5 / §4.5.1: the Target must satisfy the review CLI's target roots for
+  // its type — a target the gate would refuse is a malformed judgment output.
+  // Absent/`rule-candidate` → compass additions (the historical distil path);
+  // `skill-proposal` (the folded-in workflow-mining lens) → a new skill file.
+  const candidateType: DistilCandidateType = type === 'skill-proposal' ? 'skill-proposal' : 'rule-candidate';
+  if (candidateType === 'skill-proposal') {
+    if (!SKILL_PROPOSAL_TARGET_RE.test(proposedTarget)) return null;
+  } else {
+    if (typeof type === 'string' && type !== 'rule-candidate') return null; // unknown type is malformed
+    if (!proposedTarget.startsWith('.cortex/compass/') || proposedTarget.includes('..')) return null;
+  }
+  return { type: candidateType, pattern, occurrences, sessionIds, proposedTarget, proposedText, confidence };
 }
 
 /** All curated compass text, normalised, for the already-covered filter (Rule 3b). */
@@ -406,6 +429,29 @@ function distilSectionText(p: ProposalDraft): string {
   // §4.5 fence grammar (B-003): the outer fence is strictly longer than any
   // backtick run inside the payload.
   const fence = chooseOuterFence(p.candidate.proposedText);
+
+  // Workflow-mining lens (folded-in skill-suggest): a `skill-proposal` targets
+  // a NEW `.claude/skills/<name>/SKILL.md` and carries a `**Proposed file:**`
+  // create shape whose block is the complete draft SKILL.md (§4.5.1/§4.5.2).
+  if (p.candidate.type === 'skill-proposal') {
+    return [
+      `## ${p.id}: ${title}`,
+      '',
+      '**Type:** skill-proposal',
+      `**Source:** ${p.source}`,
+      `**Target:** ${p.candidate.proposedTarget}`,
+      `**Pattern:** ${p.candidate.pattern}`,
+      `**Occurrences:** ${p.candidate.occurrences}`,
+      `**Confidence:** ${p.candidate.confidence}`,
+      '',
+      '**Proposed file:**',
+      '',
+      fence,
+      p.candidate.proposedText,
+      fence,
+    ].join('\n');
+  }
+
   // Rule 7 — a pattern already in insight prose graduates via a `promotion`
   // (referencing the insight file in Source), not a fresh rule-candidate.
   const isPromotion = p.promoteFrom !== undefined;
@@ -521,8 +567,10 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
       continue;
     }
     // Rule 7 (v2 design §6): already in insight prose → propose a `promotion` of
-    // that file, not a fresh rule-candidate.
-    const promoteFrom = insightFileCovering(insightProse, candidate.proposedText);
+    // that file, not a fresh rule-candidate. Skipped for skill-proposals — a
+    // draft SKILL.md never graduates to a compass promotion.
+    const promoteFrom =
+      candidate.type === 'skill-proposal' ? null : insightFileCovering(insightProse, candidate.proposedText);
     passing.push(promoteFrom !== null ? { candidate, promoteFrom } : { candidate });
   }
 

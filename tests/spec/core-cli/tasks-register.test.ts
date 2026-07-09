@@ -58,7 +58,7 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
     const r = registerTasks(opts());
     expect(r.exitCode).toBe(0);
 
-    // Payloads: 14 scoped dirs, retired dir removed.
+    // Payloads: 5 scoped bundle dirs, retired dir removed.
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const expectedDirs = Object.values(CANONICAL_TASK_NAMES).map((c) => scopedTaskName(root, c)).sort();
     expect(fs.readdirSync(base).sort()).toEqual(expectedDirs);
@@ -87,7 +87,7 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
   it('verify passes on the registered slice', () => {
     const v = verifyTasks(opts());
     expect(v.exitCode).toBe(0);
-    expect(v.output).toContain('All 14 Cortex tasks registered');
+    expect(v.output).toContain('All 5 Cortex bundles registered');
   });
 
   it('an app-update wipe (#49276) is detected by verify and healed by re-register', () => {
@@ -96,7 +96,7 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
 
     const v1 = verifyTasks(opts());
     expect(v1.exitCode).toBe(1);
-    expect(v1.output).toContain('14 of 14');
+    expect(v1.output).toContain('5 of 5');
 
     const r = registerTasks(opts());
     expect(r.exitCode).toBe(0);

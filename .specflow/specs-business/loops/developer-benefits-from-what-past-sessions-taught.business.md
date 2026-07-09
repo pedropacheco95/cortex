@@ -3,8 +3,8 @@ id: loops.developer-benefits-from-what-past-sessions-taught
 status: implemented
 implemented_by:
   - ../../specs/loops/session-reading.spec.md
-  - ../../specs/pulse/distil.spec.md
   - ../../specs/loops/skill-suggest.spec.md
+  - ../../specs/pulse/distil.spec.md
 ---
 
 # A developer benefits from what past sessions already taught

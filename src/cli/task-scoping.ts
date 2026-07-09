@@ -21,43 +21,54 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 
 /**
- * Internal short id → canonical task name (schema §9.1 Cortex-managed tasks;
- * the FOURTEEN of schema 3.0 — `anatomy-refresh-deep` deregistered at
- * build-order-v3 step 7, `session-observe` registered at step 6). Keys are
- * the `SCHEDULED_TASKS` internal ids (templates.ts); values are the full
- * §9.1 canonical identities.
+ * Internal short id → canonical task name (schema §9.1 Cortex-managed tasks).
+ * v3.0 consolidation: the FIVE registered bundles. Each bundle's internal id
+ * IS its canonical name (the bundle grammar has no separate short id), so keys
+ * and values coincide. Keys are the `SCHEDULED_TASKS` internal ids
+ * (templates.ts); values are the full §9.1 canonical identities.
  */
 export const CANONICAL_TASK_NAMES: Readonly<Record<string, string>> = {
-  'hygiene': 'cortex-pulse-hygiene',
-  'distil': 'cortex-pulse-distil',
-  'skill-suggest': 'cortex-loop-skill-suggest',
-  'rule-decay': 'cortex-loop-rule-decay',
-  'atlas-staleness': 'cortex-loop-atlas-staleness',
-  'onboarding-drift': 'cortex-loop-onboarding-drift',
-  'spec-drift': 'cortex-loop-spec-drift',
-  'specflow-lint': 'specflow-lint',
-  'specflow-verify': 'specflow-verify',
-  'test-runner': 'cortex-loop-test-runner',
-  'bug-triage': 'cortex-loop-bug-triage',
-  'insight-refresh-daily': 'cortex-loop-insight-refresh-daily',
-  'insight-refresh-full': 'cortex-loop-insight-refresh-full',
-  'session-observe': 'cortex-loop-session-observe',
+  'daily': 'daily',
+  'weekly-curation': 'weekly-curation',
+  'weekly-quality': 'weekly-quality',
+  'test-runner': 'test-runner',
+  'monthly-review': 'monthly-review',
 };
 
 /**
- * Canonical names deregistered at v3 (build-order-v3 steps 5e and 7, design
- * §8.3, §5.10): the v2 insight pair and the anatomy deep-refresh. `cortex
- * init` removes this project's scoped task dirs for these (plain AND
- * hash-fallback forms); `cortex-loop-insight-refresh-fast` never appears
- * here — it is the git post-commit hook, not a scheduled task (schema §9.1).
+ * Canonical names deregistered and removed from this project's scoped task
+ * dirs on `cortex init` / register (plain AND hash-fallback forms). Two
+ * generations: (a) the pre-v3 v2 insight pair and anatomy deep-refresh
+ * (build-order-v3 steps 5e/7, design §8.3, §5.10); (b) the FOURTEEN standalone
+ * v3.0-pre-consolidation loop canonicals, superseded by the five bundles above
+ * (`skill-suggest` retired outright — its lens folded into pulse-distil). Both
+ * old grammars are cleaned so a re-init replaces the 14 with the 5 rather than
+ * leaving duplicates. `cortex-loop-insight-refresh-fast` never appears here —
+ * it is the git post-commit hook, not a scheduled task (schema §9.1).
  */
 export const RETIRED_CANONICAL_TASK_NAMES: readonly string[] = [
+  // (a) pre-v3 deregistrations.
   'cortex-loop-insight-refresh',
   'cortex-loop-insight-gaps',
   'cortex-loop-anatomy-refresh-deep',
+  // (b) the fourteen standalone loop canonicals, superseded by the five bundles.
+  'cortex-pulse-hygiene',
+  'cortex-pulse-distil',
+  'cortex-loop-skill-suggest',
+  'cortex-loop-rule-decay',
+  'cortex-loop-atlas-staleness',
+  'cortex-loop-onboarding-drift',
+  'cortex-loop-spec-drift',
+  'specflow-lint',
+  'specflow-verify',
+  'cortex-loop-test-runner',
+  'cortex-loop-bug-triage',
+  'cortex-loop-insight-refresh-daily',
+  'cortex-loop-insight-refresh-full',
+  'cortex-loop-session-observe',
 ];
 
-/** The fourteen registered canonical task names (suffix set for recognition). */
+/** The five registered canonical task names (suffix set for recognition). */
 const CANONICAL_SET: ReadonlySet<string> = new Set(Object.values(CANONICAL_TASK_NAMES));
 
 /**

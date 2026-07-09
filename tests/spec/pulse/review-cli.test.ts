@@ -48,7 +48,7 @@ function clearCapture(): void {
 const SUGGESTIONS = `---
 kind: pulse-suggestions
 generated: 2026-07-01T00:00:00Z
-loop: cortex-loop-skill-suggest
+loop: cortex-pulse-distil
 ---
 
 # Suggestions
@@ -148,5 +148,39 @@ describe('pulse.review-cli integrated slice (through cortex CLI run())', () => {
     expect(stdout()).not.toContain('S-001');
     expect(stdout()).not.toContain('S-002');
     expect(stdout().toLowerCase()).toContain('nothing pending');
+  });
+
+  it('B-003 regression, distil skill-proposal lens: a fenced draft survives propose → accept byte-exact into a NEW skill', async () => {
+    const root = makeProject('skill-lens-accept');
+    process.chdir(root);
+
+    // Distil's propose half writes the skill-proposal section (the folded-in
+    // workflow-mining lens) — the draft carries inner triple-backtick fences.
+    const { proposeFromCandidates } = await import('../../../src/pulse/distil.js');
+    const draft = '---\nname: release-notes\ndescription: assemble the weekly notes\n---\n\nSteps:\n\n```bash\npnpm build\npnpm test\n```\n';
+    fs.rmSync(path.join(root, '.cortex', 'pulse', 'suggestions.md')); // replace the fixture file
+    proposeFromCandidates(root, [
+      {
+        type: 'skill-proposal',
+        pattern: 'weekly release-notes assembly workflow',
+        occurrences: 3,
+        sessionIds: ['s1', 's2'],
+        proposedTarget: '.claude/skills/release-notes/SKILL.md',
+        proposedText: draft,
+        confidence: 'high',
+      },
+    ]);
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
+    expect(report).toContain('````'); // longer outer fence chosen by the writer
+
+    // The gate lists it and accept CREATES the new skill, draft byte-exact.
+    clearCapture();
+    expect(await run(['pulse-list'])).toBe(0);
+    expect(stdout()).toContain('S-001');
+    clearCapture();
+    expect(await run(['pulse-accept', 'S-001'])).toBe(0);
+    const created = path.join(root, '.claude', 'skills', 'release-notes', 'SKILL.md');
+    expect(fs.existsSync(created)).toBe(true);
+    expect(fs.readFileSync(created, 'utf-8')).toBe(draft);
   });
 });

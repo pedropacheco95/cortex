@@ -51,32 +51,21 @@ import { writeScheduledTasks } from './init.js';
 export const TASK_PERMISSION_MODE = 'bypassPermissions';
 
 /**
- * Canonical task name → cron expression (the cadence table, data not code).
- * Cadences per the loop specs' stated rhythms; wall-clock slots are staggered
- * so no two Cortex tasks of one project ever fire in the same minute:
- * - dailies 02:00–03:20, one per 20 min;
- * - weeklies spread across Sat/Sun 04:00–05:30;
- * - monthlies on the 1st, 06:00–06:30.
+ * Canonical bundle name → cron expression (the cadence table, data not code).
+ * v3.0 consolidation: one cadence per bundle (each bundle runs its member
+ * loops sequentially in a single fire), staggered so no two Cortex bundles of
+ * one project ever fire in the same slot:
+ * - `daily` nightly at 02:00;
+ * - `weekly-curation` Saturday 04:00, `weekly-quality` Sunday 04:00,
+ *   `test-runner` Sunday 06:00;
+ * - `monthly-review` on the 1st at 06:00.
  */
 export const TASK_CADENCE: Readonly<Record<string, string>> = {
-  // Dailies
-  'cortex-pulse-hygiene': '0 2 * * *',
-  'cortex-loop-bug-triage': '20 2 * * *',
-  'cortex-loop-spec-drift': '40 2 * * *',
-  'cortex-loop-insight-refresh-daily': '0 3 * * *',
-  'cortex-loop-session-observe': '20 3 * * *',
-  // Weeklies — Saturday
-  'cortex-pulse-distil': '0 4 * * 6',
-  'cortex-loop-rule-decay': '30 4 * * 6',
-  'cortex-loop-skill-suggest': '0 5 * * 6',
-  'specflow-lint': '30 5 * * 6',
-  // Weeklies — Sunday
-  'specflow-verify': '0 4 * * 0',
-  'cortex-loop-test-runner': '30 4 * * 0',
-  'cortex-loop-insight-refresh-full': '0 5 * * 0',
-  // Monthlies — 1st of month
-  'cortex-loop-atlas-staleness': '0 6 1 * *',
-  'cortex-loop-onboarding-drift': '30 6 1 * *',
+  'daily': '0 2 * * *',
+  'weekly-curation': '0 4 * * 6',
+  'weekly-quality': '0 4 * * 0',
+  'test-runner': '0 6 * * 0',
+  'monthly-review': '0 6 1 * *',
 };
 
 export interface TasksRegistryOptions {
@@ -176,11 +165,11 @@ function isCommandResult(v: LoadedRegistry | TasksCommandResult): v is TasksComm
   return 'exitCode' in v;
 }
 
-/** This project's 14 (canonical, scopedId, cron, payload filePath, description) rows. */
+/** This project's 5 (canonical, scopedId, cron, model, payload filePath, description) rows. */
 function ownRows(
   root: string,
   home: string,
-): { canonical: string; id: string; cron: string; filePath: string; description: string }[] {
+): { canonical: string; id: string; cron: string; model: string; filePath: string; description: string }[] {
   return SCHEDULED_TASKS.map((task) => {
     const canonical = CANONICAL_TASK_NAMES[task.name] ?? task.name;
     const id = scopedTaskName(root, canonical);
@@ -188,6 +177,7 @@ function ownRows(
       canonical,
       id,
       cron: TASK_CADENCE[canonical] ?? '0 2 * * *',
+      model: task.model,
       filePath: path.join(home, '.claude', 'scheduled-tasks', id, 'SKILL.md'),
       description: task.description,
     };
@@ -198,8 +188,9 @@ function ownRows(
 // `cortex tasks plan` — the authoritative registration plan (read-only)
 // ---------------------------------------------------------------------------
 
-/** Bumped on any change to the `--json` shape (the cortex-register-tasks skill consumes it). */
-export const TASK_PLAN_VERSION = 1;
+/** Bumped on any change to the `--json` shape (the cortex-register-tasks skill
+ *  consumes it). v2: added the per-bundle `model` field (v3.0 consolidation). */
+export const TASK_PLAN_VERSION = 2;
 
 /** One row of the registration plan, as emitted by `cortex tasks plan --json`. */
 export interface TaskPlanEntry {
@@ -208,6 +199,8 @@ export interface TaskPlanEntry {
   /** The §9.1 canonical task name behind the scoped id. */
   canonical: string;
   cronExpression: string;
+  /** The Claude model this bundle runs under (Desktop create-task `model` arg). */
+  model: string;
   /** Each entry's working directory: the resolved project root. */
   cwd: string;
   enabled: true;
@@ -233,6 +226,7 @@ export function planTasks(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home
     id: row.id,
     canonical: row.canonical,
     cronExpression: row.cron,
+    model: row.model,
     cwd: root,
     enabled: true,
     useWorktree: false,
@@ -254,13 +248,14 @@ export function tasksPlan(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home
     return { exitCode: 0, output: JSON.stringify(plan, null, 2) };
   }
   const lines: string[] = [
-    `Registration plan — ${plan.taskCount} Cortex scheduled tasks for ${plan.projectRoot}`,
+    `Registration plan — ${plan.taskCount} Cortex scheduled-task bundles for ${plan.projectRoot}`,
     `(permissionMode ${TASK_PERMISSION_MODE}, cwd = project root, useWorktree false for all)`,
     '',
   ];
   for (const t of plan.tasks) {
     lines.push(`${t.id}`);
     lines.push(`  cron: ${t.cronExpression}`);
+    lines.push(`  model: ${t.model}`);
     lines.push(`  payload: ${t.payloadPath}`);
     lines.push(`  ${t.description}`);
   }
@@ -297,14 +292,14 @@ export interface RegistrationStatus {
   registryFound: boolean;
   /** Canonical names of this project's tasks not registered-and-enabled. */
   unregistered: string[];
-  /** Total tasks in the roster (14). */
+  /** Total tasks in the roster (5 bundles). */
   total: number;
 }
 
 /**
  * Read-only registration check for `cortex init`'s summary: which of the
- * fourteen are present AND enabled in the app registry. Registry-not-found
- * (the app never ran) is tolerated — every task reports unregistered.
+ * five bundles are present AND enabled in the app registry. Registry-not-found
+ * (the app never ran) is tolerated — every bundle reports unregistered.
  */
 export function registrationStatus(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home' | 'appSupportDir'>): RegistrationStatus {
   const root = path.resolve(opts.projectRoot);
@@ -326,7 +321,7 @@ export function registrationStatus(opts: Pick<TasksRegistryOptions, 'projectRoot
 
 /**
  * Direct-write FALLBACK (app closed only): refresh the payload roster, then
- * upsert this project's fourteen entries into the Desktop app's registry:
+ * upsert this project's five bundle entries into the Desktop app's registry:
  * backup, preserve every foreign entry (and any unknown fields on our own
  * entries) structurally intact, atomic write, idempotent. Refuses while the
  * Desktop app runs (injected check) — the app holds the registry in memory
@@ -386,6 +381,7 @@ export function registerTasks(opts: TasksRegistryOptions): TasksCommandResult {
     const owned = {
       id: row.id,
       cronExpression: row.cron,
+      model: row.model,
       enabled: true,
       filePath: row.filePath,
       cwd: root,
@@ -404,7 +400,7 @@ export function registerTasks(opts: TasksRegistryOptions): TasksCommandResult {
 
   const next = JSON.stringify({ ...loaded.registry, scheduledTasks: entries }, null, 2) + '\n';
   if (next === loaded.raw) {
-    lines.push(`Registry ${loaded.file}: already up to date (14 task(s) registered) — nothing written.`);
+    lines.push(`Registry ${loaded.file}: already up to date (${ownRows(root, opts.home).length} bundle(s) registered) — nothing written.`);
     return { exitCode: 0, output: lines.join('\n') };
   }
 
@@ -428,8 +424,8 @@ export function registerTasks(opts: TasksRegistryOptions): TasksCommandResult {
 }
 
 /**
- * Per-task report against the app registry: registered / enabled / cron /
- * payload SKILL.md exists. Exit 1 if any of the fourteen is missing, disabled,
+ * Per-bundle report against the app registry: registered / enabled / cron /
+ * payload SKILL.md exists. Exit 1 if any of the five is missing, disabled,
  * or points at a dangling payload; cron drift from the cadence table is
  * reported but does not fail.
  */
@@ -468,10 +464,11 @@ export function verifyTasks(opts: TasksRegistryOptions): TasksCommandResult {
     const drift = cron === row.cron ? '' : ` [cron drifted: expected "${row.cron}"]`;
     lines.push(`ok   ${row.canonical}: enabled, cron "${String(cron)}", payload present${drift}`);
   }
+  const total = ownRows(root, opts.home).length;
   lines.push(
     failures === 0
-      ? 'All 14 Cortex tasks registered, enabled, and backed by payloads.'
-      : `${failures} of 14 Cortex task(s) missing, disabled, or dangling — open this folder in a Claude Desktop session and say "run cortex-register-tasks" (or, with the app fully quit, run \`cortex tasks register\`).`,
+      ? `All ${total} Cortex bundles registered, enabled, and backed by payloads.`
+      : `${failures} of ${total} Cortex bundle(s) missing, disabled, or dangling — open this folder in a Claude Desktop session and say "run cortex-register-tasks" (or, with the app fully quit, run \`cortex tasks register\`).`,
   );
   return { exitCode: failures === 0 ? 0 : 1, output: lines.join('\n') };
 }

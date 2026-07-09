@@ -472,6 +472,13 @@ describe('Shipped skills/cortex-pulse-distil/SKILL.md is pinned', () => {
     expect(body).toContain('cortex pulse-distil --propose');
   });
 
+  it('pins the workflow-mining lens (folded-in skill-suggest): workflow-shaped patterns become skill-proposal candidates', () => {
+    expect(body).toMatch(/workflow-mining lens/i);
+    expect(body).toMatch(/retired skill-suggest loop/i);
+    expect(body).toContain('"type": "skill-proposal"');
+    expect(body).toMatch(/\*\*Type:\*\*\s+skill-proposal/);
+  });
+
   it('pins the candidate JSON contract and conservative extraction', () => {
     for (const field of ['"pattern"', '"occurrences"', '"sessionIds"', '"proposedTarget"', '"proposedText"', '"confidence"']) {
       expect(body).toContain(field);
@@ -486,6 +493,62 @@ describe('Shipped skills/cortex-pulse-distil/SKILL.md is pinned', () => {
     expect(body).toMatch(/never write into\s*`\.cortex\/compass\/`/i);
     expect(body).toContain('cortex pulse-list');
     expect(body).toContain('cortex pulse-accept');
+  });
+});
+
+// ===========================================================================
+// Workflow-mining lens (folded-in skill-suggest, v3.0) — skill-proposal type
+// ===========================================================================
+describe('Workflow-mining lens: skill-proposal candidates ride the same propose path', () => {
+  it('a skill-proposal candidate writes a **Type:** skill-proposal section targeting a NEW .claude/skills/ file, draft byte-exact', () => {
+    const root = makeProject('skill-lens');
+    const draft = '---\nname: release-notes\n---\n\nSteps:\n\n```bash\npnpm build\n```\n';
+    const counts = proposeFromCandidates(root, [
+      {
+        type: 'skill-proposal',
+        pattern: 'weekly release-notes assembly workflow',
+        occurrences: 3,
+        sessionIds: ['s1', 's2'],
+        proposedTarget: '.claude/skills/release-notes/SKILL.md',
+        proposedText: draft,
+        confidence: 'high',
+      },
+      cand({ pattern: 'a plain rule pattern' }), // rule-candidate rides alongside
+    ]);
+    expect(counts.proposed).toBe(2);
+    const report = fs.readFileSync(pulsePath(root, 'suggestions.md'), 'utf-8');
+    expect(report).toContain('**Type:** skill-proposal');
+    expect(report).toContain('**Target:** .claude/skills/release-notes/SKILL.md');
+    expect(report).toContain('**Proposed file:**');
+    // B-003 fence grammar holds for the lens too: outer fence longer than the
+    // draft's inner triple-backtick run, draft byte-exact inside.
+    expect(report).toContain('````\n' + draft + '\n````');
+    expect(report).toContain('a plain rule pattern'); // both types in ONE suggestions output
+  });
+
+  it('validateDistilCandidate: skill-proposal requires a .claude/skills/<name>/SKILL.md target; unknown types are malformed', () => {
+    const skillCand = cand({ type: 'skill-proposal', proposedTarget: '.claude/skills/foo/SKILL.md' });
+    expect(validateDistilCandidate(skillCand)).not.toBeNull();
+    // A compass target is malformed FOR the skill-proposal type…
+    expect(validateDistilCandidate(cand({ type: 'skill-proposal' }))).toBeNull();
+    // …and an unknown type is malformed outright.
+    expect(validateDistilCandidate(cand({ type: 'workflow' }))).toBeNull();
+  });
+});
+
+// ===========================================================================
+// Retired verb: `cortex loop-skill-suggest` points at the distil lens
+// ===========================================================================
+describe('cortex loop-skill-suggest: retired at v3.0, pointed redirect', () => {
+  it('exits 1 with a message naming pulse-distil, the lens, and skill-proposal', async () => {
+    const { run } = await import('../../../src/cli/cli.js');
+    expect(await run(['loop-skill-suggest'])).toBe(1);
+    expect(await run(['loop-skill-suggest', '--collect'])).toBe(1);
+    const text = out.join('\n');
+    expect(text).toContain('retired');
+    expect(text).toContain('pulse-distil');
+    expect(text).toContain('workflow-mining lens');
+    expect(text).toContain('skill-proposal');
   });
 });
 

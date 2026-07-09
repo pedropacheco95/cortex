@@ -28,14 +28,14 @@ const TEST_TIMEOUT = 60_000;
 const DARWIN = { platform: 'darwin' as const };
 
 /**
- * Skill bundles shipped in the package's skills/ dir that a scheduled task's
- * prompt invokes (pulse.hygiene Rule 1; loops.* Rule 1 each; pulse.distil
- * Rule 1; loops.skill-suggest Rule 1; loops.bug-triage Rule 1;
- * loops.test-runner Rule 10; specflow.cortex-awareness Rule 3 — the eleven
- * specflow bundles ship too, of which specflow-lint, specflow-tests, and
- * specflow-bugs are task-invoked; cortex-loop-anatomy-refresh deleted at
- * step 7). Rule 4 installs them into every project, so ALL fourteen tasks
- * are always registrable under --partial.
+ * Skill bundles shipped in the package's skills/ dir that a scheduled task
+ * bundle's prompt invokes (pulse.hygiene Rule 1; loops.* Rule 1 each;
+ * pulse.distil Rule 1; loops.bug-triage Rule 1; loops.test-runner Rule 10;
+ * specflow.cortex-awareness Rule 3 — the eleven specflow bundles ship too, of
+ * which specflow-lint, specflow-tests, and specflow-bugs are task-invoked;
+ * cortex-loop-skill-suggest retired with the v3.0 consolidation, its lens
+ * folded into cortex-pulse-distil). Rule 4 installs them into every project,
+ * so ALL five bundles are always registrable under --partial.
  */
 const PACKAGED_LOOP_SKILLS = [
   'cortex-extract-insight',
@@ -46,7 +46,6 @@ const PACKAGED_LOOP_SKILLS = [
   'cortex-loop-onboarding-drift',
   'cortex-loop-rule-decay',
   'cortex-loop-session-observe',
-  'cortex-loop-skill-suggest',
   'cortex-loop-spec-drift',
   'cortex-loop-test-runner',
   'cortex-pulse-distil',
@@ -56,7 +55,7 @@ const PACKAGED_LOOP_SKILLS = [
   'specflow-tests',
 ];
 const PACKAGED_LOOP_TASKS = [
-  'atlas-staleness', 'bug-triage', 'distil', 'hygiene', 'insight-refresh-daily', 'insight-refresh-full', 'onboarding-drift', 'rule-decay', 'session-observe', 'skill-suggest', 'spec-drift', 'specflow-lint', 'specflow-verify', 'test-runner',
+  'daily', 'monthly-review', 'test-runner', 'weekly-curation', 'weekly-quality',
 ];
 
 // ---------------------------------------------------------------------------
@@ -425,9 +424,9 @@ describe('AC13: existing .specflow/specs/ content is byte-identical after init',
 });
 
 // ---------------------------------------------------------------------------
-// AC14: Fourteen scheduled task definitions written
+// AC14: Five scheduled task bundles written
 // ---------------------------------------------------------------------------
-describe('AC14: fourteen scheduled task definitions written to the stubbed home', () => {
+describe('AC14: five scheduled task bundles written to the stubbed home', () => {
   let root: string;
   let home: string;
   beforeAll(async () => {
@@ -440,7 +439,7 @@ describe('AC14: fourteen scheduled task definitions written to the stubbed home'
   it("~/.claude/scheduled-tasks contains every dir under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
-    expect(dirs).toHaveLength(14);
+    expect(dirs).toHaveLength(5);
     const expected = SCHEDULED_TASKS
       .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t.name]!))
       .sort();
@@ -457,17 +456,17 @@ describe('AC14: fourteen scheduled task definitions written to the stubbed home'
   });
 
   it('re-running without --force leaves user-modified task files untouched', async () => {
-    const scopedHygiene = scopedTaskName(root, CANONICAL_TASK_NAMES['hygiene']!);
-    const hygienePath = path.join(home, '.claude', 'scheduled-tasks', scopedHygiene, 'SKILL.md');
-    const userEdit = `---\nname: ${scopedHygiene}\ndescription: USER EDITED\n---\n\nmy custom prompt\n`;
-    fs.writeFileSync(hygienePath, userEdit);
+    const scopedDaily = scopedTaskName(root, CANONICAL_TASK_NAMES['daily']!);
+    const dailyPath = path.join(home, '.claude', 'scheduled-tasks', scopedDaily, 'SKILL.md');
+    const userEdit = `---\nname: ${scopedDaily}\ndescription: USER EDITED\n---\n\nmy custom prompt\n`;
+    fs.writeFileSync(dailyPath, userEdit);
     // Same project re-run (fresh .cortex/ so preflight admits it), same home, no --force:
     // the existing scoped task files are recognised as this project's and preserved.
     fs.rmSync(path.join(root, '.cortex'), { recursive: true, force: true });
     const result = await init(root, { noLlm: true, home, ...DARWIN });
     expect(result.exitCode).toBe(0);
-    expect(fs.readFileSync(hygienePath, 'utf-8')).toBe(userEdit);
-    expect(result.summary).toMatch(/14 existing preserved|preserved/);
+    expect(fs.readFileSync(dailyPath, 'utf-8')).toBe(userEdit);
+    expect(result.summary).toMatch(/5 existing preserved|preserved/);
   }, TEST_TIMEOUT);
 });
 
@@ -475,7 +474,7 @@ describe('AC14: fourteen scheduled task definitions written to the stubbed home'
 // AC15: --partial with no extra loop skills → only the packaged loop tasks register
 // (Rule 4 installs the shipped loop bundles, so their tasks are always
 // registrable — pulse.hygiene Rule 1, loops.* Rule 1. Since
-// specflow.cortex-awareness Rule 3 the packaged set covers ALL fourteen tasks,
+// specflow.cortex-awareness Rule 3 the packaged set covers ALL five bundles,
 // so nothing is ever skipped for a missing packaged skill.)
 // ---------------------------------------------------------------------------
 describe('AC15: --partial with no extra loop skills → only the packaged loop tasks register', () => {
@@ -491,7 +490,7 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('~/.claude/scheduled-tasks gains exactly the fourteen packaged loop tasks (scoped names, §9.1) and exit code is 0', () => {
+  it('~/.claude/scheduled-tasks gains exactly the five packaged bundles (scoped names, §9.1) and exit code is 0', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const expected = PACKAGED_LOOP_TASKS
@@ -512,8 +511,8 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
     expect(claudeMd).toContain('<!-- cortex:end -->');
   });
 
-  it('summary states "14 loop payloads on disk" and skips nothing — the packaged skills cover every task', () => {
-    expect(result.summary).toContain('14 loop payloads on disk');
+  it('summary states "5 bundle payloads on disk" and skips nothing — the packaged skills cover every bundle', () => {
+    expect(result.summary).toContain('5 bundle payloads on disk');
     const skippedTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => PACKAGED_LOOP_SKILLS.includes(s)),
     );
@@ -542,16 +541,15 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('all fourteen tasks are written under scoped names (seeded pair adds nothing beyond the packaged set)', () => {
+  it('all five bundles are written under scoped names (seeded pair adds nothing beyond the packaged set)', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const expected = PACKAGED_LOOP_TASKS
       .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t]!))
       .sort();
     expect(fs.readdirSync(base).sort()).toEqual(expected);
-    expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-lint'), 'SKILL.md'))).toBe(true);
-    expect(fs.existsSync(path.join(base, scopedTaskName(root, 'specflow-verify'), 'SKILL.md'))).toBe(true);
-    expect(result.summary).toContain('14 loop payloads on disk');
+    expect(fs.existsSync(path.join(base, scopedTaskName(root, 'weekly-quality'), 'SKILL.md'))).toBe(true);
+    expect(result.summary).toContain('5 bundle payloads on disk');
   });
 
   it('no task is skipped — every required skill is packaged', () => {
@@ -565,12 +563,12 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
 });
 
 // ---------------------------------------------------------------------------
-// AC17: Default mode → all fourteen written, no lacking-skill warning
+// AC17: Default mode → all five written, no lacking-skill warning
 // (The Rule 17 warning path survives in the code for the removed-bundle edge
 // case, but a fresh init can no longer produce it: specflow.cortex-awareness
 // Rule 3 packages every task-invoked skill.)
 // ---------------------------------------------------------------------------
-describe('AC17: default mode → all fourteen written, no lacking-skill warning', () => {
+describe('AC17: default mode → all five written, no lacking-skill warning', () => {
   let root: string;
   let home: string;
   let result: { exitCode: number; summary: string };
@@ -586,8 +584,8 @@ describe('AC17: default mode → all fourteen written, no lacking-skill warning'
   it('all task directories are written', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.readdirSync(base)).toHaveLength(14);
-    expect(result.summary).toMatch(/Scheduled tasks: 14 written/);
+    expect(fs.readdirSync(base)).toHaveLength(5);
+    expect(result.summary).toMatch(/Scheduled tasks: 5 written/);
   });
 
   it('summary carries no lacking-skill warning — every registered task has its packaged skill', () => {

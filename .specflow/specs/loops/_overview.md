@@ -2,7 +2,7 @@
 
 ## What this is
 
-The thirteen Cortex loops plus the shared loop infrastructure built once and reused. A Cortex loop maintains `.cortex/` integrity, writes only to `.cortex/pulse/` (except the test-runner), uses the standard skill/CLI surface, and composes with the other loops.
+The Cortex loops plus the shared loop infrastructure built once and reused. A Cortex loop maintains `.cortex/` integrity, writes only to `.cortex/pulse/` (except the test-runner), uses the standard skill/CLI surface, and composes with the other loops. Each loop skill stays **individually invocable** (from a session or by name); scheduling is a thinner wrapper on top — the individual loops are grouped into **five scheduled-task bundles** (schema §9.1: `daily`, `weekly-curation`, `weekly-quality`, `test-runner`, `monthly-review`), each bundle running its member loops sequentially and failure-isolated. The bundle grouping is a registration/cadence concern owned by `core-cli.task-scoping` / `core-cli.tasks-register`; the loop specs below each own one loop's behaviour regardless of which bundle schedules it.
 
 ## What it covers
 
@@ -14,7 +14,7 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 
 - `loops.rule-decay` / `loops.atlas-staleness` / `loops.onboarding-drift` / `loops.spec-drift` — the four curation reviewers: retirement/re-verify/refresh/drift candidates with evidence, each writing only its own always-write pulse report.
 
-- `loops.skill-suggest` — weekly did-things miner sharing distil's corpus: repeated workflows become draft SKILL.md proposals targeting new skill files, accepted through the pulse gate.
+- `loops.skill-suggest` — **SUPERSEDED** (owner decision): retired as a standalone loop; its workflow-mining judgment folds into `pulse.distil` as one extra lens (workflow-shaped patterns become `skill-proposal`-typed pulse suggestions). Spec retained for lineage with a banner pointing at `pulse/distil.spec.md`.
 
 - `loops.bug-triage` — daily ledger triage: fill-only classification of unclassified open bugs, compare-and-report on classified ones (never overwrites a human's judgment).
 - `loops.lint-scheduled` / `loops.verify-scheduled` — the daily paper trail: validator-backed structural report and owed-tests coverage report (incl. the §8.2 covers-completeness check; deferrals distinguished).
@@ -23,7 +23,7 @@ The thirteen Cortex loops plus the shared loop infrastructure built once and reu
 
 _Planned (not yet written):_
 
-- The thirteen Cortex loops and their composition properties
+- The Cortex loops and their composition properties
 - The Desktop scheduled-task SKILL.md writer
 - The session-reading layer
 - The writer/verifier sub-agent harness

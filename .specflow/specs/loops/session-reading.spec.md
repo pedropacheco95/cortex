@@ -14,7 +14,7 @@ governs:
 
 ## Intent
 
-The session-reading layer is the shared substrate (design §11.5, §16.2 step 10) that lets distil and skill-suggest read Claude Code session transcripts for *this project only*: locate the project's transcript directory, enumerate sessions, and parse their JSONL tolerantly into typed entries. Verified 2026-07-02 (resolving design open question #9 / §10.7, case 2): transcripts live globally at `~/.claude/projects/<slug>/<session-id>.jsonl`, where `<slug>` is the project's absolute path with `/` replaced by `-`. Deterministic Core library; consumers add the LLM judgment.
+The session-reading layer is the shared substrate (design §11.5, §16.2 step 10) that lets the session-consuming loops (distil — now carrying both the rule lens and the absorbed skill lens — and session-observe) read Claude Code session transcripts for *this project only*: locate the project's transcript directory, enumerate sessions, and parse their JSONL tolerantly into typed entries. Verified 2026-07-02 (resolving design open question #9 / §10.7, case 2): transcripts live globally at `~/.claude/projects/<slug>/<session-id>.jsonl`, where `<slug>` is the project's absolute path with `/` replaced by `-`. Deterministic Core library; consumers add the LLM judgment.
 
 ## Entities
 
@@ -76,8 +76,8 @@ The session-reading layer is the shared substrate (design §11.5, §16.2 step 10
 
 ## Notes
 
-- **Resolves design §10.7 / open question #9** (case 2: global storage, project-filtered). Distil and skill-suggest remain in v1 scope; the design doc was updated in this round to record the verified answer.
+- **Resolves design §10.7 / open question #9** (case 2: global storage, project-filtered). Distil (now carrying the absorbed skill lens) and session-observe remain in v1 scope; the design doc was updated in this round to record the verified answer. (The former separate `skill-suggest` consumer is retired — folded into distil.)
 - The real fixture shapes for tests are modelled on observed entries (`{"type":"last-prompt",...}`, `{"type":"mode",...}`, message entries) but the layer never *requires* those types — Rule 3/6 tolerance is the contract, precisely because the format is Claude-Code-owned.
 - Sensitive-content note: transcripts may contain anything the user typed. This layer confines exposure by design — in-process return only, project-scoped, read-only; the only durable artefacts derived from transcripts are the suggestion entries the human reviews at the pulse gate.
-- Also supports: `cortex-pulse-distil` and `cortex-loop-skill-suggest` (design §11.5 shared machinery). Primary parent remains `loops.developer-benefits-from-what-past-sessions-taught`.
+- Also supports: `cortex-pulse-distil` (which now also carries the skill lens absorbed from the retired `cortex-loop-skill-suggest`) and `cortex-loop-session-observe` (design §11.5 shared machinery). Primary parent remains `loops.developer-benefits-from-what-past-sessions-taught`.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

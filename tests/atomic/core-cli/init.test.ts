@@ -1,7 +1,7 @@
 /**
  * Atomic tests for core-cli.init — granular behaviours behind the ACs:
  * exit codes (3 retired with the purpose pass, step 7), settings deep-merge
- * details, the exact fourteen task names, gitignore exactness, config
+ * details, the exact five bundle names, gitignore exactness, config
  * defaults, index shapes, preferences, the git-hook v2 migration
  * (stripRetiredGitHookLines), idempotency and no-silent-destruction (Rule 16).
  */
@@ -18,7 +18,7 @@ import {
 } from '../../../src/cli/init.js';
 import { validate } from '../../../src/schema/validate.js';
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
-import { CANONICAL_TASK_NAMES, scopedTaskName, isOwnScopedTask } from '../../../src/cli/task-scoping.js';
+import { CANONICAL_TASK_NAMES, scopedTaskName, hashScopedTaskName, isOwnScopedTask } from '../../../src/cli/task-scoping.js';
 import {
   makeTmpDir,
   cleanTmp,
@@ -576,17 +576,17 @@ describe('Rule 12: existing v2 dual-line hook is migrated to insight-only', () =
 });
 
 // ---------------------------------------------------------------------------
-// Rule 13 — the fourteen task names, exactly
+// Rule 13 — the five bundle names, exactly
 // ---------------------------------------------------------------------------
-describe('Rule 13: the fourteen scheduled task names are exactly the design set, project-scoped (§9.1)', () => {
-  it("writes exactly the fourteen scoped names; --force overwrites only THIS project's entries", async () => {
+describe('Rule 13: the five scheduled task bundles are exactly the design set, project-scoped (§9.1)', () => {
+  it("writes exactly the five scoped bundle names; --force overwrites only THIS project's entries", async () => {
     const root = makeTmpDir('tasks-proj');
     const root2 = makeTmpDir('tasks-proj2');
     const home = makeTmpDir('tasks-home');
     try {
       await init(root, { noLlm: true, home, ...DARWIN });
       const base = path.join(home, '.claude', 'scheduled-tasks');
-      // The fourteen canonical task names, each under this project's <slug>-<hash>- prefix.
+      // The five canonical bundle names, each under this project's plain <slug>- prefix.
       const expected = SCHEDULED_TASKS
         .map((t) => scopedTaskName(root, CANONICAL_TASK_NAMES[t.name]!))
         .sort();
@@ -597,7 +597,7 @@ describe('Rule 13: the fourteen scheduled task names are exactly the design set,
 
       // Another project's --force init never touches this project's task
       // (task-scoping Rule 3: recognition is project-scoped)…
-      const scopedDistil = scopedTaskName(root, CANONICAL_TASK_NAMES['distil']!);
+      const scopedDistil = scopedTaskName(root, CANONICAL_TASK_NAMES['weekly-curation']!);
       const target = path.join(base, scopedDistil, 'SKILL.md');
       fs.writeFileSync(target, `---\nname: ${scopedDistil}\ndescription: EDITED\n---\n`);
       await init(root2, { noLlm: true, force: true, home, ...DARWIN });
@@ -610,32 +610,74 @@ describe('Rule 13: the fourteen scheduled task names are exactly the design set,
       cleanTmp(root); cleanTmp(root2); cleanTmp(home);
     }
   }, TEST_TIMEOUT);
+
+  it('retired-dir cleanup removes this project\'s retired canonicals in BOTH grammars (plain and hash6), never a foreign dir', async () => {
+    const root = makeTmpDir('tasks-retired-proj');
+    const home = makeTmpDir('tasks-retired-home');
+    try {
+      const base = path.join(home, '.claude', 'scheduled-tasks');
+      // A retired standalone loop canonical in the old hash6 grammar…
+      const hashDir = hashScopedTaskName(root, 'cortex-pulse-hygiene');
+      // …and one in the plain grammar (unmarked → claimable as ours).
+      const plainDir = scopedTaskName(root, 'cortex-loop-skill-suggest');
+      // A same-slug plain retired dir marker-owned by ANOTHER project must survive.
+      const foreignPlain = scopedTaskName(root, 'cortex-pulse-distil');
+      for (const name of [hashDir, plainDir, foreignPlain]) {
+        fs.mkdirSync(path.join(base, name), { recursive: true });
+      }
+      fs.writeFileSync(
+        path.join(base, foreignPlain, 'SKILL.md'),
+        `---\nname: ${foreignPlain}\n---\n\n<!-- cortex-project-root: /some/other/project -->\n\nbody\n`,
+        'utf-8',
+      );
+
+      const result = await init(root, { noLlm: true, home, ...DARWIN });
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(path.join(base, hashDir))).toBe(false);
+      expect(fs.existsSync(path.join(base, plainDir))).toBe(false);
+      expect(fs.existsSync(path.join(base, foreignPlain))).toBe(true);
+      expect(result.summary).toContain('Scheduled tasks retired');
+      expect(result.summary).toContain('cortex-pulse-hygiene');
+      expect(result.summary).toContain('cortex-loop-skill-suggest');
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
 });
 
 // ---------------------------------------------------------------------------
 // Rule 17 — the task→skill mapping table, pinned
 // ---------------------------------------------------------------------------
 describe('Rule 17: task→skill mapping owned by the task definitions', () => {
-  /** The shipped mapping — design §11 loop skill names, one row per task. */
+  /** The shipped mapping — one row per bundle: the union of every member
+   *  loop's skills (plus cortex-extract-insight where a member extracts). */
   const EXPECTED_MAPPING: Record<string, string[]> = {
-    'hygiene': ['cortex-pulse-hygiene'],
-    'distil': ['cortex-pulse-distil'],
-    'skill-suggest': ['cortex-loop-skill-suggest'],
-    'rule-decay': ['cortex-loop-rule-decay'],
-    'atlas-staleness': ['cortex-loop-atlas-staleness'],
-    'onboarding-drift': ['cortex-loop-onboarding-drift'],
-    'spec-drift': ['cortex-loop-spec-drift'],
-    'specflow-lint': ['specflow-lint'],
-    'specflow-verify': ['specflow-tests'],
+    'daily': [
+      'cortex-pulse-hygiene',
+      'cortex-loop-bug-triage',
+      'specflow-bugs',
+      'cortex-loop-spec-drift',
+      'cortex-loop-insight-refresh-daily',
+      'cortex-extract-insight',
+      'cortex-loop-session-observe',
+    ],
+    'weekly-curation': ['cortex-pulse-distil', 'cortex-loop-rule-decay'],
+    'weekly-quality': ['specflow-lint', 'specflow-tests', 'cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
     'test-runner': ['cortex-loop-test-runner'],
-    'bug-triage': ['cortex-loop-bug-triage', 'specflow-bugs'],
-    'insight-refresh-daily': ['cortex-loop-insight-refresh-daily', 'cortex-extract-insight'],
-    'insight-refresh-full': ['cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
-    'session-observe': ['cortex-loop-session-observe'],
+    'monthly-review': ['cortex-loop-atlas-staleness', 'cortex-loop-onboarding-drift'],
   };
 
-  it('all tasks declare ≥1 required skill matching the design skill names', () => {
-    expect(SCHEDULED_TASKS).toHaveLength(14); // anatomy-refresh-deep deregistered at step 7
+  /** Member loops per bundle, in the order the payload must run them. */
+  const MEMBER_ORDER: Record<string, string[]> = {
+    'daily': ['pulse-hygiene', 'bug-triage', 'spec-drift', 'insight-refresh-daily', 'session-observe'],
+    'weekly-curation': ['pulse-distil', 'rule-decay'],
+    'weekly-quality': ['specflow-lint', 'specflow-verify', 'insight-refresh-full'],
+    'test-runner': ['test-runner'],
+    'monthly-review': ['atlas-staleness', 'onboarding-drift'],
+  };
+
+  it('all bundles declare ≥1 required skill matching the design skill names', () => {
+    expect(SCHEDULED_TASKS).toHaveLength(5); // v3.0 consolidation: fourteen standalones → five bundles
     expect(SCHEDULED_TASKS.map((t) => t.name).sort()).toEqual(Object.keys(EXPECTED_MAPPING).sort());
     for (const task of SCHEDULED_TASKS) {
       expect(task.requiredSkills.length, `${task.name} declares no required skill`).toBeGreaterThanOrEqual(1);
@@ -643,11 +685,38 @@ describe('Rule 17: task→skill mapping owned by the task definitions', () => {
     }
   });
 
-  it('every task prompt body names each skill it declares (prompt/mapping consistency)', () => {
+  it('every bundle prompt body names each skill it declares (prompt/mapping consistency)', () => {
     for (const task of SCHEDULED_TASKS) {
       for (const skill of task.requiredSkills) {
         expect(task.body, `${task.name} body does not name ${skill}`).toContain(skill);
       }
+    }
+  });
+
+  it('every bundle body invokes its member loops in the listed order, failure-isolates, and ends with one digest', () => {
+    for (const task of SCHEDULED_TASKS) {
+      const members = MEMBER_ORDER[task.name]!;
+      // Members appear as numbered "**<member>**" steps, in order.
+      let last = -1;
+      members.forEach((member, i) => {
+        const idx = task.body.indexOf(`${i + 1}. **${member}**`);
+        expect(idx, `${task.name} body missing member step "${i + 1}. **${member}**"`).toBeGreaterThan(-1);
+        expect(idx, `${task.name}: member ${member} out of order`).toBeGreaterThan(last);
+        last = idx;
+      });
+      // Failure isolation: a failed member is reported, the run continues.
+      expect(task.body, `${task.name} lacks failure isolation`).toContain('Failure isolation');
+      expect(task.body, task.name).toMatch(/record the failure/i);
+      // One digest, after the members.
+      const digest = task.body.indexOf('**Digest (final step):**');
+      expect(digest, `${task.name} lacks the digest step`).toBeGreaterThan(last);
+      expect(task.body, task.name).toContain('ONE summary');
+    }
+  });
+
+  it('every bundle pins its model: opus for weekly-curation, sonnet elsewhere', () => {
+    for (const task of SCHEDULED_TASKS) {
+      expect(task.model, task.name).toBe(task.name === 'weekly-curation' ? 'claude-opus-4-8' : 'claude-sonnet-5');
     }
   });
 });
@@ -675,7 +744,7 @@ describe('Rule 15: summary names every change and the Desktop reminder', () => {
       expect(s).toMatch(/Preferences drafted/);
       expect(s).toMatch(/Hooks registered/);
       expect(s).toMatch(/Git hook:/);
-      expect(s).toMatch(/Scheduled tasks: 14 written/);
+      expect(s).toMatch(/Scheduled tasks: 5 written/);
       expect(s).toMatch(/CLAUDE\.md: managed cortex block/);
       expect(s).toMatch(/Migration:/);
       expect(s).toMatch(/Spec trees:/);
@@ -690,7 +759,7 @@ describe('Rule 15: summary names every change and the Desktop reminder', () => {
 // Rules 13/15 — registration instruction block (B-009 final mechanism)
 // ---------------------------------------------------------------------------
 describe('Rules 13/15: register-in-Desktop instruction block vs all-registered one-liner', () => {
-  it('registry missing (app never ran) → instruction block: 14 of 14, run cortex-register-tasks, verify', async () => {
+  it('registry missing (app never ran) → instruction block: 5 of 5, run cortex-register-tasks, verify', async () => {
     const root = makeTmpDir('regblock-proj');
     const home = makeTmpDir('regblock-home');
     const appSupportDir = makeTmpDir('regblock-appsupport'); // empty: no registry anywhere
@@ -698,11 +767,11 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
       const result = await init(root, { noLlm: true, home, appSupportDir, ...DARWIN });
       expect(result.exitCode).toBe(0);
       const s = result.summary;
-      expect(s).toContain('14 of 14 not yet registered with the Claude Desktop app');
+      expect(s).toContain('5 of 5 not yet registered with the Claude Desktop app');
       expect(s).toContain('open this folder in Claude Desktop (new session) and say:');
       expect(s).toContain('run cortex-register-tasks');
       expect(s).toContain('Then confirm with: cortex tasks verify');
-      expect(s).not.toContain('all 14 registered');
+      expect(s).not.toContain('all 5 registered');
       // The retired direct-write pointer is gone from the summary.
       expect(s).not.toContain('run `cortex tasks register`');
     } finally {
@@ -710,7 +779,7 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
     }
   }, TEST_TIMEOUT);
 
-  it('all fourteen registered in the fixture registry → all-registered one-liner, no instruction block', async () => {
+  it('all five registered in the fixture registry → all-registered one-liner, no instruction block', async () => {
     const root = makeTmpDir('regok-proj');
     const home = makeTmpDir('regok-home');
     const appSupportDir = makeTmpDir('regok-appsupport');
@@ -725,7 +794,7 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
       const result = await init(root, { noLlm: true, home, appSupportDir, ...DARWIN });
       expect(result.exitCode).toBe(0);
       const s = result.summary;
-      expect(s).toContain('Scheduled tasks: all 14 registered with the Claude Desktop app');
+      expect(s).toContain('Scheduled tasks: all 5 registered with the Claude Desktop app');
       expect(s).toContain('cortex tasks verify');
       expect(s).not.toContain('not yet registered');
       expect(s).not.toContain('run cortex-register-tasks');
