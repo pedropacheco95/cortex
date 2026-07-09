@@ -3,6 +3,7 @@
  * Shapes are owned by cortex-schema.md: §1 layout, §7.1 active prompts,
  * §7.2 specs index, §8 CLAUDE.md managed block, §10.1 config defaults.
  */
+import * as path from 'path';
 
 export const SCHEMA_VERSION = '3.0';
 
@@ -432,15 +433,20 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
 
 /**
  * SKILL.md for one scheduled task. `scopedName` is the §9.1 project-scoped
- * registration identity (`<slug>-<hash>-<canonical>`, core-cli.task-scoping
- * Rule 2) and lands ONLY in the frontmatter `name:`; the prompt body is
- * unchanged and invokes the underlying skill by its real name.
+ * registration identity (`<slug>-<canonical>` plain, or the
+ * `<slug>-<hash6>-<canonical>` collision fallback — core-cli.task-scoping
+ * Rule 2) and lands ONLY in the frontmatter `name:`; the prompt body invokes
+ * the underlying skill by its real name. `projectRoot` is stamped as the §9.1
+ * ownership-marker comment — how collision resolution tells same-slug
+ * projects apart.
  */
-export function scheduledTaskSkillMd(task: ScheduledTask, scopedName: string): string {
+export function scheduledTaskSkillMd(task: ScheduledTask, scopedName: string, projectRoot: string): string {
   return `---
 name: ${scopedName}
 description: ${JSON.stringify(task.description)}
 ---
+
+<!-- cortex-project-root: ${path.resolve(projectRoot)} -->
 
 # ${task.name} (Cortex scheduled task)
 

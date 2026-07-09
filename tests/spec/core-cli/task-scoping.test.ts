@@ -15,6 +15,7 @@ import {
   projectTaskSlug,
   projectTaskHash,
   scopedTaskName,
+  hashScopedTaskName,
   isOwnScopedTask,
   tasksRename,
 } from '../../../src/cli/task-scoping.js';
@@ -27,13 +28,24 @@ const DARWIN = { platform: 'darwin' as const };
 // AC1: Scoped name construction
 // ---------------------------------------------------------------------------
 describe('AC1: scoped name construction', () => {
-  it('project "My API_v2" → my-api-v2-<h6>-cortex-pulse-hygiene, h6 = first 6 hex of SHA256(abs path)', () => {
+  it('project "My API_v2" → my-api-v2-cortex-pulse-hygiene (plain form, no hash)', () => {
     const parent = makeTmpDir('ts-ac1');
     try {
       const root = path.join(parent, 'My API_v2');
       fs.mkdirSync(root);
+      expect(scopedTaskName(root, 'cortex-pulse-hygiene')).toBe('my-api-v2-cortex-pulse-hygiene');
+    } finally {
+      cleanTmp(parent);
+    }
+  });
+
+  it('collision fallback form: my-api-v2-<h6>-cortex-pulse-hygiene, h6 = first 6 hex of SHA256(abs path)', () => {
+    const parent = makeTmpDir('ts-ac1b');
+    try {
+      const root = path.join(parent, 'My API_v2');
+      fs.mkdirSync(root);
       const h6 = createHash('sha256').update(root).digest('hex').slice(0, 6);
-      expect(scopedTaskName(root, 'cortex-pulse-hygiene')).toBe(`my-api-v2-${h6}-cortex-pulse-hygiene`);
+      expect(hashScopedTaskName(root, 'cortex-pulse-hygiene')).toBe(`my-api-v2-${h6}-cortex-pulse-hygiene`);
       expect(h6).toMatch(/^[0-9a-f]{6}$/);
     } finally {
       cleanTmp(parent);
@@ -64,20 +76,27 @@ describe("AC2: two same-named projects don't collide", () => {
   }, TEST_TIMEOUT * 2);
   afterAll(() => { cleanTmp(tmp); cleanTmp(home); });
 
-  it('the home holds two disjoint task sets, each attributable by prefix', () => {
+  it('the home holds two disjoint task sets: the first project claims the plain names, the second falls back to hash-scoped names', () => {
     expect(resultA.exitCode).toBe(0);
     expect(resultB.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
     expect(dirs).toHaveLength(28); // 2 × the fourteen §9.1 canonical tasks
-    const ofA = dirs.filter((d) => isOwnScopedTask(rootA, d));
-    const ofB = dirs.filter((d) => isOwnScopedTask(rootB, d));
+    const ofA = dirs.filter((d) => isOwnScopedTask(rootA, d, base));
+    const ofB = dirs.filter((d) => isOwnScopedTask(rootB, d, base));
     expect(ofA).toHaveLength(14);
     expect(ofB).toHaveLength(14);
     expect(ofA.filter((d) => ofB.includes(d))).toHaveLength(0);
-    // Same slug (the Desktop-scannable part), disambiguated by the path hash.
+    // Same slug (the Desktop-scannable part): A owns the plain names via the
+    // ownership marker; B carries the §9.1 hash-fallback disambiguator.
     expect(projectTaskSlug(rootA)).toBe('api');
     expect(projectTaskSlug(rootB)).toBe('api');
+    expect(ofA.sort()).toEqual(
+      Object.values(CANONICAL_TASK_NAMES).map((c) => scopedTaskName(rootA, c)).sort(),
+    );
+    expect(ofB.sort()).toEqual(
+      Object.values(CANONICAL_TASK_NAMES).map((c) => hashScopedTaskName(rootB, c)).sort(),
+    );
     expect(projectTaskHash(rootA)).not.toBe(projectTaskHash(rootB));
   });
 
@@ -228,11 +247,14 @@ describe('AC5: rename migrates legacy tasks, idempotently', () => {
     const r = tasksRename(home, root);
     expect(r.exitCode).toBe(0);
 
-    // hygiene moved: dir gone, scoped dir present, name: rewritten, body byte-identical.
+    // hygiene moved: dir gone, scoped dir present, name: rewritten, ownership
+    // marker stamped after the frontmatter, body otherwise byte-identical.
     const scopedHygiene = scopedTaskName(root, 'cortex-pulse-hygiene');
     expect(fs.existsSync(path.join(base, 'hygiene'))).toBe(false);
     const moved = fs.readFileSync(path.join(base, scopedHygiene, 'SKILL.md'), 'utf-8');
-    expect(moved).toBe(`---\nname: ${scopedHygiene}\ndescription: "Nightly hygiene scan."\n---${hygieneBody}`);
+    expect(moved).toBe(
+      `---\nname: ${scopedHygiene}\ndescription: "Nightly hygiene scan."\n---\n\n<!-- cortex-project-root: ${path.resolve(root)} -->${hygieneBody}`,
+    );
     expect(r.output).toContain(`Renamed "hygiene" -> "${scopedHygiene}".`);
 
     // Collision skipped with a notice; both sides byte-untouched.

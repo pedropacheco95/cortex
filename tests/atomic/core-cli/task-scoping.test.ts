@@ -1,7 +1,8 @@
 /**
  * Atomic tests for core-cli.task-scoping — slug edge cases, hash stability,
  * canonical-map completeness pinned against SCHEDULED_TASKS, legacyTaskNames
- * coverage, isOwnScopedTask negatives, rename mechanics, and the
+ * coverage, plain-name/hash-fallback resolution with the ownership marker,
+ * isOwnScopedTask negatives, rename + hash-dir migration mechanics, and the
  * `cortex tasks` CLI dispatch guards.
  */
 import { describe, it, expect } from 'vitest';
@@ -14,6 +15,10 @@ import {
   projectTaskSlug,
   projectTaskHash,
   scopedTaskName,
+  hashScopedTaskName,
+  resolveScopedTaskName,
+  taskDirProjectRoot,
+  migrateHashScopedTaskDirs,
   isOwnScopedTask,
   tasksRename,
 } from '../../../src/cli/task-scoping.js';
@@ -96,14 +101,90 @@ describe('projectTaskHash: SHA256-of-absolute-path first 6 hex', () => {
 });
 
 // ---------------------------------------------------------------------------
-// scopedTaskName — assembly
+// scopedTaskName / hashScopedTaskName — assembly
 // ---------------------------------------------------------------------------
-describe('scopedTaskName: <slug>-<hash>-<canonical>', () => {
+describe('scopedTaskName: <slug>-<canonical> (plain default form)', () => {
+  it('assembles slug and canonical name, no hash', () => {
+    expect(scopedTaskName('/tmp/My Project', 'cortex-pulse-hygiene')).toBe(
+      'my-project-cortex-pulse-hygiene',
+    );
+    expect(scopedTaskName('/tmp/cortex', 'cortex-pulse-hygiene')).toBe('cortex-cortex-pulse-hygiene');
+  });
+});
+
+describe('hashScopedTaskName: <slug>-<hash6>-<canonical> (collision fallback / legacy grammar)', () => {
   it('assembles slug, hash, and canonical name in order', () => {
     const root = '/tmp/My Project';
-    expect(scopedTaskName(root, 'cortex-pulse-hygiene')).toBe(
+    expect(hashScopedTaskName(root, 'cortex-pulse-hygiene')).toBe(
       `my-project-${projectTaskHash(root)}-cortex-pulse-hygiene`,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveScopedTaskName + taskDirProjectRoot — ownership-marker resolution
+// ---------------------------------------------------------------------------
+describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by another project', () => {
+  const marker = (root: string): string => `<!-- cortex-project-root: ${root} -->`;
+  const payload = (name: string, root?: string): string =>
+    `---\nname: ${name}\ndescription: "x"\n---\n${root ? `\n${marker(root)}\n` : ''}\nbody\n`;
+
+  it('plain dir absent → plain name', () => {
+    const base = makeTmpDir('ts-res-absent');
+    try {
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
+        'api-cortex-pulse-hygiene',
+      );
+    } finally {
+      cleanTmp(base);
+    }
+  });
+
+  it('plain dir marker-owned by this project → plain name', () => {
+    const base = makeTmpDir('ts-res-ours');
+    try {
+      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-cortex-pulse-hygiene', '/tmp/work/api'), 'utf-8');
+      expect(taskDirProjectRoot(dir)).toBe('/tmp/work/api');
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
+        'api-cortex-pulse-hygiene',
+      );
+    } finally {
+      cleanTmp(base);
+    }
+  });
+
+  it('plain dir marker-owned by a DIFFERENT project → hash fallback', () => {
+    const base = makeTmpDir('ts-res-foreign');
+    try {
+      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-cortex-pulse-hygiene', '/tmp/personal/api'), 'utf-8');
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
+        hashScopedTaskName('/tmp/work/api', 'cortex-pulse-hygiene'),
+      );
+    } finally {
+      cleanTmp(base);
+    }
+  });
+
+  it('plain dir without a marker (or without a SKILL.md) is claimed as ours — no positive mismatch, no fallback', () => {
+    const base = makeTmpDir('ts-res-unmarked');
+    try {
+      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      fs.mkdirSync(dir, { recursive: true });
+      expect(taskDirProjectRoot(dir)).toBeUndefined();
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
+        'api-cortex-pulse-hygiene',
+      );
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), payload('api-cortex-pulse-hygiene'), 'utf-8');
+      expect(resolveScopedTaskName(base, '/tmp/work/api', 'cortex-pulse-hygiene')).toBe(
+        'api-cortex-pulse-hygiene',
+      );
+    } finally {
+      cleanTmp(base);
+    }
   });
 });
 
@@ -164,15 +245,39 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
   const other = '/tmp/personal/api';
   const prefix = `${projectTaskSlug(root)}-${projectTaskHash(root)}-`;
 
-  it('accepts all fourteen of its own scoped names', () => {
+  it('accepts all fourteen of its own plain scoped names and hash-fallback names', () => {
     for (const canonical of CANONICALS) {
       expect(isOwnScopedTask(root, scopedTaskName(root, canonical)), canonical).toBe(true);
+      expect(isOwnScopedTask(root, hashScopedTaskName(root, canonical)), canonical).toBe(true);
     }
   });
 
-  it("rejects another project's scoped names (same slug, different hash)", () => {
+  it("rejects another project's hash-fallback names (same slug, different hash)", () => {
     for (const canonical of CANONICALS) {
-      expect(isOwnScopedTask(root, scopedTaskName(other, canonical)), canonical).toBe(false);
+      expect(
+        isOwnScopedTask(root, `${projectTaskSlug(other)}-${projectTaskHash(other)}-${canonical}`),
+        canonical,
+      ).toBe(false);
+    }
+  });
+
+  it("with a tasksDir, rejects a same-slug plain name whose marker names another project's root", () => {
+    const base = makeTmpDir('ts-own-marker');
+    try {
+      const dir = path.join(base, 'api-cortex-pulse-hygiene');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, 'SKILL.md'),
+        `---\nname: api-cortex-pulse-hygiene\n---\n\n<!-- cortex-project-root: ${other} -->\n\nbody\n`,
+        'utf-8',
+      );
+      expect(isOwnScopedTask(root, 'api-cortex-pulse-hygiene', base)).toBe(false);
+      expect(isOwnScopedTask(other, 'api-cortex-pulse-hygiene', base)).toBe(true);
+      // Unmarked plain dirs stay claimable (no positive mismatch).
+      fs.rmSync(path.join(dir, 'SKILL.md'));
+      expect(isOwnScopedTask(root, 'api-cortex-pulse-hygiene', base)).toBe(true);
+    } finally {
+      cleanTmp(base);
     }
   });
 
@@ -181,6 +286,8 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
     expect(isOwnScopedTask(root, `${prefix}cortex-pulse-hygiene-mine`)).toBe(false);
     expect(isOwnScopedTask(root, `${prefix}hygiene`)).toBe(false); // internal id is not a canonical suffix
     expect(isOwnScopedTask(root, prefix)).toBe(false); // empty suffix
+    expect(isOwnScopedTask(root, 'api-daily-report')).toBe(false); // plain prefix, unknown suffix
+    expect(isOwnScopedTask(root, 'api-hygiene')).toBe(false); // internal id is not a canonical suffix
   });
 
   it('rejects unscoped legacy names and non-Cortex entries', () => {
@@ -206,7 +313,7 @@ describe('tasksRename: mechanics', () => {
     }
   });
 
-  it('renames a canonical-named legacy dir, rewriting only the frontmatter name line', () => {
+  it('renames a canonical-named legacy dir, rewriting the frontmatter name and stamping the ownership marker; the rest is byte-identical', () => {
     const home = makeTmpDir('ts-tr-canon-home');
     const root = makeTmpDir('ts-tr-canon-root');
     try {
@@ -220,11 +327,73 @@ describe('tasksRename: mechanics', () => {
       const scoped = scopedTaskName(root, 'cortex-loop-test-runner');
       expect(r.exitCode).toBe(0);
       expect(fs.existsSync(src)).toBe(false);
-      // Only the name: line changed; description and body byte-identical.
-      expect(fs.readFileSync(path.join(base, scoped, 'SKILL.md'), 'utf-8')).toBe(`---\nname: ${scoped}${tail}`);
+      // Only the name: line changed and the marker was inserted after the
+      // frontmatter; description and body bytes are otherwise identical.
+      const [head, body] = tail.split('---\n');
+      expect(fs.readFileSync(path.join(base, scoped, 'SKILL.md'), 'utf-8')).toBe(
+        `---\nname: ${scoped}${head}---\n\n<!-- cortex-project-root: ${path.resolve(root)} -->\n${body}`,
+      );
       expect(r.output).toContain(`Renamed "cortex-loop-test-runner" -> "${scoped}".`);
     } finally {
       cleanTmp(home); cleanTmp(root);
+    }
+  });
+
+  it('migrateHashScopedTaskDirs: moves this project\'s <slug>-<hash6>-<canonical> dirs to plain names, stamping ownership', () => {
+    const home = makeTmpDir('ts-mig-home');
+    const root = makeTmpDir('ts-mig-root');
+    try {
+      const base = path.join(home, '.claude', 'scheduled-tasks');
+      const legacy = hashScopedTaskName(root, 'cortex-pulse-hygiene');
+      fs.mkdirSync(path.join(base, legacy), { recursive: true });
+      const tail = '\ndescription: "Nightly."\n---\n\n# hygiene\n\nInvoke the `cortex-pulse-hygiene` skill.\n';
+      fs.writeFileSync(path.join(base, legacy, 'SKILL.md'), `---\nname: ${legacy}${tail}`, 'utf-8');
+      // A foreign project's hash-scoped dir must never move.
+      const foreign = hashScopedTaskName('/some/other/project', 'cortex-pulse-hygiene');
+      fs.mkdirSync(path.join(base, foreign), { recursive: true });
+
+      const lines = migrateHashScopedTaskDirs(home, root);
+      const plain = scopedTaskName(root, 'cortex-pulse-hygiene');
+      expect(lines).toContain(`Renamed "${legacy}" -> "${plain}".`);
+      expect(fs.existsSync(path.join(base, legacy))).toBe(false);
+      expect(fs.existsSync(path.join(base, foreign))).toBe(true);
+      const raw = fs.readFileSync(path.join(base, plain, 'SKILL.md'), 'utf-8');
+      expect(raw).toContain(`name: ${plain}\n`);
+      expect(taskDirProjectRoot(path.join(base, plain))).toBe(path.resolve(root));
+      // Idempotent: second run does nothing.
+      expect(migrateHashScopedTaskDirs(home, root)).toEqual([]);
+    } finally {
+      cleanTmp(home); cleanTmp(root);
+    }
+  });
+
+  it('migrateHashScopedTaskDirs: when the plain name is marker-owned by another project, the hash dir stays put (it IS the resolved name)', () => {
+    const home = makeTmpDir('ts-mig-coll-home');
+    const parent = makeTmpDir('ts-mig-coll');
+    try {
+      const rootA = path.join(parent, 'work', 'api');
+      const rootB = path.join(parent, 'personal', 'api');
+      fs.mkdirSync(rootA, { recursive: true });
+      fs.mkdirSync(rootB, { recursive: true });
+      const base = path.join(home, '.claude', 'scheduled-tasks');
+      // Project A owns the plain name.
+      const plain = scopedTaskName(rootA, 'cortex-pulse-hygiene');
+      fs.mkdirSync(path.join(base, plain), { recursive: true });
+      fs.writeFileSync(
+        path.join(base, plain, 'SKILL.md'),
+        `---\nname: ${plain}\n---\n\n<!-- cortex-project-root: ${rootA} -->\n\nbody\n`,
+        'utf-8',
+      );
+      // Project B (same slug) has a legacy hash dir.
+      const legacyB = hashScopedTaskName(rootB, 'cortex-pulse-hygiene');
+      fs.mkdirSync(path.join(base, legacyB), { recursive: true });
+      fs.writeFileSync(path.join(base, legacyB, 'SKILL.md'), `---\nname: ${legacyB}\n---\n\nbody\n`, 'utf-8');
+
+      expect(migrateHashScopedTaskDirs(home, rootB)).toEqual([]);
+      expect(fs.existsSync(path.join(base, legacyB))).toBe(true);
+      expect(fs.readFileSync(path.join(base, plain, 'SKILL.md'), 'utf-8')).toContain(rootA);
+    } finally {
+      cleanTmp(home); cleanTmp(parent);
     }
   });
 

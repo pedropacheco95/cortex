@@ -32,7 +32,14 @@ import {
   pulseDismissedTemplate,
 } from './templates.js';
 // Schema §9.1 project scoping for the Rule 13 task writer (core-cli.task-scoping).
-import { CANONICAL_TASK_NAMES, RETIRED_CANONICAL_TASK_NAMES, scopedTaskName } from './task-scoping.js';
+import {
+  CANONICAL_TASK_NAMES,
+  RETIRED_CANONICAL_TASK_NAMES,
+  scopedTaskName,
+  hashScopedTaskName,
+  resolveScopedTaskName,
+  taskDirProjectRoot,
+} from './task-scoping.js';
 // Schema §2.3 re-rooted spec trees (specflow.reorg).
 import { specsRoot, businessRoot, SPECS_REL, BUSINESS_REL } from '../paths.js';
 
@@ -642,12 +649,19 @@ export function writeScheduledTasks(home: string, force: boolean, root: string, 
   const lacking: TaskSkillGap[] = [];
   const retired: string[] = [];
   // §9.1 deregistration: retired canonical tasks are removed under THIS
-  // project's scoped names only (other projects' entries are never touched).
+  // project's scoped names only — both the plain form and the hash-fallback
+  // form dirs from before the naming revision (other projects' entries are
+  // never touched: the hash form embeds this project's path hash, and the
+  // plain form is removed only here, for this root's slug).
   for (const canonical of RETIRED_CANONICAL_TASK_NAMES) {
-    const retiredDir = path.join(baseDir, scopedTaskName(root, canonical));
-    if (fs.existsSync(retiredDir)) {
+    for (const name of [scopedTaskName(root, canonical), hashScopedTaskName(root, canonical)]) {
+      const retiredDir = path.join(baseDir, name);
+      if (!fs.existsSync(retiredDir)) continue;
+      // Plain-form guard: never remove a same-slug dir another project owns.
+      const owner = taskDirProjectRoot(retiredDir);
+      if (owner !== undefined && owner !== path.resolve(root)) continue;
       fs.rmSync(retiredDir, { recursive: true, force: true });
-      retired.push(canonical);
+      if (!retired.includes(canonical)) retired.push(canonical);
     }
   }
   for (const task of SCHEDULED_TASKS) {
@@ -662,17 +676,19 @@ export function writeScheduledTasks(home: string, force: boolean, root: string, 
       lacking.push({ task: task.name, missingSkills });
     }
     // §9.1 project-scoped registration identity (core-cli.task-scoping Rules
-    // 2-3): exists/preserve/overwrite keys on THIS project's scoped path only,
-    // so other projects' tasks and non-Cortex entries are never counted,
-    // listed, overwritten, or skipped-with-notice.
-    const scoped = scopedTaskName(root, CANONICAL_TASK_NAMES[task.name] ?? task.name);
+    // 2-3): exists/preserve/overwrite keys on THIS project's resolved scoped
+    // path only (plain `<slug>-<canonical>`, hash6 fallback when the plain
+    // name is owned by another project), so other projects' tasks and
+    // non-Cortex entries are never counted, listed, overwritten, or
+    // skipped-with-notice.
+    const scoped = resolveScopedTaskName(baseDir, root, CANONICAL_TASK_NAMES[task.name] ?? task.name);
     const skillPath = path.join(baseDir, scoped, 'SKILL.md');
     if (fs.existsSync(skillPath) && !force) {
       preserved++;
       continue;
     }
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
-    fs.writeFileSync(skillPath, scheduledTaskSkillMd(task, scoped), 'utf-8');
+    fs.writeFileSync(skillPath, scheduledTaskSkillMd(task, scoped, root), 'utf-8');
     written++;
   }
   return { written, preserved, skipped, lacking, retired };
