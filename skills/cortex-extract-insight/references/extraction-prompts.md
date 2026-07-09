@@ -155,7 +155,10 @@ Inputs: every scope's `anatomy/` entries, scope-local `graph.json` and
 >      (`confidence: inferred`, evidence mandatory). Two modules sharing a
 >      name is not evidence; two modules independently implementing the
 >      same non-obvious mechanism is.
->    - `co-clustered` — cluster co-membership, derived from `clusters.json`.
+>    - `co-clustered` — cluster co-membership, derived from `clusters.json`,
+>      at CONCEPT granularity: a handful of concept-level co-membership
+>      edges, NEVER pairwise file combinatorics across clusters (do not emit
+>      an edge per file pair).
 > 3. **`tags.json`** — a typed `vocabulary` (`tag`, `kind` ∈ `concern |
 >    technology | pattern | layer | domain-term`, optional `aliases`) and
 >    `assignments` from node ids to vocabulary tags only. Tags are the

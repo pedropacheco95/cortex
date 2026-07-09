@@ -225,7 +225,10 @@ yourself if the codebase is small) and produces the global L4 layer:
   | pattern | layer | domain-term`, optional `aliases`) plus `assignments`
   mapping node ids to vocabulary tags only.
 - **`clusters.json`** — `{id: "cluster:<label-slug>", label, members,
-  rationale (non-empty), scope: <scope-id> | "global"}`.
+  rationale (non-empty), scope: <scope-id> | "global"}`. When the extraction
+  is unscoped (no `scope-registry.yaml`), every cluster's `scope` MUST be
+  `"global"` — the validator accepts nothing else without a registry; named
+  dispatch groups from the plan are not cluster scopes.
 - **`reverse-index.json`** (§4.10.5) — `referenced_by` mapping every entity
   node id to the concept/edge ids that cite it. Build it mechanically from
   the finished graph + concepts; the refresh loops depend on it.

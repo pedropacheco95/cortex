@@ -62,6 +62,22 @@ The scope agent's **LAST act** is writing its completion manifest:
 }
 ```
 
+Beyond the bookkeeping fields above, a scope agent MAY (sanctioned,
+optional) include richer fields that Phase 4 assembles from — carrying them
+in the manifest makes unification and resume cheap because the orchestrator
+never re-reads every scope's outputs to rebuild the cross-scope picture:
+
+- `proposed_concepts` — candidate codebase-spanning concepts the scope saw;
+  Phase 4 unifies/dedupes these into `concepts/` and `concept:` nodes.
+- `semantic_edges` — cross-scope edge candidates (with evidence); Phase 4
+  filters them into the top-level `graph.json`.
+- `main_players` — the scope's key elements; Phase 4 uses them for
+  `element:` nodes and cross-scope edge endpoints.
+- `suggested_tags` — vocabulary candidates; Phase 4 merges them into
+  `tags.json`'s typed vocabulary.
+- `tag_assignments` — node-id → tag mappings; Phase 4 folds them into
+  `tags.json` `assignments` after vocabulary merge.
+
 Because the manifest is written only after every entry and the scope graph
 have landed, its existence certifies the scope's outputs are on disk. It is
 transient (pulse is gitignored) — the durable record is the ledger merge
