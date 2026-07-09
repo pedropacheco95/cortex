@@ -1,0 +1,567 @@
+{
+  "schemaVersion": "3.0",
+  "generated": "2026-07-09T08:54:17Z",
+  "built_at_commit": "8248c76",
+  "vocabulary": [
+    {
+      "tag": "S-NNN-namespace",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "atlas-hygiene",
+      "kind": "concern"
+    },
+    {
+      "tag": "bug-ledger-triage",
+      "kind": "concern"
+    },
+    {
+      "tag": "carry-forward-dedup",
+      "kind": "pattern"
+    },
+    {
+      "tag": "child-process",
+      "kind": "technology"
+    },
+    {
+      "tag": "cli",
+      "kind": "layer"
+    },
+    {
+      "tag": "cli-surface",
+      "kind": "layer"
+    },
+    {
+      "tag": "commonmark-longer-fence-rule",
+      "kind": "pattern"
+    },
+    {
+      "tag": "compass-rule",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "constellation",
+      "kind": "layer"
+    },
+    {
+      "tag": "core",
+      "kind": "layer"
+    },
+    {
+      "tag": "core-loop",
+      "kind": "layer"
+    },
+    {
+      "tag": "core-pulse-infra",
+      "kind": "layer"
+    },
+    {
+      "tag": "core-shared-util",
+      "kind": "layer"
+    },
+    {
+      "tag": "coverage-gap",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "cross-reference-resolution",
+      "kind": "concern"
+    },
+    {
+      "tag": "deterministic-core",
+      "kind": "pattern"
+    },
+    {
+      "tag": "distillation",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "dynamic-import-dispatch",
+      "kind": "pattern"
+    },
+    {
+      "tag": "fast-glob",
+      "kind": "technology"
+    },
+    {
+      "tag": "fence-grammar",
+      "kind": "concern"
+    },
+    {
+      "tag": "fill-only-mutation",
+      "kind": "pattern"
+    },
+    {
+      "tag": "git-introspection",
+      "kind": "concern"
+    },
+    {
+      "tag": "governs-glob",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "gray-matter",
+      "kind": "technology"
+    },
+    {
+      "tag": "hook-safe",
+      "kind": "pattern"
+    },
+    {
+      "tag": "hooks",
+      "kind": "layer"
+    },
+    {
+      "tag": "hygiene-sweep",
+      "kind": "concern"
+    },
+    {
+      "tag": "id-allocation",
+      "kind": "concern"
+    },
+    {
+      "tag": "llm-judgment-subprocess",
+      "kind": "pattern"
+    },
+    {
+      "tag": "managed-block",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "monotonic-counter",
+      "kind": "pattern"
+    },
+    {
+      "tag": "never-throws-wrapper",
+      "kind": "pattern"
+    },
+    {
+      "tag": "permitted-target-roots",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "promotion",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "propose-dont-mutate",
+      "kind": "pattern"
+    },
+    {
+      "tag": "provenance",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "pulse-proposal",
+      "kind": "concern"
+    },
+    {
+      "tag": "pulse-review",
+      "kind": "concern"
+    },
+    {
+      "tag": "query-engine",
+      "kind": "layer"
+    },
+    {
+      "tag": "report-writing",
+      "kind": "concern"
+    },
+    {
+      "tag": "rule-obsolescence",
+      "kind": "concern"
+    },
+    {
+      "tag": "scaffolding-drift",
+      "kind": "concern"
+    },
+    {
+      "tag": "scan-and-report",
+      "kind": "pattern"
+    },
+    {
+      "tag": "scheduled-loop",
+      "kind": "pattern"
+    },
+    {
+      "tag": "scheduled-tasks",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "session-corpus",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "seven-type-taxonomy",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "shared-validator-runtime-contract",
+      "kind": "pattern"
+    },
+    {
+      "tag": "single-write-authority",
+      "kind": "pattern"
+    },
+    {
+      "tag": "skill-suggestion",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "spec-content-drift",
+      "kind": "concern"
+    },
+    {
+      "tag": "spec-lint",
+      "kind": "concern"
+    },
+    {
+      "tag": "spec-tree",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "staleness",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "staleness-tracking",
+      "kind": "concern"
+    },
+    {
+      "tag": "suggestion-id",
+      "kind": "domain-term"
+    },
+    {
+      "tag": "suggestion-policy",
+      "kind": "concern"
+    },
+    {
+      "tag": "test-coverage",
+      "kind": "concern"
+    },
+    {
+      "tag": "transactional-compute-then-write",
+      "kind": "pattern"
+    },
+    {
+      "tag": "tree-sitter",
+      "kind": "technology"
+    },
+    {
+      "tag": "validator",
+      "kind": "layer"
+    },
+    {
+      "tag": "warn-never-block",
+      "kind": "pattern"
+    },
+    {
+      "tag": "workflow-mining",
+      "kind": "concern"
+    },
+    {
+      "tag": "writer-verifier",
+      "kind": "pattern"
+    },
+    {
+      "tag": "yaml-parsing",
+      "kind": "technology"
+    }
+  ],
+  "assignments": {
+    "file:src/cli/claude-auth.ts": [
+      "writer-verifier"
+    ],
+    "file:src/cli/cli.ts": [
+      "cli",
+      "dynamic-import-dispatch"
+    ],
+    "file:src/cli/init.ts": [
+      "cli",
+      "scheduled-tasks"
+    ],
+    "file:src/cli/task-scoping.ts": [
+      "scheduled-tasks"
+    ],
+    "file:src/cli/templates.ts": [
+      "cli"
+    ],
+    "file:src/constellation/compile.ts": [
+      "constellation"
+    ],
+    "file:src/constellation/server.ts": [
+      "constellation"
+    ],
+    "file:src/constellation/spa.ts": [
+      "constellation"
+    ],
+    "file:src/harness/run.ts": [
+      "writer-verifier"
+    ],
+    "file:src/hooks/cli.ts": [
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/errors.ts": [
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/post-write.ts": [
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/pre-read.ts": [
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/pre-write.ts": [
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/session-start.ts": [
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/insight/cli.ts": [
+      "cli-surface",
+      "deterministic-core"
+    ],
+    "file:src/insight/entry.ts": [
+      "deterministic-core",
+      "staleness-tracking"
+    ],
+    "file:src/insight/exclude.ts": [
+      "deterministic-core"
+    ],
+    "file:src/insight/l1-parse.ts": [
+      "deterministic-core",
+      "tree-sitter"
+    ],
+    "file:src/insight/l1-triage.ts": [
+      "deterministic-core"
+    ],
+    "file:src/insight/l1.ts": [
+      "deterministic-core",
+      "tree-sitter"
+    ],
+    "file:src/insight/measure.ts": [
+      "deterministic-core"
+    ],
+    "file:src/insight/query.ts": [
+      "deterministic-core",
+      "query-engine"
+    ],
+    "file:src/insight/refresh-daily.ts": [
+      "deterministic-core",
+      "staleness-tracking"
+    ],
+    "file:src/insight/refresh-fast.ts": [
+      "deterministic-core",
+      "hook-safe",
+      "staleness-tracking"
+    ],
+    "file:src/insight/refresh-full.ts": [
+      "deterministic-core",
+      "staleness-tracking"
+    ],
+    "file:src/insight/scaffold.ts": [
+      "deterministic-core"
+    ],
+    "file:src/insight/session-observe.ts": [
+      "deterministic-core",
+      "session-corpus"
+    ],
+    "file:src/insight/significance.ts": [
+      "deterministic-core"
+    ],
+    "file:src/insight/storage.ts": [
+      "deterministic-core",
+      "staleness-tracking",
+      "yaml-parsing"
+    ],
+    "file:src/loops/atlas-staleness.ts": [
+      "atlas-hygiene",
+      "scan-and-report",
+      "staleness"
+    ],
+    "file:src/loops/bug-triage.ts": [
+      "bug-ledger-triage",
+      "core-loop",
+      "fill-only-mutation",
+      "gray-matter",
+      "llm-judgment-subprocess",
+      "seven-type-taxonomy"
+    ],
+    "file:src/loops/git-info.ts": [
+      "child-process",
+      "core-shared-util",
+      "git-introspection",
+      "never-throws-wrapper"
+    ],
+    "file:src/loops/lint-scheduled.ts": [
+      "scan-and-report",
+      "spec-lint",
+      "spec-tree"
+    ],
+    "file:src/loops/onboarding-drift.ts": [
+      "managed-block",
+      "scaffolding-drift",
+      "scan-and-report"
+    ],
+    "file:src/loops/report.ts": [
+      "core-shared-util",
+      "report-writing",
+      "single-write-authority"
+    ],
+    "file:src/loops/rule-decay.ts": [
+      "compass-rule",
+      "rule-obsolescence",
+      "scan-and-report"
+    ],
+    "file:src/loops/skill-suggest.ts": [
+      "carry-forward-dedup",
+      "core-loop",
+      "llm-judgment-subprocess",
+      "propose-dont-mutate",
+      "skill-suggestion",
+      "workflow-mining"
+    ],
+    "file:src/loops/spec-drift.ts": [
+      "governs-glob",
+      "scan-and-report",
+      "spec-content-drift"
+    ],
+    "file:src/loops/verify-scheduled.ts": [
+      "coverage-gap",
+      "scan-and-report",
+      "test-coverage"
+    ],
+    "file:src/paths.ts": [
+      "constellation"
+    ],
+    "file:src/pulse/distil.ts": [
+      "child-process",
+      "core",
+      "distillation",
+      "llm-judgment-subprocess",
+      "propose-dont-mutate",
+      "pulse-proposal"
+    ],
+    "file:src/pulse/fences.ts": [
+      "commonmark-longer-fence-rule",
+      "core-pulse-infra",
+      "fence-grammar"
+    ],
+    "file:src/pulse/hygiene.ts": [
+      "child-process",
+      "fast-glob",
+      "gray-matter",
+      "hygiene-sweep",
+      "scan-and-report"
+    ],
+    "file:src/pulse/promote.ts": [
+      "core",
+      "promotion",
+      "pulse-proposal",
+      "transactional-compute-then-write"
+    ],
+    "file:src/pulse/review.ts": [
+      "propose-dont-mutate",
+      "pulse-review",
+      "suggestion-id"
+    ],
+    "file:src/pulse/suggestion-ids.ts": [
+      "S-NNN-namespace",
+      "core-pulse-infra",
+      "id-allocation",
+      "monotonic-counter"
+    ],
+    "file:src/pulse/types.ts": [
+      "core-pulse-infra",
+      "permitted-target-roots",
+      "shared-validator-runtime-contract",
+      "suggestion-policy"
+    ],
+    "file:src/schema/checks/archive.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/atlas.ts": [
+      "cross-reference-resolution",
+      "validator"
+    ],
+    "file:src/schema/checks/bizspec.ts": [
+      "spec-tree",
+      "validator"
+    ],
+    "file:src/schema/checks/claude-md.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/compass.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/config.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/constellation.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/devspec.ts": [
+      "spec-tree",
+      "validator"
+    ],
+    "file:src/schema/checks/hooks.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/insight.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/layout.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/loop-md.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/provenance.ts": [
+      "provenance",
+      "validator"
+    ],
+    "file:src/schema/checks/pulse.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/scenario.ts": [
+      "spec-tree",
+      "validator"
+    ],
+    "file:src/schema/checks/specs.ts": [
+      "spec-tree",
+      "validator"
+    ],
+    "file:src/schema/checks/xref.ts": [
+      "cross-reference-resolution",
+      "spec-tree",
+      "validator"
+    ],
+    "file:src/schema/cli.ts": [
+      "validator"
+    ],
+    "file:src/schema/index-build.ts": [
+      "cross-reference-resolution",
+      "validator"
+    ],
+    "file:src/schema/provenance-index.ts": [
+      "cross-reference-resolution",
+      "deterministic-core",
+      "provenance"
+    ],
+    "file:src/schema/types.ts": [
+      "validator"
+    ],
+    "file:src/schema/validate.ts": [
+      "deterministic-core",
+      "validator"
+    ],
+    "file:src/schema/version.ts": [
+      "validator"
+    ]
+  }
+}

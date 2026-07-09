@@ -1,0 +1,165 @@
+{
+  "schemaVersion": "3.0",
+  "generated": "2026-07-09T08:54:17Z",
+  "built_at_commit": "8248c76",
+  "clusters": [
+    {
+      "id": "cluster:archive",
+      "label": "Archive",
+      "members": [
+        "file:src/archive/formats.ts",
+        "file:src/archive/scaffold.ts"
+      ],
+      "rationale": "the archive document-type registry: YAML format parsing and the module scaffold",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:claude-hooks",
+      "label": "Claude Code hooks",
+      "members": [
+        "file:src/hooks/cli.ts",
+        "file:src/hooks/errors.ts",
+        "file:src/hooks/post-write.ts",
+        "file:src/hooks/pre-read.ts",
+        "file:src/hooks/pre-write.ts",
+        "file:src/hooks/session-start.ts"
+      ],
+      "rationale": "warn-never-block hook handlers sharing the exit-0 degradation path and hook-errors.md appender",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:cli-runtime",
+      "label": "CLI runtime",
+      "members": [
+        "file:src/cli/claude-auth.ts",
+        "file:src/cli/cli.ts",
+        "file:src/cli/init.ts",
+        "file:src/cli/task-scoping.ts",
+        "file:src/cli/templates.ts"
+      ],
+      "rationale": "the cortex CLI entry with dynamic verb dispatch, init scaffolding, and scheduled-task scoping",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:constellation",
+      "label": "Constellation",
+      "members": [
+        "file:src/constellation/compile.ts",
+        "file:src/constellation/server.ts",
+        "file:src/constellation/spa.ts",
+        "file:src/paths.ts"
+      ],
+      "rationale": "the citation-graph compiler, its localhost read-only viewer, and the shared spec-tree path globs it consumes",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:insight-pipeline",
+      "label": "Insight pipeline",
+      "members": [
+        "file:src/insight/cli.ts",
+        "file:src/insight/entry.ts",
+        "file:src/insight/exclude.ts",
+        "file:src/insight/l1-parse.ts",
+        "file:src/insight/l1-triage.ts",
+        "file:src/insight/l1.ts",
+        "file:src/insight/measure.ts",
+        "file:src/insight/query.ts",
+        "file:src/insight/refresh-daily.ts",
+        "file:src/insight/refresh-fast.ts",
+        "file:src/insight/refresh-full.ts",
+        "file:src/insight/scaffold.ts",
+        "file:src/insight/session-observe.ts",
+        "file:src/insight/significance.ts",
+        "file:src/insight/storage.ts"
+      ],
+      "rationale": "the L1 structural pass, storage contracts, query engine, and refresh loops that produce and maintain .cortex/insight/",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:pulse-proposals",
+      "label": "Pulse proposals",
+      "members": [
+        "file:src/pulse/distil.ts",
+        "file:src/pulse/fences.ts",
+        "file:src/pulse/hygiene.ts",
+        "file:src/pulse/promote.ts",
+        "file:src/pulse/review.ts",
+        "file:src/pulse/suggestion-ids.ts",
+        "file:src/pulse/types.ts"
+      ],
+      "rationale": "the propose-don’t-mutate pipeline: distillation, suggestion ids, fence grammar, the review gate, and promotion",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:scheduled-loops",
+      "label": "Scheduled loops",
+      "members": [
+        "file:src/loops/atlas-staleness.ts",
+        "file:src/loops/bug-triage.ts",
+        "file:src/loops/git-info.ts",
+        "file:src/loops/lint-scheduled.ts",
+        "file:src/loops/onboarding-drift.ts",
+        "file:src/loops/report.ts",
+        "file:src/loops/rule-decay.ts",
+        "file:src/loops/skill-suggest.ts",
+        "file:src/loops/spec-drift.ts",
+        "file:src/loops/verify-scheduled.ts"
+      ],
+      "rationale": "the scheduled scan-and-report and LLM-judgment loops that observe project state and always write a pulse report",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:schema-validator",
+      "label": "Schema validator",
+      "members": [
+        "file:src/schema/checks/archive.ts",
+        "file:src/schema/checks/atlas.ts",
+        "file:src/schema/checks/bizspec.ts",
+        "file:src/schema/checks/claude-md.ts",
+        "file:src/schema/checks/compass.ts",
+        "file:src/schema/checks/config.ts",
+        "file:src/schema/checks/constellation.ts",
+        "file:src/schema/checks/devspec.ts",
+        "file:src/schema/checks/hooks.ts",
+        "file:src/schema/checks/insight.ts",
+        "file:src/schema/checks/layout.ts",
+        "file:src/schema/checks/loop-md.ts",
+        "file:src/schema/checks/provenance.ts",
+        "file:src/schema/checks/pulse.ts",
+        "file:src/schema/checks/scenario.ts",
+        "file:src/schema/checks/specs.ts",
+        "file:src/schema/checks/xref.ts",
+        "file:src/schema/cli.ts",
+        "file:src/schema/index-build.ts",
+        "file:src/schema/provenance-index.ts",
+        "file:src/schema/types.ts",
+        "file:src/schema/validate.ts",
+        "file:src/schema/version.ts"
+      ],
+      "rationale": "validate.ts orchestrating the check modules over shared types and the project index — the deterministic contract-enforcement layer",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:session-corpus",
+      "label": "Session corpus consumers",
+      "members": [
+        "file:src/insight/session-observe.ts",
+        "file:src/loops/skill-suggest.ts",
+        "file:src/pulse/distil.ts",
+        "file:src/sessions/read.ts"
+      ],
+      "rationale": "cross-module consumers of the shared Claude-session corpus reader (distillation, workflow mining, session observation)",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:writer-verifier",
+      "label": "Writer/verifier harness",
+      "members": [
+        "file:src/cli/claude-auth.ts",
+        "file:src/harness/run.ts"
+      ],
+      "rationale": "the isolated writer/verifier headless-Claude harness and the shared auth-failure detection contract it depends on",
+      "scope": "global"
+    }
+  ]
+}
