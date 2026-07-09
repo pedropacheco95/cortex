@@ -1,14 +1,29 @@
 /**
- * `cortex tasks register` / `cortex tasks verify` (spec core-cli.tasks-register;
- * B-009 resolution, option 1).
+ * `cortex tasks plan` / `cortex tasks register` / `cortex tasks verify`
+ * (spec core-cli.tasks-register; B-009 resolution — final mechanism).
  *
  * Writing `~/.claude/scheduled-tasks/<name>/SKILL.md` produces a prompt
  * PAYLOAD only — the Claude Desktop app never scans that directory. Its real
  * registry is a `scheduled-tasks.json` under
- * `<app-support>/claude-code-sessions/<uuid>/<uuid>/`, polled every minute
- * while the app runs. This module writes that registry directly (unsupported
- * upstream: issue #41364 closed not-planned, #47797 open) and provides a
- * verify step because app updates have wiped the registry before (#49276).
+ * `<app-support>/claude-code-sessions/<uuid>/<uuid>/`, loaded into memory
+ * ONCE per app launch and rewritten wholesale from memory on every task
+ * event. That in-memory model makes direct registry writes unsafe while the
+ * app runs (externally-appended entries are clobbered on the next flush; one
+ * malformed field makes the app treat the whole file as empty and wipe every
+ * task), so the PRIMARY registration path is the `cortex-register-tasks`
+ * skill, run inside a Claude Desktop session where the app's own internal
+ * `mcp__scheduled-tasks__*` MCP tools exist. This module supplies:
+ *
+ * - `tasksPlan` — the authoritative, read-only registration plan the skill
+ *   consumes (`cortex tasks plan --json`); Core stays the single source of
+ *   truth for ids, cadences, and payload paths.
+ * - `registerTasks` — the direct-write FALLBACK, guarded: it refuses to run
+ *   while the Desktop app is running (injected process check; macOS-only
+ *   `pgrep` at the CLI entry).
+ * - `verifyTasks` — the read-only silent-loss detector app updates make
+ *   necessary (registry wipes observed, #49276); never restricted.
+ * - `registrationStatus` — the read-only check `cortex init` uses to print
+ *   its register-in-Desktop instruction block.
  *
  * Deterministic Core (RULES 3): pure file I/O, no LLM, no network. All paths
  * are injected (`home`, `appSupportDir`) so tests never touch the real
@@ -16,6 +31,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { spawnSync } from 'child_process';
 import fg from 'fast-glob';
 import { SCHEDULED_TASKS } from './templates.js';
 import {
@@ -72,6 +88,12 @@ export interface TasksRegistryOptions {
   appSupportDir: string;
   /** Clock injection for `createdAt` and the backup stamp. */
   now?: () => Date;
+  /**
+   * Injected Desktop-app process check for the `register` guard (tests inject
+   * a fake; omitted = guard off, so fixture runs are unaffected). The CLI
+   * entry alone supplies the real `desktopAppRunning` (macOS `pgrep`).
+   */
+  isDesktopAppRunning?: () => boolean;
 }
 
 export interface TasksCommandResult {
@@ -154,8 +176,11 @@ function isCommandResult(v: LoadedRegistry | TasksCommandResult): v is TasksComm
   return 'exitCode' in v;
 }
 
-/** This project's 14 (canonical, scopedId, cron, payload filePath) rows. */
-function ownRows(root: string, home: string): { canonical: string; id: string; cron: string; filePath: string }[] {
+/** This project's 14 (canonical, scopedId, cron, payload filePath, description) rows. */
+function ownRows(
+  root: string,
+  home: string,
+): { canonical: string; id: string; cron: string; filePath: string; description: string }[] {
   return SCHEDULED_TASKS.map((task) => {
     const canonical = CANONICAL_TASK_NAMES[task.name] ?? task.name;
     const id = scopedTaskName(root, canonical);
@@ -164,17 +189,169 @@ function ownRows(root: string, home: string): { canonical: string; id: string; c
       id,
       cron: TASK_CADENCE[canonical] ?? '0 2 * * *',
       filePath: path.join(home, '.claude', 'scheduled-tasks', id, 'SKILL.md'),
+      description: task.description,
     };
   });
 }
 
+// ---------------------------------------------------------------------------
+// `cortex tasks plan` — the authoritative registration plan (read-only)
+// ---------------------------------------------------------------------------
+
+/** Bumped on any change to the `--json` shape (the cortex-register-tasks skill consumes it). */
+export const TASK_PLAN_VERSION = 1;
+
+/** One row of the registration plan, as emitted by `cortex tasks plan --json`. */
+export interface TaskPlanEntry {
+  /** Registry id AND payload dir name (the app recomputes filePath from id — they must match). */
+  id: string;
+  /** The §9.1 canonical task name behind the scoped id. */
+  canonical: string;
+  cronExpression: string;
+  /** Each entry's working directory: the resolved project root. */
+  cwd: string;
+  enabled: true;
+  useWorktree: false;
+  permissionMode: string;
+  /** Absolute path of the payload SKILL.md the entry must point at. */
+  payloadPath: string;
+  /** One-line human description (from SCHEDULED_TASKS). */
+  description: string;
+}
+
+export interface TasksPlan {
+  planVersion: number;
+  projectRoot: string;
+  taskCount: number;
+  tasks: TaskPlanEntry[];
+}
+
+/** Compute the desired registration plan — pure, reads nothing but its inputs. */
+export function planTasks(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home'>): TasksPlan {
+  const root = path.resolve(opts.projectRoot);
+  const tasks: TaskPlanEntry[] = ownRows(root, opts.home).map((row) => ({
+    id: row.id,
+    canonical: row.canonical,
+    cronExpression: row.cron,
+    cwd: root,
+    enabled: true,
+    useWorktree: false,
+    permissionMode: TASK_PERMISSION_MODE,
+    payloadPath: row.filePath,
+    description: row.description,
+  }));
+  return { planVersion: TASK_PLAN_VERSION, projectRoot: root, taskCount: tasks.length, tasks };
+}
+
 /**
- * Refresh the payload roster, then upsert this project's fourteen entries into
- * the Desktop app's registry: backup, preserve every foreign entry (and any
- * unknown fields on our own entries) structurally intact, atomic write,
- * idempotent.
+ * `cortex tasks plan [--json]` — print the desired registration plan. `--json`
+ * emits the stable machine shape the `cortex-register-tasks` skill consumes;
+ * without it, a human-readable table. Read-only, always exit 0.
+ */
+export function tasksPlan(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home'>, json: boolean): TasksCommandResult {
+  const plan = planTasks(opts);
+  if (json) {
+    return { exitCode: 0, output: JSON.stringify(plan, null, 2) };
+  }
+  const lines: string[] = [
+    `Registration plan — ${plan.taskCount} Cortex scheduled tasks for ${plan.projectRoot}`,
+    `(permissionMode ${TASK_PERMISSION_MODE}, cwd = project root, useWorktree false for all)`,
+    '',
+  ];
+  for (const t of plan.tasks) {
+    lines.push(`${t.id}`);
+    lines.push(`  cron: ${t.cronExpression}`);
+    lines.push(`  payload: ${t.payloadPath}`);
+    lines.push(`  ${t.description}`);
+  }
+  lines.push('');
+  lines.push(
+    'To register: open this folder in a Claude Desktop session and say "run cortex-register-tasks" ' +
+      '(the app\'s own scheduled-tasks tools exist only there). Confirm with `cortex tasks verify`.',
+  );
+  return { exitCode: 0, output: lines.join('\n') };
+}
+
+// ---------------------------------------------------------------------------
+// Desktop-app process guard (macOS-only, like Cortex v1 itself)
+// ---------------------------------------------------------------------------
+
+/**
+ * True when the Claude Desktop app is running. Deterministic process-listing
+ * check via `pgrep -f` against the app bundle's main-binary path (macOS-only;
+ * on a platform without `pgrep` this returns false — but Cortex v1 refuses
+ * non-darwin at init anyway). Injected into `registerTasks` ONLY at the real
+ * CLI entry; tests inject fakes.
+ */
+export function desktopAppRunning(): boolean {
+  const r = spawnSync('pgrep', ['-f', 'Claude.app/Contents/MacOS/Claude'], { stdio: 'ignore' });
+  return r.status === 0;
+}
+
+// ---------------------------------------------------------------------------
+// `cortex init` read-only registration status
+// ---------------------------------------------------------------------------
+
+export interface RegistrationStatus {
+  /** False when no registry exists yet (app never ran) or it is unreadable. */
+  registryFound: boolean;
+  /** Canonical names of this project's tasks not registered-and-enabled. */
+  unregistered: string[];
+  /** Total tasks in the roster (14). */
+  total: number;
+}
+
+/**
+ * Read-only registration check for `cortex init`'s summary: which of the
+ * fourteen are present AND enabled in the app registry. Registry-not-found
+ * (the app never ran) is tolerated — every task reports unregistered.
+ */
+export function registrationStatus(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home' | 'appSupportDir'>): RegistrationStatus {
+  const root = path.resolve(opts.projectRoot);
+  const rows = ownRows(root, opts.home);
+  const loaded = loadRegistry(opts.appSupportDir);
+  if (isCommandResult(loaded)) {
+    return { registryFound: false, unregistered: rows.map((r) => r.canonical), total: rows.length };
+  }
+  const byId = new Set<string>();
+  for (const e of loaded.entries as unknown[]) {
+    if (isRecord(e) && typeof e['id'] === 'string' && e['enabled'] === true) byId.add(e['id'] as string);
+  }
+  return {
+    registryFound: true,
+    unregistered: rows.filter((r) => !byId.has(r.id)).map((r) => r.canonical),
+    total: rows.length,
+  };
+}
+
+/**
+ * Direct-write FALLBACK (app closed only): refresh the payload roster, then
+ * upsert this project's fourteen entries into the Desktop app's registry:
+ * backup, preserve every foreign entry (and any unknown fields on our own
+ * entries) structurally intact, atomic write, idempotent. Refuses while the
+ * Desktop app runs (injected check) — the app holds the registry in memory
+ * and would clobber the write; the sanctioned path is the
+ * `cortex-register-tasks` skill in a Desktop session.
  */
 export function registerTasks(opts: TasksRegistryOptions): TasksCommandResult {
+  // Guard (no escape hatch by design): the app loads scheduled-tasks.json
+  // into memory once at launch and rewrites the whole file from memory on
+  // every task event — a direct write now would be clobbered, and a malformed
+  // merge can make the app wipe ALL tasks on its next flush.
+  if (opts.isDesktopAppRunning?.() === true) {
+    return {
+      exitCode: 1,
+      output:
+        'cortex tasks register: refused — the Claude Desktop app is running.\n' +
+        'The app loads scheduled-tasks.json into memory once at launch and rewrites the whole file ' +
+        'from memory on every task event: anything written here now would be silently clobbered, and a ' +
+        'write the app cannot parse makes it treat the registry as empty and wipe ALL scheduled tasks.\n' +
+        'Use the sanctioned flow instead: open this folder in a Claude Desktop session and say ' +
+        '"run cortex-register-tasks" (it registers via the app\'s own scheduled-tasks tools), then ' +
+        'confirm with `cortex tasks verify`. Direct writing remains available only while the app is fully quit.',
+    };
+  }
+
   const root = path.resolve(opts.projectRoot);
   const now = opts.now ?? ((): Date => new Date());
   const lines: string[] = [];
@@ -294,7 +471,7 @@ export function verifyTasks(opts: TasksRegistryOptions): TasksCommandResult {
   lines.push(
     failures === 0
       ? 'All 14 Cortex tasks registered, enabled, and backed by payloads.'
-      : `${failures} of 14 Cortex task(s) missing, disabled, or dangling — run \`cortex tasks register\`.`,
+      : `${failures} of 14 Cortex task(s) missing, disabled, or dangling — open this folder in a Claude Desktop session and say "run cortex-register-tasks" (or, with the app fully quit, run \`cortex tasks register\`).`,
   );
   return { exitCode: failures === 0 ? 0 : 1, output: lines.join('\n') };
 }

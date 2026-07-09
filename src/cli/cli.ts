@@ -386,11 +386,14 @@ export async function run(argv: string[]): Promise<number> {
   // `cortex tasks rename` — move legacy-named scheduled tasks in
   // ~/.claude/scheduled-tasks/ to this project's §9.1 scoped names
   // (core-cli.task-scoping Rule 4; idempotent, exit 0).
-  // `cortex tasks register|verify` — upsert this project's fourteen entries
-  // into the Desktop app's scheduled-tasks.json registry / verify them
-  // (core-cli.tasks-register Rules 1-9; B-009 option 1). The real home and
-  // app-support roots are supplied ONLY here — the functions take them as
-  // parameters so tests run against fixtures.
+  // `cortex tasks plan [--json]` — print the desired registration plan (the
+  //   authoritative source the cortex-register-tasks skill consumes).
+  // `cortex tasks register|verify` — the guarded direct-write fallback /
+  //   read-only verification against the Desktop app's scheduled-tasks.json
+  //   registry (core-cli.tasks-register; B-009 final mechanism). The real
+  //   home, app-support root, and Desktop-app process check are supplied ONLY
+  //   here — the functions take them as parameters so tests run against
+  //   fixtures with injected fakes.
   if (argv[0] === 'tasks') {
     if (argv[1] === 'rename') {
       const { tasksRename } = await import('./task-scoping.js');
@@ -399,8 +402,15 @@ export async function run(argv: string[]): Promise<number> {
       console.log(result.output);
       return result.exitCode;
     }
+    if (argv[1] === 'plan') {
+      const { tasksPlan } = await import('./tasks-register.js');
+      const os = await import('os');
+      const result = tasksPlan({ projectRoot: process.cwd(), home: os.homedir() }, argv.includes('--json'));
+      console.log(result.output);
+      return result.exitCode;
+    }
     if (argv[1] === 'register' || argv[1] === 'verify') {
-      const { registerTasks, verifyTasks } = await import('./tasks-register.js');
+      const { registerTasks, verifyTasks, desktopAppRunning } = await import('./tasks-register.js');
       const os = await import('os');
       const path = await import('path');
       const home = os.homedir();
@@ -409,12 +419,15 @@ export async function run(argv: string[]): Promise<number> {
         home,
         appSupportDir: path.join(home, 'Library', 'Application Support', 'Claude'),
       };
-      const result = argv[1] === 'register' ? registerTasks(opts) : verifyTasks(opts);
+      const result =
+        argv[1] === 'register'
+          ? registerTasks({ ...opts, isDesktopAppRunning: desktopAppRunning })
+          : verifyTasks(opts);
       if (result.exitCode === 0) console.log(result.output);
       else console.error(result.output);
       return result.exitCode;
     }
-    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|register|verify`.');
+    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|plan|register|verify`.');
     return 1;
   }
 

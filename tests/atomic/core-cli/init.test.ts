@@ -685,3 +685,52 @@ describe('Rule 15: summary names every change and the Desktop reminder', () => {
     }
   }, TEST_TIMEOUT);
 });
+
+// ---------------------------------------------------------------------------
+// Rules 13/15 — registration instruction block (B-009 final mechanism)
+// ---------------------------------------------------------------------------
+describe('Rules 13/15: register-in-Desktop instruction block vs all-registered one-liner', () => {
+  it('registry missing (app never ran) → instruction block: 14 of 14, run cortex-register-tasks, verify', async () => {
+    const root = makeTmpDir('regblock-proj');
+    const home = makeTmpDir('regblock-home');
+    const appSupportDir = makeTmpDir('regblock-appsupport'); // empty: no registry anywhere
+    try {
+      const result = await init(root, { noLlm: true, home, appSupportDir, ...DARWIN });
+      expect(result.exitCode).toBe(0);
+      const s = result.summary;
+      expect(s).toContain('14 of 14 not yet registered with the Claude Desktop app');
+      expect(s).toContain('open this folder in Claude Desktop (new session) and say:');
+      expect(s).toContain('run cortex-register-tasks');
+      expect(s).toContain('Then confirm with: cortex tasks verify');
+      expect(s).not.toContain('all 14 registered');
+      // The retired direct-write pointer is gone from the summary.
+      expect(s).not.toContain('run `cortex tasks register`');
+    } finally {
+      cleanTmp(root); cleanTmp(home); cleanTmp(appSupportDir);
+    }
+  }, TEST_TIMEOUT);
+
+  it('all fourteen registered in the fixture registry → all-registered one-liner, no instruction block', async () => {
+    const root = makeTmpDir('regok-proj');
+    const home = makeTmpDir('regok-home');
+    const appSupportDir = makeTmpDir('regok-appsupport');
+    try {
+      // Seed an app-created registry, then fully register via the fallback writer.
+      const registryFile = path.join(appSupportDir, 'claude-code-sessions', 'u1', 'u2', 'scheduled-tasks.json');
+      fs.mkdirSync(path.dirname(registryFile), { recursive: true });
+      fs.writeFileSync(registryFile, JSON.stringify({ scheduledTasks: [], recordedSkips: {} }, null, 2) + '\n', 'utf-8');
+      const { registerTasks } = await import('../../../src/cli/tasks-register.js');
+      expect(registerTasks({ projectRoot: root, home, appSupportDir }).exitCode).toBe(0);
+
+      const result = await init(root, { noLlm: true, home, appSupportDir, ...DARWIN });
+      expect(result.exitCode).toBe(0);
+      const s = result.summary;
+      expect(s).toContain('Scheduled tasks: all 14 registered with the Claude Desktop app');
+      expect(s).toContain('cortex tasks verify');
+      expect(s).not.toContain('not yet registered');
+      expect(s).not.toContain('run cortex-register-tasks');
+    } finally {
+      cleanTmp(root); cleanTmp(home); cleanTmp(appSupportDir);
+    }
+  }, TEST_TIMEOUT);
+});

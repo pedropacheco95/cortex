@@ -8,11 +8,11 @@ The deterministic Node.js CLI binary surface — every `cortex` command — with
 
 **Specs written:**
 
-- `core-cli.init` — the day-1 bootstrap: `.cortex/` skeleton + config, anatomy scan, inline agentic purpose pass (subprocess boundary), preferences draft, spec-tree scaffolding, legacy `bugs.md` migration, CLAUDE.md managed block, hooks + git hook + fourteen Desktop scheduled-task payloads (payloads only — registration is `cortex tasks register`, B-009), self-validation, summary.
+- `core-cli.init` — the day-1 bootstrap: `.cortex/` skeleton + config, anatomy scan, inline agentic purpose pass (subprocess boundary), preferences draft, spec-tree scaffolding, legacy `bugs.md` migration, CLAUDE.md managed block, hooks + git hook + fourteen Desktop scheduled-task payloads (payloads only — registration happens in a Desktop session via the `cortex-register-tasks` skill, and init prints the instruction block; B-009 final mechanism), self-validation, summary.
 
 - `core-cli.task-scoping` — project-scoped scheduled-task names (schema §9.1: slug + path-hash + canonical), project-scoped recognition in init/--partial, and the `cortex tasks rename` legacy migration.
 
-- `core-cli.tasks-register` — `cortex tasks register` / `cortex tasks verify`: upsert this project's fourteen entries into the Desktop app's real `scheduled-tasks.json` registry (cadence table, backup, atomic write, foreign entries preserved) and verify them against silent registry loss (B-009 resolution, option 1).
+- `core-cli.tasks-register` — `cortex tasks plan` / `register` / `verify`: the authoritative registration plan the `cortex-register-tasks` skill consumes (the primary, in-Desktop-session mechanism via the app's own `mcp__scheduled-tasks__*` tools), the guarded app-closed direct-write fallback into the app's `scheduled-tasks.json` (cadence table, backup, atomic write, foreign entries preserved, refuses while the app runs), and verification against silent registry loss (B-009 resolution, final mechanism).
 
 _Planned coverage (not yet written):_
 

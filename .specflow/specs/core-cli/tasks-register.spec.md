@@ -11,29 +11,32 @@ governed_by:
   - R-001
 ---
 
-# cortex tasks register / verify — Real Desktop-App Registration
+# cortex tasks plan / register / verify — Real Desktop-App Registration
 
 ## Intent
 
-Writing `~/.claude/scheduled-tasks/<name>/SKILL.md` produces a prompt **payload** only — the Claude Desktop app never scans that directory (B-009). The app's real registry is a `scheduled-tasks.json` under `<app-support>/claude-code-sessions/<uuid>/<uuid>/` (shape `{"scheduledTasks": [...], "recordedSkips": {...}}`), polled every minute while the app runs. This spec owns `cortex tasks register` — refresh the payload roster, then upsert this project's fourteen entries into that registry directly (B-009 change-plan option 1; unsupported upstream: issue #41364 closed not-planned, #47797 open) — and `cortex tasks verify`, the silent-loss detector app updates make necessary (registry wipes observed, issue #49276).
+Writing `~/.claude/scheduled-tasks/<name>/SKILL.md` produces a prompt **payload** only — the Claude Desktop app never scans that directory (B-009). The app's real registry is a `scheduled-tasks.json` under `<app-support>/claude-code-sessions/<uuid>/<uuid>/` (shape `{"scheduledTasks": [...], "recordedSkips": {...}}`), loaded into memory **once per app launch** and rewritten wholesale from memory on every task event — so direct writes are only safe while the app is fully quit. The **primary registration mechanism** is therefore the `cortex-register-tasks` skill, run inside a Claude Desktop session, using the app's own internal MCP tools (`mcp__scheduled-tasks__create_scheduled_task` / `update_scheduled_task` / `list_scheduled_tasks`, exposed only to Desktop-spawned sessions). This spec owns the Core surface behind that flow: `cortex tasks plan [--json]` — the authoritative, read-only registration plan the skill consumes; `cortex tasks register` — the **guarded direct-write fallback** (app closed only; B-009 change-plan option 1, demoted after the app's in-memory clobber behaviour was proven; unsupported upstream: issue #41364 closed not-planned, #47797 open); and `cortex tasks verify`, the silent-loss detector app updates make necessary (registry wipes observed, issue #49276).
 
 ## Entities
 
-- **READS:** the project root (scoping inputs, `cwd`); `<appSupportDir>/claude-code-sessions/**/scheduled-tasks.json`; the payload tree under `<home>/.claude/scheduled-tasks/`.
-- **WRITES:** the payload roster (via init's `writeScheduledTasks`); the discovered registry file (atomic temp+rename); a `<file>.cortex-backup-<stamp>` copy before every write.
-- **CREATES:** `registerTasks({projectRoot, home, appSupportDir})`, `verifyTasks(...)`, the cadence table `TASK_CADENCE` (canonical name → cron), and the constant `TASK_PERMISSION_MODE`.
+- **READS:** the project root (scoping inputs, `cwd`); `<appSupportDir>/claude-code-sessions/**/scheduled-tasks.json`; the payload tree under `<home>/.claude/scheduled-tasks/`; the injected Desktop-app process check.
+- **WRITES:** (`register` only) the payload roster (via init's `writeScheduledTasks`); the discovered registry file (atomic temp+rename); a `<file>.cortex-backup-<stamp>` copy before every write. `plan` and `verify` write nothing.
+- **CREATES:** `planTasks`/`tasksPlan` (+ `TASK_PLAN_VERSION`, `TaskPlanEntry`), `registerTasks({projectRoot, home, appSupportDir, isDesktopAppRunning?})`, `verifyTasks(...)`, `registrationStatus(...)` (init's read-only summary check), `desktopAppRunning()` (the real macOS `pgrep` check, CLI-entry only), the cadence table `TASK_CADENCE` (canonical name → cron), and the constant `TASK_PERMISSION_MODE`.
 
 ## Rules
 
-1. **Injected roots, real defaults only at the CLI entry.** `registerTasks`/`verifyTasks` take `projectRoot`, `home`, and `appSupportDir` as parameters; the `cortex tasks register|verify` dispatch alone supplies the real `os.homedir()` and `~/Library/Application Support/Claude`. Tests run exclusively against fixture trees.
+1. **Injected roots, real defaults only at the CLI entry.** `registerTasks`/`verifyTasks`/`tasksPlan`/`registrationStatus` take `projectRoot`, `home`, and (where they read the registry) `appSupportDir` as parameters; the `cortex tasks plan|register|verify` dispatch alone supplies the real `os.homedir()`, `~/Library/Application Support/Claude`, and the real `desktopAppRunning` process check. Tests run exclusively against fixture trees with injected fakes.
 2. **Payload roster first.** `register` re-runs init's payload writer (non-force: missing payloads written, user-edited ones preserved, this project's retired scoped dirs removed) before touching the registry, so every registry `filePath` it writes has a payload behind it.
 3. **Registry discovery.** Glob `claude-code-sessions/**/scheduled-tasks.json` under `appSupportDir`. Zero matches → exit 1 with a message saying the app itself creates the registry (open the Desktop app once); Cortex never creates the registry file. Multiple matches → the most-recently-modified wins and a warning names the ignored files.
 4. **Upsert the fourteen, own only your fields.** Per task: `id` = the §9.1 scoped name, `cronExpression` from the cadence table, `enabled: true`, `filePath` = the absolute payload SKILL.md path, `cwd` = the resolved project root, `useWorktree: false`, `permissionMode` = `TASK_PERMISSION_MODE` (`"bypassPermissions"`, matching observed app-created entries). `createdAt` (epoch ms) is stamped **only on newly created entries**. Entries are parsed as unknown JSON: on update, fields Cortex does not own survive untouched; every foreign entry, `recordedSkips`, and any unknown top-level key pass through structurally intact.
 5. **Retired entries removed, this project only.** Registry entries whose `id` equals this project's scoped name for a retired canonical task are dropped; no other project's entries are ever counted, modified, or removed.
 6. **Backup then atomic write; idempotent.** Before writing: copy the registry to `<file>.cortex-backup-<ISO-ish stamp>`. Write via temp file + rename. A re-run with nothing to change writes nothing (no new backup) and reports already-up-to-date. Malformed registry JSON → exit 1, file untouched.
 7. **Cadence table is data.** One cron expression per canonical task, exactly fourteen entries: dailies staggered 02:00–03:20 one per 20 min (hygiene, bug-triage, spec-drift, insight-refresh-daily, session-observe); weeklies spread across Sat/Sun small hours (distil, rule-decay, skill-suggest, specflow-lint, specflow-verify, test-runner, insight-refresh-full); monthlies on the 1st (atlas-staleness, onboarding-drift). No two dailies share a minute-of-day.
-8. **`verify` reports per task and fails loudly.** For each of the fourteen: registered / enabled / cron / payload `filePath` exists on disk. Exit non-zero if any is missing, disabled, or dangling; cron drift from the cadence table is reported but does not fail. Zero registries → exit 1 (same message as Rule 3).
+8. **`verify` reports per task and fails loudly.** For each of the fourteen: registered / enabled / cron / payload `filePath` exists on disk. Exit non-zero if any is missing, disabled, or dangling; cron drift from the cadence table is reported but does not fail. Zero registries → exit 1 (same message as Rule 3). On failure the bottom line points at the Desktop-session skill flow first (`register` named only as the app-quit fallback). `verify` is read-only and is never guarded.
 9. **Deterministic Core** (R-001): pure file I/O; no LLM, no network.
+10. **`plan` is the authoritative registration plan — read-only, exit 0.** `cortex tasks plan` prints, for each of the fourteen: scoped `id`, `cronExpression` from the cadence table, `cwd` = resolved project root, `permissionMode`, absolute payload path, and the one-line description from `SCHEDULED_TASKS`. `--json` emits the stable machine shape (`planVersion` — bumped on any shape change —, `projectRoot`, `taskCount`, `tasks[]` with `id`/`canonical`/`cronExpression`/`cwd`/`enabled`/`useWorktree`/`permissionMode`/`payloadPath`/`description`) that the `cortex-register-tasks` skill consumes, keeping Core the single source of truth — the skill never hardcodes ids or cadences.
+11. **`register` refuses while the Desktop app runs.** The app holds the registry in memory (loaded once per launch, flushed wholesale on every task event): a direct write while it runs is clobbered, and a write it cannot parse makes it wipe every task. `registerTasks` takes an injected `isDesktopAppRunning` check (omitted = guard off, for fixtures); when it reports true, exit 1 **before any write** (payload roster included) with a message explaining the clobber/wipe hazard and pointing at the skill flow. **No `--force`-style escape hatch exists by design.** The real check (`desktopAppRunning`) is a deterministic `pgrep -f` against the app bundle's main-binary path, macOS-only like Cortex v1, supplied only at the CLI entry.
+12. **In-session skill registration is the primary mechanism.** The `cortex-register-tasks` skill (shipped in `skills/` + `.claude/skills/`, byte-identical) runs in a Claude Desktop session: preflight that the `mcp__scheduled-tasks__*` tools exist (else stop and instruct the user to open the repo in Desktop), read `cortex tasks plan --json`, diff against `list_scheduled_tasks` by id, create missing tasks / update drifted ones (mapping plan fields onto the tool's runtime input schema; never inventing prompt content — the payload SKILL.md already exists at the id-derived path), touch nothing foreign, and finish with `cortex tasks verify`. `cortex init` prints the open-Desktop-and-run-the-skill instruction block (spec `core-cli.init` Rules 13/15) via `registrationStatus`, the read-only registered-and-enabled check that tolerates registry-not-found.
 
 ## Acceptance Criteria
 
@@ -86,9 +89,29 @@ Writing `~/.claude/scheduled-tasks/<name>/SKILL.md` produces a prompt **payload*
 - **Given** `TASK_CADENCE`
 - **Then** it has exactly fourteen entries keyed by the §9.1 canonical names, and no two daily entries share the same minute-of-day
 
+### Plan output shape
+
+- **Given** `planTasks` / `cortex tasks plan --json`
+- **Then** the JSON carries `planVersion`, the resolved `projectRoot`, `taskCount` 14, and fourteen `tasks[]` entries — each with the scoped `id`, its `canonical` name, the cadence-table `cronExpression`, `cwd` = project root, `enabled: true`, `useWorktree: false`, `permissionMode` = `TASK_PERMISSION_MODE`, an absolute `payloadPath` under `<home>/.claude/scheduled-tasks/<id>/SKILL.md`, and a non-empty `description`
+- **And** the non-JSON output names every scoped id with its cron and payload path and points at the Desktop-session skill flow
+- **And** neither form writes anything
+
+### Register guard: refused while the Desktop app runs
+
+- **Given** a fixture registry and an injected `isDesktopAppRunning` returning true
+- **When** `registerTasks` runs
+- **Then** exit 1; the registry bytes are untouched, no backup is created, and no payload dir is written
+- **And** the message explains the in-memory clobber/wipe hazard and points at running `cortex-register-tasks` in a Claude Desktop session
+- **And** with the checker returning false (or omitted), the same call proceeds normally
+
+### The cortex-register-tasks skill ships in both trees
+
+- **Given** the package
+- **Then** `skills/cortex-register-tasks/SKILL.md` exists, is byte-identical to `.claude/skills/cortex-register-tasks/SKILL.md`, preflights the `mcp__scheduled-tasks__*` tools, consumes `cortex tasks plan --json`, and finishes with `cortex tasks verify`
+
 ## Notes
 
-- **Decision (B-009 option 1, owner-approved):** write the app's registry directly. Known fragilities accepted: the UUID path changes on reinstall (re-run `register`), app updates can wipe the registry (#49276 — `verify` is the detector), and the format is undocumented upstream (the entry TYPE here is derived from observed fields; unknown fields are preserved verbatim to survive format growth).
-- **Field parity check before first live run:** the entry field set (id, cronExpression, enabled, filePath, createdAt, cwd, useWorktree, permissionMode) was designed from B-009's observed evidence, not re-inspected against a live entry — the owner session must eyeball one real app-created entry before running `register` on the real machine.
+- **Decision (B-009 final mechanism, owner-approved):** the shipped registration path is **option 2 via skill** — `cortex init` sets everything up headlessly and prints instructions; the user opens the repo in a Claude Desktop session and runs `cortex-register-tasks`, which registers through the app's own internal `mcp__scheduled-tasks__*` MCP tools. Option 1 (direct registry write) is **demoted to a guarded, app-closed-only fallback** after reverse-engineering the app bundle proved the registry is in-memory per launch and rewritten wholesale on every task event — an external write while the app runs is clobbered, and a malformed one wipes all tasks. Known fragilities of the fallback remain accepted: the UUID path changes on reinstall, app updates can wipe the registry (#49276 — `verify` is the detector), and the format is undocumented upstream (unknown fields are preserved verbatim to survive format growth).
+- **Entry schema (from the app bundle's zod schema):** required `id` (regex `^[a-z0-9_-]+$`), `enabled`, `filePath`, `createdAt` (number, epoch ms); optional `cronExpression`, `fireAt` (number), `model`, `cwd`, `useWorktree`, `permissionMode` (enum `default|acceptEdits|plan|bypassPermissions|dontAsk|auto`). The app recomputes `filePath` from `id`, so the id MUST equal the payload dir name. The app's `create_scheduled_task` requires the SKILL.md to already exist at `~/.claude/scheduled-tasks/<id>/SKILL.md`.
 - Follow-up (not in this spec): a hygiene-loop finding when `verify` fails, so registry wipes surface on the daily cadence without a manual run.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

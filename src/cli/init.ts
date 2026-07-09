@@ -47,6 +47,12 @@ export interface InitOptions {
   home?: string;
   /** Testability seam: the platform (default process.platform). */
   platform?: string;
+  /**
+   * Testability seam: the Desktop app-support root the Rule 15 read-only
+   * registration check globs (default `<home>/Library/Application
+   * Support/Claude`). Fixtures point this at a tmp dir.
+   */
+  appSupportDir?: string;
   /** Accepted for CLI compatibility; unused since the purpose pass retired (step 7). */
   claudeBin?: string;
   /** Accepted for CLI compatibility; unused since the purpose pass retired (step 7). */
@@ -816,11 +822,26 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   } else {
     lines.push(`Spec trees: existing ${SPECS_REL}/ and ${BUSINESS_REL}/ left untouched.`);
   }
-  // B-009: payloads on disk are NOT registration — the Desktop app polls its
-  // own registry, which `cortex tasks register` writes.
-  lines.push(
-    'Reminder: task payloads are not yet registered with the Claude Desktop app — run `cortex tasks register` to write its registry (cadences applied from the canonical table) and `cortex tasks verify` to confirm.',
-  );
+  // B-009 (final mechanism): payloads on disk are NOT registration — the
+  // Desktop app owns its registry in memory, so registration happens inside a
+  // Desktop session via the cortex-register-tasks skill. Init runs the
+  // read-only registry check (registry-not-found tolerated: the app may never
+  // have run) and prints the instruction block when anything is unregistered.
+  const { registrationStatus } = await import('./tasks-register.js');
+  const appSupportDir = opts.appSupportDir ?? path.join(home, 'Library', 'Application Support', 'Claude');
+  const regStatus = registrationStatus({ projectRoot: absRoot, home, appSupportDir });
+  if (regStatus.unregistered.length === 0) {
+    lines.push(
+      `Scheduled tasks: all ${regStatus.total} registered with the Claude Desktop app (cadences from the canonical table) — confirm anytime with \`cortex tasks verify\`.`,
+    );
+  } else {
+    lines.push(
+      `Scheduled tasks: payloads ready — ${regStatus.unregistered.length} of ${regStatus.total} not yet registered with the Claude Desktop app (cadences apply once registered).`,
+    );
+    lines.push('To activate them: open this folder in Claude Desktop (new session) and say:');
+    lines.push('    run cortex-register-tasks');
+    lines.push('Then confirm with: cortex tasks verify');
+  }
 
   if (errors.length > 0) {
     lines.push(`Self-validation: FAILED — ${errors.length} violation(s):`);

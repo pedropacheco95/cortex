@@ -9,11 +9,16 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import {
   TASK_CADENCE,
   TASK_PERMISSION_MODE,
+  TASK_PLAN_VERSION,
   discoverRegistryFiles,
+  planTasks,
+  tasksPlan,
   registerTasks,
+  registrationStatus,
   verifyTasks,
 } from '../../../src/cli/tasks-register.js';
 import { CANONICAL_TASK_NAMES, scopedTaskName } from '../../../src/cli/task-scoping.js';
@@ -413,6 +418,164 @@ describe('verifyTasks: report and exit codes', () => {
     } finally {
       cleanFixture(fx);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tasksPlan — the authoritative, read-only registration plan (Rule 10)
+// ---------------------------------------------------------------------------
+describe('tasksPlan: 14 entries, stable JSON shape, writes nothing', () => {
+  it('planTasks emits all fourteen with every plan field populated', () => {
+    const fx = makeFixture('plan');
+    try {
+      const plan = planTasks({ projectRoot: fx.root, home: fx.home });
+      expect(plan.planVersion).toBe(TASK_PLAN_VERSION);
+      expect(plan.projectRoot).toBe(path.resolve(fx.root));
+      expect(plan.taskCount).toBe(14);
+      expect(plan.tasks).toHaveLength(14);
+      const byCanonical = new Map(plan.tasks.map((t) => [t.canonical, t]));
+      for (const canonical of CANONICALS) {
+        const t = byCanonical.get(canonical)!;
+        expect(t, canonical).toBeDefined();
+        expect(t.id).toBe(scopedTaskName(fx.root, canonical));
+        expect(t.cronExpression).toBe(TASK_CADENCE[canonical]);
+        expect(t.cwd).toBe(path.resolve(fx.root));
+        expect(t.enabled).toBe(true);
+        expect(t.useWorktree).toBe(false);
+        expect(t.permissionMode).toBe(TASK_PERMISSION_MODE);
+        expect(t.payloadPath).toBe(path.join(fx.home, '.claude', 'scheduled-tasks', t.id, 'SKILL.md'));
+        expect(t.description.length).toBeGreaterThan(0);
+      }
+    } finally {
+      cleanFixture(fx);
+    }
+  });
+
+  it('--json output round-trips to the same stable machine shape', () => {
+    const fx = makeFixture('plan-json');
+    try {
+      const r = tasksPlan({ projectRoot: fx.root, home: fx.home }, true);
+      expect(r.exitCode).toBe(0);
+      const parsed = JSON.parse(r.output);
+      expect(parsed).toEqual(JSON.parse(JSON.stringify(planTasks({ projectRoot: fx.root, home: fx.home }))));
+      expect(Object.keys(parsed).sort()).toEqual(['planVersion', 'projectRoot', 'taskCount', 'tasks']);
+      expect(Object.keys(parsed.tasks[0]).sort()).toEqual(
+        ['canonical', 'cronExpression', 'cwd', 'description', 'enabled', 'id', 'payloadPath', 'permissionMode', 'useWorktree'],
+      );
+    } finally {
+      cleanFixture(fx);
+    }
+  });
+
+  it('human output names every scoped id and points at the Desktop-session skill flow; nothing is written', () => {
+    const fx = makeFixture('plan-human');
+    try {
+      const r = tasksPlan({ projectRoot: fx.root, home: fx.home }, false);
+      expect(r.exitCode).toBe(0);
+      for (const canonical of CANONICALS) {
+        expect(r.output).toContain(scopedTaskName(fx.root, canonical));
+      }
+      expect(r.output).toContain('run cortex-register-tasks');
+      expect(r.output).toContain('cortex tasks verify');
+      // Read-only: no payload dirs, no registry, nothing under home.
+      expect(fs.existsSync(path.join(fx.home, '.claude'))).toBe(false);
+      expect(discoverRegistryFiles(fx.appSupport)).toEqual([]);
+    } finally {
+      cleanFixture(fx);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// register guard — refuses while the Desktop app runs (Rule 11)
+// ---------------------------------------------------------------------------
+describe('registerTasks guard: injected Desktop-app process check', () => {
+  it('checker=true → exit 1 before any write: registry untouched, no backup, no payloads', () => {
+    const fx = makeFixture('guard-on', defaultRegistry());
+    try {
+      const before = fs.readFileSync(fx.registryFile, 'utf-8');
+      const r = registerTasks({ ...opts(fx), isDesktopAppRunning: () => true });
+      expect(r.exitCode).toBe(1);
+      expect(r.output).toContain('refused — the Claude Desktop app is running');
+      expect(r.output).toContain('clobbered');
+      expect(r.output).toContain('run cortex-register-tasks');
+      expect(fs.readFileSync(fx.registryFile, 'utf-8')).toBe(before);
+      expect(backups(fx.registryFile)).toHaveLength(0);
+      expect(fs.existsSync(path.join(fx.home, '.claude', 'scheduled-tasks'))).toBe(false);
+    } finally {
+      cleanFixture(fx);
+    }
+  });
+
+  it('checker=false → proceeds and registers normally', () => {
+    const fx = makeFixture('guard-off', defaultRegistry());
+    try {
+      const r = registerTasks({ ...opts(fx), isDesktopAppRunning: () => false });
+      expect(r.exitCode).toBe(0);
+      expect(readRegistry(fx.registryFile).scheduledTasks).toHaveLength(2 + 14);
+    } finally {
+      cleanFixture(fx);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// registrationStatus — init's read-only summary check (Rule 12)
+// ---------------------------------------------------------------------------
+describe('registrationStatus: read-only registered-and-enabled check', () => {
+  it('no registry (app never ran) → registryFound false, all fourteen unregistered', () => {
+    const fx = makeFixture('rs-none');
+    try {
+      const s = registrationStatus(opts(fx));
+      expect(s.registryFound).toBe(false);
+      expect(s.total).toBe(14);
+      expect(s.unregistered.sort()).toEqual([...CANONICALS].sort());
+    } finally {
+      cleanFixture(fx);
+    }
+  });
+
+  it('after register → none unregistered; a disabled entry counts as unregistered', () => {
+    const fx = makeFixture('rs-full', defaultRegistry());
+    try {
+      registerTasks(opts(fx));
+      expect(registrationStatus(opts(fx)).unregistered).toEqual([]);
+      const reg = readRegistry(fx.registryFile);
+      const id = scopedTaskName(fx.root, 'cortex-pulse-hygiene');
+      for (const e of reg.scheduledTasks) if (e['id'] === id) e['enabled'] = false;
+      fs.writeFileSync(fx.registryFile, JSON.stringify(reg, null, 2) + '\n', 'utf-8');
+      expect(registrationStatus(opts(fx)).unregistered).toEqual(['cortex-pulse-hygiene']);
+    } finally {
+      cleanFixture(fx);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// cortex-register-tasks skill — ships in both trees, drives the plan (Rule 12)
+// ---------------------------------------------------------------------------
+describe('cortex-register-tasks skill bundle', () => {
+  const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+  const pkgSkill = path.join(REPO_ROOT, 'skills', 'cortex-register-tasks', 'SKILL.md');
+  const localSkill = path.join(REPO_ROOT, '.claude', 'skills', 'cortex-register-tasks', 'SKILL.md');
+
+  it('exists in both trees, byte-identical', () => {
+    expect(fs.existsSync(pkgSkill)).toBe(true);
+    expect(fs.existsSync(localSkill)).toBe(true);
+    expect(fs.readFileSync(pkgSkill).equals(fs.readFileSync(localSkill))).toBe(true);
+  });
+
+  it('preflights the Desktop-only MCP tools, consumes the plan, and ends with verify', () => {
+    const raw = fs.readFileSync(pkgSkill, 'utf-8');
+    expect(raw).toContain('name: cortex-register-tasks');
+    expect(raw).toContain('mcp__scheduled-tasks__create_scheduled_task');
+    expect(raw).toContain('mcp__scheduled-tasks__update_scheduled_task');
+    expect(raw).toContain('mcp__scheduled-tasks__list_scheduled_tasks');
+    expect(raw).toContain('cortex tasks plan --json');
+    expect(raw).toContain('cortex tasks verify');
+    // Never invents prompt content; never edits the registry file itself.
+    expect(raw).toContain('Do NOT invent instructions/prompt content');
+    expect(raw).toMatch(/never write the app's `scheduled-tasks\.json`/i);
   });
 });
 
