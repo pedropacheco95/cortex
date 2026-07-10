@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-09T08:54:17Z",
-  "built_at_commit": "8248c76",
+  "generated": "2026-07-10T12:01:33Z",
+  "built_at_commit": "5f24181",
   "clusters": [
     {
       "id": "cluster:archive",
@@ -101,7 +101,6 @@
         "file:src/loops/onboarding-drift.ts",
         "file:src/loops/report.ts",
         "file:src/loops/rule-decay.ts",
-        "file:src/loops/skill-suggest.ts",
         "file:src/loops/spec-drift.ts",
         "file:src/loops/verify-scheduled.ts"
       ],
@@ -144,11 +143,10 @@
       "label": "Session corpus consumers",
       "members": [
         "file:src/insight/session-observe.ts",
-        "file:src/loops/skill-suggest.ts",
         "file:src/pulse/distil.ts",
         "file:src/sessions/read.ts"
       ],
-      "rationale": "cross-module consumers of the shared Claude-session corpus reader (distillation, workflow mining, session observation)",
+      "rationale": "cross-module consumers of the shared Claude-session corpus reader (distillation, session observation)",
       "scope": "global"
     },
     {

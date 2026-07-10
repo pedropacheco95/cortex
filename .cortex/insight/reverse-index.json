@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "8248c76",
+  "built_at_commit": "5f24181",
   "referenced_by": {
     "element:src/archive/scaffold.ts#scaffoldArchive": [
       "edge:calls:element:src/cli/init.ts#init->element:src/archive/scaffold.ts#scaffoldArchive"
@@ -80,9 +80,11 @@
       "edge:calls:element:src/insight/refresh-full.ts#reportFull->element:src/insight/refresh-daily.ts#rebuildReverseIndex"
     ],
     "element:src/insight/refresh-daily.ts#runRefreshDaily": [
+      "concept:insight-refresh-loops",
       "edge:implements-concept:element:src/insight/refresh-daily.ts#runRefreshDaily->concept:insight-refresh-loops"
     ],
     "element:src/insight/refresh-fast.ts#runInsightRefreshFast": [
+      "concept:insight-refresh-loops",
       "edge:calls:element:src/insight/refresh-fast.ts#runInsightRefreshFast->element:src/insight/significance.ts#classifyChange",
       "edge:implements-concept:element:src/insight/refresh-fast.ts#runInsightRefreshFast->concept:insight-refresh-loops"
     ],
@@ -90,6 +92,7 @@
       "edge:calls:element:src/insight/refresh-full.ts#reportFull->element:src/insight/refresh-daily.ts#rebuildReverseIndex"
     ],
     "element:src/insight/refresh-full.ts#runRefreshFull": [
+      "concept:insight-refresh-loops",
       "edge:implements-concept:element:src/insight/refresh-full.ts#runRefreshFull->concept:insight-refresh-loops"
     ],
     "element:src/insight/session-observe.ts#applyObserve": [
@@ -116,17 +119,7 @@
       "edge:calls:element:src/loops/bug-triage.ts#writeBugTriageReport->element:src/loops/report.ts#writePulseReport"
     ],
     "element:src/loops/report.ts#writePulseReport": [
-      "edge:calls:element:src/loops/bug-triage.ts#writeBugTriageReport->element:src/loops/report.ts#writePulseReport",
-      "edge:calls:element:src/loops/skill-suggest.ts#writeSkillSuggestionsReport->element:src/loops/report.ts#writePulseReport"
-    ],
-    "element:src/loops/skill-suggest.ts#proposeSkillCandidates": [
-      "edge:calls:element:src/loops/skill-suggest.ts#proposeSkillCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds"
-    ],
-    "element:src/loops/skill-suggest.ts#sectionText": [
-      "edge:calls:element:src/loops/skill-suggest.ts#sectionText->element:src/pulse/fences.ts#chooseOuterFence"
-    ],
-    "element:src/loops/skill-suggest.ts#writeSkillSuggestionsReport": [
-      "edge:calls:element:src/loops/skill-suggest.ts#writeSkillSuggestionsReport->element:src/loops/report.ts#writePulseReport"
+      "edge:calls:element:src/loops/bug-triage.ts#writeBugTriageReport->element:src/loops/report.ts#writePulseReport"
     ],
     "element:src/pulse/distil.ts#insightFileCovering": [
       "edge:semantically-similar-to:element:src/pulse/distil.ts#insightFileCovering->element:src/pulse/promote.ts#planPromotion"
@@ -137,9 +130,6 @@
     "element:src/pulse/distil.ts#proposeFromCandidates": [
       "edge:calls:element:src/pulse/distil.ts#proposeFromCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds"
     ],
-    "element:src/pulse/fences.ts#chooseOuterFence": [
-      "edge:calls:element:src/loops/skill-suggest.ts#sectionText->element:src/pulse/fences.ts#chooseOuterFence"
-    ],
     "element:src/pulse/promote.ts#planPromotion": [
       "edge:calls:element:src/pulse/review.ts#pulseCli->element:src/pulse/promote.ts#planPromotion",
       "edge:semantically-similar-to:element:src/pulse/distil.ts#insightFileCovering->element:src/pulse/promote.ts#planPromotion"
@@ -148,7 +138,6 @@
       "edge:calls:element:src/pulse/review.ts#pulseCli->element:src/pulse/promote.ts#planPromotion"
     ],
     "element:src/pulse/suggestion-ids.ts#allocateSuggestionIds": [
-      "edge:calls:element:src/loops/skill-suggest.ts#proposeSkillCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds",
       "edge:calls:element:src/pulse/distil.ts#proposeFromCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds"
     ],
     "element:src/schema/checks/compass.ts#globMatchesNothing": [
@@ -184,7 +173,6 @@
       "edge:implements-concept:file:src/cli/claude-auth.ts->concept:writer-verifier-harness",
       "edge:imports:file:src/harness/run.ts->file:src/cli/claude-auth.ts",
       "edge:imports:file:src/loops/bug-triage.ts->file:src/cli/claude-auth.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/cli/claude-auth.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/cli/claude-auth.ts"
     ],
     "file:src/cli/cli.ts": [
@@ -205,18 +193,26 @@
       "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/cli/init.ts->file:src/insight/scaffold.ts",
       "edge:imports:file:src/cli/init.ts->file:src/paths.ts",
-      "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts"
+      "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
+      "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts"
     ],
     "file:src/cli/task-scoping.ts": [
       "concept:task-scoping",
       "edge:implements-concept:file:src/cli/task-scoping.ts->concept:task-scoping",
-      "edge:imports:file:src/cli/init.ts->file:src/cli/task-scoping.ts"
+      "edge:imports:file:src/cli/init.ts->file:src/cli/task-scoping.ts",
+      "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/task-scoping.ts"
+    ],
+    "file:src/cli/tasks-register.ts": [
+      "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
+      "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/task-scoping.ts",
+      "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/templates.ts"
     ],
     "file:src/cli/templates.ts": [
       "concept:scaffolding",
       "edge:implements-concept:file:src/cli/templates.ts->concept:scaffolding",
       "edge:imports:file:src/archive/scaffold.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
+      "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/insight/scaffold.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/cli/templates.ts",
@@ -236,7 +232,6 @@
       "edge:imports:file:src/constellation/server.ts->file:src/constellation/spa.ts"
     ],
     "file:src/constellation/spa.ts": [
-      "concept:citation-graph",
       "edge:imports:file:src/constellation/server.ts->file:src/constellation/spa.ts"
     ],
     "file:src/harness/run.ts": [
@@ -261,7 +256,6 @@
       "edge:imports:file:src/insight/refresh-fast.ts->file:src/hooks/errors.ts"
     ],
     "file:src/hooks/post-write.ts": [
-      "concept:hook-safety",
       "edge:imports:file:src/hooks/cli.ts->file:src/hooks/post-write.ts",
       "edge:imports:file:src/hooks/post-write.ts->file:src/hooks/session-start.ts"
     ],
@@ -296,7 +290,6 @@
       "edge:imports:file:src/insight/cli.ts->file:src/insight/query.ts"
     ],
     "file:src/insight/entry.ts": [
-      "concept:insight-query-engine",
       "edge:imports:file:src/insight/entry.ts->file:src/insight/storage.ts",
       "edge:imports:file:src/insight/query.ts->file:src/insight/entry.ts",
       "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/entry.ts",
@@ -304,7 +297,6 @@
       "edge:imports:file:src/schema/checks/insight.ts->file:src/insight/entry.ts"
     ],
     "file:src/insight/exclude.ts": [
-      "concept:l1-structural-pass",
       "edge:imports:file:src/insight/l1.ts->file:src/insight/exclude.ts",
       "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/exclude.ts",
       "edge:imports:file:src/pulse/hygiene.ts->file:src/insight/exclude.ts"
@@ -340,7 +332,6 @@
       "edge:imports:file:src/insight/query.ts->file:src/insight/storage.ts"
     ],
     "file:src/insight/refresh-daily.ts": [
-      "concept:insight-refresh-loops",
       "concept:staleness-ledger",
       "edge:implements-concept:file:src/insight/refresh-daily.ts->concept:staleness-ledger",
       "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/entry.ts",
@@ -352,8 +343,6 @@
       "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-daily.ts"
     ],
     "file:src/insight/refresh-fast.ts": [
-      "concept:insight-refresh-loops",
-      "concept:staleness-ledger",
       "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/refresh-fast.ts",
       "edge:imports:file:src/insight/refresh-fast.ts->file:src/hooks/errors.ts",
       "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/exclude.ts",
@@ -363,7 +352,6 @@
       "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-fast.ts"
     ],
     "file:src/insight/refresh-full.ts": [
-      "concept:insight-refresh-loops",
       "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-daily.ts",
       "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-fast.ts",
       "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/storage.ts",
@@ -402,13 +390,10 @@
       "edge:imports:file:src/schema/checks/insight.ts->file:src/insight/storage.ts"
     ],
     "file:src/loops/atlas-staleness.ts": [
-      "concept:always-write-pulse-report",
-      "concept:scan-and-report",
       "edge:imports:file:src/loops/atlas-staleness.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/atlas-staleness.ts->file:src/schema/index-build.ts"
     ],
     "file:src/loops/bug-triage.ts": [
-      "concept:always-write-pulse-report",
       "concept:llm-judgment-subprocess",
       "edge:implements-concept:file:src/loops/bug-triage.ts->concept:llm-judgment-subprocess",
       "edge:imports:file:src/loops/bug-triage.ts->file:src/cli/claude-auth.ts",
@@ -421,16 +406,12 @@
       "edge:imports:file:src/pulse/hygiene.ts->file:src/loops/git-info.ts"
     ],
     "file:src/loops/lint-scheduled.ts": [
-      "concept:always-write-pulse-report",
-      "concept:scan-and-report",
       "edge:imports:file:src/loops/lint-scheduled.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/lint-scheduled.ts->file:src/paths.ts",
       "edge:imports:file:src/loops/lint-scheduled.ts->file:src/schema/types.ts",
       "edge:imports:file:src/loops/lint-scheduled.ts->file:src/schema/validate.ts"
     ],
     "file:src/loops/onboarding-drift.ts": [
-      "concept:always-write-pulse-report",
-      "concept:scan-and-report",
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/insight/measure.ts",
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/loops/report.ts",
@@ -449,14 +430,12 @@
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/report.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/report.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/verify-scheduled.ts->file:src/loops/report.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
       "edge:imports:file:src/pulse/hygiene.ts->file:src/loops/report.ts"
     ],
     "file:src/loops/rule-decay.ts": [
-      "concept:always-write-pulse-report",
       "concept:scan-and-report",
       "edge:implements-concept:file:src/loops/rule-decay.ts->concept:scan-and-report",
       "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/git-info.ts",
@@ -464,21 +443,7 @@
       "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/checks/compass.ts",
       "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/index-build.ts"
     ],
-    "file:src/loops/skill-suggest.ts": [
-      "concept:always-write-pulse-report",
-      "concept:carry-forward-by-normalised-name",
-      "concept:llm-judgment-subprocess",
-      "edge:calls:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
-      "edge:implements-concept:file:src/loops/skill-suggest.ts->concept:carry-forward-by-normalised-name",
-      "edge:implements-concept:file:src/loops/skill-suggest.ts->concept:llm-judgment-subprocess",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/cli/claude-auth.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts"
-    ],
     "file:src/loops/spec-drift.ts": [
-      "concept:always-write-pulse-report",
       "concept:scan-and-report",
       "edge:implements-concept:file:src/loops/spec-drift.ts->concept:scan-and-report",
       "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/git-info.ts",
@@ -486,8 +451,6 @@
       "edge:imports:file:src/loops/spec-drift.ts->file:src/paths.ts"
     ],
     "file:src/loops/verify-scheduled.ts": [
-      "concept:always-write-pulse-report",
-      "concept:scan-and-report",
       "edge:imports:file:src/loops/verify-scheduled.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/verify-scheduled.ts->file:src/paths.ts"
     ],
@@ -508,18 +471,15 @@
       "edge:imports:file:src/schema/provenance-index.ts->file:src/paths.ts"
     ],
     "file:src/pulse/distil.ts": [
-      "concept:always-write-pulse-report",
       "concept:carry-forward-by-normalised-name",
       "concept:llm-judgment-subprocess",
       "concept:promotion-graduation-path",
-      "edge:calls:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
       "edge:calls:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
       "edge:implements-concept:file:src/pulse/distil.ts->concept:carry-forward-by-normalised-name",
       "edge:implements-concept:file:src/pulse/distil.ts->concept:llm-judgment-subprocess",
       "edge:implements-concept:file:src/pulse/distil.ts->concept:promotion-graduation-path",
       "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/distil.ts",
       "edge:imports:file:src/loops/bug-triage.ts->file:src/pulse/distil.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/cli/claude-auth.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
@@ -530,12 +490,10 @@
       "edge:calls:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
       "edge:calls:file:src/pulse/review.ts->file:src/pulse/fences.ts",
       "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/fences.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
       "edge:imports:file:src/pulse/review.ts->file:src/pulse/fences.ts"
     ],
     "file:src/pulse/hygiene.ts": [
-      "concept:always-write-pulse-report",
       "concept:scan-and-report",
       "edge:implements-concept:file:src/pulse/hygiene.ts->concept:scan-and-report",
       "edge:imports:file:src/pulse/hygiene.ts->file:src/insight/exclude.ts",
@@ -565,7 +523,6 @@
     ],
     "file:src/pulse/suggestion-ids.ts": [
       "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/suggestion-ids.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/pulse/suggestion-ids.ts"
     ],
     "file:src/pulse/types.ts": [
@@ -576,32 +533,27 @@
       "edge:imports:file:src/schema/checks/pulse.ts->file:src/pulse/types.ts"
     ],
     "file:src/schema/checks/archive.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/archive.ts->file:src/archive/formats.ts",
       "edge:imports:file:src/schema/checks/archive.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/archive.ts"
     ],
     "file:src/schema/checks/atlas.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/atlas.ts->file:src/schema/index-build.ts",
       "edge:imports:file:src/schema/checks/atlas.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/atlas.ts"
     ],
     "file:src/schema/checks/bizspec.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/bizspec.ts->file:src/paths.ts",
       "edge:imports:file:src/schema/checks/bizspec.ts->file:src/schema/index-build.ts",
       "edge:imports:file:src/schema/checks/bizspec.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/bizspec.ts"
     ],
     "file:src/schema/checks/claude-md.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/schema/checks/claude-md.ts",
       "edge:imports:file:src/schema/checks/claude-md.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/claude-md.ts"
     ],
     "file:src/schema/checks/compass.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/checks/compass.ts",
       "edge:imports:file:src/pulse/hygiene.ts->file:src/schema/checks/compass.ts",
       "edge:imports:file:src/schema/checks/compass.ts->file:src/schema/index-build.ts",
@@ -610,19 +562,16 @@
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/compass.ts"
     ],
     "file:src/schema/checks/config.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/config.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/checks/config.ts->file:src/schema/version.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/config.ts"
     ],
     "file:src/schema/checks/constellation.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/constellation.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/constellation.ts",
       "edge:semantically-similar-to:file:src/schema/checks/insight.ts->file:src/schema/checks/constellation.ts"
     ],
     "file:src/schema/checks/devspec.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/devspec.ts->file:src/paths.ts",
       "edge:imports:file:src/schema/checks/devspec.ts->file:src/schema/checks/compass.ts",
       "edge:imports:file:src/schema/checks/devspec.ts->file:src/schema/index-build.ts",
@@ -630,12 +579,10 @@
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/devspec.ts"
     ],
     "file:src/schema/checks/hooks.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/hooks.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/hooks.ts"
     ],
     "file:src/schema/checks/insight.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/insight/refresh-full.ts->file:src/schema/checks/insight.ts",
       "edge:imports:file:src/schema/checks/insight.ts->file:src/insight/entry.ts",
       "edge:imports:file:src/schema/checks/insight.ts->file:src/insight/storage.ts",
@@ -644,44 +591,37 @@
       "edge:semantically-similar-to:file:src/schema/checks/insight.ts->file:src/schema/checks/constellation.ts"
     ],
     "file:src/schema/checks/layout.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/schema/checks/layout.ts",
       "edge:imports:file:src/schema/checks/layout.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/layout.ts"
     ],
     "file:src/schema/checks/loop-md.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/loop-md.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/loop-md.ts"
     ],
     "file:src/schema/checks/provenance.ts": [
       "concept:provenance-tracking",
-      "concept:validation-checks",
       "edge:implements-concept:file:src/schema/checks/provenance.ts->concept:provenance-tracking",
       "edge:imports:file:src/schema/checks/provenance.ts->file:src/schema/provenance-index.ts",
       "edge:imports:file:src/schema/checks/provenance.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/provenance.ts"
     ],
     "file:src/schema/checks/pulse.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/pulse.ts->file:src/pulse/types.ts",
       "edge:imports:file:src/schema/checks/pulse.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/pulse.ts"
     ],
     "file:src/schema/checks/scenario.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/scenario.ts->file:src/schema/index-build.ts",
       "edge:imports:file:src/schema/checks/scenario.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/scenario.ts"
     ],
     "file:src/schema/checks/specs.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/specs.ts->file:src/paths.ts",
       "edge:imports:file:src/schema/checks/specs.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/specs.ts"
     ],
     "file:src/schema/checks/xref.ts": [
-      "concept:validation-checks",
       "edge:imports:file:src/schema/checks/xref.ts->file:src/paths.ts",
       "edge:imports:file:src/schema/checks/xref.ts->file:src/schema/index-build.ts",
       "edge:imports:file:src/schema/checks/xref.ts->file:src/schema/types.ts",

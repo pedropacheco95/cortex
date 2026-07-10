@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-09T08:54:17Z",
-  "built_at_commit": "8248c76",
+  "generated": "2026-07-10T12:01:33Z",
+  "built_at_commit": "5f24181",
   "vocabulary": [
     {
       "tag": "S-NNN-namespace",
@@ -14,10 +14,6 @@
     {
       "tag": "bug-ledger-triage",
       "kind": "concern"
-    },
-    {
-      "tag": "carry-forward-dedup",
-      "kind": "pattern"
     },
     {
       "tag": "child-process",
@@ -204,10 +200,6 @@
       "kind": "pattern"
     },
     {
-      "tag": "skill-suggestion",
-      "kind": "domain-term"
-    },
-    {
       "tag": "spec-content-drift",
       "kind": "concern"
     },
@@ -254,10 +246,6 @@
     {
       "tag": "warn-never-block",
       "kind": "pattern"
-    },
-    {
-      "tag": "workflow-mining",
-      "kind": "concern"
     },
     {
       "tag": "writer-verifier",
@@ -417,14 +405,6 @@
       "compass-rule",
       "rule-obsolescence",
       "scan-and-report"
-    ],
-    "file:src/loops/skill-suggest.ts": [
-      "carry-forward-dedup",
-      "core-loop",
-      "llm-judgment-subprocess",
-      "propose-dont-mutate",
-      "skill-suggestion",
-      "workflow-mining"
     ],
     "file:src/loops/spec-drift.ts": [
       "governs-glob",

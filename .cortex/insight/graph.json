@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-09T08:54:17Z",
-  "built_at_commit": "8248c76",
+  "generated": "2026-07-10T10:00:00Z",
+  "built_at_commit": "5f24181",
   "nodes": [
     {
       "id": "concept:always-write-pulse-report",
@@ -124,6 +124,16 @@
       "label": "run"
     },
     {
+      "id": "element:src/cli/init.ts#ScheduledTasksResult",
+      "kind": "element",
+      "label": "ScheduledTasksResult"
+    },
+    {
+      "id": "element:src/cli/init.ts#TaskSkillGap",
+      "kind": "element",
+      "label": "TaskSkillGap"
+    },
+    {
       "id": "element:src/cli/init.ts#draftPreferences",
       "kind": "element",
       "label": "draftPreferences"
@@ -174,9 +184,54 @@
       "label": "writeSkeleton"
     },
     {
+      "id": "element:src/cli/task-scoping.ts#hashScopedTaskName",
+      "kind": "element",
+      "label": "hashScopedTaskName"
+    },
+    {
+      "id": "element:src/cli/task-scoping.ts#migrateHashScopedTaskDirs",
+      "kind": "element",
+      "label": "migrateHashScopedTaskDirs"
+    },
+    {
+      "id": "element:src/cli/task-scoping.ts#resolveScopedTaskName",
+      "kind": "element",
+      "label": "resolveScopedTaskName"
+    },
+    {
       "id": "element:src/cli/task-scoping.ts#scopedTaskName",
       "kind": "element",
       "label": "scopedTaskName"
+    },
+    {
+      "id": "element:src/cli/task-scoping.ts#taskDirProjectRoot",
+      "kind": "element",
+      "label": "taskDirProjectRoot"
+    },
+    {
+      "id": "element:src/cli/tasks-register.ts#desktopAppRunning",
+      "kind": "element",
+      "label": "desktopAppRunning"
+    },
+    {
+      "id": "element:src/cli/tasks-register.ts#registerTasks",
+      "kind": "element",
+      "label": "registerTasks"
+    },
+    {
+      "id": "element:src/cli/tasks-register.ts#registrationStatus",
+      "kind": "element",
+      "label": "registrationStatus"
+    },
+    {
+      "id": "element:src/cli/tasks-register.ts#tasksPlan",
+      "kind": "element",
+      "label": "tasksPlan"
+    },
+    {
+      "id": "element:src/cli/tasks-register.ts#verifyTasks",
+      "kind": "element",
+      "label": "verifyTasks"
     },
     {
       "id": "element:src/constellation/server.ts#applyPreset",
@@ -519,49 +574,9 @@
       "label": "writePulseReport"
     },
     {
-      "id": "element:src/loops/skill-suggest.ts#judgmentPrompt",
+      "id": "element:src/pulse/distil.ts#DistilCandidateType",
       "kind": "element",
-      "label": "judgmentPrompt"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#proposeSkillCandidates",
-      "kind": "element",
-      "label": "proposeSkillCandidates"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#runClaudeJudgment",
-      "kind": "element",
-      "label": "runClaudeJudgment"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#runSkillSuggest",
-      "kind": "element",
-      "label": "runSkillSuggest"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#sectionText",
-      "kind": "element",
-      "label": "sectionText"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#skillNameExists",
-      "kind": "element",
-      "label": "skillNameExists"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#validateSkillCandidate",
-      "kind": "element",
-      "label": "validateSkillCandidate"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#writeDegradedSkillReport",
-      "kind": "element",
-      "label": "writeDegradedSkillReport"
-    },
-    {
-      "id": "element:src/loops/skill-suggest.ts#writeSkillSuggestionsReport",
-      "kind": "element",
-      "label": "writeSkillSuggestionsReport"
+      "label": "DistilCandidateType"
     },
     {
       "id": "element:src/pulse/distil.ts#collectCorpus",
@@ -759,6 +774,11 @@
       "label": "task-scoping.ts"
     },
     {
+      "id": "file:src/cli/tasks-register.ts",
+      "kind": "file",
+      "label": "tasks-register.ts"
+    },
+    {
       "id": "file:src/cli/templates.ts",
       "kind": "file",
       "label": "templates.ts"
@@ -922,11 +942,6 @@
       "id": "file:src/loops/rule-decay.ts",
       "kind": "file",
       "label": "rule-decay.ts"
-    },
-    {
-      "id": "file:src/loops/skill-suggest.ts",
-      "kind": "file",
-      "label": "skill-suggest.ts"
     },
     {
       "id": "file:src/loops/spec-drift.ts",
@@ -1107,7 +1122,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "The fallback branch of run() calls `await init(target, { force, yes, noLlm, partial, ... })`.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:calls:element:src/cli/init.ts#init->element:src/archive/scaffold.ts#scaffoldArchive",
@@ -1116,7 +1131,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "writeSkeleton (called from init) calls `scaffoldArchive(cortexDir)` directly.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:calls:element:src/cli/init.ts#writeScheduledTasks->element:src/cli/task-scoping.ts#scopedTaskName",
@@ -1125,7 +1140,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "writeScheduledTasks calls `scopedTaskName(root, CANONICAL_TASK_NAMES[task.name] ?? task.name)` for every registered task and for each retired canonical name.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#applyPreset",
@@ -1296,7 +1311,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "runBugTriage parses the LLM subprocess stdout via distil.ts's parseCandidatesFromOutput",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:calls:element:src/loops/bug-triage.ts#writeBugTriageReport->element:src/loops/report.ts#writePulseReport",
@@ -1308,40 +1323,13 @@
       "confirmed_at_commit": "8248c76"
     },
     {
-      "id": "edge:calls:element:src/loops/skill-suggest.ts#proposeSkillCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds",
-      "source": "element:src/loops/skill-suggest.ts#proposeSkillCandidates",
-      "target": "element:src/pulse/suggestion-ids.ts#allocateSuggestionIds",
-      "edge_type": "calls",
-      "confidence": "structural",
-      "evidence": "proposeSkillCandidates calls allocateSuggestionIds(root, freshCount) to assign S-NNN ids to new candidates",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
-      "id": "edge:calls:element:src/loops/skill-suggest.ts#sectionText->element:src/pulse/fences.ts#chooseOuterFence",
-      "source": "element:src/loops/skill-suggest.ts#sectionText",
-      "target": "element:src/pulse/fences.ts#chooseOuterFence",
-      "edge_type": "calls",
-      "confidence": "structural",
-      "evidence": "sectionText calls chooseOuterFence(payload) to strip the outer code fence before parsing a suggestion section",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
-      "id": "edge:calls:element:src/loops/skill-suggest.ts#writeSkillSuggestionsReport->element:src/loops/report.ts#writePulseReport",
-      "source": "element:src/loops/skill-suggest.ts#writeSkillSuggestionsReport",
-      "target": "element:src/loops/report.ts#writePulseReport",
-      "edge_type": "calls",
-      "confidence": "structural",
-      "evidence": "writeSkillSuggestionsReport and writeDegradedSkillReport both delegate to writePulseReport",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
       "id": "edge:calls:element:src/pulse/distil.ts#proposeFromCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds",
       "source": "element:src/pulse/distil.ts#proposeFromCandidates",
       "target": "element:src/pulse/suggestion-ids.ts#allocateSuggestionIds",
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "proposeFromCandidates calls allocateSuggestionIds to assign ids to freshly accepted candidates",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:calls:element:src/pulse/review.ts#pulseCli->element:src/pulse/promote.ts#planPromotion",
@@ -1380,22 +1368,13 @@
       "confirmed_at_commit": "8248c76"
     },
     {
-      "id": "edge:calls:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "file:src/pulse/distil.ts",
-      "edge_type": "calls",
-      "confidence": "structural",
-      "evidence": "skill-suggest.ts reuses distil.ts's collectCorpus, normaliseText, readPendingSections, readUnexpiredDismissals, isDismissed, readThresholdN, and parseCandidatesFromOutput rather than reimplementing corpus/dismissal handling",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
       "id": "edge:calls:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
       "source": "file:src/pulse/distil.ts",
       "target": "file:src/pulse/fences.ts",
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "parseSuggestionSections and distilSectionText call openingFence, closesFence, chooseOuterFence, and headingLinesOutsideFences to parse suggestion report markdown",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:calls:file:src/pulse/review.ts->file:src/pulse/fences.ts",
@@ -1521,7 +1500,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "run() dispatches nearly every verb via `await import(...)` rather than static imports; only src/cli/init.ts is statically imported.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:dynamic-verb-dispatch",
@@ -1530,7 +1509,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "init() dynamically imports src/constellation/compile.ts to build the citation graph rather than statically importing it, mirroring cli.ts's convention.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:scaffolding",
@@ -1539,7 +1518,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "writeSkeleton/upsertClaudeMd/mergeSettings/writeScheduledTasks create and repair the per-project runtime surface",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:task-scoping",
@@ -1548,7 +1527,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "writeScheduledTasks calls scopedTaskName(root, ...) to register and retire this project's tasks under scoped names.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/cli/task-scoping.ts->concept:task-scoping",
@@ -1557,7 +1536,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "scopedTaskName implements '<project-slug>-<short-hash>-<canonical-task-name>' exactly per the file's doc comment and schema §9.1 reference.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/cli/templates.ts->concept:scaffolding",
@@ -1749,24 +1728,6 @@
       "confirmed_at_commit": "8248c76"
     },
     {
-      "id": "edge:implements-concept:file:src/loops/skill-suggest.ts->concept:carry-forward-by-normalised-name",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "concept:carry-forward-by-normalised-name",
-      "edge_type": "implements-concept",
-      "confidence": "stated",
-      "evidence": "reuses distil.ts’s normalised-name carry-forward for skill suggestion ids",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
-      "id": "edge:implements-concept:file:src/loops/skill-suggest.ts->concept:llm-judgment-subprocess",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "concept:llm-judgment-subprocess",
-      "edge_type": "implements-concept",
-      "confidence": "stated",
-      "evidence": "runClaudeJudgment/judgmentPrompt mirror bug-triage.ts's subprocess classification pattern",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
       "id": "edge:implements-concept:file:src/loops/spec-drift.ts->concept:scan-and-report",
       "source": "file:src/loops/spec-drift.ts",
       "target": "concept:scan-and-report",
@@ -1791,7 +1752,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "matches new candidates against pending report sections via normaliseText(name) so S-NNN ids persist across runs",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/pulse/distil.ts->concept:llm-judgment-subprocess",
@@ -1800,7 +1761,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "distil.ts's runClaudeJudgment is the one LLM-subprocess boundary among the pulse-layer files in this scope",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/pulse/distil.ts->concept:promotion-graduation-path",
@@ -1809,7 +1770,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "insightFileCovering detects prior insight coverage and redirects the candidate to a promotion proposal",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:implements-concept:file:src/pulse/hygiene.ts->concept:scan-and-report",
@@ -1917,7 +1878,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/cli.ts imports src/cli/init.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
@@ -1926,7 +1887,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/archive/scaffold.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/task-scoping.ts",
@@ -1935,7 +1896,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/cli/task-scoping.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
@@ -1944,7 +1905,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/insight/scaffold.ts",
@@ -1953,7 +1914,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/insight/scaffold.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/paths.ts",
@@ -1962,7 +1923,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/paths.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
@@ -1971,7 +1932,34 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/schema/validate.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
+    },
+    {
+      "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
+      "source": "file:src/cli/tasks-register.ts",
+      "target": "file:src/cli/init.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/tasks-register.ts imports src/cli/init.ts",
+      "confirmed_at_commit": "5f24181"
+    },
+    {
+      "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/task-scoping.ts",
+      "source": "file:src/cli/tasks-register.ts",
+      "target": "file:src/cli/task-scoping.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/tasks-register.ts imports src/cli/task-scoping.ts",
+      "confirmed_at_commit": "5f24181"
+    },
+    {
+      "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/templates.ts",
+      "source": "file:src/cli/tasks-register.ts",
+      "target": "file:src/cli/templates.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/tasks-register.ts imports src/cli/templates.ts",
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/constellation/compile.ts->file:src/paths.ts",
@@ -2358,7 +2346,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/session-observe.ts imports src/pulse/distil.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/fences.ts",
@@ -2430,7 +2418,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/bug-triage.ts imports src/pulse/distil.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/loops/lint-scheduled.ts->file:src/loops/report.ts",
@@ -2559,51 +2547,6 @@
       "confirmed_at_commit": "8248c76"
     },
     {
-      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/cli/claude-auth.ts",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "file:src/cli/claude-auth.ts",
-      "edge_type": "imports",
-      "confidence": "structural",
-      "evidence": "L1 tree-sitter parse: src/loops/skill-suggest.ts imports src/cli/claude-auth.ts",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
-      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "file:src/loops/report.ts",
-      "edge_type": "imports",
-      "confidence": "structural",
-      "evidence": "L1 tree-sitter parse: src/loops/skill-suggest.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
-      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "file:src/pulse/distil.ts",
-      "edge_type": "imports",
-      "confidence": "structural",
-      "evidence": "L1 tree-sitter parse: src/loops/skill-suggest.ts imports src/pulse/distil.ts",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
-      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "file:src/pulse/fences.ts",
-      "edge_type": "imports",
-      "confidence": "structural",
-      "evidence": "L1 tree-sitter parse: src/loops/skill-suggest.ts imports src/pulse/fences.ts",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
-      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts",
-      "source": "file:src/loops/skill-suggest.ts",
-      "target": "file:src/pulse/suggestion-ids.ts",
-      "edge_type": "imports",
-      "confidence": "structural",
-      "evidence": "L1 tree-sitter parse: src/loops/skill-suggest.ts imports src/pulse/suggestion-ids.ts",
-      "confirmed_at_commit": "8248c76"
-    },
-    {
       "id": "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/git-info.ts",
       "source": "file:src/loops/spec-drift.ts",
       "target": "file:src/loops/git-info.ts",
@@ -2655,7 +2598,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/distil.ts imports src/cli/claude-auth.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
@@ -2664,7 +2607,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/distil.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
@@ -2673,7 +2616,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/distil.ts imports src/pulse/fences.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/pulse/distil.ts->file:src/pulse/suggestion-ids.ts",
@@ -2682,7 +2625,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/distil.ts imports src/pulse/suggestion-ids.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/pulse/distil.ts->file:src/sessions/read.ts",
@@ -2691,7 +2634,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/distil.ts imports src/sessions/read.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:imports:file:src/pulse/hygiene.ts->file:src/insight/exclude.ts",
@@ -3321,7 +3264,7 @@
       "edge_type": "semantically-similar-to",
       "confidence": "inferred",
       "evidence": "distil.ts redirects a candidate already covered by insight prose into a promotion proposal consumed by promote.ts's planPromotion, without a direct import between the two files",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "5f24181"
     },
     {
       "id": "edge:semantically-similar-to:file:src/schema/checks/insight.ts->file:src/schema/checks/constellation.ts",

@@ -20,3 +20,7 @@ Uses:
 
 Used by:
 - src/hooks/cli.ts: dispatches `case 'pre-write'` to this module's `run`
+
+## Insights
+
+- Rule 4 warning is two-stage (fix for bug B-001): a rule with an evaluable `check:` predicate (regex/grep kind) warns only when that predicate actually fires on the proposed content within its `applies_to` scope; a predicateless rule (`check` absent, or kind `none`/`ast`) falls back to warning on bare path match. Path-match-always was the project's first dogfooding bug — it broke "silence is the normal case". (claude-sessions/pedropacheco1/75ef81a0-97bd-4fa1-8c2a-72ddb2d98405)

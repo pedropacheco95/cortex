@@ -19,3 +19,7 @@ Uses:
 
 Used by:
 - (none src-internal in this slice — consumed dynamically, most likely by a test-runner loop module outside this scope)
+
+## Insights
+
+- Includes a stale-worktree sweep/prune (bug B-002): if the harness is killed mid-run (e.g. a stub reading stdin times out), `finally` cleanup never runs and a `cortex-harness-*` git worktree is orphaned against the real repo; the sweep reclaims these on a later run rather than relying on a clean exit. (claude-sessions/pedropacheco1/75ef81a0-97bd-4fa1-8c2a-72ddb2d98405)
