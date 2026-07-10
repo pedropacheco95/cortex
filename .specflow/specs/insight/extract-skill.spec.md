@@ -19,7 +19,7 @@ governs:
 ## Entities
 
 - **READS:** the L1 structural output (`insight.l1-structural` — import/export graph, sizes, centrality, skip-listed paths excluded); the existing `.cortex/insight/` layout when resuming (`scope-registry.yaml`, `ledger.json`, per-scope completion state) for checkpoint recovery; `cortex.config.json` for the auto-run-vs-confirm threshold (`insight.extractionAutoRunThreshold` or equivalent, config-name TBD by `insight.cli`/`insight.storage-format`).
-- **WRITES:** the full `.cortex/insight/` output contract owned by `insight.storage-format` — `anatomy/` (or `scopes/<scope>/anatomy/`) per-file entries, `concepts/`, `graph.json`, `tags.json`, `clusters.json`, `scope-registry.yaml`, `ledger.json`, `reverse-index.json`; `.cortex/pulse/insight-extraction-plan.md`; `.cortex/pulse/insight-extraction-progress.md`. Never gated content — this skill has no target in `compass/`, `atlas/`, or `RULES.md`.
+- **WRITES:** the full `.cortex/insight/` output contract owned by `insight.storage-format` — `anatomy/` (or `scopes/<scope>/anatomy/`) per-file entries, `concepts/`, `graph.json`, `tags.json`, `clusters.json`, `scope-registry.yaml`, `ledger.json`, `reverse-index.json`; `.cortex/pulse/extraction/plan.md`; `.cortex/pulse/extraction/progress.md`. Never gated content — this skill has no target in `compass/`, `atlas/`, or `RULES.md`.
 - **CREATES:** the scope registry and every per-file entry, concept file, and JSON artefact on a first run; the plan and progress pulse artefacts on every run.
 
 ## Rules
@@ -28,10 +28,10 @@ governs:
 2. **The scope registry is the durable planning record (design §5.4).** Written to `scope-registry.yaml` (per `insight.storage-format`'s `check.insight-scope-registry`): `path`, `depends_on`, `shared_by` per scope. A scope shared by multiple parents is extracted **once** and referenced from each parent — never re-extracted.
 3. **Same-module vs. similar-module is Claude's judgment during planning, made by reading the code.** Same underlying files (imports, path resolution, symlinks) → one scope, referenced from both parents. Independently-implemented similar functionality (e.g., two unrelated `notifications/` directories) → two separate scopes, connected by a Phase-4 `semantically-similar-to` edge, never merged into one scope (study's dedup guardrail: same label ≠ same entity across scopes).
 4. **Recursion re-plans from the top (build-order flag F7).** When planning finds a scope still too large after the initial pass, the top-level orchestrator breaks it into sub-scopes and re-dispatches — it does **not** let an already-running scope sub-agent spawn its own nested sub-agents. Recursion terminates when every leaf scope is small enough for one extraction agent; very small collections with no cross-scope sharing (roughly 5–10 files) fold into their parent instead of becoming their own scope.
-5. **Auto-run vs. confirm gate (design §5.3).** Below the configured cost/size threshold, the skill executes the plan without waiting. At or above it — large scope trees, ambiguous boundaries, high estimated cost — the skill writes the plan to `insight-extraction-plan.md` and waits for the user to confirm or adjust before Phase 3 begins.
+5. **Auto-run vs. confirm gate (design §5.3).** Below the configured cost/size threshold, the skill executes the plan without waiting. At or above it — large scope trees, ambiguous boundaries, high estimated cost — the skill writes the plan to `extraction/plan.md` and waits for the user to confirm or adjust before Phase 3 begins.
 6. **Parallel-sub-agent-per-root-scope orchestration (study Axis 1, verbatim adoption).** All root-scope sub-agents for a given wave are dispatched in a single message. Each writes its L2/L3 output fragment to a disk file before returning; the orchestrator's success signal is **the file existing on disk**, never the sub-agent's own report. A scope whose fragment is missing after dispatch is a **warn**, not a silent skip. If **more than half** of the dispatched scopes' fragments are missing, the run **aborts** rather than continuing on a majority-incomplete result.
 7. **Resumability and checkpointing (design §5.11, A5.2).** Scope completion is checkpointed as each scope's fragment lands on disk and merges cleanly. A crashed or interrupted run, re-invoked, skips scopes already checkpointed complete and resumes only the incomplete ones — it never re-extracts a completed scope.
-8. **Progress and plan are pulse artefacts, not durable insight state.** `.cortex/pulse/insight-extraction-plan.md` (`kind: insight-extraction-plan`) carries the root/shared/sub-scope tree, estimated cost, and peak parallelism. `.cortex/pulse/insight-extraction-progress.md` (`kind: insight-extraction-progress`) carries per-scope status (pending/running/complete/failed), files done, checkpoints, and warnings. Both are transient (gitignored, `pulse/` header conventions apply) — the durable output is the `.cortex/insight/` tree itself.
+8. **Progress and plan are pulse artefacts, not durable insight state.** `.cortex/pulse/extraction/plan.md` (`kind: insight-extraction-plan`) carries the root/shared/sub-scope tree, estimated cost, and peak parallelism. `.cortex/pulse/extraction/progress.md` (`kind: insight-extraction-progress`) carries per-scope status (pending/running/complete/failed), files done, checkpoints, and warnings. Both are transient (gitignored, `pulse/` header conventions apply) — the durable output is the `.cortex/insight/` tree itself.
 9. **No CLI wrapper (RULES 3, design §5.3).** There is no `cortex extract-insight` command. The skill is invoked from a Claude Code session or directly by a scheduled task; Core never orchestrates or triggers extraction.
 10. **Output validation before a scope or run is considered done (design §A5.2).** Every written per-file entry, JSON artefact, and the scope registry is validated against `insight.storage-format`'s checks (`check.insight-entry`, `check.insight-scope-registry`, `check.insight-graph`, `check.insight-ledger`) before the corresponding checkpoint is marked complete.
 
@@ -41,7 +41,7 @@ governs:
 
 - **Given** a codebase with `auth/` (~2,400 files) and `billing/` (~1,800 files) both importing a shared `notifications/` module
 - **When** Phase 2 planning runs over the L1 output
-- **Then** `.cortex/pulse/insight-extraction-plan.md` lists `auth/` and `billing/` as root scopes each referencing shared scope `notifications/`, and `scope-registry.yaml` records `notifications` with `shared_by: [auth, billing]`
+- **Then** `.cortex/pulse/extraction/plan.md` lists `auth/` and `billing/` as root scopes each referencing shared scope `notifications/`, and `scope-registry.yaml` records `notifications` with `shared_by: [auth, billing]`
 
 ### Same-underlying-files scopes are extracted once
 
@@ -65,13 +65,13 @@ governs:
 
 - **Given** a small codebase whose estimated extraction plan is below the configured auto-run threshold
 - **When** planning completes
-- **Then** Phase 3 execution begins immediately without waiting for user confirmation, and the plan is still written to `insight-extraction-plan.md` for the record
+- **Then** Phase 3 execution begins immediately without waiting for user confirmation, and the plan is still written to `extraction/plan.md` for the record
 
 ### Above-threshold codebases wait for confirmation
 
 - **Given** a codebase whose plan estimates 5 concurrent extraction agents and ~14 hours, above the configured threshold
 - **When** planning completes
-- **Then** the skill writes `insight-extraction-plan.md` and stops, waiting for the user to confirm or adjust the plan before any scope is dispatched
+- **Then** the skill writes `extraction/plan.md` and stops, waiting for the user to confirm or adjust the plan before any scope is dispatched
 
 ### Parallel dispatch treats the on-disk fragment as the success signal
 
@@ -98,7 +98,7 @@ governs:
 
 - **Given** all root and shared scopes checkpointed complete
 - **When** Phase 4 begins
-- **Then** a single unification pass produces `concepts/` spanning multiple scopes and cross-scope edges in the top-level `graph.json`, and this pass does not start while any scope is still `pending` or `running` per `insight-extraction-progress.md`
+- **Then** a single unification pass produces `concepts/` spanning multiple scopes and cross-scope edges in the top-level `graph.json`, and this pass does not start while any scope is still `pending` or `running` per `extraction/progress.md`
 
 ### Malformed output fails validation before checkpointing
 

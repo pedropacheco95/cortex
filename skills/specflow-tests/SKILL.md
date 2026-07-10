@@ -54,7 +54,7 @@ When the project has a `.cortex/` directory, read the knowledge layer before gen
    scenario `covers:` mechanism follow cortex-schema §3 and §4.8 — generated files must
    land in that layout, and every scenario spec must carry a resolvable `covers:` list.
 4. **Verification output home (design §8.5).** The verification report lands at
-   `.cortex/pulse/verification-report.md` — never `tests/verification-report.md`. The
+   `.cortex/pulse/reports/verification.md` — never `tests/verification-report.md`. The
    pulse directory is where transient process outputs live and where the scheduled
    specflow-verify loop expects to find it.
 5. **Insight queries (when `.cortex/insight/` exists).** Before generating tests, run
@@ -231,7 +231,7 @@ If any check fails:
 
 #### 3f. Verification report
 
-The verification agent writes `.cortex/pulse/verification-report.md`:
+The verification agent writes `.cortex/pulse/reports/verification.md`:
 
 ```markdown
 # Test Verification Report
@@ -271,7 +271,7 @@ Coverage gaps are acceptable if honestly reported with justification.
 ### Phase 4: Report
 
 Final output: the verification report from Phase 3 (after PASS), placed at
-`.cortex/pulse/verification-report.md`. The orchestrator presents it to the human.
+`.cortex/pulse/reports/verification.md`. The orchestrator presents it to the human.
 
 ## Test Output Structure
 
@@ -295,7 +295,7 @@ tests/
 ```
 
 The verification report is not part of the `tests/` tree — it lands at
-`.cortex/pulse/verification-report.md` (design §8.5).
+`.cortex/pulse/reports/verification.md` (design §8.5).
 
 ## The Coverage Constraint
 

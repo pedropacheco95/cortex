@@ -158,15 +158,22 @@ from these files into committed artefacts.
 `,
   'pulse': `# Pulse — index
 
-**Read this when:** reviewing what the scheduled loops found or proposed — reports and
-suggestions land here and are transient (gitignored).
+**Read this when:** reviewing what the scheduled loops found or proposed — everything
+here is transient (gitignored), organised into three subdirectories plus two root gate files.
 
 **What's here:**
-- \`*.md\` — loop reports (hygiene, suggestions, rule candidates), overwritten each run.
-- \`dismissed.md\` — rejection memory; persists so dismissed suggestions stay dismissed.
+- \`suggestions.md\` — the gate: S-NNN proposals awaiting \`cortex pulse-accept\`. Persists.
+- \`dismissed.md\` — rejection memory, so dismissed suggestions stay dismissed.
+- \`reports/\` — one \`.md\` per loop (hygiene, bug-triage, spec-drift, insight-refresh,
+  session-observe, rule-candidates, atlas-review, scaffolding-review, lint, verification,
+  test-failures) plus \`hook-errors.md\` (append-only, capped at 100).
+- \`state/\` — machine state: \`suggestion-counter\`, worklists, \`readback-applied\`,
+  and \`reads/<session-id>\` ledgers (hygiene prunes those >14 days old).
+- \`extraction/\` — insight-extraction \`plan.md\` / \`progress.md\` / \`l1.json\` / \`fragments/\`.
 
-**How to navigate:** each report's \`loop:\` header names the skill that wrote it;
-suggestion entries carry S-NNN IDs referenced by \`dismissed.md\`.
+**How to navigate:** a report's \`loop:\` header names the writer; suggestions carry S-NNN
+IDs referenced by \`dismissed.md\`. Subdirectories are machine-managed, no \`_index.md\` of
+their own (§7.1 exempt) — this file is the only active prompt under \`pulse/\`.
 `,
 };
 
@@ -362,7 +369,7 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
   {
     name: 'daily',
     description:
-      'Cortex daily bundle — runs pulse-hygiene, bug-triage, spec-drift, insight-refresh-daily, and session-observe in sequence; each writes its own report to .cortex/pulse/.',
+      'Cortex daily bundle — runs pulse-hygiene, bug-triage, spec-drift, insight-refresh-daily, and session-observe in sequence; each writes its own report to .cortex/pulse/reports/.',
     model: 'claude-sonnet-5',
     requiredSkills: [
       'cortex-pulse-hygiene',
@@ -375,9 +382,9 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     ],
     body:
       'This is the Cortex **daily bundle** — one scheduled task covering five daily loops. Run the members in the listed order, each with its own established skill discipline. **Failure isolation:** if a member fails, record the failure and CONTINUE to the next member — never abort the bundle because one member failed. Each member still writes its own pulse report exactly as it does standalone; this bundle changes only the scheduling, not where the individual reports land.\n\n' +
-      '1. **pulse-hygiene** (`cortex-pulse-hygiene`): read `.cortex/_index.md`, then run `cortex pulse-hygiene`; it audits every Cortex artefact for staleness, broken cross-references, and budget overruns and writes `.cortex/pulse/hygiene-report.md`. Propose only — never edit compass, atlas, the spec trees, or insight directly.\n' +
-      '2. **bug-triage** (`cortex-loop-bug-triage`, using `specflow-bugs`): run `cortex loop-bug-triage --collect`, classify every worklist bug in-session against the seven-type taxonomy using the `specflow-bugs` diagnostic discipline, write the results JSON to your session scratchpad, then run `cortex loop-bug-triage --report <file>`. Fill-only: absent type/severity/proposed_fix fields on open bugs are filled, present fields never overwritten — divergences land in `.cortex/pulse/bug-triage.md`.\n' +
-      '3. **spec-drift** (`cortex-loop-spec-drift`): run `cortex loop-spec-drift`; for each implemented leaf spec it verifies the code still satisfies the rules and the business parent still describes the same outcome, and writes `.cortex/pulse/spec-drift.md` classifying findings per the seven-type bug taxonomy.\n' +
+      '1. **pulse-hygiene** (`cortex-pulse-hygiene`): read `.cortex/_index.md`, then run `cortex pulse-hygiene`; it audits every Cortex artefact for staleness, broken cross-references, and budget overruns and writes `.cortex/pulse/reports/hygiene.md` (and prunes `.cortex/pulse/state/reads/*` ledgers older than 14 days, reporting the count). Propose only — never edit compass, atlas, the spec trees, or insight directly.\n' +
+      '2. **bug-triage** (`cortex-loop-bug-triage`, using `specflow-bugs`): run `cortex loop-bug-triage --collect`, classify every worklist bug in-session against the seven-type taxonomy using the `specflow-bugs` diagnostic discipline, write the results JSON to your session scratchpad, then run `cortex loop-bug-triage --report <file>`. Fill-only: absent type/severity/proposed_fix fields on open bugs are filled, present fields never overwritten — divergences land in `.cortex/pulse/reports/bug-triage.md`.\n' +
+      '3. **spec-drift** (`cortex-loop-spec-drift`): run `cortex loop-spec-drift`; for each implemented leaf spec it verifies the code still satisfies the rules and the business parent still describes the same outcome, and writes `.cortex/pulse/reports/spec-drift.md` classifying findings per the seven-type bug taxonomy.\n' +
       '4. **insight-refresh-daily** (`cortex-loop-insight-refresh-daily`, using `cortex-extract-insight`): run `cortex loop-insight-refresh --daily --collect`, triage the uncertain files in-session, re-extract L2/L3 via the `cortex-extract-insight` skill in dirty-only mode, re-verify surfaced stale references and confidence-aged edges, then run `cortex loop-insight-refresh --daily --apply`. Writes only `.cortex/insight/` (machine-owned, ungated) plus its pulse report — never gated content, never a pulse proposal.\n' +
       '5. **session-observe** (`cortex-loop-session-observe`): run `cortex loop-session-observe --collect`, read the unobserved sessions and infer durable knowledge, routing it BY TYPE — ungated codebase observations enrich the relevant insight per-file entry directly; conventions/rules and decisions go into a proposals JSON — then run `cortex loop-session-observe --apply --proposals <file>`. Never write `.cortex/compass/` or `.cortex/atlas/` directly (RULES 7); leave cross-session repetition to the weekly distil.\n\n' +
       '**Digest (final step):** after all five members, write ONE summary for the user — per member, whether it ran or was skipped-on-failure (with the error) and a one-line outcome. Each member\'s own pulse report remains the authoritative detail; the digest only rolls up what happened this run.',
@@ -391,19 +398,19 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     body:
       'This is the Cortex **weekly-curation bundle** — one scheduled task covering two weekly curation loops. Run the members in the listed order, each with its own established skill discipline. **Failure isolation:** if a member fails, record the failure and CONTINUE to the next member — never abort the bundle because one member failed. Each member still writes its own pulse report exactly as it does standalone.\n\n' +
       '1. **pulse-distil** (`cortex-pulse-distil`): run `cortex pulse-distil --collect`, perform the pattern judgment in-session, then run `cortex pulse-distil --propose <file>`; it writes `.cortex/pulse/suggestions.md`. Beyond rule-shaped patterns, apply the **workflow-mining lens** folded in from the retired skill-suggest loop: when a cross-session pattern is workflow-shaped — a repeated multi-step MANUAL workflow rather than a single preference/convention — emit it as a `skill-proposal`-typed candidate in the SAME candidates array (set `"type": "skill-proposal"`, `"proposedTarget": ".claude/skills/<name>/SKILL.md"` for a NEW skill, and `"proposedText"` to a complete draft SKILL.md). The deterministic propose half writes it as a `skill-proposal` section in the same suggestions output.\n' +
-      '2. **rule-decay** (`cortex-loop-rule-decay`): run `cortex loop-rule-decay`; it audits `.cortex/compass/rules/` for rules whose `governs` globs no longer match, whose sources vanished, or that have not fired in a long time, and writes a retirement-candidate report to `.cortex/pulse/rule-candidates.md`. Never retire a rule yourself.\n\n' +
+      '2. **rule-decay** (`cortex-loop-rule-decay`): run `cortex loop-rule-decay`; it audits `.cortex/compass/rules/` for rules whose `governs` globs no longer match, whose sources vanished, or that have not fired in a long time, and writes a retirement-candidate report to `.cortex/pulse/reports/rule-candidates.md`. Never retire a rule yourself.\n\n' +
       '**Digest (final step):** after both members, write ONE summary for the user — per member, whether it ran or was skipped-on-failure (with the error) and a one-line outcome. Each member\'s own pulse report remains the authoritative detail.',
   },
   {
     name: 'weekly-quality',
     description:
-      'Cortex weekly-quality bundle — runs specflow-lint, specflow-verify, and insight-refresh-full in sequence; reports land in .cortex/pulse/.',
+      'Cortex weekly-quality bundle — runs specflow-lint, specflow-verify, and insight-refresh-full in sequence; reports land in .cortex/pulse/reports/.',
     model: 'claude-sonnet-5',
     requiredSkills: ['specflow-lint', 'specflow-tests', 'cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
     body:
       'This is the Cortex **weekly-quality bundle** — one scheduled task covering three weekly quality loops. Run the members in the listed order, each with its own established skill discipline. **Failure isolation:** if a member fails, record the failure and CONTINUE to the next member — never abort the bundle because one member failed. Each member still writes its own pulse report exactly as it does standalone.\n\n' +
-      '1. **specflow-lint** (`specflow-lint`): run the `specflow-lint` skill over both spec trees — format, naming, frontmatter, bidirectional links, and overview presence. Write the lint report to `.cortex/pulse/`; apply only unambiguous mechanical fixes.\n' +
-      '2. **specflow-verify** (`specflow-tests`, verification pass only): verify project-completeness constraints the schema validator does not own — every business spec appears in at least one scenario `covers:`, journeys map to business specs, and the build order is current. Write `.cortex/pulse/verification-report.md`.\n' +
+      '1. **specflow-lint** (`specflow-lint`): run the `specflow-lint` skill over both spec trees — format, naming, frontmatter, bidirectional links, and overview presence. Write the lint report to `.cortex/pulse/reports/lint.md`; apply only unambiguous mechanical fixes.\n' +
+      '2. **specflow-verify** (`specflow-tests`, verification pass only): verify project-completeness constraints the schema validator does not own — every business spec appears in at least one scenario `covers:`, journeys map to business specs, and the build order is current. Write `.cortex/pulse/reports/verification.md`.\n' +
       '3. **insight-refresh-full** (`cortex-loop-insight-refresh-full`, using `cortex-extract-insight`): run `cortex loop-insight-refresh --full --collect`, re-run cross-scope L4 unification via the `cortex-extract-insight` skill over every scope (deterministic regeneration: stable ids, total-ordered serialization; a legitimate shrink from deleted files is sanctioned on this ground-truth pass), then run `cortex loop-insight-refresh --full --report`. Writes only `.cortex/insight/` plus its pulse report — never gated content, never a pulse proposal.\n\n' +
       '**Digest (final step):** after all three members, write ONE summary for the user — per member, whether it ran or was skipped-on-failure (with the error) and a one-line outcome. Each member\'s own pulse report remains the authoritative detail.',
   },
@@ -415,19 +422,19 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
     requiredSkills: ['cortex-loop-test-runner'],
     body:
       'This is the Cortex **test-runner bundle** — one scheduled task covering a single loop, the tiered test-runner. It is the only code-writing loop and is kept isolated by design (never merged with other loops). **Failure isolation:** if the member fails, record the failure in the digest rather than raising.\n\n' +
-      '1. **test-runner** (`cortex-loop-test-runner`): run `cortex loop-test-runner --collect`, classify each pending failure in-session against the seven-type taxonomy with the `specflow-bugs` diagnostic discipline, then run `cortex loop-test-runner --fix-stage <results.json>`. It writes code behind the writer/verifier split this loop is governed by, drafts bug entries for `.cortex/compass/bugs/`, and summarises `.cortex/pulse/test-failures.md`.\n\n' +
-      '**Digest (final step):** write ONE summary for the user — whether the loop ran or was skipped-on-failure (with the error) and a one-line outcome. The loop\'s own `.cortex/pulse/test-failures.md` remains the authoritative detail.',
+      '1. **test-runner** (`cortex-loop-test-runner`): run `cortex loop-test-runner --collect`, classify each pending failure in-session against the seven-type taxonomy with the `specflow-bugs` diagnostic discipline, then run `cortex loop-test-runner --fix-stage <results.json>`. It writes code behind the writer/verifier split this loop is governed by, drafts bug entries for `.cortex/compass/bugs/`, and summarises `.cortex/pulse/reports/test-failures.md`.\n\n' +
+      '**Digest (final step):** write ONE summary for the user — whether the loop ran or was skipped-on-failure (with the error) and a one-line outcome. The loop\'s own `.cortex/pulse/reports/test-failures.md` remains the authoritative detail.',
   },
   {
     name: 'monthly-review',
     description:
-      'Cortex monthly-review bundle — runs atlas-staleness and onboarding-drift in sequence; reports land in .cortex/pulse/.',
+      'Cortex monthly-review bundle — runs atlas-staleness and onboarding-drift in sequence; reports land in .cortex/pulse/reports/.',
     model: 'claude-sonnet-5',
     requiredSkills: ['cortex-loop-atlas-staleness', 'cortex-loop-onboarding-drift'],
     body:
       'This is the Cortex **monthly-review bundle** — one scheduled task covering two monthly review loops. Run the members in the listed order, each with its own established skill discipline. **Failure isolation:** if a member fails, record the failure and CONTINUE to the next member — never abort the bundle because one member failed. Each member still writes its own pulse report exactly as it does standalone.\n\n' +
-      '1. **atlas-staleness** (`cortex-loop-atlas-staleness`): run `cortex loop-atlas-staleness`; it audits `.cortex/atlas/` for decisions contradicted by newer ones, stakeholders no longer referenced, unused domain terms, and orphaned sources, and writes findings to `.cortex/pulse/atlas-review.md` as proposals for human review.\n' +
-      '2. **onboarding-drift** (`cortex-loop-onboarding-drift`): run `cortex loop-onboarding-drift`; it compares the codebase (and its insight entries) against `.specflow/specs/` — files with no governing spec, specs whose governed files vanished — and writes `.cortex/pulse/scaffolding-review.md` recommending onboarding updates.\n\n' +
+      '1. **atlas-staleness** (`cortex-loop-atlas-staleness`): run `cortex loop-atlas-staleness`; it audits `.cortex/atlas/` for decisions contradicted by newer ones, stakeholders no longer referenced, unused domain terms, and orphaned sources, and writes findings to `.cortex/pulse/reports/atlas-review.md` as proposals for human review.\n' +
+      '2. **onboarding-drift** (`cortex-loop-onboarding-drift`): run `cortex loop-onboarding-drift`; it compares the codebase (and its insight entries) against `.specflow/specs/` — files with no governing spec, specs whose governed files vanished — and writes `.cortex/pulse/reports/scaffolding-review.md` recommending onboarding updates.\n\n' +
       '**Digest (final step):** after both members, write ONE summary for the user — per member, whether it ran or was skipped-on-failure (with the error) and a one-line outcome. Each member\'s own pulse report remains the authoritative detail.',
   },
 ];

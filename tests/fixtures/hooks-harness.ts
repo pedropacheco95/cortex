@@ -43,7 +43,7 @@ export function makeCortexProject(
 }
 
 export function writeHygieneReport(root: string, generatedIso: string, summary: string): string {
-  const p = path.join(root, '.cortex', 'pulse', 'hygiene-report.md');
+  const p = path.join(root, '.cortex', 'pulse', 'reports', 'hygiene.md');
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(
     p,
@@ -124,7 +124,7 @@ export function readIfExists(p: string): string | null {
 }
 
 export function hookErrorsPath(root: string): string {
-  return path.join(root, '.cortex', 'pulse', 'hook-errors.md');
+  return path.join(root, '.cortex', 'pulse', 'reports', 'hook-errors.md');
 }
 
 /** Parse hook stdout as the pinned JSON envelope. */

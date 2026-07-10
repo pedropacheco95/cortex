@@ -276,7 +276,7 @@ describe('sweep: path normalisation and untouched entry parts', () => {
 // dedupe memory (Rule 6)
 // ---------------------------------------------------------------------------
 
-describe('applied-tag memory: pulse/.readback-applied', () => {
+describe('applied-tag memory: pulse/state/readback-applied', () => {
   it('applied AND rejected tags are both remembered as hash lines', async () => {
     const root = tmp('memory');
     makeCortexProject(root);
@@ -290,7 +290,7 @@ describe('applied-tag memory: pulse/.readback-applied', () => {
       },
     ]);
     await run(stdinFor(root, transcript), { now: NOW });
-    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE), 'utf-8');
+    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'state', READBACK_APPLIED_FILE), 'utf-8');
     const hashes = memory.split('\n').filter((l) => l.trim());
     expect(hashes).toHaveLength(2);
     expect(hashes.every((h) => /^[0-9a-f]{64}$/.test(h))).toBe(true);
@@ -300,8 +300,8 @@ describe('applied-tag memory: pulse/.readback-applied', () => {
     const root = tmp('memory-corrupt');
     makeCortexProject(root);
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Original.' });
-    fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
-    fs.writeFileSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE), 'not-a-hash\n');
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'state'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex', 'pulse', 'state', READBACK_APPLIED_FILE), 'not-a-hash\n');
     const transcript = writeTranscript(root, [
       { role: 'assistant', text: '<cortex:purpose file="src/a.ts">Applied anyway.</cortex:purpose>' },
     ]);
@@ -355,7 +355,7 @@ describe('silence and degradation paths', () => {
     expect(fs.readFileSync(p, 'utf-8')).toBe(broken);
     const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
     expect(log).toContain('insight entry unreadable');
-    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE), 'utf-8');
+    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'state', READBACK_APPLIED_FILE), 'utf-8');
     expect(memory.split('\n').filter((l) => l.trim())).toHaveLength(1);
   });
 
@@ -377,7 +377,7 @@ describe('silence and degradation paths', () => {
     const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
     expect(log.split('hook: post-read').length - 1).toBe(2);
     expect(log).toContain('invalid');
-    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE), 'utf-8');
+    const memory = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'state', READBACK_APPLIED_FILE), 'utf-8');
     expect(memory.split('\n').filter((l) => l.trim())).toHaveLength(2);
   });
 

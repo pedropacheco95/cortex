@@ -18,7 +18,7 @@ The PreWrite hook is where Cortex earns its keep (design §5.3): before a write 
 ## Entities
 
 - **READS:** stdin JSON (`tool_name`, `tool_input.file_path`, `tool_input.content` for Write / `tool_input.new_string` for Edit, `cwd`); `.cortex/cerebrum/rules/R-*.md` (frontmatter: `governs`, `check`, `status`, `title`, `source`).
-- **WRITES:** `.cortex/pulse/hook-errors.md` (append, only on internal error).
+- **WRITES:** `.cortex/pulse/reports/hook-errors.md` (append, only on internal error).
 - **CREATES:** nothing.
 
 ## Rules
@@ -32,7 +32,7 @@ The PreWrite hook is where Cortex earns its keep (design §5.3): before a write 
 
    Rules with `status: retired` are skipped entirely. This split is what keeps "silence is the normal case" true (design §6.3) while preserving the fallback for rules that can't be checked mechanically.
 5. **Warning text.** One line per matching rule, per schema §5: `⚠ Cortex {{RULE_ID}} may apply to {{PATH}}: {{RULE_TITLE}}. Source: {{SOURCE_PATHS}}. {{GUIDANCE}}` — multiple matches concatenate into one `additionalContext`, each carrying its rule ID and source so the warning can be challenged, not just obeyed.
-6. **Degradation.** A malformed rule file is skipped (the remaining rules are still evaluated), one degradation line is appended to the warning if any other output is being emitted, and a structured entry is appended to `.cortex/pulse/hook-errors.md`. A missing `.cortex/` or empty `rules/` → silent exit 0. The hook never exits non-zero.
+6. **Degradation.** A malformed rule file is skipped (the remaining rules are still evaluated), one degradation line is appended to the warning if any other output is being emitted, and a structured entry is appended to `.cortex/pulse/reports/hook-errors.md`. A missing `.cortex/` or empty `rules/` → silent exit 0. The hook never exits non-zero.
 7. **Deterministic and offline.** Pure Node file I/O; no network, no LLM, no subprocess. Target: fast enough to be imperceptible per write.
 
 ## Acceptance Criteria
@@ -66,7 +66,7 @@ The PreWrite hook is where Cortex earns its keep (design §5.3): before a write 
 - **Given** `rules/R-001-broken.md` with unparseable frontmatter and a valid matching `R-002`
 - **When** the hook receives a matching Write
 - **Then** `additionalContext` carries the `R-002` warning, exit code 0
-- **And** `.cortex/pulse/hook-errors.md` gains an entry naming `R-001-broken.md`
+- **And** `.cortex/pulse/reports/hook-errors.md` gains an entry naming `R-001-broken.md`
 
 ### Predicate passes on a governed path → silent (B-001 regression)
 

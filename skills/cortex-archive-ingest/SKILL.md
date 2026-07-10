@@ -175,11 +175,11 @@ referenceable. Go straight to step 8 (register update). Write nothing to
 
 4. **Write the suggestion section(s) yourself**, directly, into
    `.cortex/pulse/archive-ingestion.md` (a new pulse report this skill owns,
-   alongside `bug-triage.md`, `rule-candidates.md`, etc. — schema §4.5:
+   alongside `reports/bug-triage.md`, `reports/rule-candidates.md`, etc. — schema §4.5:
    "Proposal sections may appear in any `pulse/*.md` loop report"). There is
    no Core CLI for this step; you perform it directly, the same way you write
    `archive/` and `register.md` directly:
-   - Read `.cortex/pulse/.suggestion-counter` (a plain integer; missing file
+   - Read `.cortex/pulse/state/suggestion-counter` (a plain integer; missing file
      = `0`). Allocate the next id(s) as `S-<counter+1>` (zero-padded to 3
      digits), then write the advanced counter back — this is the single
      shared S-namespace across all pulse artefacts; never reuse an id.

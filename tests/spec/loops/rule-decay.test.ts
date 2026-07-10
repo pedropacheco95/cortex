@@ -1,6 +1,6 @@
 /**
  * Spec-level tests — loops.rule-decay, one describe per acceptance criterion,
- * over realistic tmp fixtures. The report is `.cortex/pulse/rule-candidates.md`
+ * over realistic tmp fixtures. The report is `.cortex/pulse/reports/rule-candidates.md`
  * and nothing else (tree-snapshot AC).
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
@@ -28,7 +28,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const REPORT_REL = path.join('.cortex', 'pulse', 'rule-candidates.md');
+const REPORT_REL = path.join('.cortex', 'pulse', 'reports', 'rule-candidates.md');
 
 function makeProject(label: string): string {
   const root = tmp(label);
@@ -119,7 +119,7 @@ describe('AC: Always-writes when clean', () => {
 });
 
 describe('AC: Only the report is written', () => {
-  it('a full-tree snapshot differs only by pulse/rule-candidates.md', async () => {
+  it('a full-tree snapshot differs only by pulse/reports/rule-candidates.md', async () => {
     const root = makeProject('only-report');
     writeAt(root, '.cortex/compass/rules/R-116-dead.md', ruleMd('R-116', { governs: ['lib/gone/**'] }));
     const before = snapshotTree(root);

@@ -149,6 +149,16 @@ function writeSkeleton(root: string, force: boolean, nowIso: string): void {
   // Pulse rejection memory (persists; preserved if present).
   writeIfAbsent(path.join(cortexDir, 'pulse', 'dismissed.md'), pulseDismissedTemplate(nowIso), false);
 
+  // Pulse subdivided layout (pulse reorg): pre-create the organised directories
+  // so a fresh project shows the correct structure day-1. reports/ holds loop
+  // reports, state/ (+ state/reads/) the machine working state, extraction/ the
+  // Skill-layer extraction artefacts. Writers mkdir -p anyway; pulse/ is
+  // gitignored, so no .gitkeep is needed.
+  const pulseDir = path.join(cortexDir, 'pulse');
+  for (const sub of ['reports', 'state', path.join('state', 'reads'), 'extraction']) {
+    fs.mkdirSync(path.join(pulseDir, sub), { recursive: true });
+  }
+
   // Insight module (§4.10.1, §7.4 — v3) — committed, NOT gitignored. Creates
   // insight/_index.md (the §5.13 active prompt) + the empty flat-layout
   // anatomy/ and concepts/; seeds no entries or JSON. Scoped layout

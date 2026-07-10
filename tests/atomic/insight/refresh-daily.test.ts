@@ -122,9 +122,9 @@ describe('collectDaily: ledger sha-mismatch splitting (spec Rules 1-2)', () => {
   it('an unchanged flagged file (sha back in sync) is dropped', async () => {
     const { root, baseline } = makeScopedProject('insync');
     // Hand-craft a stale flag for an unchanged file.
-    fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'state'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, '.cortex', 'pulse', INSIGHT_WORKLIST_FILE),
+      path.join(root, '.cortex', 'pulse', 'state', INSIGHT_WORKLIST_FILE),
       JSON.stringify({
         kind: 'insight-refresh-worklist',
         generated: '2026-07-01T00:00:00Z',

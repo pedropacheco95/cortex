@@ -17,12 +17,12 @@ governs:
 
 ## Intent
 
-`cortex loop-spec-drift` (daily, design §11.4 item 10) detects *content* drift between specs and the code they govern — complementing `specflow-lint` (structure) and the verification pass (coverage). For each dev spec with governed files, it compares the spec's last substantive change against its files' changes and writes suspects to `pulse/spec-drift.md`.
+`cortex loop-spec-drift` (daily, design §11.4 item 10) detects *content* drift between specs and the code they govern — complementing `specflow-lint` (structure) and the verification pass (coverage). For each dev spec with governed files, it compares the spec's last substantive change against its files' changes and writes suspects to `pulse/reports/spec-drift.md`.
 
 ## Entities
 
 - **READS:** dev specs (`governs:` frontmatter, git last-commit dates); governed files' git last-commit dates; `.cortex/anatomy/files.md` (`spec_links` as the reverse map).
-- **WRITES:** `.cortex/pulse/spec-drift.md` only.
+- **WRITES:** `.cortex/pulse/reports/spec-drift.md` only.
 - **CREATES:** the report per schema §4.5 (`kind: pulse-spec-drift`, always-write).
 
 ## Rules
@@ -58,7 +58,7 @@ governs:
 
 ### Only the report is written
 
-- **Then** the only file created or modified is `pulse/spec-drift.md`
+- **Then** the only file created or modified is `pulse/reports/spec-drift.md`
 
 ## Notes
 

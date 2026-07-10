@@ -1,7 +1,7 @@
 /**
  * Spec-level tests — loops.atlas-staleness, one describe per acceptance
  * criterion, over realistic tmp fixtures. The report is
- * `.cortex/pulse/atlas-review.md` and nothing else (tree-snapshot AC).
+ * `.cortex/pulse/reports/atlas-review.md` and nothing else (tree-snapshot AC).
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import * as path from 'path';
@@ -31,7 +31,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const REPORT_REL = path.join('.cortex', 'pulse', 'atlas-review.md');
+const REPORT_REL = path.join('.cortex', 'pulse', 'reports', 'atlas-review.md');
 
 function makeProject(label: string): string {
   const root = tmp(label);
@@ -126,7 +126,7 @@ describe('AC: Empty atlas is a stated clean run', () => {
 });
 
 describe('AC: Only the report is written', () => {
-  it('a full-tree snapshot differs only by pulse/atlas-review.md', async () => {
+  it('a full-tree snapshot differs only by pulse/reports/atlas-review.md', async () => {
     const root = makeProject('only-report');
     writeAt(root, '.cortex/atlas/decisions/2025-12-01-old.md', decisionMd('2025-12-01-old', daysAgoIso(200)));
     const src = writeAt(root, '.cortex/atlas/sources/old.txt', 'raw\n');

@@ -3,7 +3,7 @@
  * loops.onboarding-drift, design §11.4 item 7). Checks the CLAUDE.md managed
  * block and every `_index.md` under `.cortex/` against the current schema's
  * templates and budgets, and writes refresh proposals to
- * `.cortex/pulse/scaffolding-review.md` — nothing else. Propose-don't-mutate:
+ * `.cortex/pulse/reports/scaffolding-review.md` — nothing else. Propose-don't-mutate:
  * refreshing is the human running init-style updates.
  *
  * Reuse (Rule 2): heading checks come from the validator's
@@ -219,7 +219,7 @@ export async function runOnboardingDrift(root = '.', opts: { now?: Date } = {}):
     lines.join('\n'),
   );
   console.log(
-    `cortex loop-onboarding-drift: wrote .cortex/pulse/scaffolding-review.md (${findings.length} finding(s)).`,
+    `cortex loop-onboarding-drift: wrote .cortex/pulse/reports/scaffolding-review.md (${findings.length} finding(s)).`,
   );
   return 0;
 }

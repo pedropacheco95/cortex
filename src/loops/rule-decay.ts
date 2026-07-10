@@ -2,7 +2,7 @@
  * `cortex loop-rule-decay` — weekly rule-obsolescence review (spec
  * loops.rule-decay, design §11.4 item 5). Reviews every ACTIVE compass rule
  * for decay signals and writes retirement candidates to
- * `.cortex/pulse/rule-candidates.md` — nothing else. Propose-don't-mutate:
+ * `.cortex/pulse/reports/rule-candidates.md` — nothing else. Propose-don't-mutate:
  * a human retires a rule by editing `status: retired`; this loop never does.
  * Deterministic Core (R-001); resolution logic reused from the validator
  * (index-build + globMatchesNothing), never reimplemented.
@@ -138,7 +138,7 @@ export async function runRuleDecay(root = '.', opts: { now?: Date } = {}): Promi
     lines.join('\n'),
   );
   console.log(
-    `cortex loop-rule-decay: wrote .cortex/pulse/rule-candidates.md (${scan.candidates.length} candidate(s) from ${scan.reviewed} active rule(s)).`,
+    `cortex loop-rule-decay: wrote .cortex/pulse/reports/rule-candidates.md (${scan.candidates.length} candidate(s) from ${scan.reviewed} active rule(s)).`,
   );
   return 0;
 }

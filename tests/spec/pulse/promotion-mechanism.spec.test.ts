@@ -421,7 +421,7 @@ text
     const root = makeProject('s058', {
       suggestions: HEADER + SECTION('first copy', '.cortex/compass/preferences.md'),
       extra: {
-        '.cortex/pulse/rule-candidates.md':
+        '.cortex/pulse/reports/rule-candidates.md':
           `---
 kind: pulse-rule-candidates
 generated: 2026-07-06T00:00:00Z
@@ -437,7 +437,7 @@ loop: cortex-loop-rule-decay
     const before = snapshotTree(root);
     expect(await pulseCli('pulse-accept', ['S-058'], root)).toBe(1);
     expect(stderr()).toContain(path.join('.cortex', 'pulse', 'suggestions.md'));
-    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'rule-candidates.md'));
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'reports', 'rule-candidates.md'));
     expect(snapshotTree(root)).toEqual(before);
   });
 

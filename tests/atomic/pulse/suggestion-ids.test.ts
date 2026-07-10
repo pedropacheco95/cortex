@@ -1,7 +1,7 @@
 /**
  * Atomic tests — the shared S-id allocator (schema §4.5 single S-namespace;
  * pulse.distil Rule 4 / loops.skill-suggest Rule 4). The counter file
- * `pulse/.suggestion-counter` is a plain integer that persists like
+ * `pulse/state/suggestion-counter` is a plain integer that persists like
  * dismissed.md: monotonic, never reused, missing file starts at 0.
  */
 import { describe, it, expect, afterEach } from 'vitest';
@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 function counterPath(root: string): string {
-  return path.join(root, '.cortex', 'pulse', SUGGESTION_COUNTER_FILE);
+  return path.join(root, '.cortex', 'pulse', 'state', SUGGESTION_COUNTER_FILE);
 }
 
 describe('Shared S-id allocator (schema §4.5)', () => {

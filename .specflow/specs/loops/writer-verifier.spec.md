@@ -34,7 +34,7 @@ The writer/verifier harness is the safety mechanism required before any Cortex a
 7. **Unavailability is not failure.** `claudeBin` absent → `outcome: unavailable`, zero iterations recorded, workspace cleaned up, no litter. Per-role subprocess timeout (bounded by `timeoutMs`) or crash → that iteration counts as a failed attempt; the loop continues to the limit. Auth-failure output (the `core-cli.init` Rule 6 detection pattern) → `outcome: unavailable` with the auth condition named.
 8. **Deterministic Core.** The harness's own logic — workspace management, sequencing, gating, verdict parsing, result assembly — is deterministic Core code (`src/harness/`, governed by R-001): no LLM calls from the harness process itself, no network; the two subprocesses are the only agentic touch.
 9. **Crash recovery (B-002).** `finally`-cleanup cannot survive a process kill, so every `runWriterVerifier` invocation begins with a **stale-workspace sweep**: remove leftover `cortex-harness-*` workspace directories older than a staleness threshold (engineering-call constant, ~2h) and `git worktree prune` orphaned registrations for `root`, before creating its own workspace. A killed harness therefore self-heals on the next run.
-10. **Full audit trail.** The result preserves every iteration's verdict and reasoning, pass or fail — consumers surface these to humans (e.g. the test-runner writing `pulse/test-failures.md`). The harness never discards a verdict.
+10. **Full audit trail.** The result preserves every iteration's verdict and reasoning, pass or fail — consumers surface these to humans (e.g. the test-runner writing `pulse/reports/test-failures.md`). The harness never discards a verdict.
 
 ## Acceptance Criteria
 

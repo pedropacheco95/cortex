@@ -21,8 +21,8 @@ governed_by:
 
 ## Entities
 
-- **READS:** `.cortex/cerebrum/bugs/B-*.md` (`status: open`); `pulse/.triage-worklist.json` (collect output); triage results JSON.
-- **WRITES:** `pulse/bug-triage.md` (always-write report); `pulse/.triage-worklist.json`; and — the **narrow sanctioned cerebrum write** — absent `type:`/`severity:`/`proposed_fix:` frontmatter fields on open bugs. Nothing else, ever.
+- **READS:** `.cortex/cerebrum/bugs/B-*.md` (`status: open`); `pulse/state/triage-worklist.json` (collect output); triage results JSON.
+- **WRITES:** `pulse/reports/bug-triage.md` (always-write report); `pulse/state/triage-worklist.json`; and — the **narrow sanctioned cerebrum write** — absent `type:`/`severity:`/`proposed_fix:` frontmatter fields on open bugs. Nothing else, ever.
 - **CREATES:** the report per §4.5 (`kind: pulse-bug-triage`).
 
 ## Rules
@@ -72,7 +72,7 @@ governed_by:
 
 ### Blast radius
 
-- **Then** any run touches only `pulse/bug-triage.md`, the worklist, and (fill-only) open bug files
+- **Then** any run touches only `pulse/reports/bug-triage.md`, the worklist, and (fill-only) open bug files
 
 ## Notes
 

@@ -20,7 +20,7 @@ The PreRead hook (design §5, now core opt-out) injects the anatomy summary befo
 ## Entities
 
 - **READS:** stdin (`tool_input.file_path`, `cwd`, `session_id`); `.cortex/anatomy/files.md` (the row); cerebrum rules (`governs` match for `{{APPLICABLE_RULE_IDS}}`); `cortex.config.json` (`hooks.preRead`); a per-session read-memory (duplicate-read detection).
-- **WRITES:** `pulse/hook-errors.md` (degradation only); the per-session read-memory (transient).
+- **WRITES:** `pulse/reports/hook-errors.md` (degradation only); the per-session read-memory (transient).
 - **CREATES:** nothing durable.
 
 ## Rules

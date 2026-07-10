@@ -13,7 +13,7 @@
  *    stale concept/edge references from the ledger, confidence-aged
  *    inferred/ambiguous edges, and the scope-scoped invalidation plan
  *    (touched scopes + the cross-scope edges touching them). Emits
- *    `.cortex/pulse/.insight-daily-worklist.json`.
+ *    `.cortex/pulse/state/insight-daily-worklist.json`.
  *  - `--apply` validates the re-extracted entries against the §4.10.2
  *    contract, reconciles `ledger.json` (per-entry sha/commit/level for
  *    refreshed files; rows removed for deleted files; rows for untouched
@@ -23,7 +23,7 @@
  *    `reverse-index.json`, clears the stale set the skill just re-verified,
  *    rebuilds `reverse-index.json` from the new graph state, advances the
  *    refresh-cycle history (confidence-aging window), prunes the fast
- *    worklist, and writes the pulse report `.cortex/pulse/insight-refresh.md`.
+ *    worklist, and writes the pulse report `.cortex/pulse/reports/insight-refresh.md`.
  *
  * Loop-write invariant (RULES 7 / schema Decision 13): writes land only under
  * `.cortex/insight/` + the transient pulse worklist/report. Nothing gated,
@@ -61,7 +61,7 @@ import {
 } from './refresh-fast.js';
 import { writePulseReport } from '../loops/report.js';
 
-export const DAILY_WORKLIST_FILE = '.insight-daily-worklist.json';
+export const DAILY_WORKLIST_FILE = 'insight-daily-worklist.json';
 export const INSIGHT_REFRESH_REPORT_FILE = 'insight-refresh.md';
 export const INSIGHT_REFRESH_REPORT_KIND = 'insight-refresh';
 export const DAILY_LOOP_NAME = 'cortex-loop-insight-refresh-daily';
@@ -92,8 +92,9 @@ export function readConfidenceAgingCycles(root: string): number {
 function insightDir(root: string): string {
   return path.join(root, '.cortex', 'insight');
 }
-function pulseDir(root: string): string {
-  return path.join(root, '.cortex', 'pulse');
+/** Machine working state under `pulse/state/` (pulse reorg). */
+function stateDir(root: string): string {
+  return path.join(root, '.cortex', 'pulse', 'state');
 }
 
 export function readGraph(root: string): InsightGraphV3 | null {
@@ -219,7 +220,7 @@ export interface DailyWorklist {
 }
 
 export function dailyWorklistPath(root: string): string {
-  return path.join(pulseDir(root), DAILY_WORKLIST_FILE);
+  return path.join(stateDir(root), DAILY_WORKLIST_FILE);
 }
 
 export function readDailyWorklist(root: string): DailyWorklist | null {
@@ -393,7 +394,7 @@ export function collectDaily(root: string, now: Date = new Date()): CollectDaily
     aged_edges: agedEdges(graph, ledger, window),
     aging_window: window,
   };
-  fs.mkdirSync(pulseDir(absRoot), { recursive: true });
+  fs.mkdirSync(stateDir(absRoot), { recursive: true });
   const p = dailyWorklistPath(absRoot);
   fs.writeFileSync(p, JSON.stringify(worklist, null, 2) + '\n', 'utf-8');
   return {
@@ -464,7 +465,7 @@ export function applyDaily(root: string, now: Date = new Date()): ApplyDailyResu
   const absRoot = path.resolve(root);
   const worklist = readDailyWorklist(absRoot);
   if (worklist === null) {
-    throw new Error(`no .cortex/pulse/${DAILY_WORKLIST_FILE} — run \`cortex loop-insight-refresh --daily --collect\` first`);
+    throw new Error(`no .cortex/pulse/state/${DAILY_WORKLIST_FILE} — run \`cortex loop-insight-refresh --daily --collect\` first`);
   }
   const ledger = readLedger(absRoot);
   if (ledger === null) {
@@ -647,7 +648,7 @@ export async function runRefreshDaily(root = '.', opts: RefreshDailyOptions = {}
     if (opts.collect) {
       const r = collectDaily(absRoot, now);
       console.log(
-        `cortex loop-insight-refresh --daily: worklist written to .cortex/pulse/${DAILY_WORKLIST_FILE} — ` +
+        `cortex loop-insight-refresh --daily: worklist written to .cortex/pulse/state/${DAILY_WORKLIST_FILE} — ` +
           `${r.l2} L2, ${r.l3} L3, ${r.triage} for triage, ${r.dropped} dropped (cosmetic/unchanged), ` +
           `${r.removals} removal(s), ${r.staleReferences} stale reference(s), ${r.agedEdges} aged edge(s).`,
       );
@@ -659,7 +660,7 @@ export async function runRefreshDaily(root = '.', opts: RefreshDailyOptions = {}
         `cortex loop-insight-refresh --daily: ${r.refreshed} entr${r.refreshed === 1 ? 'y' : 'ies'} reconciled ` +
           `(${r.pending} pending, ${r.invalid} invalid), ${r.removed} ledger row(s) removed, ` +
           `${r.edgesConfirmed} edge(s) re-confirmed, ${r.staleMarked} reference(s) marked stale — ` +
-          `report at .cortex/pulse/${INSIGHT_REFRESH_REPORT_FILE}.`,
+          `report at .cortex/pulse/reports/${INSIGHT_REFRESH_REPORT_FILE}.`,
       );
       return 0;
     }
@@ -669,7 +670,7 @@ export async function runRefreshDaily(root = '.', opts: RefreshDailyOptions = {}
     console.log(
       `cortex loop-insight-refresh --daily: worklist collected (${r.l2 + r.l3 + r.triage} file(s) due); ` +
         `the triage/re-extraction middle runs in the cortex-loop-insight-refresh-daily skill — ` +
-        `worklist retained at .cortex/pulse/${DAILY_WORKLIST_FILE}.`,
+        `worklist retained at .cortex/pulse/state/${DAILY_WORKLIST_FILE}.`,
     );
     return 0;
   } catch (err) {

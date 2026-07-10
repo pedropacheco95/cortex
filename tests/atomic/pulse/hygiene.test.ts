@@ -17,6 +17,8 @@ import {
   insightLedgerContent,
   ruleMd,
   specMd,
+  setMtimeDaysAgo,
+  parsePulseReport,
 } from '../../fixtures/loops-harness.js';
 import {
   checkOrphanBranches,
@@ -25,9 +27,12 @@ import {
   checkCompassDeadRefs,
   checkSpecOrphans,
   checkAgedTodos,
+  cleanStaleReadLedgers,
+  runHygiene,
   ORPHAN_BRANCH_DAYS,
   STALE_PR_DAYS,
   AGED_TODO_DAYS,
+  READS_RETENTION_DAYS,
 } from '../../../src/pulse/hygiene.js';
 
 const dirs: string[] = [];
@@ -274,5 +279,50 @@ describe('check (f): aged TODO/FIXME comments', () => {
     gitCommitAllAt(repo, daysAgoIso(40));
     writeAt(repo, 'src/uncommitted.ts', '// TODO: untracked\n');
     expect((await checkAgedTodos(repo)).findings).toEqual([]);
+  });
+});
+
+// ===========================================================================
+// retention: per-session read ledgers under pulse/state/reads/ (pulse reorg)
+// ===========================================================================
+describe('retention: cleanStaleReadLedgers prunes aged pulse/state/reads/ ledgers', () => {
+  /** Write a read ledger under pulse/state/reads/<id> and backdate its mtime. */
+  function writeReadLedger(root: string, id: string, agedDays: number): string {
+    const abs = writeAt(root, path.join('.cortex', 'pulse', 'state', 'reads', id), 'read\n');
+    setMtimeDaysAgo(abs, agedDays);
+    return abs;
+  }
+
+  it(`deletes ledgers older than ${READS_RETENTION_DAYS} days and keeps fresh ones, returning the count`, () => {
+    const root = tmp('reads-unit');
+    const stale = writeReadLedger(root, 'stale-session', READS_RETENTION_DAYS + 6);
+    const fresh = writeReadLedger(root, 'fresh-session', 2);
+
+    const deleted = cleanStaleReadLedgers(root);
+    expect(deleted).toBe(1);
+    expect(fs.existsSync(stale)).toBe(false);
+    expect(fs.existsSync(fresh)).toBe(true);
+  });
+
+  it('tolerates an absent reads directory (nothing extracted yet) with a zero count', () => {
+    const root = tmp('reads-absent');
+    expect(cleanStaleReadLedgers(root)).toBe(0);
+  });
+
+  it('the full sweep prunes the stale ledger and the report body names the cleaned count', async () => {
+    const root = tmp('reads-sweep');
+    writeAt(root, '.cortex/cortex.config.json', JSON.stringify({ schemaVersion: '1.0' }) + '\n');
+    const stale = writeReadLedger(root, 'aged-abc', READS_RETENTION_DAYS + 6);
+    const fresh = writeReadLedger(root, 'recent-def', 2);
+
+    // gh is forced absent (a path that does not exist) — no network, no real gh.
+    const code = await runHygiene(root, { ghBin: path.join(root, 'no-such-gh') });
+    expect(code).toBe(0);
+    expect(fs.existsSync(stale)).toBe(false);
+    expect(fs.existsSync(fresh)).toBe(true);
+
+    const { body } = parsePulseReport(path.join(root, '.cortex', 'pulse', 'reports', 'hygiene.md'));
+    expect(body).toContain('Stale session-read ledgers cleaned: 1');
+    expect(body).toContain('pulse/state/reads/');
   });
 });

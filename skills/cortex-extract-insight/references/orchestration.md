@@ -47,7 +47,7 @@ copy-merge step for markdown entries):
 The scope agent's **LAST act** is writing its completion manifest:
 
 ```
-.cortex/pulse/insight-fragments/<scope-id>.json
+.cortex/pulse/extraction/fragments/<scope-id>.json
 ```
 
 ```jsonc
@@ -131,11 +131,11 @@ never silently accepted.
   re-run scope is a safe optimization, never an obligation.
 - Stale fragment manifests from a previous run prove nothing across runs
   (pulse is transient); trust only the ledger + on-disk entries for resume
-  decisions. Clear `.cortex/pulse/insight-fragments/` at run start.
+  decisions. Clear `.cortex/pulse/extraction/fragments/` at run start.
 
 ## The progress artefact
 
-Maintain `.cortex/pulse/insight-extraction-progress.md` throughout Phases
+Maintain `.cortex/pulse/extraction/progress.md` throughout Phases
 3–4 (schema §4.10.10; header per §4.5):
 
 ```markdown
@@ -175,4 +175,4 @@ abort — the file must always reflect current truth, with a fresh
   apply the identical rule when writing directly).
 - Finish by updating `ledger.json`'s top-level `built_at_commit`, writing
   `reverse-index.json`, running a final `cortex validate . --json`, and
-  removing `.cortex/pulse/insight-fragments/`.
+  removing `.cortex/pulse/extraction/fragments/`.

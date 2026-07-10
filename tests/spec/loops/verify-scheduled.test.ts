@@ -59,7 +59,7 @@ describe('loops.verify-scheduled integrated slice (through cortex CLI run())', (
     writeAt(root, 'tests/scenario/specs/s.md', ['---', 'name: s', 'covers:', '  - a.out', '---', ''].join('\n'));
     process.chdir(root);
     expect(await run(['loop-specflow-verify'])).toBe(0);
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'verification-report.md'), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'verification.md'), 'utf-8');
     expect(report).toContain('kind: pulse-verification-report');
     expect(report).toContain('loop: cortex-loop-specflow-verify');
     expect(report).toContain('All specs carry their owed tests.');
@@ -72,7 +72,7 @@ describe('loops.verify-scheduled integrated slice (through cortex CLI run())', (
     // No tests at all; a.out covered by no scenario, journey deferred by the dev spec's Notes.
     process.chdir(root);
     expect(await run(['loop-specflow-verify'])).toBe(0);
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'verification-report.md'), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'verification.md'), 'utf-8');
     expect(report).toContain('`a.b` (`.specflow/specs/a/b.spec.md`): missing `tests/atomic/a/b.test.ts`, `tests/spec/a/b.test.ts`');
     expect(report).toContain('absent from every scenario `covers:`');
     expect(report.split('## Deferred by decision')[1]).toContain('tests/journey/a/out.test.ts');

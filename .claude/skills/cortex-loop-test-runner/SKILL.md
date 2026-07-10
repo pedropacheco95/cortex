@@ -7,7 +7,7 @@ description: >-
   Runs `cortex loop-test-runner --collect`, classifies each pending failure
   in-session with the specflow-bugs discipline, runs
   `cortex loop-test-runner --fix-stage <results.json>`, and summarises
-  .cortex/pulse/test-failures.md.
+  .cortex/pulse/reports/test-failures.md.
 ---
 
 # cortex-loop-test-runner
@@ -45,12 +45,12 @@ writer/verifier harness — you never edit project code directly.
    five-field PR (spec id, criterion, writer reasoning, verifier verdict,
    trigger context); budget exhaustion becomes an open `B-NNN` ledger case
    file that suppresses retries — no push, no PR. It always writes
-   `.cortex/pulse/test-failures.md`.
-6. Read `.cortex/pulse/test-failures.md` and summarise to the user per tier:
+   `.cortex/pulse/reports/test-failures.md`.
+6. Read `.cortex/pulse/reports/test-failures.md` and summarise to the user per tier:
    passed counts, fixed (branch/PR refs), case-filed, suppressed, and
    unclassifiable-reported failures.
 
 **The working tree is inviolate** (spec Rule 8): fixes live on
 `cortex/test-fix-*` branches built in fresh worktrees; the loop's only other
-writes are `.cortex/pulse/test-failures.md`, the worklist dotfile, and NEW
+writes are `.cortex/pulse/reports/test-failures.md`, the worklist dotfile, and NEW
 `.cortex/compass/bugs/` case files. Never edit an existing ledger entry.

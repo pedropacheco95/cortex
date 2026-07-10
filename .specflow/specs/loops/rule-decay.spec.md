@@ -16,12 +16,12 @@ governs:
 
 ## Intent
 
-`cortex loop-rule-decay` (weekly, design §11.4 item 5) reviews every cerebrum rule for obsolescence signals and writes retirement candidates to `pulse/rule-candidates.md`. Propose-don't-mutate: rules are retired by a human editing `status: retired`, never by this loop.
+`cortex loop-rule-decay` (weekly, design §11.4 item 5) reviews every cerebrum rule for obsolescence signals and writes retirement candidates to `pulse/reports/rule-candidates.md`. Propose-don't-mutate: rules are retired by a human editing `status: retired`, never by this loop.
 
 ## Entities
 
 - **READS:** `.cortex/cerebrum/rules/R-*.md` (frontmatter + git last-modified age); the filesystem (governs resolution); rule `source:` targets.
-- **WRITES:** `.cortex/pulse/rule-candidates.md` only.
+- **WRITES:** `.cortex/pulse/reports/rule-candidates.md` only.
 - **CREATES:** the report per schema §4.5 (`kind: pulse-rule-candidates`, always-write).
 
 ## Rules
@@ -66,7 +66,7 @@ governs:
 ### Only the report is written
 
 - **Given** any run
-- **Then** the only file created or modified is `pulse/rule-candidates.md`
+- **Then** the only file created or modified is `pulse/reports/rule-candidates.md`
 
 ## Notes
 

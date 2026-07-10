@@ -385,7 +385,7 @@ describe('Discovery spans all pulse reports', () => {
     const root = makeProject('discovery', {
       suggestions: SUGGESTIONS_HEADER + entry('S-001', 'In suggestions', '.cortex/compass/preferences.md', 'text one'),
       extra: {
-        '.cortex/pulse/rule-candidates.md':
+        '.cortex/pulse/reports/rule-candidates.md':
           `---
 kind: pulse-rule-candidates
 generated: 2026-07-01T00:00:00Z
@@ -407,7 +407,7 @@ loop: cortex-loop-rule-decay
     const env = fs.readFileSync(path.join(root, '.cortex', 'compass', 'environment.md'), 'utf-8');
     expect(env.endsWith('Discovered across files.')).toBe(true);
     // The status annotation lands in the report the section came from.
-    const rcFile = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'rule-candidates.md'), 'utf-8');
+    const rcFile = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'rule-candidates.md'), 'utf-8');
     expect(rcFile).toContain('**Status:** accepted');
     const suggestions = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
     expect(suggestions).not.toContain('**Status:**');
@@ -483,14 +483,17 @@ describe('Duplicate id across files errors', () => {
     return makeProject(label, {
       suggestions: SUGGESTIONS_HEADER + entry('S-006', 'First copy', '.cortex/compass/preferences.md', 'text A'),
       extra: {
-        '.cortex/pulse/skill-suggestions.md':
+        // skill-suggestions.md is a retired-loop orphan (deleted by the pulse
+        // migration, never scanned) — a live cross-file duplicate now lands
+        // under reports/, which discoverSuggestions DOES scan.
+        '.cortex/pulse/reports/rule-candidates.md':
           `---
-kind: pulse-skill-suggestions
+kind: pulse-rule-candidates
 generated: 2026-07-01T00:00:00Z
-loop: cortex-loop-skill-suggest
+loop: cortex-loop-rule-decay
 ---
 
-# Skill suggestions
+# Rule retirement candidates
 
 ` + entry('S-006', 'Second copy', '.cortex/compass/environment.md', 'text B'),
         '.cortex/compass/preferences.md': '# Preferences\n',
@@ -504,7 +507,7 @@ loop: cortex-loop-skill-suggest
     const before = snapshotTree(root);
     expect(await pulseCli('pulse-accept', ['S-006'], root)).toBe(1);
     expect(stderr()).toContain(path.join('.cortex', 'pulse', 'suggestions.md'));
-    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'skill-suggestions.md'));
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'reports', 'rule-candidates.md'));
     expect(snapshotTree(root)).toEqual(before);
   });
 
@@ -513,7 +516,7 @@ loop: cortex-loop-skill-suggest
     const before = snapshotTree(root);
     expect(await pulseCli('pulse-reject', ['S-006'], root)).toBe(1);
     expect(stderr()).toContain('S-006');
-    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'skill-suggestions.md'));
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'reports', 'rule-candidates.md'));
     expect(snapshotTree(root)).toEqual(before);
   });
 
@@ -521,7 +524,7 @@ loop: cortex-loop-skill-suggest
     const root = makeDuplicateProject('dup-list');
     expect(await pulseCli('pulse-list', [], root)).toBe(1);
     expect(stderr()).toContain(path.join('.cortex', 'pulse', 'suggestions.md'));
-    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'skill-suggestions.md'));
+    expect(stderr()).toContain(path.join('.cortex', 'pulse', 'reports', 'rule-candidates.md'));
   });
 });
 

@@ -2,8 +2,9 @@
  * The pulse review CLI — the human gate of propose-don't-mutate (spec
  * pulse.review-cli; schema §4.5). `pulse-list` shows pending suggestions,
  * `pulse-accept <S-NNN>` applies one verbatim, `pulse-reject <S-NNN>` records a
- * windowed dismissal. Discovery spans ALL `.cortex/pulse/*.md` reports (§4.5
- * single S-namespace; Rule 2) — a duplicate id across files is a hard error
+ * windowed dismissal. Discovery spans every report under
+ * `.cortex/pulse/reports/` plus `suggestions.md` at the pulse root (§4.5 single
+ * S-namespace; Rule 2) — a duplicate id across files is a hard error
  * (Rule 4b). Accept targets must lie inside `.cortex/compass/` or be a NEW
  * `.claude/skills/<name>/SKILL.md` (Rule 4). Deterministic Core (R-001):
  * fs/path only — no LLM, no network, no subprocess.
@@ -267,28 +268,46 @@ interface SourcedSuggestion extends Suggestion {
 }
 
 /**
- * Rule 2 — discover proposal sections across ALL `.cortex/pulse/*.md` reports
- * (single S-namespace). `dismissed.md` is rejection memory, not a report: its
- * `## S-NNN` sections are never proposals, so it is excluded.
+ * Rule 2 — discover proposal sections across the single S-namespace: every loop
+ * report under `.cortex/pulse/reports/` PLUS `suggestions.md`, which stays at
+ * the pulse root (distil's user-facing output — the primary proposal source).
+ * `dismissed.md` is rejection memory, not a report, so it is excluded from the
+ * reports/ scan; `_index.md` and other pulse-root files are never scanned.
  */
 function discoverSuggestions(root: string): SourcedSuggestion[] {
   const pulseDir = path.join(root, '.cortex', 'pulse');
-  let names: string[];
-  try {
-    names = fs.readdirSync(pulseDir).filter((n) => n.endsWith('.md') && n !== 'dismissed.md');
-  } catch {
-    return [];
-  }
-  names.sort();
+  const reportsDir = path.join(pulseDir, 'reports');
   const discovered: SourcedSuggestion[] = [];
-  for (const name of names) {
-    const file = path.join(pulseDir, name);
-    const lines = readLines(file);
-    if (lines === null) continue;
-    for (const s of parseSuggestions(lines)) {
-      discovered.push({ ...s, file, rel: path.join('.cortex', 'pulse', name) });
+
+  const scanDir = (dir: string, relBase: string): void => {
+    let names: string[];
+    try {
+      names = fs.readdirSync(dir).filter((n) => n.endsWith('.md') && n !== 'dismissed.md');
+    } catch {
+      return;
+    }
+    names.sort();
+    for (const name of names) {
+      const file = path.join(dir, name);
+      const lines = readLines(file);
+      if (lines === null) continue;
+      for (const s of parseSuggestions(lines)) {
+        discovered.push({ ...s, file, rel: path.join(relBase, name) });
+      }
+    }
+  };
+
+  scanDir(reportsDir, path.join('.cortex', 'pulse', 'reports'));
+
+  // suggestions.md stays at the pulse root but is a first-class proposal source.
+  const suggestionsFile = path.join(pulseDir, 'suggestions.md');
+  const suggestionsLines = readLines(suggestionsFile);
+  if (suggestionsLines !== null) {
+    for (const s of parseSuggestions(suggestionsLines)) {
+      discovered.push({ ...s, file: suggestionsFile, rel: path.join('.cortex', 'pulse', 'suggestions.md') });
     }
   }
+
   return discovered;
 }
 

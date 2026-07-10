@@ -90,7 +90,7 @@ function writeBug(root: string, id: string, opts: BugOpts = {}): string {
 }
 
 function reportText(root: string): string {
-  return fs.readFileSync(path.join(root, '.cortex', 'pulse', BUG_TRIAGE_REPORT_FILE), 'utf-8');
+  return fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', BUG_TRIAGE_REPORT_FILE), 'utf-8');
 }
 
 function result(bugId: string, over: Record<string, unknown> = {}): Record<string, unknown> {
@@ -127,7 +127,7 @@ describe('Rule 1: --collect partitions open bugs into unclassified and classifie
     const res = collectTriageWorklist(root);
     expect(res.unclassified).toBe(1);
     expect(res.classified).toBe(1);
-    const parsed = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'pulse', TRIAGE_WORKLIST_FILE), 'utf-8')) as {
+    const parsed = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'pulse', 'state', TRIAGE_WORKLIST_FILE), 'utf-8')) as {
       unclassified: { id: string }[];
       classified: { id: string }[];
     };
@@ -357,8 +357,8 @@ JSON
     const after = snapshotTree(root);
 
     const allowed = new Set([
-      path.join('.cortex', 'pulse', BUG_TRIAGE_REPORT_FILE),
-      path.join('.cortex', 'pulse', TRIAGE_WORKLIST_FILE),
+      path.join('.cortex', 'pulse', 'reports', BUG_TRIAGE_REPORT_FILE),
+      path.join('.cortex', 'pulse', 'state', TRIAGE_WORKLIST_FILE),
       path.join('.cortex', 'compass', 'bugs', 'B-001-test-bug.md'),
     ]);
     const keys = new Set([...before.keys(), ...after.keys()]);
@@ -381,7 +381,7 @@ describe('Bare-mode subprocess degradation', () => {
     const code = await runBugTriage(root, { noLlm: true });
     expect(code).toBe(0);
     expect(reportText(root)).toMatch(/judgment pass skipped \(--no-llm\)/);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', TRIAGE_WORKLIST_FILE))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', TRIAGE_WORKLIST_FILE))).toBe(true);
   }, TEST_TIMEOUT);
 
   it('missing claude binary degrades politely (exit 0, notice in the report)', async () => {
@@ -421,7 +421,7 @@ describe('Shipped skills/cortex-loop-bug-triage/SKILL.md is pinned', () => {
 
   it('instructs: run --collect, classify in-session with the specflow-bugs discipline against the seven types, write results JSON, run --report', () => {
     expect(body).toContain('cortex loop-bug-triage --collect');
-    expect(body).toContain('.cortex/pulse/.triage-worklist.json');
+    expect(body).toContain('.cortex/pulse/state/triage-worklist.json');
     expect(body).toMatch(/in this session/i);
     expect(body).toContain('`specflow-bugs`');
     expect(body).toContain('missing-criterion, incomplete-rule, wrong-rule, missing-dev-spec');
@@ -439,6 +439,6 @@ describe('Shipped skills/cortex-loop-bug-triage/SKILL.md is pinned', () => {
     expect(body).toMatch(/fill-only/i);
     expect(body).toMatch(/present fields are NEVER overwritten/i);
     expect(body).toMatch(/never overwrite an existing classification/i);
-    expect(body).toContain('.cortex/pulse/bug-triage.md');
+    expect(body).toContain('.cortex/pulse/reports/bug-triage.md');
   });
 });

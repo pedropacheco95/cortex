@@ -53,7 +53,7 @@ function makeFixtureCopy(label: string): string {
 }
 
 function report(root: string): string {
-  return fs.readFileSync(path.join(root, '.cortex', 'pulse', LINT_REPORT_FILE), 'utf-8');
+  return fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', LINT_REPORT_FILE), 'utf-8');
 }
 
 function violation(p: string): Violation {
@@ -133,12 +133,12 @@ describe('Violations grouped with location and clause', () => {
 // AC — Only the report is written
 // ===========================================================================
 describe('Only the report is written', () => {
-  it('a run touches only pulse/lint-report.md', async () => {
+  it('a run touches only pulse/reports/lint.md', async () => {
     const root = makeFixtureCopy('blast');
     const before = snapshotTree(root);
     expect(await runLintScheduled(root)).toBe(0);
     const after = snapshotTree(root);
-    const allowed = path.join('.cortex', 'pulse', LINT_REPORT_FILE);
+    const allowed = path.join('.cortex', 'pulse', 'reports', LINT_REPORT_FILE);
     const keys = new Set([...before.keys(), ...after.keys()]);
     for (const key of keys) {
       if (key === allowed) continue;

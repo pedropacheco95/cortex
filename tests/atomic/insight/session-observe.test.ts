@@ -59,11 +59,19 @@ function pulsePath(root: string, name: string): string {
   return path.join(root, '.cortex', 'pulse', name);
 }
 
+function statePath(root: string, name: string): string {
+  return path.join(root, '.cortex', 'pulse', 'state', name);
+}
+
+function reportPath(root: string, name: string): string {
+  return path.join(root, '.cortex', 'pulse', 'reports', name);
+}
+
 /** A prebuilt shared corpus (as distil's --collect writes it). */
 function writeCorpus(root: string, sessionIds: string[]): void {
-  fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'state'), { recursive: true });
   fs.writeFileSync(
-    pulsePath(root, CORPUS_FILE),
+    statePath(root, CORPUS_FILE),
     JSON.stringify(
       {
         kind: 'session-corpus',
@@ -158,7 +166,7 @@ describe('collect: shared-corpus reuse and unobserved-session worklist', () => {
     const root = tmp('collect-reuse');
     writeCorpus(root, ['sess-a', 'sess-b', 'sess-c']);
     fs.writeFileSync(
-      pulsePath(root, SESSION_OBSERVE_STATE_FILE),
+      statePath(root, SESSION_OBSERVE_STATE_FILE),
       JSON.stringify({ kind: 'session-observe-state', updated: '2026-07-01T00:00:00Z', observed: ['sess-a'] }),
       'utf-8',
     );
@@ -178,7 +186,7 @@ describe('collect: shared-corpus reuse and unobserved-session worklist', () => {
     writeTranscript(home, root, 'sess-x');
     const result = collectObserve(root, { now: NOW, home });
     expect(result.corpusReused).toBe(false);
-    expect(fs.existsSync(pulsePath(root, CORPUS_FILE))).toBe(true);
+    expect(fs.existsSync(statePath(root, CORPUS_FILE))).toBe(true);
     expect(readObserveWorklist(root)?.sessions.map((s) => s.id)).toEqual(['sess-x']);
   });
 
@@ -240,7 +248,7 @@ describe('apply: section-boundary + provenance enforcement on enriched entries',
     fs.appendFileSync(abs, '- Naked guidance without provenance\n', 'utf-8');
     const result = applyObserve(root, { now: NOW });
     expect(result.violations).toBe(1);
-    const report = fs.readFileSync(pulsePath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
+    const report = fs.readFileSync(reportPath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
     expect(report).toContain('provenance trailer');
   });
 
@@ -250,7 +258,7 @@ describe('apply: section-boundary + provenance enforcement on enriched entries',
     const abs = path.join(root, ENTRY_REL);
     fs.writeFileSync(abs, fs.readFileSync(abs, 'utf-8').replace('Retries billing calls.', 'Rewritten purpose.'), 'utf-8');
     expect(await runSessionObserve(root, { apply: true, now: NOW })).toBe(1);
-    const report = fs.readFileSync(pulsePath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
+    const report = fs.readFileSync(reportPath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
     expect(report).toContain('## Purpose');
     expect(report).toContain('extraction-owned');
   });
@@ -269,7 +277,7 @@ describe('apply: section-boundary + provenance enforcement on enriched entries',
     fs.appendFileSync(path.join(root, '.cortex', 'compass', 'preferences.md'), '\n- sneaky direct rule\n', 'utf-8');
     const result = applyObserve(root, { now: NOW });
     expect(result.violations).toBe(1);
-    expect(fs.readFileSync(pulsePath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8')).toContain('gated path modified directly');
+    expect(fs.readFileSync(reportPath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8')).toContain('gated path modified directly');
   });
 
   it('splitEntrySections is byte-preserving per section and the trailer regex anchors at line end', () => {
@@ -368,9 +376,9 @@ describe('decision-candidate in the typed pulse gate', () => {
 
   it('check.pulse accepts a decision-candidate section and errors on a wrong root', async () => {
     const root = tmp('check-pulse');
-    fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
     fs.writeFileSync(
-      pulsePath(root, 'session-observe.md'),
+      reportPath(root, 'session-observe.md'),
       `---\nkind: pulse-session-observe\ngenerated: 2026-07-08T12:00:00Z\nloop: cortex-loop-session-observe\n---\n\n` +
         `## S-001: A decision\n\n**Type:** decision-candidate\n**Source:** session-observe (sessions: s)\n` +
         `**Target:** .cortex/atlas/decisions/2026-07-08-a-decision.md\n\n**Proposed file:**\n\n\`\`\`\nbody\n\`\`\`\n\n` +
@@ -419,8 +427,9 @@ describe('decision-candidate in the typed pulse gate', () => {
 
   it('accept refuses a decision-candidate targeting outside atlas/decisions/', async () => {
     const root = makeGitProject('accept-refuse');
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
     fs.writeFileSync(
-      pulsePath(root, 'session-observe.md'),
+      reportPath(root, 'session-observe.md'),
       `---\nkind: pulse-session-observe\ngenerated: 2026-07-08T12:00:00Z\nloop: cortex-loop-session-observe\n---\n\n` +
         `## S-009: Escapee\n\n**Type:** decision-candidate\n**Source:** session-observe (sessions: s)\n` +
         `**Target:** .cortex/atlas/decisions/../../../evil.md\n\n**Proposed file:**\n\n\`\`\`\nbody\n\`\`\`\n`,

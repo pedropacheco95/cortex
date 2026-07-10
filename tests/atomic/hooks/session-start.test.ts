@@ -84,7 +84,7 @@ describe('hygiene line freshness (Rule 3)', () => {
     const { stdout } = await run(stdinFor(root), { now: NOW });
     const ctx = parseEnvelope(stdout).additionalContext;
     expect(ctx).toContain('Hygiene: 2 stale purposes, 1 dangling spec link.');
-    expect(ctx).toContain('(.cortex/pulse/hygiene-report.md)');
+    expect(ctx).toContain('(.cortex/pulse/reports/hygiene.md)');
   });
 
   it('stale report (80h old, window 48) → no hygiene line', async () => {
@@ -137,8 +137,9 @@ describe('degradation (Rule 6, warn-never-block)', () => {
   it('malformed hygiene report frontmatter → pointer still injected + hook-errors entry', async () => {
     const root = tmp('badreport');
     makeCortexProject(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, '.cortex', 'pulse', 'hygiene-report.md'),
+      path.join(root, '.cortex', 'pulse', 'reports', 'hygiene.md'),
       '---\nkind: [unclosed\n---\nbroken',
     );
     const { exitCode, stdout } = await run(stdinFor(root), { now: NOW });
@@ -147,14 +148,15 @@ describe('degradation (Rule 6, warn-never-block)', () => {
     const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
     expect(log).toContain('kind: pulse-hook-errors');
     expect(log).toContain('hook: session-start');
-    expect(log).toContain('hygiene-report.md');
+    expect(log).toContain('reports/hygiene.md');
   });
 
   it('report missing `generated` → treated as malformed, pointer still injected', async () => {
     const root = tmp('nogen');
     makeCortexProject(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, '.cortex', 'pulse', 'hygiene-report.md'),
+      path.join(root, '.cortex', 'pulse', 'reports', 'hygiene.md'),
       '---\nkind: pulse-hygiene-report\nloop: hygiene\n---\n\nSummary.\n',
     );
     const { stdout } = await run(stdinFor(root), { now: NOW });

@@ -82,7 +82,7 @@ describe('loops.bug-triage integrated slice (through cortex CLI run())', () => {
 
     expect(await run(['loop-bug-triage', '--collect'])).toBe(0);
     const worklist = JSON.parse(
-      fs.readFileSync(path.join(root, '.cortex', 'pulse', '.triage-worklist.json'), 'utf-8'),
+      fs.readFileSync(path.join(root, '.cortex', 'pulse', 'state', 'triage-worklist.json'), 'utf-8'),
     ) as { kind: string; unclassified: { id: string }[]; classified: { id: string }[] };
     expect(worklist.kind).toBe('triage-worklist');
     expect(worklist.unclassified.map((b) => b.id)).toEqual(['B-001']);
@@ -107,7 +107,7 @@ describe('loops.bug-triage integrated slice (through cortex CLI run())', () => {
 
     // Classified bug byte-identical; divergence reported with both readings.
     expect(fs.readFileSync(classifiedFile, 'utf-8')).toBe(classifiedBefore);
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'bug-triage.md'), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'bug-triage.md'), 'utf-8');
     expect(report).toContain('kind: pulse-bug-triage');
     expect(report).toContain('loop: cortex-loop-bug-triage');
     expect(report).toContain('B-002 `type` — ledger: `layer-drift` / loop: `wrong-rule`');
@@ -128,7 +128,7 @@ describe('loops.bug-triage integrated slice (through cortex CLI run())', () => {
     const afterFirst = fs.readFileSync(file, 'utf-8');
     expect(await run(['loop-bug-triage', '--report', scratch])).toBe(0);
     expect(fs.readFileSync(file, 'utf-8')).toBe(afterFirst);
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'bug-triage.md'), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'bug-triage.md'), 'utf-8');
     expect(report).toContain('B-001: independent re-derivation agrees on `type`, `severity`, `proposed_fix`');
   }, TEST_TIMEOUT);
 
@@ -144,7 +144,7 @@ describe('loops.bug-triage integrated slice (through cortex CLI run())', () => {
     const root = makeProject('empty');
     process.chdir(root);
     expect(await run(['loop-bug-triage', '--no-llm'])).toBe(0);
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'bug-triage.md'), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'bug-triage.md'), 'utf-8');
     expect(report).toContain('No open bugs — the ledger is clean this run.');
   }, TEST_TIMEOUT);
 });

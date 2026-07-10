@@ -16,7 +16,7 @@
  *
  * Deferrals are distinguished: a journey gap whose spec Notes declare the
  * journey-deferral convention lands under "Deferred by decision", separate
- * from genuine gaps. Always-writes `pulse/verification-report.md`; read-only
+ * from genuine gaps. Always-writes `pulse/reports/verification.md`; read-only
  * otherwise (R-001); exit 0 regardless — the report is the product.
  */
 import * as fs from 'fs';
@@ -25,7 +25,7 @@ import matter from 'gray-matter';
 import { writePulseReport } from './report.js';
 import { specsRoot, businessRoot } from '../paths.js';
 
-export const VERIFICATION_REPORT_FILE = 'verification-report.md';
+export const VERIFICATION_REPORT_FILE = 'verification.md';
 
 /**
  * The journey-deferral convention (spec Rule 3), matched against a spec's
@@ -300,7 +300,7 @@ export async function runVerifyScheduled(root = '.', opts: VerifyRunOptions = {}
     lines.join('\n'),
   );
   console.log(
-    `cortex loop-specflow-verify: wrote .cortex/pulse/${VERIFICATION_REPORT_FILE} ` +
+    `cortex loop-specflow-verify: wrote .cortex/pulse/reports/${VERIFICATION_REPORT_FILE} ` +
       `(${devGaps.length} dev gap(s), ${bizGaps.length} business gap(s), ${deferred.length} deferred).`,
   );
   return 0;

@@ -35,11 +35,11 @@ describe('appendHookError (schema §4.5)', () => {
   it('each entry is structured: hook name, file, failure, iso-datetime', () => {
     const root = tmp('structured');
     makeCortexProject(root);
-    appendHookError(root, { hook: 'session-start', file: 'hygiene-report.md', failure: 'no generated field' }, NOW);
+    appendHookError(root, { hook: 'session-start', file: 'reports/hygiene.md', failure: 'no generated field' }, NOW);
     const entries = readHookErrorEntries(root);
     expect(entries).toHaveLength(1);
     expect(entries[0]).toContain('hook: session-start');
-    expect(entries[0]).toContain('file: hygiene-report.md');
+    expect(entries[0]).toContain('file: reports/hygiene.md');
     expect(entries[0]).toContain('failure: no generated field');
     expect(entries[0]).toContain('at: 2026-07-02T10:00:00.000Z');
   });

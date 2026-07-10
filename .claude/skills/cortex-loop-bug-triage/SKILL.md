@@ -6,7 +6,7 @@ description: >-
   the open bugs", or "classify the bug ledger". Runs
   `cortex loop-bug-triage --collect`, classifies each worklist bug in-session
   with the specflow-bugs discipline, runs `cortex loop-bug-triage --report`,
-  and summarises .cortex/pulse/bug-triage.md.
+  and summarises .cortex/pulse/reports/bug-triage.md.
 ---
 
 # cortex-loop-bug-triage
@@ -17,7 +17,7 @@ nested `claude` subprocess, and never run bare `cortex loop-bug-triage`**
 (bare mode exists only for humans at a terminal; it would spawn one).
 
 1. From the project root, run `cortex loop-bug-triage --collect`.
-2. Read `.cortex/pulse/.triage-worklist.json` — the open bugs partitioned into
+2. Read `.cortex/pulse/state/triage-worklist.json` — the open bugs partitioned into
    *unclassified* (any of `type`/`severity`/`proposed_fix` absent) and
    *classified* (all three present).
 3. Classify EVERY worklist bug **in this session** against the seven-type
@@ -36,8 +36,8 @@ nested `claude` subprocess, and never run bare `cortex loop-bug-triage`**
    deterministic report half applies results **fill-only** (spec Rule 3):
    absent `type`/`severity`/`proposed_fix` fields on open bugs are filled;
    present fields are NEVER overwritten — divergences go to the report with
-   both readings and your reasoning. It writes `.cortex/pulse/bug-triage.md`.
-6. Read `.cortex/pulse/bug-triage.md` and summarise to the user: fields
+   both readings and your reasoning. It writes `.cortex/pulse/reports/bug-triage.md`.
+6. Read `.cortex/pulse/reports/bug-triage.md` and summarise to the user: fields
    filled, agreements, divergences, and aged open bugs.
 
 **Never overwrite an existing classification.** The fill-only write to open

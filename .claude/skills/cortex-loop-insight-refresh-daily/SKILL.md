@@ -8,7 +8,7 @@ description: >-
   in-session, re-extracts L2/L3 via cortex-extract-insight in dirty-only mode,
   re-verifies stale references and aged edges, runs
   `cortex loop-insight-refresh --daily --apply`, and summarises
-  .cortex/pulse/insight-refresh.md.
+  .cortex/pulse/reports/insight-refresh.md.
 ---
 
 # cortex-loop-insight-refresh-daily
@@ -29,7 +29,7 @@ report, not a proposal.
    If it errors with "no ledger", stop and tell the user to run the initial
    extraction (`cortex-extract-insight`) first — the daily loop refreshes; it
    never bootstraps.
-2. Read `.cortex/pulse/.insight-daily-worklist.json`. The Core structural
+2. Read `.cortex/pulse/state/insight-daily-worklist.json`. The Core structural
    filter has already ruled out formatting-only / comment-only / whitespace /
    import-reordering changes (`dropped`) and pre-classified the obvious cases:
    - `l2` — real change: L2 (Purpose + Connections) re-extraction due.
@@ -68,7 +68,7 @@ report, not a proposal.
    reconciles `ledger.json`, neighbourhood-updates L4 confirmations around
    the L3 re-extractions, marks newly-invalidated references stale for the
    next cycle, rebuilds `reverse-index.json`, prunes the fast worklist, and
-   writes `.cortex/pulse/insight-refresh.md`.
+   writes `.cortex/pulse/reports/insight-refresh.md`.
 6. Read the report and summarise to the user: refreshed / pending / invalid
    counts, edges re-confirmed, stale marked vs cleared, and any invalid
    entries that need attention.

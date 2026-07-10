@@ -21,8 +21,8 @@ governs:
 
 ## Entities
 
-- **READS:** the shared session-transcript corpus (this project's recent Claude Code sessions, coordinated with `cortex-pulse-distil`'s corpus machinery and the read-time purpose capture folded into insight extraction metadata, design §5.10); existing per-file insight entries under `anatomy/`/`scopes/<scope>/anatomy/` (to locate the right `## Insights`/`## Query pointers` target and to avoid duplicate enrichment); `pulse/dismissed.md` (suppression); `pulse/.suggestion-counter`; `cortex.config.json`.
-- **WRITES:** the `## Insights` and `## Query pointers` sections of existing per-file insight entries (direct rewrite/append, never touching `## Purpose`, `## Main players`, or `## File map`, which are extraction-owned); `pulse/session-observe.md` (its report, plus `rule-candidate`/decision-proposal sections carrying S-ids from the shared counter); `pulse/.suggestion-counter`; the transient session corpus. Never `compass/`, `atlas/`, or `RULES.md` directly.
+- **READS:** the shared session-transcript corpus (this project's recent Claude Code sessions, coordinated with `cortex-pulse-distil`'s corpus machinery and the read-time purpose capture folded into insight extraction metadata, design §5.10); existing per-file insight entries under `anatomy/`/`scopes/<scope>/anatomy/` (to locate the right `## Insights`/`## Query pointers` target and to avoid duplicate enrichment); `pulse/dismissed.md` (suppression); `pulse/state/suggestion-counter`; `cortex.config.json`.
+- **WRITES:** the `## Insights` and `## Query pointers` sections of existing per-file insight entries (direct rewrite/append, never touching `## Purpose`, `## Main players`, or `## File map`, which are extraction-owned); `pulse/reports/session-observe.md` (its report, plus `rule-candidate`/decision-proposal sections carrying S-ids from the shared counter); `pulse/state/suggestion-counter`; the transient session corpus. Never `compass/`, `atlas/`, or `RULES.md` directly.
 - **CREATES:** typed pulse proposal sections per schema §4.5.1 (as amended for v3 target roots — compass replacing cerebrum).
 
 ## Rules
@@ -33,7 +33,7 @@ governs:
 4. **Decisions are proposed to atlas, never written directly.** A candidate that captures a decision (the reasoning behind a choice, not just an observable convention) is emitted as a typed `pulse/` proposal with `**Type:** decision-candidate` (schema addendum §A7.4 — additive to the v2.0 enum, parallel to `rule-candidate` but targeting `atlas/decisions/` instead of `compass/`) targeting `.cortex/atlas/decisions/`. It is never written to `atlas/` directly by this loop.
 5. **Never mutate gated content directly (RULES 7, the loop-write invariant).** The loop's only direct writes are to `.cortex/insight/` per-file entries (Rule 2) and to `pulse/`. Every `compass/` or `atlas/` change is a human-reviewed typed proposal, with no exception.
 6. **Boundary with `cortex-pulse-distil` (design §9).** Distil mines **cross-session repetition** into rule candidates over a wider window; session-observe captures **in-context, per-session** observations from how one session went. Both read the same corpus at a different altitude. Coordination prevents double-proposing the same pattern: a pattern this loop has already enriched into an insight entry is treated by distil's already-covered filter as a candidate for a `promotion`-style reference to the insight content rather than a fresh independent rule candidate (mirroring the v2 gaps/distil coordination, v2 design §6) — the precise mechanism (a shared already-covered index, or distil reading this loop's provenance trailers) is this spec's implementation detail, but the outcome (no double-proposal) is the contract.
-7. **S-ids and suppression are the existing shared machinery.** Proposal S-ids are acquired from the shared `pulse/.suggestion-counter` (global, monotonic, never reused, schema §4.5). A previously-dismissed candidate (matched via `pulse/dismissed.md`, unexpired) is not re-proposed.
+7. **S-ids and suppression are the existing shared machinery.** Proposal S-ids are acquired from the shared `pulse/state/suggestion-counter` (global, monotonic, never reused, schema §4.5). A previously-dismissed candidate (matched via `pulse/dismissed.md`, unexpired) is not re-proposed.
 8. **Deterministic Core bookends (R-001).** Corpus collection is pure file I/O and runs in Core (or a Core-adjacent deterministic step, same convention as distil's collect half); only the classification/routing judgment and the enrichment-text drafting are LLM work, never inside Core.
 
 ## Acceptance Criteria
@@ -61,14 +61,14 @@ governs:
 
 - **Given** a session where the user established "all new API routes must validate input with the shared schema validator" — a rule that should bind future work, not just describe one file
 - **When** the loop classifies this as gated and routes it
-- **Then** `pulse/session-observe.md` gains an `S-NNN` section with `**Type:** rule-candidate` and `**Target:**` under `.cortex/compass/`
+- **Then** `pulse/reports/session-observe.md` gains an `S-NNN` section with `**Type:** rule-candidate` and `**Target:**` under `.cortex/compass/`
 - **And** `.cortex/compass/` itself is unchanged — the gate applies it, not this loop
 
 ### A decision becomes an atlas-targeted proposal, never a direct write
 
 - **Given** a session where the user explained why the team chose polling over webhooks for a specific integration, with reasoning worth preserving as a decision record
 - **When** the loop classifies this as a decision and routes it
-- **Then** `pulse/session-observe.md` gains an `S-NNN` section with `**Type:** decision-candidate` targeting `.cortex/atlas/decisions/`, carrying the reasoning and session provenance
+- **Then** `pulse/reports/session-observe.md` gains an `S-NNN` section with `**Type:** decision-candidate` targeting `.cortex/atlas/decisions/`, carrying the reasoning and session provenance
 - **And** no file under `.cortex/atlas/` is modified directly
 
 ### A dismissed candidate is not re-proposed

@@ -6,7 +6,7 @@
  * unification via cortex-extract-insight over all scopes):
  *
  *  - `--collect` emits the full L4 regeneration worklist
- *    (`.cortex/pulse/.insight-full-worklist.json`): every ledger path, every
+ *    (`.cortex/pulse/state/insight-full-worklist.json`): every ledger path, every
  *    scope, plus the current graph/tags/clusters counts as the baseline the
  *    report compares against, the carried stale references, and the
  *    confidence-aged edges (the full pass also performs the aging check —
@@ -16,7 +16,7 @@
  *    module-wide `built_at_commit` advances to HEAD, the stale set clears
  *    (everything was just re-derived), the refresh-cycle history advances,
  *    `reverse-index.json` is rebuilt from the new graph, and the pulse report
- *    `.cortex/pulse/insight-refresh.md` records the counts (including a
+ *    `.cortex/pulse/reports/insight-refresh.md` records the counts (including a
  *    shrink note when the regen legitimately shrank — full regen is the
  *    sanctioned ground-truth pass; the writer-side shrink guard remains the
  *    extraction skill's confirmation discipline, schema §4.10.6).
@@ -49,14 +49,15 @@ import {
 import { checkInsightGraph, checkInsightLedger, checkInsightEntry } from '../schema/checks/insight.js';
 import { writePulseReport } from '../loops/report.js';
 
-export const FULL_WORKLIST_FILE = '.insight-full-worklist.json';
+export const FULL_WORKLIST_FILE = 'insight-full-worklist.json';
 export const FULL_LOOP_NAME = 'cortex-loop-insight-refresh-full';
 
 function insightDir(root: string): string {
   return path.join(root, '.cortex', 'insight');
 }
-function pulseDir(root: string): string {
-  return path.join(root, '.cortex', 'pulse');
+/** Machine working state under `pulse/state/` (pulse reorg). */
+function stateDir(root: string): string {
+  return path.join(root, '.cortex', 'pulse', 'state');
 }
 
 export interface StoreBaseline {
@@ -82,7 +83,7 @@ export interface FullWorklist {
 }
 
 export function fullWorklistPath(root: string): string {
-  return path.join(pulseDir(root), FULL_WORKLIST_FILE);
+  return path.join(stateDir(root), FULL_WORKLIST_FILE);
 }
 
 export function readFullWorklist(root: string): FullWorklist | null {
@@ -157,7 +158,7 @@ export function collectFull(root: string, now: Date = new Date()): CollectFullRe
     aged_edges: agedEdges(graph, ledger, window),
     aging_window: window,
   };
-  fs.mkdirSync(pulseDir(absRoot), { recursive: true });
+  fs.mkdirSync(stateDir(absRoot), { recursive: true });
   const p = fullWorklistPath(absRoot);
   fs.writeFileSync(p, JSON.stringify(worklist, null, 2) + '\n', 'utf-8');
   return { worklistPath: p, files: files.length, scopes: scopes.length, agedEdges: worklist.aged_edges.length };
@@ -181,7 +182,7 @@ export function reportFull(root: string, now: Date = new Date()): ReportFullResu
   const absRoot = path.resolve(root);
   const worklist = readFullWorklist(absRoot);
   if (worklist === null) {
-    throw new Error(`no .cortex/pulse/${FULL_WORKLIST_FILE} — run \`cortex loop-insight-refresh --full --collect\` first`);
+    throw new Error(`no .cortex/pulse/state/${FULL_WORKLIST_FILE} — run \`cortex loop-insight-refresh --full --collect\` first`);
   }
   const ledger = readLedger(absRoot);
   if (ledger === null) {
@@ -271,7 +272,7 @@ export async function runRefreshFull(root = '.', opts: RefreshFullOptions = {}):
     if (opts.collect) {
       const r = collectFull(absRoot, now);
       console.log(
-        `cortex loop-insight-refresh --full: regeneration worklist written to .cortex/pulse/${FULL_WORKLIST_FILE} — ` +
+        `cortex loop-insight-refresh --full: regeneration worklist written to .cortex/pulse/state/${FULL_WORKLIST_FILE} — ` +
           `${r.files} file(s), ${r.scopes} scope(s), ${r.agedEdges} aged edge(s).`,
       );
       return 0;
@@ -281,7 +282,7 @@ export async function runRefreshFull(root = '.', opts: RefreshFullOptions = {}):
       console.log(
         `cortex loop-insight-refresh --full: ${r.ok ? 'ground truth blessed' : 'NOT blessed (validation errors)'} — ` +
           `${r.errors} error(s), ${r.warnings} warning(s)${r.shrunk.length > 0 ? `; shrink: ${r.shrunk.join(', ')}` : ''} — ` +
-          `report at .cortex/pulse/${INSIGHT_REFRESH_REPORT_FILE}.`,
+          `report at .cortex/pulse/reports/${INSIGHT_REFRESH_REPORT_FILE}.`,
       );
       return r.ok ? 0 : 1;
     }
@@ -290,7 +291,7 @@ export async function runRefreshFull(root = '.', opts: RefreshFullOptions = {}):
     console.log(
       `cortex loop-insight-refresh --full: worklist collected (${r.files} file(s)); ` +
         `the L4 regeneration runs in the cortex-loop-insight-refresh-full skill — ` +
-        `worklist retained at .cortex/pulse/${FULL_WORKLIST_FILE}.`,
+        `worklist retained at .cortex/pulse/state/${FULL_WORKLIST_FILE}.`,
     );
     return 0;
   } catch (err) {

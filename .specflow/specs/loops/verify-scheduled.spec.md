@@ -15,12 +15,12 @@ governed_by:
 
 ## Intent
 
-`cortex loop-specflow-verify` (daily, design §11.4 item 9) checks that every spec has the tests it is owed — by the schema §3 path conventions — and writes `pulse/verification-report.md`. Existence and coverage only; running tests is the test-runner's job.
+`cortex loop-specflow-verify` (daily, design §11.4 item 9) checks that every spec has the tests it is owed — by the schema §3 path conventions — and writes `pulse/reports/verification.md`. Existence and coverage only; running tests is the test-runner's job.
 
 ## Entities
 
 - **READS:** dev specs, business specs, scenario specs (`covers:` lists), and the `tests/` tree paths per schema §3.
-- **WRITES:** `pulse/verification-report.md` only.
+- **WRITES:** `pulse/reports/verification.md` only.
 - **CREATES:** the report per §4.5 (`kind: pulse-verification-report`).
 
 ## Rules
@@ -54,4 +54,4 @@ governed_by:
 
 ### Only the report is written
 
-- **Then** any run touches only `pulse/verification-report.md`
+- **Then** any run touches only `pulse/reports/verification.md`

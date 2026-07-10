@@ -67,11 +67,51 @@ function parseLoopFlags(
   };
 }
 
+/**
+ * The pulse/loop verbs that read or write under `.cortex/pulse/`. A single
+ * `migratePulseLayout` runs once at the top of the dispatch for any of these,
+ * before routing into the specific loop — the invasive alternative is a call
+ * duplicated inside every loop's entry function. Hooks are deliberately absent:
+ * they self-heal one file at a time (renameIfLegacy) and must not pay for a
+ * full-tree scan on their latency-critical paths.
+ */
+const PULSE_LOOP_COMMANDS = new Set([
+  'pulse-list',
+  'pulse-accept',
+  'pulse-reject',
+  'pulse-hygiene',
+  'pulse-distil',
+  'loop-rule-decay',
+  'loop-atlas-staleness',
+  'loop-onboarding-drift',
+  'loop-bug-triage',
+  'loop-specflow-lint',
+  'loop-specflow-verify',
+  'loop-test-runner',
+  'test-run',
+  'loop-spec-drift',
+  'insight-refresh-fast',
+  'loop-insight-refresh',
+  'loop-session-observe',
+]);
+
 export async function run(argv: string[]): Promise<number> {
   // `cortex hook <name>` — names match init's settings.json registrations.
   if (argv[0] === 'hook') {
     const { main } = await import('../hooks/cli.js');
     return main(argv.slice(1));
+  }
+
+  // Single migration chokepoint (pulse reorg): fold any legacy flat
+  // `.cortex/pulse/` layout into reports/ + state/ once, before routing into a
+  // pulse/loop command. Best-effort — never blocks the loop it precedes.
+  if (argv[0] !== undefined && PULSE_LOOP_COMMANDS.has(argv[0])) {
+    try {
+      const { migratePulseLayout } = await import('../pulse/migrate.js');
+      migratePulseLayout('.');
+    } catch {
+      /* migration is best-effort — a failure never blocks the command */
+    }
   }
 
   // `cortex validate [path] [--json]` — wires the schema validator's existing

@@ -2,7 +2,7 @@
  * `cortex loop-spec-drift` — daily content-drift detector (spec
  * loops.spec-drift, design §11.4 item 10). For each dev spec with governed
  * files, compares the spec's git last-commit date against its files' and
- * writes suspects to `.cortex/pulse/spec-drift.md` — nothing else.
+ * writes suspects to `.cortex/pulse/reports/spec-drift.md` — nothing else.
  * Deterministic Core (R-001): flags suspects; classification is the human's
  * (or specflow-bugs') job.
  *
@@ -175,7 +175,7 @@ export async function runSpecDrift(root = '.', opts: { now?: Date } = {}): Promi
     lines.join('\n'),
   );
   console.log(
-    `cortex loop-spec-drift: wrote .cortex/pulse/spec-drift.md (${scan.suspects.length} suspect(s), ${scan.untracked.length} untracked spec(s) noted).`,
+    `cortex loop-spec-drift: wrote .cortex/pulse/reports/spec-drift.md (${scan.suspects.length} suspect(s), ${scan.untracked.length} untracked spec(s) noted).`,
   );
   return 0;
 }

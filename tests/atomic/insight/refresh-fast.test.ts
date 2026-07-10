@@ -128,7 +128,7 @@ describe('fast tier: hook safety (spec Rule 7 — no-op and degradation paths)',
     fs.writeFileSync(path.join(root, 'x.ts'), 'export const x = 1;\n', 'utf-8');
     gitCommitAll(root, 'c');
     expect(await runInsightRefreshFast(root)).toBe(0);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', INSIGHT_WORKLIST_FILE))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', INSIGHT_WORKLIST_FILE))).toBe(false);
   });
 
   it('non-git project → silent no-op, exit 0', async () => {
@@ -137,7 +137,7 @@ describe('fast tier: hook safety (spec Rule 7 — no-op and degradation paths)',
     fs.writeFileSync(path.join(root, 'x.ts'), 'export const x = 1;\n', 'utf-8');
     writeLedgerFor(root, [{ path: 'x.ts', level: 2 }], 'abc1234');
     expect(await runInsightRefreshFast(root)).toBe(0);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', INSIGHT_WORKLIST_FILE))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', INSIGHT_WORKLIST_FILE))).toBe(false);
   });
 
   it('skip-listed / ignored paths in the commit never enter the worklist', async () => {

@@ -82,10 +82,10 @@ CORTEX_DIST="$(dirname "$(node -e 'console.log(require("fs").realpathSync(proces
 node --input-type=module -e '
   const { runL1, serializeL1 } = await import(process.argv[1]);
   process.stdout.write(serializeL1(await runL1(process.cwd())));
-' "$CORTEX_DIST/insight/l1.js" > .cortex/pulse/insight-l1.json
+' "$CORTEX_DIST/insight/l1.js" > .cortex/pulse/extraction/l1.json
 ```
 
-The output (`.cortex/pulse/insight-l1.json` — a transient working file;
+The output (`.cortex/pulse/extraction/l1.json` — a transient working file;
 `pulse/` tolerates extra generated files) is what Phase 2 plans from. Its
 real fields (`src/insight/l1.ts`, `serializeL1`):
 
@@ -149,7 +149,7 @@ Write two durable/transient records:
    unscoped — both layouts are valid (§4.10.1); the query layer hides the
    difference.
 
-2. **`.cortex/pulse/insight-extraction-plan.md`** (§4.10.10, `kind:
+2. **`.cortex/pulse/extraction/plan.md`** (§4.10.10, `kind:
    insight-extraction-plan`; header fields `kind`, `generated`, `loop:
    cortex-extract-insight` per §4.5) — root scopes with file counts and
    analysis depth, shared-scope references, sub-scopes, estimated total
@@ -191,7 +191,7 @@ contract. The shape:
   (scoped) or `anatomy/<source-path>.md` (unscoped), path mirroring the
   source — plus the scope-local `scopes/<scope>/graph.json` and
   `scopes/<scope>/concepts/`. The scope agent's LAST write is its completion
-  manifest `.cortex/pulse/insight-fragments/<scope-id>.json`. **The manifest
+  manifest `.cortex/pulse/extraction/fragments/<scope-id>.json`. **The manifest
   file existing on disk is the ONLY success signal** — an agent's textual
   "done" without it is a failure. One manifest missing after a wave → warn,
   name the scope, continue. **More than half of a wave's manifests missing →
@@ -202,7 +202,7 @@ contract. The shape:
   re-invoked, skips checkpointed scopes and resumes the rest; a scope killed
   mid-flight is re-dispatched whole (its agent MAY keep any existing entry
   that parses valid and whose `source_sha256` still matches the source body).
-- **Progress:** maintain `.cortex/pulse/insight-extraction-progress.md`
+- **Progress:** maintain `.cortex/pulse/extraction/progress.md`
   (`kind: insight-extraction-progress`, §4.10.10) — per-scope status
   `pending | running | complete | failed`, files done/total within each
   scope, checkpoints, and warnings (missing fragments, validation failures).

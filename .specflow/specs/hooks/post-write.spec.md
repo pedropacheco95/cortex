@@ -19,7 +19,7 @@ The PostWrite hook keeps anatomy honest at the moment a file changes: after a su
 ## Entities
 
 - **READS:** stdin JSON (`tool_name`, `tool_input.file_path`, `cwd`); the written file's content on disk (post-write state); `.cortex/anatomy/files.md` (the row to update); `.gitignore` + `cortex.config.json` `anatomy.exclude` (exclusion check).
-- **WRITES:** `.cortex/anatomy/files.md` (one row updated or appended); `.cortex/pulse/hook-errors.md` (append, only on internal error).
+- **WRITES:** `.cortex/anatomy/files.md` (one row updated or appended); `.cortex/pulse/reports/hook-errors.md` (append, only on internal error).
 - **CREATES:** nothing.
 
 ## Rules
@@ -30,7 +30,7 @@ The PostWrite hook keeps anatomy honest at the moment a file changes: after a su
 4. **Unchanged content is a no-op.** If the recomputed `sha256` equals the row's existing hash, the row is left untouched (including its flag and `last_seen`).
 5. **New files are appended** with a placeholder purpose and `needs_purpose_refresh: true`, matching the scanner's row conventions.
 6. **Exclusions respected.** A path matched by `.gitignore` or `anatomy.exclude` → no-op. A path outside the project root → no-op.
-7. **Missing substrate is silence, corruption is a log.** No `.cortex/` or no `anatomy/files.md` → silent no-op (the project isn't scanned). A `files.md` that exists but cannot be parsed → **no write at all** (never destroy the artefact), append a structured entry to `.cortex/pulse/hook-errors.md`, exit 0.
+7. **Missing substrate is silence, corruption is a log.** No `.cortex/` or no `anatomy/files.md` → silent no-op (the project isn't scanned). A `files.md` that exists but cannot be parsed → **no write at all** (never destroy the artefact), append a structured entry to `.cortex/pulse/reports/hook-errors.md`, exit 0.
 8. **Deterministic and offline.** Pure Node file I/O; no network, no LLM, no subprocess.
 
 ## Acceptance Criteria
@@ -72,7 +72,7 @@ The PostWrite hook keeps anatomy honest at the moment a file changes: after a su
 - **Given** an `anatomy/files.md` with a truncated, unparseable table
 - **When** the hook runs after a Write
 - **Then** `files.md` is byte-identical to before, exit code 0
-- **And** `.cortex/pulse/hook-errors.md` gains an entry naming the hook and the parse failure
+- **And** `.cortex/pulse/reports/hook-errors.md` gains an entry naming the hook and the parse failure
 
 ### No graph or purpose work in the fast tier
 

@@ -1,7 +1,7 @@
 /**
  * Spec-level tests — loops.spec-drift, one describe per acceptance
  * criterion, over realistic git fixtures with backdated commits. The report
- * is `.cortex/pulse/spec-drift.md` and nothing else (tree-snapshot AC).
+ * is `.cortex/pulse/reports/spec-drift.md` and nothing else (tree-snapshot AC).
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import * as path from 'path';
@@ -31,7 +31,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const REPORT_REL = path.join('.cortex', 'pulse', 'spec-drift.md');
+const REPORT_REL = path.join('.cortex', 'pulse', 'reports', 'spec-drift.md');
 
 function makeDriftProject(label: string): string {
   const root = tmp(label);
@@ -149,7 +149,7 @@ describe('Always-write (schema §4.5) and non-repo handling', () => {
 });
 
 describe('AC: Only the report is written', () => {
-  it('a full-tree snapshot differs only by pulse/spec-drift.md', async () => {
+  it('a full-tree snapshot differs only by pulse/reports/spec-drift.md', async () => {
     const root = makeDriftProject('only-report');
     const before = snapshotTree(root);
     await runSpecDrift(root);

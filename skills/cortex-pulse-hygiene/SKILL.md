@@ -5,7 +5,7 @@ description: >-
   scheduled hygiene task, or when the user says "run the hygiene loop",
   "hygiene sweep", "project health check", or asks what unfinished or broken
   state the project has. Invokes `cortex pulse-hygiene` and summarises
-  .cortex/pulse/hygiene-report.md.
+  .cortex/pulse/reports/hygiene.md.
 ---
 
 # cortex-pulse-hygiene
@@ -14,7 +14,7 @@ You are a thin wrapper around the deterministic Core sweep. The CLI does the
 work; you run it, read it, and report it.
 
 1. From the project root, run `cortex pulse-hygiene`.
-2. Read `.cortex/pulse/hygiene-report.md`.
+2. Read `.cortex/pulse/reports/hygiene.md`.
 3. Summarise the findings to the user, section by section (branches, PRs,
    insight drift, compass dead references, spec orphans, aged TODOs), and
    name any skipped checks and the thresholds from the report footer.

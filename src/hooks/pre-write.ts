@@ -169,7 +169,7 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     // Rule 6: degradation line rides along only when other output is emitted.
     if (malformedCount > 0) {
       warnings.push(
-        `⚠ Cortex: ${malformedCount} rule file(s) could not be parsed and were skipped — see .cortex/pulse/hook-errors.md.`,
+        `⚠ Cortex: ${malformedCount} rule file(s) could not be parsed and were skipped — see .cortex/pulse/reports/hook-errors.md.`,
       );
     }
 

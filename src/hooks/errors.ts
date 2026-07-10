@@ -1,5 +1,5 @@
 /**
- * `.cortex/pulse/hook-errors.md` — the hooks' degradation log (schema §4.5).
+ * `.cortex/pulse/reports/hook-errors.md` — the hooks' degradation log (schema §4.5).
  *
  * Hooks APPEND one structured entry per internal error (hook name, file
  * involved, failure, iso-datetime), capped at the most recent 100 entries.
@@ -11,6 +11,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { renameIfLegacy } from '../pulse/migrate.js';
 
 export interface HookErrorEntry {
   /** The hook that degraded, e.g. `session-start`, `pre-write`, `post-write`. */
@@ -39,9 +40,13 @@ export function appendHookError(root: string, entry: HookErrorEntry, now: Date =
   try {
     const cortexDir = path.join(root, '.cortex');
     if (!fs.existsSync(cortexDir)) return;
-    const pulseDir = path.join(cortexDir, 'pulse');
-    fs.mkdirSync(pulseDir, { recursive: true });
-    const filePath = path.join(pulseDir, 'hook-errors.md');
+    const reportsDir = path.join(cortexDir, 'pulse', 'reports');
+    const filePath = path.join(reportsDir, 'hook-errors.md');
+    // Cheap O(1) self-heal: a hook can be the first thing to touch pulse/ this
+    // session, before any loop ran the full migration — carry a legacy flat
+    // hook-errors.md into reports/ so its capped history isn't orphaned.
+    renameIfLegacy(path.join(cortexDir, 'pulse', 'hook-errors.md'), filePath);
+    fs.mkdirSync(reportsDir, { recursive: true });
 
     // Collect existing entry lines (append-not-overwrite, §4.5).
     const existing: string[] = [];
@@ -84,7 +89,8 @@ ${kept.join('\n')}
 /** Parse the entry lines back out (test/consumer convenience). */
 export function readHookErrorEntries(root: string): string[] {
   try {
-    const filePath = path.join(root, '.cortex', 'pulse', 'hook-errors.md');
+    const filePath = path.join(root, '.cortex', 'pulse', 'reports', 'hook-errors.md');
+    renameIfLegacy(path.join(root, '.cortex', 'pulse', 'hook-errors.md'), filePath);
     if (!fs.existsSync(filePath)) return [];
     return fs
       .readFileSync(filePath, 'utf-8')

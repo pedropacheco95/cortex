@@ -34,3 +34,5 @@ When a class of behaviour is implemented by two or more modules with the same co
 ## Intent
 
 Fewer permission checks, more executed work per round. When in doubt about which bucket a decision falls in, the tiebreaker is blast radius: contained-and-reversible → act and report; architectural-or-rippling → ask.
+
+When running two or more subagents in parallel on the same working tree (each touching a disjoint file set), a subagent's own in-session test-suite run can observe a sibling's concurrent in-flight edits and report false failures. Treat only the orchestrator's full-suite verification run, performed after every agent in the parallel batch has completed, as authoritative.

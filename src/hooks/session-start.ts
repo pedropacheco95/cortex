@@ -2,7 +2,7 @@
  * SessionStart hook (spec hooks.session-start).
  *
  * Injects the schema §5 pointer payload (<100 tokens) on every session source,
- * plus a one-line hygiene summary when `pulse/hygiene-report.md` is fresh.
+ * plus a one-line hygiene summary when `pulse/reports/hygiene.md` is fresh.
  * Warn-never-block, self-applied: every internal error degrades to whatever
  * part of the payload is still derivable and logs to pulse/hook-errors.md.
  */
@@ -108,7 +108,7 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     ];
 
     // Rule 3: hygiene line iff the report exists and `generated` is fresh.
-    const reportRel = '.cortex/pulse/hygiene-report.md';
+    const reportRel = '.cortex/pulse/reports/hygiene.md';
     const reportPath = path.join(root, reportRel);
     if (fs.existsSync(reportPath)) {
       try {

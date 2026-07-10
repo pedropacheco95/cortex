@@ -89,7 +89,7 @@ function scenarioSpec(name: string, covers: string[]): string {
 }
 
 function report(root: string): string {
-  return fs.readFileSync(path.join(root, '.cortex', 'pulse', VERIFICATION_REPORT_FILE), 'utf-8');
+  return fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', VERIFICATION_REPORT_FILE), 'utf-8');
 }
 
 // ===========================================================================
@@ -253,14 +253,14 @@ describe('Clean fixture is a stated clean run', () => {
 // AC — Only the report is written
 // ===========================================================================
 describe('Only the report is written', () => {
-  it('a run touches only pulse/verification-report.md', async () => {
+  it('a run touches only pulse/reports/verification.md', async () => {
     const root = makeProject('blast');
     writeAt(root, '.specflow/specs-business/x/y.business.md', bizSpec('x.y'));
     writeAt(root, '.specflow/specs/c/d.spec.md', devSpec('c.d', '../../specs-business/x/y.business.md'));
     const before = snapshotTree(root);
     expect(await runVerifyScheduled(root)).toBe(0);
     const after = snapshotTree(root);
-    const allowed = path.join('.cortex', 'pulse', VERIFICATION_REPORT_FILE);
+    const allowed = path.join('.cortex', 'pulse', 'reports', VERIFICATION_REPORT_FILE);
     const keys = new Set([...before.keys(), ...after.keys()]);
     for (const key of keys) {
       if (key === allowed) continue;

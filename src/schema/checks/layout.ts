@@ -83,6 +83,13 @@ export function checkIndexPresent(root: string): Violation[] {
   // `documents/` subtree and the `types/` directory, mirroring insight's data trees.
   const archiveDocuments = path.join(cortexDir, 'archive', 'documents');
   const archiveTypes = path.join(cortexDir, 'archive', 'types');
+  // §4.5 (B-008): everything under `pulse/` is transient/generated working state
+  // (loop reports, machine state, extraction fragments — reports/, state/,
+  // state/reads/, extraction/, extraction/fragments/, …), not navigable module
+  // indexes. Exempt the WHOLE pulse subtree from the `_index.md` requirement.
+  // `pulse/` itself is the module root and still requires `_index.md` — only its
+  // descendants are exempt (note `startsWith(pulseRoot + path.sep)`, not `=== pulseRoot`).
+  const pulseRoot = path.join(cortexDir, 'pulse');
 
   function walkDir(dir: string): void {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -91,7 +98,8 @@ export function checkIndexPresent(root: string): Violation[] {
       insightDataRoots.some((d) => dir === d || dir.startsWith(d + path.sep)) ||
       dir === archiveTypes ||
       dir === archiveDocuments ||
-      dir.startsWith(archiveDocuments + path.sep);
+      dir.startsWith(archiveDocuments + path.sep) ||
+      dir.startsWith(pulseRoot + path.sep);
     if (!hasIndex && !exempt) {
       violations.push({
         severity: 'error',

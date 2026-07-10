@@ -59,7 +59,9 @@ function makeProject(label: string, config: Record<string, unknown> = {}): strin
 }
 
 function pulsePath(root: string, name: string): string {
-  return path.join(root, '.cortex', 'pulse', name);
+  const p = path.join(root, '.cortex', 'pulse', name);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  return p;
 }
 
 function writeTranscript(home: string, root: string, id: string, texts: string[], mtime?: Date): string {
@@ -100,7 +102,7 @@ describe('Collect is project-scoped and windowed', () => {
     const root = makeProject('collect');
     const home = tmp('collect-home');
     const lastRun = new Date('2026-06-20T00:00:00Z');
-    fs.writeFileSync(pulsePath(root, DISTIL_LAST_RUN_FILE), lastRun.toISOString(), 'utf-8');
+    fs.writeFileSync(pulsePath(root, path.join('state', DISTIL_LAST_RUN_FILE)), lastRun.toISOString(), 'utf-8');
 
     writeTranscript(home, root, 'new-session', ['please use pnpm'], new Date('2026-06-25T00:00:00Z'));
     writeTranscript(home, root, 'old-session', ['ancient message'], new Date('2026-06-10T00:00:00Z'));
@@ -216,7 +218,7 @@ loop: cortex-init
 describe('Ids allocated from the shared counter, provenance attached', () => {
   it('counter at 7 + two passing candidates → S-008 and S-009 with distil provenance; counter reads 9', () => {
     const root = makeProject('ids');
-    fs.writeFileSync(pulsePath(root, '.suggestion-counter'), '7', 'utf-8');
+    fs.writeFileSync(pulsePath(root, path.join('state', 'suggestion-counter')), '7', 'utf-8');
     proposeFromCandidates(root, [
       cand({ pattern: 'first pattern', sessionIds: ['sess-a', 'sess-b'] }),
       cand({ pattern: 'second pattern', proposedText: 'Other text.', sessionIds: ['sess-c'] }),
@@ -226,7 +228,7 @@ describe('Ids allocated from the shared counter, provenance attached', () => {
     expect(report).toContain('## S-009: second pattern');
     expect(report).toContain('**Source:** distil (sessions: sess-a, sess-b)');
     expect(report).toContain('**Source:** distil (sessions: sess-c)');
-    expect(fs.readFileSync(pulsePath(root, '.suggestion-counter'), 'utf-8').trim()).toBe('9');
+    expect(fs.readFileSync(pulsePath(root, path.join('state', 'suggestion-counter')), 'utf-8').trim()).toBe('9');
   });
 });
 
@@ -258,7 +260,7 @@ Old proposed text.
   it('a still-pending S-008 whose pattern recurs is carried forward with its id and Source', () => {
     const root = makeProject('carry');
     fs.writeFileSync(pulsePath(root, 'suggestions.md'), PRIOR, 'utf-8');
-    fs.writeFileSync(pulsePath(root, '.suggestion-counter'), '8', 'utf-8');
+    fs.writeFileSync(pulsePath(root, path.join('state', 'suggestion-counter')), '8', 'utf-8');
 
     const counts = proposeFromCandidates(root, [
       cand({ pattern: 'recurring pattern', sessionIds: ['sess-new'], proposedText: 'Refreshed text.' }),
@@ -270,7 +272,7 @@ Old proposed text.
     // Carried sections keep their original Source (no provenance churn).
     expect(report).toContain('**Source:** distil (sessions: sess-old)');
     expect(report).toContain('## S-009: brand new pattern');
-    expect(fs.readFileSync(pulsePath(root, '.suggestion-counter'), 'utf-8').trim()).toBe('9');
+    expect(fs.readFileSync(pulsePath(root, path.join('state', 'suggestion-counter')), 'utf-8').trim()).toBe('9');
   });
 
   it('an already-decided prior section is NOT carried forward (only the still-pending carry)', () => {
@@ -280,7 +282,7 @@ Old proposed text.
       PRIOR.replace('**Pattern:** recurring pattern', '**Status:** accepted\n**Pattern:** recurring pattern'),
       'utf-8',
     );
-    fs.writeFileSync(pulsePath(root, '.suggestion-counter'), '8', 'utf-8');
+    fs.writeFileSync(pulsePath(root, path.join('state', 'suggestion-counter')), '8', 'utf-8');
     const counts = proposeFromCandidates(root, [cand({ pattern: 'recurring pattern' })]);
     expect(counts.carried).toBe(0);
     const report = fs.readFileSync(pulsePath(root, 'suggestions.md'), 'utf-8');
@@ -299,11 +301,11 @@ describe('Subprocess degradation', () => {
     expect(code).toBe(0);
     const report = fs.readFileSync(pulsePath(root, 'suggestions.md'), 'utf-8');
     expect(report).toMatch(/judgment pass skipped/i);
-    expect(report).toContain('.session-corpus.json');
+    expect(report).toContain('state/session-corpus.json');
     // Collect output is retained for the scheduled skill run.
-    expect(fs.existsSync(pulsePath(root, CORPUS_FILE))).toBe(true);
+    expect(fs.existsSync(pulsePath(root, path.join('state', CORPUS_FILE)))).toBe(true);
     // The window stays open: .distil-last-run is NOT advanced by a degraded run.
-    expect(fs.existsSync(pulsePath(root, DISTIL_LAST_RUN_FILE))).toBe(false);
+    expect(fs.existsSync(pulsePath(root, path.join('state', DISTIL_LAST_RUN_FILE)))).toBe(false);
   }, TEST_TIMEOUT);
 
   it('--no-llm degrades identically and preserves still-pending proposals verbatim', async () => {
@@ -377,11 +379,12 @@ JSON
     expect(code).toBe(0);
     const after = snapshotTree(root);
 
-    const allowed = new Set(
-      ['suggestions.md', CORPUS_FILE, DISTIL_LAST_RUN_FILE, '.suggestion-counter'].map((f) =>
-        path.join('.cortex', 'pulse', f),
-      ),
-    );
+    const allowed = new Set([
+      path.join('.cortex', 'pulse', 'suggestions.md'),
+      path.join('.cortex', 'pulse', 'state', CORPUS_FILE),
+      path.join('.cortex', 'pulse', 'state', DISTIL_LAST_RUN_FILE),
+      path.join('.cortex', 'pulse', 'state', 'suggestion-counter'),
+    ]);
     const keys = new Set([...before.keys(), ...after.keys()]);
     for (const key of keys) {
       if (allowed.has(key)) continue;
@@ -389,7 +392,7 @@ JSON
     }
     // And the run actually proposed + recorded its moment.
     expect(after.get(path.join('.cortex', 'pulse', 'suggestions.md'))).toContain('S-001');
-    expect(after.has(path.join('.cortex', 'pulse', DISTIL_LAST_RUN_FILE))).toBe(true);
+    expect(after.has(path.join('.cortex', 'pulse', 'state', DISTIL_LAST_RUN_FILE))).toBe(true);
   }, TEST_TIMEOUT);
 });
 
@@ -441,7 +444,7 @@ describe('Always-write: a quiet week still writes the report', () => {
     expect(parsed.data['loop']).toBe('cortex-pulse-distil');
     expect(report).toContain('No new patterns this cycle.');
     // Rule 7: the successful proposing run records its moment.
-    expect(fs.existsSync(pulsePath(root, DISTIL_LAST_RUN_FILE))).toBe(true);
+    expect(fs.existsSync(pulsePath(root, path.join('state', DISTIL_LAST_RUN_FILE)))).toBe(true);
   });
 });
 
@@ -464,7 +467,7 @@ describe('Shipped skills/cortex-pulse-distil/SKILL.md is pinned', () => {
 
   it('instructs: run --collect, judge IN-SESSION (never a nested claude, never bare), scratchpad JSON, run --propose', () => {
     expect(body).toContain('cortex pulse-distil --collect');
-    expect(body).toContain('.cortex/pulse/.session-corpus.json');
+    expect(body).toContain('.cortex/pulse/state/session-corpus.json');
     expect(body).toMatch(/in this session/i);
     expect(body).toMatch(/never spawn a nested\s+`claude` subprocess/i);
     expect(body).toMatch(/never run bare `cortex pulse-distil`/i);

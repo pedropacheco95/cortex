@@ -17,12 +17,13 @@ governs:
 
 ## Intent
 
-`cortex pulse-hygiene` is the daily deterministic sweep (design §10.2): it surveys the project for unfinished or broken state and writes `pulse/hygiene-report.md`, which the SessionStart hook already surfaces (freshness window, schema §5). Deterministic Core CLI; the shipped `cortex-pulse-hygiene` skill bundle wraps it for scheduled runs.
+`cortex pulse-hygiene` is the daily deterministic sweep (design §10.2): it surveys the project for unfinished or broken state and writes `pulse/reports/hygiene.md`, which the SessionStart hook already surfaces (freshness window, schema §5). Deterministic Core CLI; the shipped `cortex-pulse-hygiene` skill bundle wraps it for scheduled runs.
 
 ## Entities
 
 - **READS:** git state (local branches, last-commit ages); `.cortex/anatomy/files.md` vs the filesystem; cerebrum rules/bugs cross-refs; the spec trees; project files (TODO/FIXME scan); `gh` CLI output when available (open PRs).
-- **WRITES:** `.cortex/pulse/hygiene-report.md` — nothing else, ever (design §11.3 property 2).
+- **WRITES:** `.cortex/pulse/reports/hygiene.md` — the only file it writes, ever (design §11.3 property 2).
+- **DELETES:** stale per-session read ledgers under `.cortex/pulse/state/reads/` whose mtime is older than the retention window (default 14 days) — the sole deletion this loop performs; the count deleted is reported in `reports/hygiene.md`.
 - **CREATES:** the report per schema §4.5 (`kind: pulse-hygiene-report`, always-write convention).
 
 ## Rules
@@ -32,7 +33,8 @@ governs:
 3. **Always-write (schema §4.5).** Every run overwrites the report with a fresh `generated`; a clean project yields explicit "No findings this cycle." sections.
 4. **Report shape.** One `##` section per check with concrete findings ("thing, problem, suggested next step") — no scores. Footer names skipped checks (gh absent, drop-off detection deferred) and the thresholds used.
 5. **Mid-conversation drop-off detection is deferred** to the agentic layer (design §10.2 names it the sole LLM check): the CLI's footer states it was not run; the skill bundle may add it in a later round. Never blocks the deterministic sweep.
-6. **Read-only Core.** No LLM, no mutation of anything but its own report, no network beyond `gh`/`git ls-remote` queries (observing remotes is reading, not egress of content). Governed by R-001.
+6. **Read-only Core.** No LLM, no mutation of anything but its own report and the reads-ledger pruning of Rule 7, no network beyond `gh`/`git ls-remote` queries (observing remotes is reading, not egress of content). Governed by R-001.
+7. **Reads-ledger retention (the one sanctioned deletion).** Delete every `pulse/state/reads/<session-id>` ledger whose mtime is older than `READS_RETENTION_DAYS` (default 14, currently in-code in `src/pulse/hygiene.ts`; flagged as a future `cortex.config.json` `pulse.readsRetentionDays` key, schema §10.1). The count deleted is reported in a report section; a run with none to prune reports "No reads ledgers past retention this cycle." No other `pulse/state/`, `reports/`, or `extraction/` file is ever deleted.
 
 ## Acceptance Criteria
 
@@ -40,7 +42,7 @@ governs:
 
 - **Given** a freshly initialised, fully conformant project with one branch and no TODOs
 - **When** `cortex pulse-hygiene` runs
-- **Then** `pulse/hygiene-report.md` has `kind: pulse-hygiene-report`, a fresh `generated`, and every section reads "No findings this cycle."
+- **Then** `pulse/reports/hygiene.md` has `kind: pulse-hygiene-report`, a fresh `generated`, and every section reads "No findings this cycle."
 
 ### Anatomy drift both directions
 
@@ -69,7 +71,7 @@ governs:
 ### Only the report is written
 
 - **Given** any run
-- **Then** the only file created or modified under the project is `pulse/hygiene-report.md`
+- **Then** the only file created or modified under the project is `pulse/reports/hygiene.md` (aside from the Rule 7 pruning of aged `pulse/state/reads/` ledgers)
 
 ## Notes
 

@@ -20,19 +20,19 @@ The PostRead hook is the capture half of refine-during-use (design §5): after a
 
 ## Entities
 
-- **READS:** stdin (`transcript_path`, `cwd`); the transcript's recent assistant messages; `.cortex/anatomy/files.md`; `pulse/.readback-applied` (applied-tag memory).
-- **WRITES:** `.cortex/anatomy/files.md` (matched rows); `pulse/.readback-applied`; `pulse/hook-errors.md` (degradation only).
+- **READS:** stdin (`transcript_path`, `cwd`); the transcript's recent assistant messages; `.cortex/anatomy/files.md`; `pulse/state/readback-applied` (applied-tag memory).
+- **WRITES:** `.cortex/anatomy/files.md` (matched rows); `pulse/state/readback-applied`; `pulse/reports/hook-errors.md` (degradation only).
 - **CREATES:** nothing else.
 
 ## Rules
 
 1. **Invocation.** Registered by init under `PostToolUse` matcher `Read` as `cortex hook post-read`, paired with pre-read under the one `hooks.preRead` flag (schema §5, §10.1).
 2. **Always silent.** Exit 0, empty stdout, every case — the PostWrite envelope discipline.
-3. **Sweep.** Parse `<cortex:purpose file="...">...</cortex:purpose>` tags from the transcript's recent assistant messages (bounded tail — engineering-call constant, footer of the module). Tags already in `pulse/.readback-applied` (hashed) are skipped.
-4. **Validation.** The `file` attribute must have a `files.md` row (project-relative after normalisation); the payload must be non-empty, single-line, sanitized to the row grammar, ≤120 chars — **a writeback-specific ceiling, not an anatomy-wide purpose limit** (schema §5; existing purposes are untouched by it). Invalid tags are recorded to `hook-errors.md` and remembered as processed (no retry storms).
+3. **Sweep.** Parse `<cortex:purpose file="...">...</cortex:purpose>` tags from the transcript's recent assistant messages (bounded tail — engineering-call constant, footer of the module). Tags already in `pulse/state/readback-applied` (hashed) are skipped.
+4. **Validation.** The `file` attribute must have a `files.md` row (project-relative after normalisation); the payload must be non-empty, single-line, sanitized to the row grammar, ≤120 chars — **a writeback-specific ceiling, not an anatomy-wide purpose limit** (schema §5; existing purposes are untouched by it). Invalid tags are recorded to `reports/hook-errors.md` and remembered as processed (no retry storms).
 5. **Apply.** Purpose + `purpose_source: read-time` + `last_seen` in one atomic row write (the coordination pin); `needs_purpose_refresh` cleared. `read-time` sits atop the trust ordering, so the write is always permitted; bulk tiers may not overwrite it until the file's content changes (schema §4.1 — enforced by those tiers, asserted here).
 6. **Applied-tag memory is transient and per-session** (schema §5): it exists only to avoid redundant writes within a session; it carries no cross-session guarantee, because re-applying an identical tag is idempotent. No persistence machinery.
-7. **Degradation.** Unreadable transcript, corrupt anatomy → no write, `hook-errors.md` entry, exit 0. Deterministic Core (R-001) — the hook never calls an LLM; it captures what the session already said.
+7. **Degradation.** Unreadable transcript, corrupt anatomy → no write, `reports/hook-errors.md` entry, exit 0. Deterministic Core (R-001) — the hook never calls an LLM; it captures what the session already said.
 
 ## Acceptance Criteria
 
@@ -45,7 +45,7 @@ The PostRead hook is the capture half of refine-during-use (design §5): after a
 
 ### Same tag not applied twice in a session
 
-- **Given** the tag was applied and recorded in `.readback-applied`
+- **Given** the tag was applied and recorded in `state/readback-applied`
 - **When** a later Read fires the hook
 - **Then** `files.md` is byte-identical
 
@@ -53,7 +53,7 @@ The PostRead hook is the capture half of refine-during-use (design §5): after a
 
 - **Given** tags with an unknown `file`, a multi-line payload, and a 300-char payload
 - **When** the hook fires
-- **Then** no row changes, each is recorded to `hook-errors.md` once, and none is retried on the next fire
+- **Then** no row changes, each is recorded to `reports/hook-errors.md` once, and none is retried on the next fire
 
 ### Deep tier respects the trust ordering (cross-tier regression)
 
@@ -69,7 +69,7 @@ The PostRead hook is the capture half of refine-during-use (design §5): after a
 ### Transcript unavailable degrades silently
 
 - **Given** a missing `transcript_path`
-- **Then** exit 0, empty stdout, one `hook-errors.md` entry
+- **Then** exit 0, empty stdout, one `reports/hook-errors.md` entry
 
 ## Notes
 

@@ -120,7 +120,7 @@ describe('AC: three-tier round-trip — fast flags, daily reconciles, full bless
     const ledger = readLedger(root) as LedgerFile;
     expect(ledger.entries['src/a.ts']?.built_at_commit).toBe(headShort(root));
     expect(readWorklist(root)).toEqual([]);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', INSIGHT_REFRESH_REPORT_FILE))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'reports', INSIGHT_REFRESH_REPORT_FILE))).toBe(true);
     // Reverse-dependency invalidation reached the referencing concept + edge.
     expect(ledger.stale).toContain('concept:alpha');
 
@@ -134,7 +134,7 @@ describe('AC: three-tier round-trip — fast flags, daily reconciles, full bless
     expect(blessed.stale).toEqual([]); // ground truth clears the stale set
     expect(headShort(root)).not.toBe(baseline);
 
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', INSIGHT_REFRESH_REPORT_FILE), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', INSIGHT_REFRESH_REPORT_FILE), 'utf-8');
     expect(report).toContain('kind: insight-refresh');
     expect(report).toContain('loop: cortex-loop-insight-refresh-full');
   });
@@ -167,10 +167,13 @@ describe('AC: loop-write invariant — every write under .cortex/insight/ + puls
     for (const [p, content] of before) {
       expect(fs.readFileSync(p, 'utf-8'), p).toBe(content);
     }
-    // Pulse artefacts are the worklists + the report only — no proposal file.
-    const pulseFiles = fs.readdirSync(path.join(root, '.cortex', 'pulse')).sort();
-    expect(pulseFiles).toEqual([INSIGHT_WORKLIST_FILE, DAILY_WORKLIST_FILE, INSIGHT_REFRESH_REPORT_FILE].sort());
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', INSIGHT_REFRESH_REPORT_FILE), 'utf-8');
+    // Pulse artefacts are the worklists (state/) + the report (reports/) only —
+    // no proposal file, and nothing unexpected in either zone.
+    const stateFiles = fs.readdirSync(path.join(root, '.cortex', 'pulse', 'state')).sort();
+    expect(stateFiles).toEqual([INSIGHT_WORKLIST_FILE, DAILY_WORKLIST_FILE].sort());
+    const reportFiles = fs.readdirSync(path.join(root, '.cortex', 'pulse', 'reports')).sort();
+    expect(reportFiles).toEqual([INSIGHT_REFRESH_REPORT_FILE]);
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', INSIGHT_REFRESH_REPORT_FILE), 'utf-8');
     expect(report).not.toContain('**Target:**'); // no proposal sections
   });
 });

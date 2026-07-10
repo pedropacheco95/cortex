@@ -2,9 +2,9 @@
  * `cortex loop-bug-triage` — the daily bug-ledger triage loop (spec
  * loops.bug-triage, design §11.4 item 13). Deterministic bookends around an
  * agentic middle, same shape as distil: `--collect` partitions open bugs into
- * unclassified/classified and writes `pulse/.triage-worklist.json`;
+ * unclassified/classified and writes `pulse/state/triage-worklist.json`;
  * `--report <results.json>` applies the judgment's results deterministically
- * and always-writes `pulse/bug-triage.md`. Bare CLI = collect → headless
+ * and always-writes `pulse/reports/bug-triage.md`. Bare CLI = collect → headless
  * Claude judgment (core-cli.init Rule 6 subprocess semantics) → report. The
  * shipped skill does the judgment in-session instead.
  *
@@ -22,7 +22,7 @@ import { parseCandidatesFromOutput } from '../pulse/distil.js';
 import { AUTH_FAILURE_PATTERN } from '../cli/claude-auth.js';
 import { writePulseReport } from './report.js';
 
-export const TRIAGE_WORKLIST_FILE = '.triage-worklist.json';
+export const TRIAGE_WORKLIST_FILE = 'triage-worklist.json';
 export const BUG_TRIAGE_REPORT_FILE = 'bug-triage.md';
 
 /** Aged threshold (spec Rule 5): open longer than this is reported. */
@@ -141,9 +141,9 @@ export interface CollectResult {
 /** `--collect`: partition open bugs and write the worklist (Rule 1). */
 export function collectTriageWorklist(root: string, now: Date = new Date()): CollectResult {
   const worklist = partitionWorklist(scanOpenBugs(root), now.toISOString());
-  const pulseDir = path.join(root, '.cortex', 'pulse');
-  fs.mkdirSync(pulseDir, { recursive: true });
-  const worklistPath = path.join(pulseDir, TRIAGE_WORKLIST_FILE);
+  const stateDir = path.join(root, '.cortex', 'pulse', 'state');
+  fs.mkdirSync(stateDir, { recursive: true });
+  const worklistPath = path.join(stateDir, TRIAGE_WORKLIST_FILE);
   fs.writeFileSync(worklistPath, JSON.stringify(worklist, null, 2) + '\n', 'utf-8');
   return { worklistPath, unclassified: worklist.unclassified.length, classified: worklist.classified.length };
 }
@@ -446,7 +446,7 @@ function runClaudeJudgment(bin: string, prompt: string, cwd: string, timeoutMs: 
 
 function judgmentPrompt(): string {
   return (
-    `Read .cortex/pulse/${TRIAGE_WORKLIST_FILE} — this project's open bugs partitioned into unclassified and ` +
+    `Read .cortex/pulse/state/${TRIAGE_WORKLIST_FILE} — this project's open bugs partitioned into unclassified and ` +
     `classified. Classify EVERY listed bug against the seven-type taxonomy ` +
     `(${BUG_TYPES.join(', ')}) with the specflow-bugs diagnostic discipline: walk the spec-model layers to the ` +
     `root cause before naming a type. Output ONLY a JSON array of results, each shaped ` +
@@ -482,7 +482,7 @@ export async function runBugTriage(root = '.', opts: BugTriageOptions = {}): Pro
   if (opts.collect) {
     const result = collectTriageWorklist(absRoot, now);
     console.log(
-      `cortex loop-bug-triage: worklist written to .cortex/pulse/${TRIAGE_WORKLIST_FILE} ` +
+      `cortex loop-bug-triage: worklist written to .cortex/pulse/state/${TRIAGE_WORKLIST_FILE} ` +
         `(${result.unclassified} unclassified, ${result.classified} classified open bug(s)).`,
     );
     return 0;
@@ -504,7 +504,7 @@ export async function runBugTriage(root = '.', opts: BugTriageOptions = {}): Pro
     const app = applyTriageResults(absRoot, raw);
     writeBugTriageReport(absRoot, app, now);
     console.log(
-      `cortex loop-bug-triage: wrote .cortex/pulse/${BUG_TRIAGE_REPORT_FILE} (${app.filled.length} filled, ` +
+      `cortex loop-bug-triage: wrote .cortex/pulse/reports/${BUG_TRIAGE_REPORT_FILE} (${app.filled.length} filled, ` +
         `${app.agreements.length} agreement(s), ${app.divergences.length} divergence(s), ${app.invalid} skipped).`,
     );
     return 0;
@@ -529,7 +529,7 @@ export async function runBugTriage(root = '.', opts: BugTriageOptions = {}): Pro
 
   if (opts.noLlm) {
     return degrade(
-      `judgment pass skipped (--no-llm); worklist retained at .cortex/pulse/${TRIAGE_WORKLIST_FILE} for the scheduled skill run.`,
+      `judgment pass skipped (--no-llm); worklist retained at .cortex/pulse/state/${TRIAGE_WORKLIST_FILE} for the scheduled skill run.`,
       0,
     );
   }
@@ -545,28 +545,28 @@ export async function runBugTriage(root = '.', opts: BugTriageOptions = {}): Pro
       // Named failure (core-cli.init Rule 6 semantics: auth is exit 3, actionable).
       return degrade(
         `judgment pass failed: ${outcome.detail}. Authenticate the Claude CLI (run \`claude\` and log in via /login), ` +
-          `then re-run — worklist retained at .cortex/pulse/${TRIAGE_WORKLIST_FILE}.`,
+          `then re-run — worklist retained at .cortex/pulse/state/${TRIAGE_WORKLIST_FILE}.`,
         3,
       );
     case 'no-binary':
     case 'timeout':
     case 'error':
       return degrade(
-        `judgment pass skipped (${outcome.detail}); worklist retained at .cortex/pulse/${TRIAGE_WORKLIST_FILE} for the scheduled skill run.`,
+        `judgment pass skipped (${outcome.detail}); worklist retained at .cortex/pulse/state/${TRIAGE_WORKLIST_FILE} for the scheduled skill run.`,
         0,
       );
     case 'ok': {
       const results = parseCandidatesFromOutput(outcome.stdout);
       if (results === null) {
         return degrade(
-          `judgment pass produced no usable results JSON; worklist retained at .cortex/pulse/${TRIAGE_WORKLIST_FILE} for the scheduled skill run.`,
+          `judgment pass produced no usable results JSON; worklist retained at .cortex/pulse/state/${TRIAGE_WORKLIST_FILE} for the scheduled skill run.`,
           0,
         );
       }
       const app = applyTriageResults(absRoot, results);
       writeBugTriageReport(absRoot, app, now);
       console.log(
-        `cortex loop-bug-triage: wrote .cortex/pulse/${BUG_TRIAGE_REPORT_FILE} (${app.filled.length} filled, ` +
+        `cortex loop-bug-triage: wrote .cortex/pulse/reports/${BUG_TRIAGE_REPORT_FILE} (${app.filled.length} filled, ` +
           `${app.agreements.length} agreement(s), ${app.divergences.length} divergence(s), ${app.invalid} skipped).`,
       );
       return 0;

@@ -50,7 +50,7 @@ describe('loops.lint-scheduled integrated slice (through cortex CLI run())', () 
     copyDir(VALID_FIXTURE, root);
     process.chdir(root);
     expect(await run(['loop-specflow-lint'])).toBe(0);
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'lint-report.md'), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'lint.md'), 'utf-8');
     expect(report).toContain('kind: pulse-lint-report');
     expect(report).toMatch(/generated: \d{4}-/);
     expect(report).toContain('Spec tree structurally sound.');
@@ -62,7 +62,7 @@ describe('loops.lint-scheduled integrated slice (through cortex CLI run())', () 
     fs.rmSync(path.join(root, '.specflow', 'specs', 'schema', '_overview.md'));
     process.chdir(root);
     expect(await run(['loop-specflow-lint'])).toBe(0);
-    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'lint-report.md'), 'utf-8');
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'lint.md'), 'utf-8');
     expect(report).toContain('## check.overview-present');
     expect(report).toMatch(/error\(s\), \d+ warning\(s\) across the spec trees\./);
   }, TEST_TIMEOUT);

@@ -112,7 +112,7 @@ function bugFiles(root: string): string[] {
 }
 
 function readReport(root: string): { kind: string | null; loop: string | null; body: string } {
-  return parsePulseReport(path.join(root, '.cortex', 'pulse', TEST_FAILURES_REPORT_FILE));
+  return parsePulseReport(path.join(root, '.cortex', 'pulse', 'reports', TEST_FAILURES_REPORT_FILE));
 }
 
 // ===========================================================================
@@ -386,7 +386,7 @@ describe('Skill flow: --collect then --fix-stage (Rule 10)', () => {
       expect(exitCollect).toBe(0);
       expect(readCalls(sb.rec)).toEqual([]);
       const worklist = JSON.parse(
-        fs.readFileSync(path.join(sb.root, '.cortex', 'pulse', TEST_WORKLIST_FILE), 'utf-8'),
+        fs.readFileSync(path.join(sb.root, '.cortex', 'pulse', 'state', TEST_WORKLIST_FILE), 'utf-8'),
       ) as TestWorklist;
       expect(worklist.kind).toBe('test-runner-worklist');
       expect(worklist.pending).toHaveLength(1);
@@ -424,7 +424,7 @@ describe('Skill flow: --collect then --fix-stage (Rule 10)', () => {
       const sb = makeSandbox('nollm');
       const exit = await runTestRunner(sb.root, { ...sb.opts, noLlm: true });
       expect(exit).toBe(0);
-      expect(fs.existsSync(path.join(sb.root, '.cortex', 'pulse', TEST_WORKLIST_FILE))).toBe(true);
+      expect(fs.existsSync(path.join(sb.root, '.cortex', 'pulse', 'state', TEST_WORKLIST_FILE))).toBe(true);
       expect(readReport(sb.root).body).toContain('classification skipped (--no-llm)');
       expect(readCalls(sb.rec)).toEqual([]);
     },

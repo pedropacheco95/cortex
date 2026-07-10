@@ -12,7 +12,7 @@ Claude Code hooks plus the git post-commit hook — runtime reinforcement at dec
 - `hooks.pre-write` — the high-value hook: compass rule matching (`governs` globs + regex/grep `check:` predicates) with allow-plus-warn envelope; never blocks by construction.
 - `hooks.post-write` — fast-tier anatomy row refresh (tokens/sha/last_seen + `needs_purpose_refresh`), always silent.
 
-All three share: `cortex hook <name>` command signature as the ownership marker in `.claude/settings.json`, exit-0-always failure model, degradation logged to `pulse/hook-errors.md`, atomic + spec test layers only (journey deferred to v1.1 pending the test-runner loop).
+All three share: `cortex hook <name>` command signature as the ownership marker in `.claude/settings.json`, exit-0-always failure model, degradation logged to `pulse/reports/hook-errors.md`, atomic + spec test layers only (journey deferred to v1.1 pending the test-runner loop).
 
 - `hooks.pre-read-writeback` / `hooks.post-read` — the refine-during-use pair (opt-out via `hooks.preRead`): anatomy summary + conditional writeback invitation before a read; silent transcript sweep and `purpose_source: read-time` capture after.
 

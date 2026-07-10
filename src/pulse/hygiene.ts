@@ -1,7 +1,7 @@
 /**
  * `cortex pulse-hygiene` — the daily deterministic sweep (spec pulse.hygiene,
  * design §10.2). Surveys the project for unfinished or broken state and
- * writes `.cortex/pulse/hygiene-report.md` — nothing else, ever (Rule 6 /
+ * writes `.cortex/pulse/reports/hygiene.md` — nothing else, ever (Rule 6 /
  * design §11.3 property 2). Deterministic Core (R-001): no LLM; git and gh
  * are queried read-only via execFile.
  *
@@ -31,6 +31,10 @@ import { specsRoot, SPECS_GLOB } from '../paths.js';
 export const ORPHAN_BRANCH_DAYS = 30;
 export const STALE_PR_DAYS = 14;
 export const AGED_TODO_DAYS = 30;
+/** Per-session read ledgers under `pulse/state/reads/` older than this are
+ *  pruned deterministically each sweep. TODO: promote to cortex.config.json as
+ *  pulse.readsRetentionDays. */
+export const READS_RETENTION_DAYS = 14;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_TODO_FILE_BYTES = 512 * 1024;
@@ -316,6 +320,41 @@ export async function checkAgedTodos(root: string, nowMs = Date.now()): Promise<
 }
 
 // ---------------------------------------------------------------------------
+// retention: prune per-session read ledgers under pulse/state/reads/
+// ---------------------------------------------------------------------------
+
+/**
+ * Delete `pulse/state/reads/<session-id>` ledgers whose mtime is older than
+ * READS_RETENTION_DAYS and return the count deleted. Tolerates the directory's
+ * absence (nothing extracted / no reads yet) and any per-file stat/unlink
+ * error (deterministic best-effort — this hook never blocks on housekeeping).
+ */
+export function cleanStaleReadLedgers(root: string, nowMs = Date.now()): number {
+  const readsDir = path.join(root, '.cortex', 'pulse', 'state', 'reads');
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(readsDir, { withFileTypes: true });
+  } catch {
+    return 0; // no reads directory yet
+  }
+  const cutoff = nowMs - READS_RETENTION_DAYS * DAY_MS;
+  let deleted = 0;
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const abs = path.join(readsDir, entry.name);
+    try {
+      if (fs.statSync(abs).mtimeMs < cutoff) {
+        fs.unlinkSync(abs);
+        deleted++;
+      }
+    } catch {
+      /* vanished or unremovable — skip it */
+    }
+  }
+  return deleted;
+}
+
+// ---------------------------------------------------------------------------
 // the sweep + report (always-write, schema §4.5)
 // ---------------------------------------------------------------------------
 
@@ -349,6 +388,9 @@ export async function runHygiene(root = '.', opts: HygieneOptions = {}): Promise
   const skipped = sections.filter((s) => s.skipped);
   const findingsTotal = sections.reduce((n, s) => n + s.findings.length, 0);
 
+  // Deterministic retention: prune aged per-session read ledgers (pulse reorg).
+  const readsCleaned = cleanStaleReadLedgers(absRoot, nowMs);
+
   const body = [
     '# Hygiene report',
     '',
@@ -357,19 +399,21 @@ export async function runHygiene(root = '.', opts: HygieneOptions = {}): Promise
     '',
     `Thresholds: orphan branches ≥ ${ORPHAN_BRANCH_DAYS} days unmerged; stale PRs ≥ ${STALE_PR_DAYS} days without update; aged TODO/FIXME ≥ ${AGED_TODO_DAYS} days since the file's last commit (untracked files and non-git projects are never "aged").`,
     '',
+    `Stale session-read ledgers cleaned: ${readsCleaned} (older than ${READS_RETENTION_DAYS} days under \`pulse/state/reads/\`).`,
+    '',
     `Skipped checks: ${skipped.length > 0 ? skipped.map((s) => `${s.title} (${s.skipped})`).join('; ') : 'none'}. Mid-conversation drop-off detection was not run — deferred to the agentic layer (design §10.2).`,
   ].join('\n');
 
   writePulseReport(
     absRoot,
-    'hygiene-report.md',
+    'hygiene.md',
     'pulse-hygiene-report',
     'cortex-pulse-hygiene',
     now.toISOString(),
     body,
   );
   console.log(
-    `cortex pulse-hygiene: wrote .cortex/pulse/hygiene-report.md (${findingsTotal} finding(s), ${skipped.length} check(s) skipped).`,
+    `cortex pulse-hygiene: wrote .cortex/pulse/reports/hygiene.md (${findingsTotal} finding(s), ${skipped.length} check(s) skipped, ${readsCleaned} stale read ledger(s) cleaned).`,
   );
   return 0;
 }

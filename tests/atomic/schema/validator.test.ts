@@ -329,6 +329,28 @@ loop: "weekly"
   });
 });
 
+describe('B-008: pulse subdirectories are exempt from check.index-present (four-zone reorg)', () => {
+  let tmpDir: string;
+  beforeAll(() => { tmpDir = makeTmpFixture('pulse-zones'); });
+  afterAll(() => cleanup(tmpDir));
+
+  it('reports/ and extraction/fragments/ content with no _index.md of their own raises no violation under .cortex/pulse/, while the pulse root _index.md is still required', async () => {
+    const pulseDir = path.join(tmpDir, '.cortex', 'pulse');
+    // The fixture's pulse root _index.md is untouched — still required and present.
+    expect(fs.existsSync(path.join(pulseDir, '_index.md'))).toBe(true);
+
+    fs.mkdirSync(path.join(pulseDir, 'reports'), { recursive: true });
+    fs.writeFileSync(path.join(pulseDir, 'reports', 'hygiene.md'), '# Hygiene report\n');
+
+    fs.mkdirSync(path.join(pulseDir, 'extraction', 'fragments'), { recursive: true });
+    fs.writeFileSync(path.join(pulseDir, 'extraction', 'fragments', 'f1.json'), '{}');
+
+    const report = await validate(tmpDir);
+    const indexPresentViolations = report.violations.filter((v) => v.check === 'check.index-present');
+    expect(indexPresentViolations.some((v) => v.location.path.includes(path.join('.cortex', 'pulse')))).toBe(false);
+  });
+});
+
 // check.anatomy-files / check.anatomy-graph / check.anatomy-purpose-source
 // were DELETED at v3.0 (schema Appendix A; build-order-v3 step 7) — the
 // anatomy module no longer exists and the checks are unregistered.

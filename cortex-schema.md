@@ -147,14 +147,17 @@ Where `cortex-v3-design.md` explicitly left a concrete shape open beyond what it
 │   ├── tags.json                              global structured tag vocabulary (§4.10.6)
 │   └── clusters.json                          global cluster assignments (§4.10.6)
 └── pulse/                      [gitignored]  transient loop outputs (§4.5) + insight extraction plan/progress (§4.10.10)
-    ├── _index.md
+    ├── _index.md                             active prompt (the ONLY _index.md here; subdirs are exempt, §7.1)
+    ├── suggestions.md                        the gate — S-NNN proposals (persists)
     ├── dismissed.md                          rejection memory (persists)
-    └── *.md                                  reports, overwritten each run
+    ├── reports/                              one .md per loop, overwritten each run (§4.5)
+    ├── state/                                machine working state — counter, worklists, reads/<session-id> ledgers (§4.5)
+    └── extraction/                           insight-extraction plan/progress/l1/fragments (§4.10.10)
 ```
 
 `.cortex/anatomy/` and `.cortex/cerebrum/` no longer exist at v3.0. The five modules are atlas, compass, archive, insight, pulse (design §3). The two spec trees live under **`.specflow/`** at the project root (v2 design §9); the test tree stays directly at the project root. Neither lives under `.cortex/`: `.specflow/specs/`, `.specflow/specs-business/`, `tests/`. They are covered in §2 and §3.
 
-**Validated by** `check.layout`: every directory listed above (when its module is present) exists and carries the required `_index.md`; `pulse/` and `archive/documents/*/extracted/` contents beyond the fixed names are tolerated (transient/generated); `insight/`'s two layouts — scoped (with `scope-registry.yaml` + `scopes/`) and unscoped (flat `anatomy/`) — are both valid (§4.10.1). Every new-module check (`check.archive-*`, `check.insight-*`) tolerates its module being entirely absent, so a project that has not yet run archive ingestion or insight extraction still validates clean at schema 3.0.
+**Validated by** `check.layout`: every directory listed above (when its module is present) exists and carries the required `_index.md`; `pulse/` (including its `reports/`, `state/`, `state/reads/`, `extraction/`, and `extraction/fragments/` subdirectories — machine-managed, `_index.md`-exempt per §7.1, resolving B-008) and `archive/documents/*/extracted/` contents beyond the fixed names are tolerated (transient/generated); `insight/`'s two layouts — scoped (with `scope-registry.yaml` + `scopes/`) and unscoped (flat `anatomy/`) — are both valid (§4.10.1). Every new-module check (`check.archive-*`, `check.insight-*`) tolerates its module being entirely absent, so a project that has not yet run archive ingestion or insight extraction still validates clean at schema 3.0.
 
 ---
 
@@ -229,7 +232,7 @@ tests/
 
 - The **schema validator** checks: scenario specs carry a well-formed `covers:` whose entries resolve (§4.8). **Validated by** `check.covers-resolves`.
 - The **coverage-completeness** constraint (every business spec appears in ≥1 scenario's `covers:`) is **out of schema scope** — owned by `specflow-verify` (Decision 4).
-- `verification-report.md` is written to `.cortex/pulse/`, **not** `tests/` (design §8.5).
+- `verification.md` is written to `.cortex/pulse/reports/`, **not** `tests/` (design §8.5).
 - `tests/` remains at the **project root** — deliberately not moved under `.specflow/` (§2.3).
 
 ---
@@ -406,11 +409,38 @@ extraction:                        # required — the extraction-output contract
 
 ### 4.5 `pulse/` artefacts
 
-Transient; gitignored. Each loop output is markdown with a minimal header. **Always-write convention:** every loop writes its output file on **every** run, overwriting, with a fresh `generated` timestamp — when there is nothing to report, the body carries an explicit "No candidates this cycle." (or loop-appropriate phrasing) rather than an empty or untouched file. The pulse directory is thereby self-documenting: any `pulse/*.md` tells the reader when its loop last ran and what it found or didn't. **Required:** `kind` (string const, e.g. `pulse-hygiene-report`, `pulse-suggestions`, `pulse-rule-candidates`, …), `generated` (iso-datetime), `loop` (string — the skill that wrote it). Suggestion entries inside `suggestions.md` use `S-NNN` IDs.
+Transient; gitignored. `pulse/` is organised into three machine-managed subdirectories plus the two persistent gate files at its root:
+
+```
+pulse/
+├── _index.md                    the only _index.md here — subdirs are exempt (§7.1, B-008)
+├── suggestions.md               the gate — S-NNN proposals (persists across runs)
+├── dismissed.md                 rejection memory (persists across runs)
+├── reports/                     one .md per loop, overwritten each run
+│   ├── hygiene.md  bug-triage.md  spec-drift.md  insight-refresh.md
+│   ├── session-observe.md  rule-candidates.md  atlas-review.md
+│   ├── scaffolding-review.md  lint.md  verification.md  test-failures.md
+│   └── hook-errors.md           append-not-overwrite, capped at 100 (§4.5.2)
+├── state/                       machine working state (dotfiles → dots dropped)
+│   ├── suggestion-counter       the single authoritative S-NNN allocator
+│   ├── distil-last-run  session-corpus.json  session-observe-state.json
+│   ├── *-worklist.json          per-loop worklists (triage / session-observe / insight-refresh tiers)
+│   ├── readback-applied
+│   └── reads/<session-id>       per-session read ledgers (hygiene deletes those >14 days old)
+└── extraction/                  insight-extraction (§4.10.10)
+    ├── plan.md  progress.md  l1.json
+    └── fragments/<scope-id>.json
+```
+
+`suggestions.md` and `dismissed.md` stay at the pulse root; every loop report lands under `reports/`; all machine working state lands under `state/`; the insight-extraction artefacts land under `extraction/`. The three subdirectories are machine-managed and do NOT carry their own `_index.md` (§7.1 carve-out, resolving B-008 — only `pulse/` itself has one). `cortex init` scaffolds `reports/`, `state/`, `state/reads/`, and `extraction/` empty on day one so the organised layout exists before any loop runs; upgrading an existing flat `pulse/` renames the live artefacts into these subdirectories and **deletes** known orphans from retired loops (e.g. `.purpose-worklist.json` from the retired anatomy-refresh-deep loop) rather than moving them.
+
+Each loop output is markdown with a minimal header. **Always-write convention:** every loop writes its output file on **every** run, overwriting, with a fresh `generated` timestamp — when there is nothing to report, the body carries an explicit "No candidates this cycle." (or loop-appropriate phrasing) rather than an empty or untouched file. The pulse directory is thereby self-documenting: any `pulse/reports/*.md` tells the reader when its loop last ran and what it found or didn't. **Required:** `kind` (string const, e.g. `pulse-hygiene-report`, `pulse-suggestions`, `pulse-rule-candidates`, …), `generated` (iso-datetime), `loop` (string — the skill that wrote it). Suggestion entries inside `suggestions.md` use `S-NNN` IDs.
 
 `dismissed.md` **persists** (rejection memory, design §10.3): one entry per dismissed `S-NNN`, with `dismissed` (iso-datetime) and `expires` (iso-datetime, default +90 days). **Validated by** `check.pulse` (header present; loose otherwise — transient data is not held to artefact-grade rigor).
 
-**Suggestion entries — single S-namespace across all pulse artefacts.** `S-NNN` ids form **one global namespace** shared by every proposal-writing loop, allocated monotonically via the counter file `pulse/.suggestion-counter` (a plain integer; persists like `dismissed.md`; ids are never reused). Proposal sections may appear in **any** `pulse/*.md` loop report — the review CLI discovers them by scanning all of them; the id is a handle, not metadata, so users never need to know which loop proposed what. Each section carries provenance in its own field lines. A duplicate `S-NNN` across files is a hard error at review time.
+**Retention (`state/reads/`).** The per-session read ledgers under `pulse/state/reads/<session-id>` accumulate one file per session; the hygiene loop deletes any whose mtime is older than a retention window (default **14 days**) and reports the count deleted. The 14-day window is currently in-code (`READS_RETENTION_DAYS` in `src/pulse/hygiene.ts`) and flagged as a future `cortex.config.json` key (`pulse.readsRetentionDays`, §10.1) — not yet a config option. No other `state/`, `reports/`, or `extraction/` file is subject to age-based deletion; those are overwritten in place by their owning loop.
+
+**Suggestion entries — single S-namespace across all pulse artefacts.** `S-NNN` ids form **one global namespace** shared by every proposal-writing loop, allocated monotonically via the counter file `pulse/state/suggestion-counter` (a plain integer; persists like `dismissed.md`; ids are never reused). Proposal sections may appear in **any** `pulse/reports/*.md` loop report (and in `suggestions.md` at the pulse root) — the review CLI discovers them by scanning all of them; the id is a handle, not metadata, so users never need to know which loop proposed what. Each section carries provenance in its own field lines. A duplicate `S-NNN` across files is a hard error at review time.
 
 **Suggestion section shape:** one `## S-NNN: <title>` section per suggestion. Required field lines inside each section:
 
@@ -421,7 +451,7 @@ Transient; gitignored. Each loop output is markdown with a minimal header. **Alw
 
 **Fence grammar (nested payloads — resolves B-003).** A payload containing code fences MUST be wrapped in an outer fence **strictly longer** than any fence it contains (CommonMark longer-fence rule: four-plus backticks around a payload with triple-backtick fences). Writers inspect the payload and choose the outer length automatically; the parser honours the opening fence's length and closes only on a fence of at least that length. Accept round-trips the payload **byte-exact**, fences included.
 
-**Counter authority.** `pulse/.suggestion-counter` is the single authoritative id allocator: every loop that emits proposal sections MUST acquire ids from it (via the shared allocator) — never allocate locally, never reuse. Optional: `**Status:** pending | accepted | rejected` (absent = `pending`); free evidence lines (pattern, occurrences, source sessions, confidence) are unconstrained. The review CLI parses exactly these fields; accept applies the payload per its operation shape (§4.5.2).
+**Counter authority.** `pulse/state/suggestion-counter` is the single authoritative id allocator: every loop that emits proposal sections MUST acquire ids from it (via the shared allocator) — never allocate locally, never reuse. Optional: `**Status:** pending | accepted | rejected` (absent = `pending`); free evidence lines (pattern, occurrences, source sessions, confidence) are unconstrained. The review CLI parses exactly these fields; accept applies the payload per its operation shape (§4.5.2).
 
 #### 4.5.1 Suggestion types (v3.0)
 
@@ -453,7 +483,7 @@ Accept is **transactional per suggestion**: a refusal (byte-mismatch, clobber, a
 
 **`dismissed.md`** (`kind: pulse-dismissed`) holds one `## S-NNN` section per rejection with `**Dismissed:**` (iso-datetime) and `**Expires:**` (iso-datetime; default now + `pulse.dismissedWindowDays`, 90). `pulse-list` hides unexpired dismissed ids; expired ones may resurface.
 
-`hook-errors.md` (`kind: pulse-hook-errors`) is the hooks' degradation log (§5): hooks **append** one structured entry per internal error (hook name, file involved, failure, iso-datetime), capped at the most recent 100 entries. Unlike loop reports it is append-not-overwrite; like everything in `pulse/` it is transient and surfaced by hygiene.
+`reports/hook-errors.md` (`kind: pulse-hook-errors`) is the hooks' degradation log (§5): hooks **append** one structured entry per internal error (hook name, file involved, failure, iso-datetime), capped at the most recent 100 entries. Unlike loop reports it is append-not-overwrite; like everything in `pulse/` it is transient and surfaced by hygiene.
 
 ### 4.6 Developer specs — `.specflow/specs/**/*.spec.md`
 
@@ -739,8 +769,8 @@ A Claude Code **skill**, **no CLI wrapper** (design §5.3, §5.11; RULES 3 — e
 
 Both under `pulse/` (gitignored, transient; §4.5 header conventions apply — `kind`, `generated`, `loop`).
 
-- **`.cortex/pulse/insight-extraction-plan.md`** (`kind: insight-extraction-plan`) — the plan Claude drafts in Phase 2 for user review: root scopes (with size/depth and shared references), shared scopes, sub-scopes, estimated cost and peak parallelism (design §5.3 example). For codebases below the auto-run threshold the plan is written and executed without a wait; above it, execution waits for confirmation.
-- **`.cortex/pulse/insight-extraction-progress.md`** (`kind: insight-extraction-progress`) — progress reporting during Phase 3/4: per-scope status (pending / running / complete / failed), files done, checkpoints, warnings (missing fragments) (design §5.11).
+- **`.cortex/pulse/extraction/plan.md`** (`kind: insight-extraction-plan`) — the plan Claude drafts in Phase 2 for user review: root scopes (with size/depth and shared references), shared scopes, sub-scopes, estimated cost and peak parallelism (design §5.3 example). For codebases below the auto-run threshold the plan is written and executed without a wait; above it, execution waits for confirmation.
+- **`.cortex/pulse/extraction/progress.md`** (`kind: insight-extraction-progress`) — progress reporting during Phase 3/4: per-scope status (pending / running / complete / failed), files done, checkpoints, warnings (missing fragments) (design §5.11). The per-scope L1 structural output (`extraction/l1.json`) and per-scope fragments (`extraction/fragments/<scope-id>.json`) share this directory.
 
 **Validated by** `check.pulse` (header presence; loose otherwise — transient).
 
@@ -762,9 +792,9 @@ From design §5, §6.3, §9.3. All hooks are pure Node file I/O, **warn-never-bl
 ```
 Cortex is active (schema {{SCHEMA_VERSION}}). See .cortex/_index.md.
 Modules: {{PRESENT_MODULES}}.
-{{#if fresh hygiene-report}}Hygiene: {{ONE_LINE_SUMMARY}} (.cortex/pulse/hygiene-report.md).{{/if}}
+{{#if fresh hygiene-report}}Hygiene: {{ONE_LINE_SUMMARY}} (.cortex/pulse/reports/hygiene.md).{{/if}}
 ```
-The hygiene line is included only if `.cortex/pulse/hygiene-report.md` exists and its `generated` is within `cortex.config.json` `pulse.hygieneFreshnessHours` (default 48). The hook **reads** the report; it never re-runs hygiene (design §10.4).
+The hygiene line is included only if `.cortex/pulse/reports/hygiene.md` exists and its `generated` is within `cortex.config.json` `pulse.hygieneFreshnessHours` (default 48). The hook **reads** the report; it never re-runs hygiene (design §10.4).
 
 **PreToolUse (Write/Edit) warning** — emitted once per compass rule whose `governs` glob matches the target path OR whose `check.pattern` matches the proposed content:
 ```
@@ -780,9 +810,9 @@ If this purpose is wrong or stale after reading, emit: <cortex:purpose file="{{P
 ```
 `{{PURPOSE}}` = first line of the insight entry's `## Purpose` (§4.10.2); `{{TOKENS}}` = the entry's `size_tokens`; empty rule list renders `-`. **No entry → no output** (the zero-overhead common case, like PreWrite's no-matching-rule case). The invitation line is suppressed when the Purpose section already carries the read-time provenance marker (a witnessed correction is not re-litigated) and never trimmed — budget enforcement trims the purpose text only. A third line `(already read this session)` MAY ride along on duplicate reads (implementation-carried from v2.0).
 
-**PostToolUse (Read) capture (v3.0, resolved at build-order-v3 step 7).** The tag sweep is the v2.0 mechanic; the write target changes: a valid tag (non-empty, single-line, ≤120 chars) whose file has an existing insight entry rewrites ONLY that entry's `## Purpose` section to the corrected purpose + `*(read-time, claude-sessions/<user>/<id>)*`. Invalid tags and tags for entry-less files are logged to `pulse/hook-errors.md` and remembered (never retried); nothing is ever created. This is read-time purpose capture integrated into insight, tagged `read-time` (design §5.10) — the entry's extraction frontmatter is never touched by the hook.
+**PostToolUse (Read) capture (v3.0, resolved at build-order-v3 step 7).** The tag sweep is the v2.0 mechanic; the write target changes: a valid tag (non-empty, single-line, ≤120 chars) whose file has an existing insight entry rewrites ONLY that entry's `## Purpose` section to the corrected purpose + `*(read-time, claude-sessions/<user>/<id>)*`. Invalid tags and tags for entry-less files are logged to `pulse/reports/hook-errors.md` and remembered (never retried); nothing is ever created. This is read-time purpose capture integrated into insight, tagged `read-time` (design §5.10) — the entry's extraction frontmatter is never touched by the hook.
 
-**Envelope (pinned to the Claude Code hooks API, verified 2026-07-02).** All Cortex hooks communicate via **exit 0 + stdout JSON**: SessionStart emits `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": …}}`; the PreWrite warning emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "additionalContext": …}}`; PostWrite and PostRead emit nothing (empty stdout). No Cortex hook ever exits 2, exits non-zero, or emits `deny`/`ask` — warn-never-block is enforced by the envelope itself. Hook-internal errors degrade (operation proceeds) and append to `pulse/hook-errors.md` (§4.5). Registration entries use the command signature `cortex hook <name>` — that prefix is the **ownership marker** (the JSON transposition of §8's CLAUDE.md marker idiom); tooling manages only entries carrying it.
+**Envelope (pinned to the Claude Code hooks API, verified 2026-07-02).** All Cortex hooks communicate via **exit 0 + stdout JSON**: SessionStart emits `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": …}}`; the PreWrite warning emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "additionalContext": …}}`; PostWrite and PostRead emit nothing (empty stdout). No Cortex hook ever exits 2, exits non-zero, or emits `deny`/`ask` — warn-never-block is enforced by the envelope itself. Hook-internal errors degrade (operation proceeds) and append to `pulse/reports/hook-errors.md` (§4.5). Registration entries use the command signature `cortex hook <name>` — that prefix is the **ownership marker** (the JSON transposition of §8's CLAUDE.md marker idiom); tooling manages only entries carrying it.
 
 **No insight hook (unchanged from v2.0).** The insight module adds **no** hook and no field to any existing hook payload. Insight is pull-only via the CLI (§4.10.8). Injecting unreviewed inferred content at SessionStart or PreRead would spend the trust budget on the layer with the weakest trust warrant, and the enforcement channel (PreWrite) reads compass precisely because compass is gated (v2 design §7.4; addendum A1.5, A4.0). The hook table above is unchanged in this regard from v1/v2.0.
 
@@ -892,7 +922,9 @@ not copied. Follow `governs:` to the files it constrains; `related_specs:` to th
 touches.
 ```
 
-**Validated by** `check.index-shape`: `_index.md` present in every `.cortex/` directory; contains the `Read this when:` and `What's here:` headings; soft token-budget check → `warning` over 300.
+**Pulse subdirectory carve-out (resolves B-008).** Directories nested **below** `.cortex/pulse/` — `reports/`, `state/`, `state/reads/`, `extraction/`, `extraction/fragments/`, and any future machine-managed pulse subdirectory — are **exempt** from the `_index.md` requirement: they are machine-managed working directories, not human-navigable modules, and an `_index.md` in each would be transient noise the loops must maintain. `pulse/` itself still requires its `_index.md` (the active prompt that describes the whole subtree). `check.index-present`'s exemption for these paths is implemented in `src/schema/checks/layout.ts`; this section is the contract it enforces.
+
+**Validated by** `check.index-shape`: `_index.md` present in every `.cortex/` directory (except the pulse subdirectories carved out above); contains the `Read this when:` and `What's here:` headings; soft token-budget check → `warning` over 300.
 
 ### 7.2 `.specflow/specs/_index.md` — the engineering index
 
@@ -1075,7 +1107,7 @@ Example: a project at `/Users/me/dev/api` names its tasks `api-daily`, `api-week
 }
 ```
 
-**Required:** `schemaVersion` (string `MAJOR.MINOR`). All other keys optional with the defaults shown. `hooks.preRead` governs the **Read pair** (PreRead + PostRead) as one opt-out flag; `cortex init` writes it explicitly on fresh projects so the config self-documents. **v3.0 change (addendum A10.0):** the v2.0 `anatomy` block (`exclude`, `enhancement`) is removed with the anatomy module. The v2.0 `insight` block (`clusterCarryOverJaccard`, `promotionMinAgeDays`, `promotionMinObservations`) is **superseded** — those keys tuned v2.0 mechanics (prose cluster carry-over, promotion eligibility) that no longer exist; v3.0's insight config keys (auto-run threshold, significance-triage tuning, confidence-aging N) are **deferred to the insight-refresh loop spec** (design §10.3) and are not yet part of this contract. Config MAY gain an `archive` block in a future MINOR; its keys are deferred to the archive ingestion spec. This addendum fixes only `schemaVersion`. **Validated by** `check.config`: valid JSON; `schemaVersion` present and parseable; unknown keys → `warning`.
+**Required:** `schemaVersion` (string `MAJOR.MINOR`). All other keys optional with the defaults shown. `hooks.preRead` governs the **Read pair** (PreRead + PostRead) as one opt-out flag; `cortex init` writes it explicitly on fresh projects so the config self-documents. **v3.0 change (addendum A10.0):** the v2.0 `anatomy` block (`exclude`, `enhancement`) is removed with the anatomy module. The v2.0 `insight` block (`clusterCarryOverJaccard`, `promotionMinAgeDays`, `promotionMinObservations`) is **superseded** — those keys tuned v2.0 mechanics (prose cluster carry-over, promotion eligibility) that no longer exist; v3.0's insight config keys (auto-run threshold, significance-triage tuning, confidence-aging N) are **deferred to the insight-refresh loop spec** (design §10.3) and are not yet part of this contract. The `pulse` block MAY gain a `readsRetentionDays` key (default **14**) in a future MINOR — the age threshold for deleting `pulse/state/reads/<session-id>` ledgers (§4.5); it is **not yet a config option** (currently hardcoded as `READS_RETENTION_DAYS` in `src/pulse/hygiene.ts`). Config MAY also gain an `archive` block in a future MINOR; its keys are deferred to the archive ingestion spec. This addendum fixes only `schemaVersion`. **Validated by** `check.config`: valid JSON; `schemaVersion` present and parseable; unknown keys → `warning`.
 
 ### 10.2 Version semantics (semver-lite, MAJOR.MINOR)
 

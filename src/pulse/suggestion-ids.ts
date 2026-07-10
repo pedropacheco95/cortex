@@ -1,7 +1,7 @@
 /**
  * Shared S-id allocator (schema §4.5 — single S-namespace across all pulse
  * artefacts). Every proposal-writing loop allocates its `S-NNN` ids through
- * this ONE monotonic counter, `pulse/.suggestion-counter`: a plain integer
+ * this ONE monotonic counter, `pulse/state/suggestion-counter`: a plain integer
  * holding the last id ever allocated. Like `dismissed.md`, the counter
  * persists across runs; ids are never reused. A missing file starts at 0.
  * The review CLI only reads ids — it never allocates.
@@ -11,10 +11,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-export const SUGGESTION_COUNTER_FILE = '.suggestion-counter';
+export const SUGGESTION_COUNTER_FILE = 'suggestion-counter';
 
 function counterPath(root: string): string {
-  return path.join(root, '.cortex', 'pulse', SUGGESTION_COUNTER_FILE);
+  return path.join(root, '.cortex', 'pulse', 'state', SUGGESTION_COUNTER_FILE);
 }
 
 /** The last allocated suggestion number (0 when the file is missing or unreadable). */

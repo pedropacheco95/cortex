@@ -7,7 +7,7 @@ description: >-
   `cortex loop-insight-refresh --full --collect`, re-runs cross-scope L4
   unification via cortex-extract-insight over all scopes, runs
   `cortex loop-insight-refresh --full --report`, and summarises
-  .cortex/pulse/insight-refresh.md.
+  .cortex/pulse/reports/insight-refresh.md.
 ---
 
 # cortex-loop-insight-refresh-full
@@ -26,7 +26,7 @@ or write any `pulse/` proposal.
 1. From the project root, run `cortex loop-insight-refresh --full --collect`.
    If it errors with "no ledger", stop and tell the user to run the initial
    extraction (`cortex-extract-insight`) first.
-2. Read `.cortex/pulse/.insight-full-worklist.json` — the full regeneration
+2. Read `.cortex/pulse/state/insight-full-worklist.json` — the full regeneration
    ground set: every extracted file with its level, every scope, the current
    store counts (`baseline`), the carried `stale_references`, and the
    `aged_edges` the aging check surfaced.
@@ -57,7 +57,7 @@ or write any `pulse/` proposal.
    validates the regenerated store against the §4.10 checks; when clean it
    blesses the pass (module-wide `built_at_commit` advances, the stale set
    clears, `reverse-index.json` is rebuilt) and writes
-   `.cortex/pulse/insight-refresh.md` — including a shrink note when counts
+   `.cortex/pulse/reports/insight-refresh.md` — including a shrink note when counts
    dropped. Validation errors → nothing is blessed; fix the store and re-run.
 7. Read the report and summarise to the user: blessed or not, error/warning
    counts, store counts vs baseline, and any shrink note.

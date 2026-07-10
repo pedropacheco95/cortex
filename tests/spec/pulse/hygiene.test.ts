@@ -68,7 +68,7 @@ function makeCleanProject(label: string): string {
   return root;
 }
 
-const REPORT_REL = path.join('.cortex', 'pulse', 'hygiene-report.md');
+const REPORT_REL = path.join('.cortex', 'pulse', 'reports', 'hygiene.md');
 
 // ===========================================================================
 describe('AC: Always-writes, even when clean', () => {
@@ -202,5 +202,28 @@ describe('AC: Only the report is written', () => {
       if (!after.has(rel)) changed.push(`(deleted) ${rel}`);
     }
     expect(changed).toEqual([REPORT_REL]);
+  });
+});
+
+// ===========================================================================
+describe('AC: Stale session-read ledgers pruned (retention)', () => {
+  it('deletes a 15-day-old ledger, keeps a fresh one, and states the count in the report', async () => {
+    const root = makeCleanProject('reads-retention');
+    const readsDir = path.join(root, '.cortex', 'pulse', 'state', 'reads');
+    fs.mkdirSync(readsDir, { recursive: true });
+    const stalePath = path.join(readsDir, 'stale-session');
+    const freshPath = path.join(readsDir, 'fresh-session');
+    fs.writeFileSync(stalePath, '{}\n', 'utf-8');
+    fs.writeFileSync(freshPath, '{}\n', 'utf-8');
+    const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+    fs.utimesSync(stalePath, fifteenDaysAgo, fifteenDaysAgo);
+
+    const code = await runHygiene(root, { ghBin: emptyGhStub() });
+    expect(code).toBe(0);
+
+    expect(fs.existsSync(stalePath)).toBe(false);
+    expect(fs.existsSync(freshPath)).toBe(true);
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('Stale session-read ledgers cleaned: 1');
   });
 });

@@ -102,8 +102,9 @@ function makeProject(label: string): string {
 }
 
 function writeCorpus(root: string, sessionIds: string[]): void {
+  fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'state'), { recursive: true });
   fs.writeFileSync(
-    path.join(root, '.cortex', 'pulse', CORPUS_FILE),
+    path.join(root, '.cortex', 'pulse', 'state', CORPUS_FILE),
     JSON.stringify({
       kind: 'session-corpus',
       generated: NOW.toISOString(),
@@ -122,7 +123,7 @@ function collected(label: string, sessions: string[] = ['sess-1']): string {
 }
 
 function report(root: string): string {
-  return fs.readFileSync(path.join(root, '.cortex', 'pulse', SESSION_OBSERVE_REPORT_FILE), 'utf-8');
+  return fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', SESSION_OBSERVE_REPORT_FILE), 'utf-8');
 }
 
 function gatedClean(root: string): boolean {
@@ -403,7 +404,7 @@ describe('CLI dispatch (spec Rule 1 / core surface)', () => {
     writeCorpus(root, ['sess-1']);
     process.chdir(root);
     expect(await run(['loop-session-observe', '--collect'])).toBe(0);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', SESSION_OBSERVE_WORKLIST_FILE))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', SESSION_OBSERVE_WORKLIST_FILE))).toBe(true);
     expect(await run(['loop-session-observe'])).toBe(0);
     expect(out.join('\n')).toContain('cortex-loop-session-observe skill');
     expect(await run(['loop-session-observe', '--collect', '--apply'])).toBe(1);

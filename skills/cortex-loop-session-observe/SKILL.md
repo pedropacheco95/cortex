@@ -11,7 +11,7 @@ description: >-
   insight per-file entries directly with claude-sessions provenance;
   conventions/rules become rule-candidate and decisions become
   decision-candidate pulse proposals — then runs `cortex loop-session-observe
-  --apply --proposals <file>` and summarises .cortex/pulse/session-observe.md.
+  --apply --proposals <file>` and summarises .cortex/pulse/reports/session-observe.md.
 ---
 
 # cortex-loop-session-observe
@@ -28,12 +28,12 @@ file. Everything gated — compass, atlas, RULES.md — goes through the pulse
 gate as a typed proposal, with no exception.
 
 1. From the project root, run `cortex loop-session-observe --collect`. Read
-   `.cortex/pulse/.session-observe-worklist.json` — the sessions not yet
+   `.cortex/pulse/state/session-observe-worklist.json` — the sessions not yet
    observed. If the worklist is empty, run
    `cortex loop-session-observe --apply` anyway (it records the run in the
    report) and tell the user there was nothing new to observe.
 2. Read each worklist session's messages from
-   `.cortex/pulse/.session-corpus.json` (the shared corpus — the same file
+   `.cortex/pulse/state/session-corpus.json` (the shared corpus — the same file
    `cortex-pulse-distil` reads; never rebuild it yourself). Infer **durable**
    knowledge from how each session actually went:
    - corrections the user made;
@@ -95,10 +95,10 @@ gate as a typed proposal, with no exception.
    audits your entry writes (section boundaries + provenance trailers),
    verifies compass/atlas are untouched, allocates S-ids from the shared
    counter, writes the typed proposal sections into
-   `.cortex/pulse/session-observe.md`, and advances the observed-session
+   `.cortex/pulse/reports/session-observe.md`, and advances the observed-session
    state. A non-zero exit means you violated a write boundary — fix the
    entries (revert the offending sections) and re-run apply.
-7. Read `.cortex/pulse/session-observe.md` and summarise to the user:
+7. Read `.cortex/pulse/reports/session-observe.md` and summarise to the user:
    sessions observed, entries enriched, proposals written (their S-ids and
    types), any files skipped for lack of an entry, and any violations.
 

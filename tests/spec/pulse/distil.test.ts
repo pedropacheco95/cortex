@@ -79,7 +79,7 @@ describe('pulse.distil integrated slices (through cortex CLI run())', () => {
     // injected home is covered by the atomic tests; the candidates below stand
     // in for the skill's in-session judgment.
     expect(await run(['pulse-distil', '--collect'])).toBe(0);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', '.session-corpus.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', 'session-corpus.json'))).toBe(true);
 
     const scratch = path.join(tmp('scratch'), 'candidates.json');
     fs.writeFileSync(scratch, JSON.stringify(CANDIDATES), 'utf-8');
@@ -90,7 +90,7 @@ describe('pulse.distil integrated slices (through cortex CLI run())', () => {
     expect(report).toContain('## S-001: chrome profile is profile-X');
     expect(report).toContain('**Source:** distil (sessions: sess-1)');
     expect(report).toContain('**Target:** .cortex/compass/environment.md');
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', '.distil-last-run'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', 'distil-last-run'))).toBe(true);
 
     // End-to-end through the review gate: list shows it (id, title, source,
     // target, block — review-cli Rule 2), accept lands it.
@@ -127,7 +127,7 @@ JSON
     expect(await run(['pulse-distil'])).toBe(0);
     const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
     expect(report).toMatch(/judgment pass skipped/i);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', '.session-corpus.json'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', 'session-corpus.json'))).toBe(true);
   }, TEST_TIMEOUT);
 
   it('--collect with --propose is refused (exit 1); --propose without a path is refused', async () => {

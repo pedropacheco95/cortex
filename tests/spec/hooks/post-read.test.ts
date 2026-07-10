@@ -143,7 +143,7 @@ describe('AC: same tag not applied twice in a session', () => {
       { role: 'assistant', text: '<cortex:purpose file="src/a.ts">Parses insight entries.</cortex:purpose>' },
     ]);
     await run(stdinFor(root, transcript), { now: NOW });
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', READBACK_APPLIED_FILE))).toBe(true);
     const snapshot = readInsightEntry(root, 'src/a.ts');
 
     const later = await run(stdinFor(root, transcript), { now: new Date(NOW.getTime() + 60_000) });
@@ -202,7 +202,7 @@ describe('AC: unextracted project is a silent no-op', () => {
     expect(result).toEqual({ exitCode: 0, stdout: '' });
     expect(fs.existsSync(insightEntryPath(root, 'src/a.ts'))).toBe(false);
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', READBACK_APPLIED_FILE))).toBe(false);
   });
 });
 
@@ -221,7 +221,7 @@ describe('AC: no tags → no writes', () => {
     const result = await run(stdinFor(root, transcript), { now: NOW });
     expect(result).toEqual({ exitCode: 0, stdout: '' });
     expect(readInsightEntry(root, 'src/a.ts')).toBe(snapshot);
-    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', READBACK_APPLIED_FILE))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', READBACK_APPLIED_FILE))).toBe(false);
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 });

@@ -2,7 +2,7 @@
  * `cortex pulse-distil` — the weekly session-distillation loop (spec
  * pulse.distil, design §10.3). Two deterministic halves around an agentic
  * middle: `--collect` extracts this project's transcript messages since the
- * last run into `pulse/.session-corpus.json` (the shared corpus, also read by
+ * last run into `pulse/state/session-corpus.json` (the shared corpus, also read by
  * `cortex-loop-session-observe`, design §11.5); `--propose <candidates.json>`
  * deterministically filters the judgment's candidates and writes §4.5 proposal
  * sections to `pulse/suggestions.md` — rule-candidate/promotion additions plus,
@@ -12,8 +12,9 @@
  * subprocess boundary) → propose. The shipped skill runs the judgment
  * in-session instead — never a nested subprocess.
  *
- * WRITES only: suggestions.md, .session-corpus.json, .distil-last-run,
- * .suggestion-counter (spec Entities). Core halves are deterministic (R-001).
+ * WRITES only: suggestions.md (pulse root), state/session-corpus.json,
+ * state/distil-last-run, state/suggestion-counter (spec Entities). Core halves
+ * are deterministic (R-001).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -32,9 +33,18 @@ const DEFAULT_THRESHOLD_N = 3;
 const DEFAULT_TIMEOUT_MS = 300_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const CORPUS_FILE = '.session-corpus.json';
-export const DISTIL_LAST_RUN_FILE = '.distil-last-run';
+export const CORPUS_FILE = 'session-corpus.json';
+export const DISTIL_LAST_RUN_FILE = 'distil-last-run';
 export const SUGGESTIONS_FILE = 'suggestions.md';
+
+/** Machine working state lives under `pulse/state/` (dots dropped, pulse reorg). */
+function stateDir(root: string): string {
+  return path.join(root, '.cortex', 'pulse', 'state');
+}
+/** `suggestions.md` stays at the pulse root (distil's user-facing output). */
+function pulseRootDir(root: string): string {
+  return path.join(root, '.cortex', 'pulse');
+}
 
 // ---------------------------------------------------------------------------
 // shared helpers (also consumed by insight.session-observe via the corpus)
@@ -205,14 +215,13 @@ export interface CollectResult {
 
 /**
  * Spec Rule 1 (collect half) + Rule 7: extract this project's messages since
- * `.distil-last-run` (first run: the last 30 days) into
- * `pulse/.session-corpus.json` via the session-reading layer — never
+ * `state/distil-last-run` (first run: the last 30 days) into
+ * `pulse/state/session-corpus.json` via the session-reading layer — never
  * re-implemented (loops.session-reading Rules 2-4).
  */
 export function collectCorpus(root: string, opts: CollectOptions = {}): CollectResult {
   const now = opts.now ?? new Date();
-  const pulseDir = path.join(root, '.cortex', 'pulse');
-  const lastRunPath = path.join(pulseDir, DISTIL_LAST_RUN_FILE);
+  const lastRunPath = path.join(stateDir(root), DISTIL_LAST_RUN_FILE);
 
   let since: Date | null = null;
   if (fs.existsSync(lastRunPath)) {
@@ -239,8 +248,8 @@ export function collectCorpus(root: string, opts: CollectOptions = {}): CollectR
     since: since.toISOString(),
     sessions: corpusSessions,
   };
-  fs.mkdirSync(pulseDir, { recursive: true });
-  const corpusPath = path.join(pulseDir, CORPUS_FILE);
+  fs.mkdirSync(stateDir(root), { recursive: true });
+  const corpusPath = path.join(stateDir(root), CORPUS_FILE);
   fs.writeFileSync(corpusPath, JSON.stringify(corpus, null, 2) + '\n', 'utf-8');
   return { corpusPath, sessionCount: corpusSessions.length, messageCount, sinceIso: corpus.since, firstRun };
 }
@@ -506,7 +515,9 @@ function writeSuggestionsReport(opts: WriteReportOptions): void {
       `\`pulse-accept\` — this loop never touches compass.`,
   );
   for (const notice of opts.notices) lines.push('', notice);
-  writePulseReport(opts.root, SUGGESTIONS_FILE, 'pulse-suggestions', 'cortex-pulse-distil', opts.nowIso, lines.join('\n'));
+  writePulseReport(opts.root, SUGGESTIONS_FILE, 'pulse-suggestions', 'cortex-pulse-distil', opts.nowIso, lines.join('\n'), {
+    dir: pulseRootDir(opts.root),
+  });
 }
 
 export interface ProposeOptions {
@@ -519,7 +530,7 @@ export interface ProposeOptions {
  * Spec Rules 3-6: validate shape, filter (threshold → covered → dismissed, in
  * order), allocate S-ids from the shared counter, carry forward still-pending
  * recurring patterns with their original ids and Source, and always-write the
- * report. Records `.distil-last-run` (Rule 7 — a successful run's moment).
+ * report. Records `state/distil-last-run` (Rule 7 — a successful run's moment).
  */
 export function proposeFromCandidates(root: string, rawCandidates: unknown, opts: ProposeOptions = {}): ProposeCounts {
   const now = opts.now ?? new Date();
@@ -626,7 +637,8 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
   });
 
   // Rule 7 — timestamp memory: a successful (proposing) run records its moment.
-  fs.writeFileSync(path.join(root, '.cortex', 'pulse', DISTIL_LAST_RUN_FILE), `${nowIso}\n`, 'utf-8');
+  fs.mkdirSync(stateDir(root), { recursive: true });
+  fs.writeFileSync(path.join(stateDir(root), DISTIL_LAST_RUN_FILE), `${nowIso}\n`, 'utf-8');
   return counts;
 }
 
@@ -634,7 +646,7 @@ export function proposeFromCandidates(root: string, rawCandidates: unknown, opts
  * Degraded bare run (spec Rule 1 / "Subprocess degradation" AC): the judgment
  * pass did not happen, so no evidence exists to decide anything — still-pending
  * prior sections are re-emitted verbatim, the report states the skip, and the
- * collect output is retained for the scheduled skill run. `.distil-last-run`
+ * collect output is retained for the scheduled skill run. `state/distil-last-run`
  * is NOT advanced (the window must stay open for the skill run).
  */
 export function writeDegradedReport(root: string, notice: string, now: Date): void {
@@ -705,7 +717,7 @@ export function parseCandidatesFromOutput(output: string): unknown[] | null {
 
 function judgmentPrompt(): string {
   return (
-    `Read .cortex/pulse/${CORPUS_FILE} — this project's session messages since the last distil run. ` +
+    `Read .cortex/pulse/state/${CORPUS_FILE} — this project's session messages since the last distil run. ` +
     `Extract recurring patterns the user keeps stating: corrections, preferences, environment facts. ` +
     `Be conservative: filter one-offs; every candidate must cite the session ids it was seen in. ` +
     `Output ONLY a JSON array of candidates, each shaped ` +
@@ -745,7 +757,7 @@ export async function runDistil(root = '.', opts: DistilOptions = {}): Promise<n
     const result = collectCorpus(absRoot, collectOpts);
     console.log(
       `cortex pulse-distil: collected ${result.messageCount} message(s) from ${result.sessionCount} session(s) ` +
-        `since ${result.sinceIso} into .cortex/pulse/${CORPUS_FILE}${result.firstRun ? ' (first run: last 30 days)' : ''}.`,
+        `since ${result.sinceIso} into .cortex/pulse/state/${CORPUS_FILE}${result.firstRun ? ' (first run: last 30 days)' : ''}.`,
     );
     return 0;
   }
@@ -784,7 +796,7 @@ export async function runDistil(root = '.', opts: DistilOptions = {}): Promise<n
 
   if (opts.noLlm) {
     return degrade(
-      `judgment pass skipped (--no-llm); collect output retained at .cortex/pulse/${CORPUS_FILE} for the scheduled skill run.`,
+      `judgment pass skipped (--no-llm); collect output retained at .cortex/pulse/state/${CORPUS_FILE} for the scheduled skill run.`,
       0,
     );
   }
@@ -800,21 +812,21 @@ export async function runDistil(root = '.', opts: DistilOptions = {}): Promise<n
       // Named failure (core-cli.init Rule 6 semantics: auth is exit 3, actionable).
       return degrade(
         `judgment pass failed: ${outcome.detail}. Authenticate the Claude CLI (run \`claude\` and log in via /login), ` +
-          `then re-run — collect output retained at .cortex/pulse/${CORPUS_FILE}.`,
+          `then re-run — collect output retained at .cortex/pulse/state/${CORPUS_FILE}.`,
         3,
       );
     case 'no-binary':
     case 'timeout':
     case 'error':
       return degrade(
-        `judgment pass skipped (${outcome.detail}); collect output retained at .cortex/pulse/${CORPUS_FILE} for the scheduled skill run.`,
+        `judgment pass skipped (${outcome.detail}); collect output retained at .cortex/pulse/state/${CORPUS_FILE} for the scheduled skill run.`,
         0,
       );
     case 'ok': {
       const candidates = parseCandidatesFromOutput(outcome.stdout);
       if (candidates === null) {
         return degrade(
-          `judgment pass produced no usable candidates JSON; collect output retained at .cortex/pulse/${CORPUS_FILE} for the scheduled skill run.`,
+          `judgment pass produced no usable candidates JSON; collect output retained at .cortex/pulse/state/${CORPUS_FILE} for the scheduled skill run.`,
           0,
         );
       }

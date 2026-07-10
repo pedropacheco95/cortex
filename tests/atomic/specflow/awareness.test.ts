@@ -117,13 +117,13 @@ describe('specflow-tests (Deep): compass check: predicates into generated tests,
     expect(s).toContain('`covers:`');
   });
 
-  it('verification output lands at .cortex/pulse/verification-report.md, never tests/verification-report.md (§8.5)', () => {
-    expect(s).toContain('.cortex/pulse/verification-report.md');
+  it('verification output lands at .cortex/pulse/reports/verification.md, never tests/verification-report.md (§8.5)', () => {
+    expect(s).toContain('.cortex/pulse/reports/verification.md');
     expect(s).toContain('§8.5');
     expectOnlyProhibitions(s, 'tests/verification-report.md', 'specflow-tests');
     // The write instructions themselves are redirected, not just prohibited.
-    expect(s).toMatch(/verification agent writes `\.cortex\/pulse\/verification-report\.md`/);
-    expect(s).toMatch(/placed at\s+`\.cortex\/pulse\/verification-report\.md`/);
+    expect(s).toMatch(/verification agent writes `\.cortex\/pulse\/reports\/verification\.md`/);
+    expect(s).toMatch(/placed at\s+`\.cortex\/pulse\/reports\/verification\.md`/);
   });
 });
 

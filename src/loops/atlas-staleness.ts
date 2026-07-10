@@ -1,7 +1,7 @@
 /**
  * `cortex loop-atlas-staleness` — monthly project-memory review (spec
  * loops.atlas-staleness, design §11.4 item 6). Reviews `.cortex/atlas/**` for
- * age and orphanhood and writes `.cortex/pulse/atlas-review.md` — nothing
+ * age and orphanhood and writes `.cortex/pulse/reports/atlas-review.md` — nothing
  * else. Propose-don't-mutate. Deterministic Core (R-001); reference
  * resolution reused from the validator (index-build).
  *
@@ -249,7 +249,7 @@ export async function runAtlasStaleness(root = '.', opts: { now?: Date } = {}): 
   );
   const total = scan.reverify.length + scan.archive.length + scan.deadLinks.length;
   console.log(
-    `cortex loop-atlas-staleness: wrote .cortex/pulse/atlas-review.md (${scan.empty ? 'atlas empty' : `${total} candidate(s)/finding(s)`}).`,
+    `cortex loop-atlas-staleness: wrote .cortex/pulse/reports/atlas-review.md (${scan.empty ? 'atlas empty' : `${total} candidate(s)/finding(s)`}).`,
   );
   return 0;
 }

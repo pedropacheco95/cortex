@@ -5,7 +5,7 @@
  * NO LLM anywhere in this path (R-001), NO extraction: it diffs the last
  * commit, applies the Core structural significance filter (formatting-only /
  * comment-only / whitespace / import-reordering changes are ruled out), and
- * flags the survivors into `.cortex/pulse/.insight-refresh-worklist.json` for
+ * flags the survivors into `.cortex/pulse/state/insight-refresh-worklist.json` for
  * the daily loop. `ledger.json` is NOT updated here — that happens only on a
  * successful re-extraction (daily apply).
  *
@@ -75,7 +75,7 @@ export function parseNameStatus(output: string): CommitScope {
 
 /** The v3 fast-tier worklist (replaces the v2 node-set worklist of the same
  *  filename — the v2 `cortex loop-insight-refresh` is retired, design §8.3). */
-export const INSIGHT_WORKLIST_FILE = '.insight-refresh-worklist.json';
+export const INSIGHT_WORKLIST_FILE = 'insight-refresh-worklist.json';
 
 export type FlagReason = 'changed' | 'significant' | 'uncertain' | 'new' | 'deleted';
 
@@ -92,12 +92,13 @@ export interface InsightRefreshWorklist {
   flagged: FlaggedFile[];
 }
 
-function pulseDir(root: string): string {
-  return path.join(root, '.cortex', 'pulse');
+/** Machine working state under `pulse/state/` (pulse reorg). */
+function stateDir(root: string): string {
+  return path.join(root, '.cortex', 'pulse', 'state');
 }
 
 export function worklistPath(root: string): string {
-  return path.join(pulseDir(root), INSIGHT_WORKLIST_FILE);
+  return path.join(stateDir(root), INSIGHT_WORKLIST_FILE);
 }
 
 /** Read the (v3-shaped) worklist; absent/garbled/v2-shaped → empty. */
@@ -120,7 +121,7 @@ export function readWorklist(root: string): FlaggedFile[] {
 
 /** Write the worklist (sorted by path; deterministic but for `generated`). */
 export function writeWorklist(root: string, flagged: FlaggedFile[], now: Date): string {
-  fs.mkdirSync(pulseDir(root), { recursive: true });
+  fs.mkdirSync(stateDir(root), { recursive: true });
   const doc: InsightRefreshWorklist = {
     kind: 'insight-refresh-worklist',
     generated: now.toISOString(),
@@ -256,7 +257,7 @@ export async function runInsightRefreshFast(root = '.', opts: RefreshFastOptions
     if (flagged.length > 0) {
       console.log(
         `cortex insight-refresh-fast: ${flagged.length} file(s) flagged for the daily loop ` +
-          `(.cortex/pulse/${INSIGHT_WORKLIST_FILE}).`,
+          `(.cortex/pulse/state/${INSIGHT_WORKLIST_FILE}).`,
       );
     }
     return 0;

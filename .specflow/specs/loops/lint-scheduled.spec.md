@@ -15,12 +15,12 @@ governed_by:
 
 ## Intent
 
-`cortex loop-specflow-lint` (daily, design §11.4 item 8) is the cadence-and-paper-trail wrapper around structural spec checking: it runs the validator's spec-tree checks and writes `pulse/lint-report.md`. No new judgment — the existing interactive `specflow-lint` skill remains the deep path; this loop guarantees the daily dated record.
+`cortex loop-specflow-lint` (daily, design §11.4 item 8) is the cadence-and-paper-trail wrapper around structural spec checking: it runs the validator's spec-tree checks and writes `pulse/reports/lint.md`. No new judgment — the existing interactive `specflow-lint` skill remains the deep path; this loop guarantees the daily dated record.
 
 ## Entities
 
 - **READS:** the project tree via `schema.validator`'s `validate()` — consumed, not reimplemented.
-- **WRITES:** `pulse/lint-report.md` only.
+- **WRITES:** `pulse/reports/lint.md` only.
 - **CREATES:** the report per §4.5 (`kind: pulse-lint-report`).
 
 ## Rules
@@ -45,7 +45,7 @@ governed_by:
 
 ### Only the report is written
 
-- **Then** any run touches only `pulse/lint-report.md`
+- **Then** any run touches only `pulse/reports/lint.md`
 
 ## Notes
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

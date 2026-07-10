@@ -28,6 +28,6 @@ Every business spec must appear in at least one scenario's `covers:` list. A bus
 
 ## Notes
 
-- The test results artefact `verification-report.md` lives in `.cortex/pulse/`, **not** here.
+- The test results artefact lives at `.cortex/pulse/reports/verification.md`, **not** here.
 - This tree is **scaffolded only** — no tests have been written yet.
 - Test files use the `.test.ts` extension.

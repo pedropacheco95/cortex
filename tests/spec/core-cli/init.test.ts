@@ -679,3 +679,36 @@ describe('AC18b: existing v2 dual-line hook migrated to insight-only, idempotent
     expect(fs.readFileSync(hookPath, 'utf-8')).toBe(before);
   }, TEST_TIMEOUT);
 });
+
+// ---------------------------------------------------------------------------
+// Pulse four-zone layout (pulse reorg): init pre-creates reports/, state/,
+// state/reads/, and extraction/ so a fresh project shows the organised
+// structure day-1, and the pulse root _index.md describes all four zones.
+// ---------------------------------------------------------------------------
+describe('Pulse layout: init scaffolds the four-zone directories and the root index describes them', () => {
+  let root: string;
+  let home: string;
+  beforeAll(async () => {
+    root = makeTmpDir('pulse-layout-proj');
+    home = makeTmpDir('pulse-layout-home');
+    await init(root, { noLlm: true, home, ...DARWIN });
+  }, TEST_TIMEOUT);
+  afterAll(() => { cleanTmp(root); cleanTmp(home); });
+
+  it('.cortex/pulse/_index.md exists and mentions reports/, state/, and extraction/', () => {
+    const indexPath = path.join(root, '.cortex', 'pulse', '_index.md');
+    expect(fs.existsSync(indexPath)).toBe(true);
+    const content = fs.readFileSync(indexPath, 'utf-8');
+    for (const substr of ['reports/', 'state/', 'extraction/']) {
+      expect(content, substr).toContain(substr);
+    }
+  });
+
+  it('pre-creates reports/, state/, state/reads/, and extraction/ as real directories', () => {
+    const pulseDir = path.join(root, '.cortex', 'pulse');
+    for (const zone of ['reports', 'state', path.join('state', 'reads'), 'extraction']) {
+      const zonePath = path.join(pulseDir, zone);
+      expect(fs.statSync(zonePath).isDirectory(), zonePath).toBe(true);
+    }
+  });
+});

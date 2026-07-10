@@ -2,7 +2,7 @@
  * Spec-level tests — loops.onboarding-drift, one describe per acceptance
  * criterion. The clean-run AC uses a REAL `cortex init` (noLlm, fake home —
  * the real ~/.claude is never touched); the drift ACs use targeted fixtures.
- * The report is `.cortex/pulse/scaffolding-review.md` and nothing else.
+ * The report is `.cortex/pulse/reports/scaffolding-review.md` and nothing else.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import * as path from 'path';
@@ -26,7 +26,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const REPORT_REL = path.join('.cortex', 'pulse', 'scaffolding-review.md');
+const REPORT_REL = path.join('.cortex', 'pulse', 'reports', 'scaffolding-review.md');
 
 describe('AC: Version-lagging CLAUDE.md block flagged', () => {
   it('names the v0.9 vs 1.0 mismatch and proposes refreshing the managed block', async () => {
@@ -102,7 +102,7 @@ describe('AC: Current scaffolding is a stated clean run', () => {
 });
 
 describe('AC: Only the report is written', () => {
-  it('a full-tree snapshot differs only by pulse/scaffolding-review.md', async () => {
+  it('a full-tree snapshot differs only by pulse/reports/scaffolding-review.md', async () => {
     const root = tmp('only-report');
     makeCortexProject(root, '1.0');
     writeAt(root, 'CLAUDE.md', '<!-- cortex:start v0.9 -->\nx\n<!-- cortex:end -->\n');

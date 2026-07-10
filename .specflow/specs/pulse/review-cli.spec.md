@@ -19,14 +19,14 @@ The pulse review CLI is the human gate of the propose-don't-mutate convention (d
 
 ## Entities
 
-- **READS:** **every** `.cortex/pulse/*.md` (schema §4.5 proposal sections — single S-namespace: `## S-NNN` with `**Source:**`, `**Target:**`, fenced `**Proposed addition:**`); `.cortex/pulse/dismissed.md`; `.cortex/cortex.config.json` (`pulse.dismissedWindowDays`, default 90).
-- **WRITES:** the accepted suggestion's `**Target:**` file (append the fenced block verbatim); `suggestions.md` (status annotation only); `dismissed.md` (rejection records). Nothing else, ever.
-- **CREATES:** `dismissed.md` if absent (with its §4.5 header).
+- **READS:** **every** `.cortex/pulse/reports/*.md` **and** `.cortex/pulse/suggestions.md` (schema §4.5 proposal sections — single S-namespace: `## S-NNN` with `**Source:**`, `**Target:**`, fenced `**Proposed addition:**`); `.cortex/pulse/dismissed.md` (root, suppression memory); `.cortex/cortex.config.json` (`pulse.dismissedWindowDays`, default 90).
+- **WRITES:** the accepted suggestion's `**Target:**` file (append the fenced block verbatim); the pulse file that holds the suggestion — a `reports/*.md` report or the root `suggestions.md` — for the status annotation only; `dismissed.md` (root, rejection records). Nothing else, ever.
+- **CREATES:** `dismissed.md` (at the pulse root) if absent (with its §4.5 header).
 
 ## Rules
 
 1. **Commands.** `cortex pulse-list`, `cortex pulse-accept <S-NNN>`, `cortex pulse-reject <S-NNN>`. Exit codes: 0 success (including "nothing pending" and idempotent no-ops); 1 unknown id, malformed suggestion entry, or refused target.
-2. **`pulse-list`** discovers proposal sections across **all** `pulse/*.md` reports (§4.5 single S-namespace) and prints each **pending** one — id, title, source, target, and the proposed block — excluding: entries with `**Status:** accepted|rejected`, and ids present in `dismissed.md` whose `**Expires:**` is in the future. An expired dismissal no longer suppresses (design §10.3: snooze, not ban).
+2. **`pulse-list`** discovers proposal sections across **all** `pulse/reports/*.md` reports and the root `pulse/suggestions.md` (§4.5 single S-namespace) and prints each **pending** one — id, title, source, target, and the proposed block — excluding: entries with `**Status:** accepted|rejected`, and ids present in `dismissed.md` whose `**Expires:**` is in the future. An expired dismissal no longer suppresses (design §10.3: snooze, not ban).
 3. **`pulse-accept`** appends the suggestion's fenced block **verbatim** (with a separating blank line) to its `**Target:**` file and annotates the entry `**Status:** accepted`. No reinterpretation, no reformatting — what was shown is what lands.
 4. **Target roots.** A `**Target:**` must lie inside `.cortex/cerebrum/` (curated knowledge) or be a **new** `.claude/skills/<name>/SKILL.md` (`skill-proposal`-typed suggestions — now produced by `pulse.distil`'s skill lens, formerly the retired skill-suggest loop; design §11.4 item 12); anything else is refused (exit 1, naming the path). Cerebrum targets must already exist except the core files (created if absent); a skills target that already exists is refused — accept never overwrites a skill.
 4b. **Duplicate ids are a hard error.** The same `S-NNN` appearing in two pulse files → exit 1 naming both files, no action taken (§4.5).
@@ -78,7 +78,7 @@ The pulse review CLI is the human gate of the propose-don't-mutate convention (d
 
 ### Discovery spans all pulse reports
 
-- **Given** `S-004` proposed inside `pulse/rule-candidates.md` (not `suggestions.md`)
+- **Given** `S-004` proposed inside `pulse/reports/rule-candidates.md` (not the root `suggestions.md`)
 - **When** `cortex pulse-list` and `cortex pulse-accept S-004` run
 - **Then** both find it, and accept applies its block
 

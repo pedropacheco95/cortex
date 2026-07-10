@@ -4,7 +4,7 @@
  * wrapper around structural spec checking: runs the schema validator's
  * existing `validate()` (consumed, never reimplemented), groups the
  * spec-tree-relevant violations by check, and always-writes
- * `pulse/lint-report.md`. Exit 0 clean or dirty — the report is the product;
+ * `pulse/reports/lint.md`. Exit 0 clean or dirty — the report is the product;
  * `cortex validate` is the CI gate. Deterministic Core (R-001); WRITES only
  * the report.
  */
@@ -14,7 +14,7 @@ import type { Violation } from '../schema/types.js';
 import { writePulseReport } from './report.js';
 import { SPECS_REL, BUSINESS_REL } from '../paths.js';
 
-export const LINT_REPORT_FILE = 'lint-report.md';
+export const LINT_REPORT_FILE = 'lint.md';
 
 /** Spec Rule 2: the spec tree = these three roots. `tests/scenario/specs/`
  *  stays at the project root (§2.3); the two moved trees live under `.specflow/`. */
@@ -93,7 +93,7 @@ export async function runLintScheduled(root = '.', opts: LintRunOptions = {}): P
 
   writePulseReport(absRoot, LINT_REPORT_FILE, 'pulse-lint-report', 'cortex-loop-specflow-lint', now.toISOString(), lines.join('\n'));
   console.log(
-    `cortex loop-specflow-lint: wrote .cortex/pulse/${LINT_REPORT_FILE} ` +
+    `cortex loop-specflow-lint: wrote .cortex/pulse/reports/${LINT_REPORT_FILE} ` +
       `(${specViolations.length} spec-tree violation(s): ${errors} error(s), ${warnings} warning(s)).`,
   );
   return 0;

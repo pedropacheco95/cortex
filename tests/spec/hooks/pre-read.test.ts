@@ -229,7 +229,7 @@ describe('Rule 5: warn-never-block degradation', () => {
     fs.writeFileSync(p, '---\npath: src/a.ts\nextraction_level: 9\n---\n\nno sections\n');
     const result = await run(stdinFor(root, path.join(root, 'src/a.ts')));
     expect(result).toEqual({ exitCode: 0, stdout: '' });
-    const log = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'hook-errors.md'), 'utf-8');
+    const log = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'hook-errors.md'), 'utf-8');
     expect(log).toContain('hook: pre-read');
     expect(log).toContain('insight entry unreadable');
   });

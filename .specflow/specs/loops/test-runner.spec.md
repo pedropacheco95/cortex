@@ -23,7 +23,7 @@ governed_by:
 ## Entities
 
 - **READS:** the `tests/` tiers (per schema §3); failing-test output; the specs the failing tests trace to (`governs`/path conventions); `cerebrum/bugs/` (suppression, Rule 5); `cortex.config.json` (`harness.maxIterations`).
-- **WRITES:** `pulse/test-failures.md` (always-write report); `cerebrum/bugs/B-NNN-*.md` (budget-exhaustion case files — within the bug-triage fill-only precedent: new entries only, never edits); git branches `cortex/test-fix-*` (via worktree — the §11.3 sanctioned code path); PRs via `gh` when available.
+- **WRITES:** `pulse/reports/test-failures.md` (always-write report); `cerebrum/bugs/B-NNN-*.md` (budget-exhaustion case files — within the bug-triage fill-only precedent: new entries only, never edits); git branches `cortex/test-fix-*` (via worktree — the §11.3 sanctioned code path); PRs via `gh` when available.
 - **CREATES:** the report per §4.5 (`kind: pulse-test-failures`).
 
 ## Rules
@@ -35,7 +35,7 @@ governed_by:
 5. **Fix attempt.** Classifiable failures go to `runWriterVerifier` — brief = the traced spec's relevant excerpts + the failing output + the classification; `testCommand` = the failing tests, scoped. `maxIterations` per the harness config chain.
 6. **Verified pass → branch + PR (Pedro pin 2).** The diff is applied in a fresh worktree on branch `cortex/test-fix-<slug>`, committed, pushed when a remote exists, PR opened when `gh` is available (else: branch + report notice). **The PR body always carries all five contract fields:** the failing spec's id, the criterion the tests trace to, the writer's reasoning, the verifier's verdict/reasoning, and the trigger context. Minimal diff, rich body. The PR states its automated origin; authorship rides the user's own gh auth (design Q13, engineering call recorded here).
 7. **Budget exhaustion → case file, no PR (Pedro pin 1a-b).** `outcome: fail` → nothing is pushed or proposed; a ledger entry is filed carrying the classification `type:`, the **writer's last diff**, the **verifier's rejection reasoning** (full verdict history), and the trigger context, with `affects:` naming the test path (arming Rule 3's suppression) and the traced spec.
-8. **Working tree inviolate.** Runner + harness writes are confined to: worktrees/branches, `pulse/test-failures.md`, new ledger entries. A run leaves the checked-out tree byte-identical.
+8. **Working tree inviolate.** Runner + harness writes are confined to: worktrees/branches, `pulse/reports/test-failures.md`, new ledger entries. A run leaves the checked-out tree byte-identical.
 9. **Always-write report** (§4.5): per-tier sections — passed counts, fixed (branch/PR refs), case-filed, suppressed, unclassifiable-reported — with explicit empty states; footer names tier commands and budget used.
 10. **Bundle.** Shipped `skills/cortex-loop-test-runner/SKILL.md` (satisfies the scoped task's `requiredSkills`): run intake `--collect`-style, classify in-session, then invoke the CLI's fix/report stages. Deterministic Core orchestration throughout (R-001); the agentic touches are the classifier and the harness's two roles.
 

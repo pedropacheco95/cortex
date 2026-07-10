@@ -19,7 +19,7 @@ the pattern judgment. You already ARE a Claude session: **never spawn a nested
 exists only for humans at a terminal; it would spawn one).
 
 1. From the project root, run `cortex pulse-distil --collect`.
-2. Read `.cortex/pulse/.session-corpus.json` — this project's session messages
+2. Read `.cortex/pulse/state/session-corpus.json` — this project's session messages
    since the last run.
 3. Perform the pattern judgment **in this session**. Be conservative
    (design §10.3): one-offs are filtered out, only patterns with repeated

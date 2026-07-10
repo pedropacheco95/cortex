@@ -16,12 +16,12 @@ governs:
 
 ## Intent
 
-`cortex loop-atlas-staleness` (monthly, design §11.4 item 6) reviews project memory for age and orphanhood and writes `pulse/atlas-review.md`: old decisions the project still leans on get re-verification flags; sources nothing references get archival candidates. Propose-don't-mutate.
+`cortex loop-atlas-staleness` (monthly, design §11.4 item 6) reviews project memory for age and orphanhood and writes `pulse/reports/atlas-review.md`: old decisions the project still leans on get re-verification flags; sources nothing references get archival candidates. Propose-don't-mutate.
 
 ## Entities
 
 - **READS:** `.cortex/atlas/**` artefacts (frontmatter dates, cross-refs); cerebrum rules' `source:` fields (who cites which atlas entries).
-- **WRITES:** `.cortex/pulse/atlas-review.md` only.
+- **WRITES:** `.cortex/pulse/reports/atlas-review.md` only.
 - **CREATES:** the report per schema §4.5 (`kind: pulse-atlas-review`, always-write).
 
 ## Rules
@@ -63,7 +63,7 @@ governs:
 
 ### Only the report is written
 
-- **Then** the only file created or modified is `pulse/atlas-review.md`
+- **Then** the only file created or modified is `pulse/reports/atlas-review.md`
 
 ## Notes
 

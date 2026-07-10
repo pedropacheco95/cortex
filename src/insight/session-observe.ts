@@ -4,11 +4,11 @@
  * bookends around the agentic middle run by the shipped
  * `skills/cortex-loop-session-observe/` bundle:
  *
- *  - `--collect` REUSES the shared session corpus (`pulse/.session-corpus.json`,
+ *  - `--collect` REUSES the shared session corpus (`pulse/state/session-corpus.json`,
  *    the same file `cortex pulse-distil --collect` builds — spec Rule 1: shared
  *    machinery, never double-built; a missing corpus is collected via distil's
  *    own `collectCorpus`). It emits a worklist of corpus sessions not yet
- *    observed (tracked in `pulse/.session-observe-state.json`) for the
+ *    observed (tracked in `pulse/state/session-observe-state.json`) for the
  *    in-session judgment.
  *  - `--apply [--proposals <f>]` audits the skill's ungated enrichments —
  *    touched per-file entries must still parse (§4.10.2), only the
@@ -22,7 +22,7 @@
  *    proposals JSON are validated, dismissal-suppressed (spec Rule 7), given
  *    S-ids from the shared counter, and written as typed §4.5.1 sections
  *    (`rule-candidate` → compass, `decision-candidate` → atlas/decisions)
- *    into the always-write report `pulse/session-observe.md`; still-pending
+ *    into the always-write report `pulse/reports/session-observe.md`; still-pending
  *    prior sections are carried forward verbatim. Finally the observed-state
  *    file advances.
  *
@@ -46,8 +46,8 @@ import { chooseOuterFence } from '../pulse/fences.js';
 import { writePulseReport } from '../loops/report.js';
 import { parseEntry } from './entry.js';
 
-export const SESSION_OBSERVE_WORKLIST_FILE = '.session-observe-worklist.json';
-export const SESSION_OBSERVE_STATE_FILE = '.session-observe-state.json';
+export const SESSION_OBSERVE_WORKLIST_FILE = 'session-observe-worklist.json';
+export const SESSION_OBSERVE_STATE_FILE = 'session-observe-state.json';
 export const SESSION_OBSERVE_REPORT_FILE = 'session-observe.md';
 export const SESSION_OBSERVE_REPORT_KIND = 'pulse-session-observe';
 export const SESSION_OBSERVE_LOOP_NAME = 'cortex-loop-session-observe';
@@ -64,8 +64,13 @@ export const LOOP_WRITABLE_SECTIONS = ['Insights', 'Query pointers'] as const;
  */
 export const PROVENANCE_TRAILER_RE = /\(claude-sessions\/[^/\s)]+\/[^/\s)]+\)\s*$/;
 
-function pulseDir(root: string): string {
-  return path.join(root, '.cortex', 'pulse');
+/** Machine working state (worklist, observed-state, shared corpus) under
+ *  `pulse/state/`; the report lands under `pulse/reports/` (pulse reorg). */
+function stateDir(root: string): string {
+  return path.join(root, '.cortex', 'pulse', 'state');
+}
+function reportsDir(root: string): string {
+  return path.join(root, '.cortex', 'pulse', 'reports');
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +85,7 @@ export interface ObserveState {
 }
 
 export function readObserveState(root: string): ObserveState {
-  const p = path.join(pulseDir(root), SESSION_OBSERVE_STATE_FILE);
+  const p = path.join(stateDir(root), SESSION_OBSERVE_STATE_FILE);
   try {
     const doc = JSON.parse(fs.readFileSync(p, 'utf-8')) as ObserveState;
     if (doc.kind === 'session-observe-state' && Array.isArray(doc.observed)) {
@@ -93,9 +98,9 @@ export function readObserveState(root: string): ObserveState {
 }
 
 function writeObserveState(root: string, observed: string[], nowIso: string): void {
-  fs.mkdirSync(pulseDir(root), { recursive: true });
+  fs.mkdirSync(stateDir(root), { recursive: true });
   const state: ObserveState = { kind: 'session-observe-state', updated: nowIso, observed: [...new Set(observed)].sort() };
-  fs.writeFileSync(path.join(pulseDir(root), SESSION_OBSERVE_STATE_FILE), JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  fs.writeFileSync(path.join(stateDir(root), SESSION_OBSERVE_STATE_FILE), JSON.stringify(state, null, 2) + '\n', 'utf-8');
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +124,7 @@ export interface ObserveWorklist {
 }
 
 export function observeWorklistPath(root: string): string {
-  return path.join(pulseDir(root), SESSION_OBSERVE_WORKLIST_FILE);
+  return path.join(stateDir(root), SESSION_OBSERVE_WORKLIST_FILE);
 }
 
 export function readObserveWorklist(root: string): ObserveWorklist | null {
@@ -134,7 +139,7 @@ export function readObserveWorklist(root: string): ObserveWorklist | null {
 }
 
 function readCorpus(root: string): SessionCorpus | null {
-  const p = path.join(pulseDir(root), CORPUS_FILE);
+  const p = path.join(stateDir(root), CORPUS_FILE);
   if (!fs.existsSync(p)) return null;
   try {
     const doc = JSON.parse(fs.readFileSync(p, 'utf-8')) as SessionCorpus;
@@ -172,7 +177,7 @@ export function collectObserve(root: string, opts: ObserveCollectOptions = {}): 
     corpus = readCorpus(absRoot);
   }
   if (corpus === null) {
-    throw new Error(`could not build or read the shared session corpus (.cortex/pulse/${CORPUS_FILE})`);
+    throw new Error(`could not build or read the shared session corpus (.cortex/pulse/state/${CORPUS_FILE})`);
   }
 
   const observed = new Set(readObserveState(absRoot).observed);
@@ -187,7 +192,7 @@ export function collectObserve(root: string, opts: ObserveCollectOptions = {}): 
     corpus_reused: corpusReused,
     sessions,
   };
-  fs.mkdirSync(pulseDir(absRoot), { recursive: true });
+  fs.mkdirSync(stateDir(absRoot), { recursive: true });
   const p = observeWorklistPath(absRoot);
   fs.writeFileSync(p, JSON.stringify(worklist, null, 2) + '\n', 'utf-8');
   return {
@@ -600,14 +605,14 @@ export function applyObserve(root: string, opts: ObserveApplyOptions = {}): Obse
 
   const worklist = readObserveWorklist(absRoot);
   if (worklist === null) {
-    throw new Error(`no .cortex/pulse/${SESSION_OBSERVE_WORKLIST_FILE} — run \`cortex loop-session-observe --collect\` first`);
+    throw new Error(`no .cortex/pulse/state/${SESSION_OBSERVE_WORKLIST_FILE} — run \`cortex loop-session-observe --collect\` first`);
   }
 
   const audit = auditEnrichments(absRoot);
 
   // Gated candidates → typed proposal sections (spec Rules 3, 4, 7).
   const counts: ObserveProposeCounts = { received: 0, proposed: 0, carried: 0, malformed: 0, dismissed: 0 };
-  const reportPath = path.join(pulseDir(absRoot), SESSION_OBSERVE_REPORT_FILE);
+  const reportPath = path.join(reportsDir(absRoot), SESSION_OBSERVE_REPORT_FILE);
   const pending = readPendingSections(reportPath);
   const dismissals = readUnexpiredDismissals(absRoot, now.getTime());
 
@@ -735,7 +740,7 @@ export async function runSessionObserve(root = '.', opts: SessionObserveOptions 
           `${r.entriesValidated} entr${r.entriesValidated === 1 ? 'y' : 'ies'} enriched cleanly, ` +
           `${r.counts.proposed} proposal(s) written (${r.counts.carried} carried, ${r.counts.malformed} malformed, ` +
           `${r.counts.dismissed} dismissed), ${r.violations} violation(s) — ` +
-          `report at .cortex/pulse/${SESSION_OBSERVE_REPORT_FILE}.`,
+          `report at .cortex/pulse/reports/${SESSION_OBSERVE_REPORT_FILE}.`,
       );
       return r.violations > 0 ? 1 : 0;
     }
@@ -746,7 +751,7 @@ export async function runSessionObserve(root = '.', opts: SessionObserveOptions 
     console.log(
       `cortex loop-session-observe: ${r.sessions} unobserved session(s) in the worklist ` +
         `(${r.alreadyObserved} already observed; corpus ${r.corpusReused ? 'reused' : 'collected'}) — ` +
-        `worklist at .cortex/pulse/${SESSION_OBSERVE_WORKLIST_FILE}.` +
+        `worklist at .cortex/pulse/state/${SESSION_OBSERVE_WORKLIST_FILE}.` +
         (opts.collect ? '' : ' The observation judgment runs in the cortex-loop-session-observe skill.'),
     );
     return 0;

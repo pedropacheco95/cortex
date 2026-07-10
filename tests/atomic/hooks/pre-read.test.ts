@@ -113,7 +113,7 @@ describe('config flag: absent means ON (§10.1 default true)', () => {
 });
 
 describe('per-session read-memory (the duplicate-read engineering call)', () => {
-  it('records the path under pulse/.reads-<session_id>', async () => {
+  it('records the path under pulse/state/reads/<session_id>', async () => {
     const root = makeProject('memfile');
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
     await run(stdinFor(root, path.join(root, 'src/a.ts'), 'sess-42'));
@@ -124,8 +124,8 @@ describe('per-session read-memory (the duplicate-read engineering call)', () => 
 
   it('session ids are sanitised into safe filenames', () => {
     const p = readsMemoryPath('/proj', '../../etc/passwd');
-    expect(path.basename(p)).toBe('.reads-.._.._etc_passwd');
-    expect(p).toContain(path.join('.cortex', 'pulse'));
+    expect(path.basename(p)).toBe('.._.._etc_passwd');
+    expect(p).toContain(path.join('.cortex', 'pulse', 'state', 'reads'));
   });
 
   it('no session_id → no note, no memory file', async () => {
@@ -135,7 +135,8 @@ describe('per-session read-memory (the duplicate-read engineering call)', () => 
     await run(stdin);
     const second = await run(stdin);
     expect(parseEnvelope(second.stdout).additionalContext).not.toContain('already read');
-    expect(fs.readdirSync(path.join(root, '.cortex', 'pulse')).filter((f) => f.startsWith('.reads-'))).toEqual([]);
+    const readsDir = path.join(root, '.cortex', 'pulse', 'state', 'reads');
+    expect(fs.existsSync(readsDir) ? fs.readdirSync(readsDir) : []).toEqual([]);
   });
 });
 

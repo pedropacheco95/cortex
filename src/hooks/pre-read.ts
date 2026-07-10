@@ -26,6 +26,7 @@ import picomatch from 'picomatch';
 import { fileQuery } from '../insight/query.js';
 import { READ_TIME_MARKER } from './post-read.js';
 import { appendHookError } from './errors.js';
+import { renameIfLegacy } from '../pulse/migrate.js';
 import type { HookRunResult, HookRunOptions } from './session-start.js';
 
 const HOOK_NAME = 'pre-read';
@@ -43,11 +44,19 @@ const MAX_CHARS_WITHOUT_INVITE = 50 * 4;
 /**
  * Per-session read-memory for duplicate-read detection (spec Rule 4) —
  * engineering call: a transient newline-separated path list under
- * `pulse/.reads-<session_id>`, keyed by the stdin `session_id` (sanitised).
- * Transient like `.readback-applied`: pulse/ is gitignored, and losing the
- * file merely drops the "(already read this session)" note.
+ * `pulse/state/reads/<session_id>`, keyed by the stdin `session_id`
+ * (sanitised). Transient like `readback-applied`: pulse/ is gitignored, and
+ * losing the file merely drops the "(already read this session)" note. The
+ * legacy flat `pulse/.reads-<session_id>` is self-healed on first use
+ * ({@link legacyReadsMemoryPath}).
  */
 export function readsMemoryPath(root: string, sessionId: string): string {
+  const safe = sessionId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
+  return path.join(root, '.cortex', 'pulse', 'state', 'reads', safe);
+}
+
+/** The pre-reorg flat location for a session's read ledger (self-heal source). */
+export function legacyReadsMemoryPath(root: string, sessionId: string): string {
   const safe = sessionId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
   return path.join(root, '.cortex', 'pulse', `.reads-${safe}`);
 }
@@ -173,6 +182,9 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     let alreadyRead = false;
     if (sessionId) {
       const memPath = readsMemoryPath(root, sessionId);
+      // Cheap O(1) self-heal (a hook must not run the full pulse migration):
+      // carry a legacy flat `.reads-<id>` into state/reads/<id> once.
+      renameIfLegacy(legacyReadsMemoryPath(root, sessionId), memPath);
       try {
         if (fs.existsSync(memPath)) {
           alreadyRead = fs.readFileSync(memPath, 'utf-8').split('\n').includes(relPath);

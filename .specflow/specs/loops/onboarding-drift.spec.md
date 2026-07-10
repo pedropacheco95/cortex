@@ -16,12 +16,12 @@ governs:
 
 ## Intent
 
-`cortex loop-onboarding-drift` (monthly, design §11.4 item 7) checks the scaffolding that directs Claude into Cortex — the CLAUDE.md managed block and every `_index.md` — against the current schema's templates and budgets, and writes refresh proposals to `pulse/scaffolding-review.md`. Propose-don't-mutate: refreshing is the human running init-style updates, never this loop.
+`cortex loop-onboarding-drift` (monthly, design §11.4 item 7) checks the scaffolding that directs Claude into Cortex — the CLAUDE.md managed block and every `_index.md` — against the current schema's templates and budgets, and writes refresh proposals to `pulse/reports/scaffolding-review.md`. Propose-don't-mutate: refreshing is the human running init-style updates, never this loop.
 
 ## Entities
 
 - **READS:** `CLAUDE.md` (managed block, marker version); every `.cortex/**/_index.md`; `cortex.config.json` (`schemaVersion`); the shipped templates (`src/cli/templates.ts` output shapes).
-- **WRITES:** `.cortex/pulse/scaffolding-review.md` only.
+- **WRITES:** `.cortex/pulse/reports/scaffolding-review.md` only.
 - **CREATES:** the report per schema §4.5 (`kind: pulse-scaffolding-review`, always-write).
 
 ## Rules
@@ -56,7 +56,7 @@ governs:
 
 ### Only the report is written
 
-- **Then** the only file created or modified is `pulse/scaffolding-review.md`
+- **Then** the only file created or modified is `pulse/reports/scaffolding-review.md`
 
 ## Notes
 

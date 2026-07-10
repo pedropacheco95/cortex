@@ -190,6 +190,19 @@ describe('Rule 3: skeleton', () => {
     expect(data['loop']).toBeTruthy();
   });
 
+  it('scaffolds the pulse four-zone layout: reports/, state/, state/reads/, extraction/ pre-created, and _index.md describes all four', () => {
+    const pulseDir = path.join(root, '.cortex', 'pulse');
+    for (const zone of ['reports', 'state', path.join('state', 'reads'), 'extraction']) {
+      const zonePath = path.join(pulseDir, zone);
+      expect(fs.existsSync(zonePath), zonePath).toBe(true);
+      expect(fs.statSync(zonePath).isDirectory(), zonePath).toBe(true);
+    }
+    const index = fs.readFileSync(path.join(pulseDir, '_index.md'), 'utf-8');
+    for (const substr of ['suggestions.md', 'dismissed.md', 'reports/', 'state/', 'reads/<session-id>', 'extraction/']) {
+      expect(index, substr).toContain(substr);
+    }
+  });
+
   it('scaffolded .specflow/specs/_index.md has the §7.2 sections', () => {
     const content = fs.readFileSync(path.join(root, '.specflow', 'specs', '_index.md'), 'utf-8');
     for (const section of ['Read this when:', '## Domains', '## Dependency Graph', '## Build Order']) {

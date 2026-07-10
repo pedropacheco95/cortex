@@ -54,7 +54,7 @@ describe('AC session-start.1: fresh hygiene report → pointer plus one-line sum
     expect(env.additionalContext).toContain('Modules: compass, atlas, insight, pulse.');
     expect(env.additionalContext).not.toContain('anatomy');
     expect(env.additionalContext).toContain('Hygiene: 3 stale purposes flagged.');
-    expect(env.additionalContext).toContain('.cortex/pulse/hygiene-report.md');
+    expect(env.additionalContext).toContain('.cortex/pulse/reports/hygiene.md');
   });
 });
 
@@ -89,8 +89,9 @@ describe('AC session-start.4: malformed hygiene report degrades to pointer', () 
   it('unparseable frontmatter → pointer injected, hook-errors entry names hook + file + failure', async () => {
     const root = tmp('ss4');
     makeCortexProject(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
     fs.writeFileSync(
-      path.join(root, '.cortex', 'pulse', 'hygiene-report.md'),
+      path.join(root, '.cortex', 'pulse', 'reports', 'hygiene.md'),
       '---\ngenerated: [broken yaml\n---\nreport body',
     );
     const { exitCode, stdout } = await runHook(
@@ -102,7 +103,7 @@ describe('AC session-start.4: malformed hygiene report degrades to pointer', () 
     const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
     expect(log).toContain('kind: pulse-hook-errors');
     expect(log).toContain('hook: session-start');
-    expect(log).toContain('file: .cortex/pulse/hygiene-report.md');
+    expect(log).toContain('file: .cortex/pulse/reports/hygiene.md');
     expect(log).toMatch(/failure: \S/);
   });
 });
