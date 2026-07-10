@@ -4,6 +4,7 @@
 !.cortex/atlas/sources/cortex-v3-reframe.meta.md
 .cortex/pulse/
 .cortex/constellation.json
+.cortex/archive/documents/*/source.*
 node_modules/
 dist/
 .DS_Store

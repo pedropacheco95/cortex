@@ -1,0 +1,10 @@
+id: design-reference
+label: Design reference
+classification:
+  extensions: [.html, .fig, .sketch, .png]
+  hints: ["design", "template"]
+extraction:
+  strategy: generic
+  outputs:
+    - kind: summary
+      path: extracted/summary.md
