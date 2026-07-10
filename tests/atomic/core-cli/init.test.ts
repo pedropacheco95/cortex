@@ -770,6 +770,8 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
       expect(s).toContain('5 of 5 not yet registered with the Claude Desktop app');
       expect(s).toContain('open this folder in Claude Desktop (new session) and say:');
       expect(s).toContain('run cortex-register-tasks');
+      expect(s).toContain('approve each task registration (5 prompts)');
+      expect(s).toContain('"always allow" is not offered for task creation');
       expect(s).toContain('Then confirm with: cortex tasks verify');
       expect(s).not.toContain('all 5 registered');
       // The retired direct-write pointer is gone from the summary.

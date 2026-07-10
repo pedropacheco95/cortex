@@ -39,6 +39,14 @@ task event — an external edit is clobbered while the app runs, and a single
 malformed field makes the app treat the entire file as empty and wipe ALL
 tasks on its next flush.
 
+**Warn the user before you start creating.** The app demands a live approval
+for every `create_scheduled_task` call and does NOT offer "always allow" for
+task creation. Tell the user up front: "The app will ask you to approve each
+task registration — one prompt per bundle (5 total). Stay at the keyboard and
+approve each." Then proceed; if a prompt is declined or times out, record that
+bundle as skipped and continue with the rest, listing skipped bundles in the
+final report so the user can re-run for just those.
+
 ## 1. Get the authoritative plan from Core
 
 From the project root, run:

@@ -856,6 +856,9 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
     );
     lines.push('To activate them: open this folder in Claude Desktop (new session) and say:');
     lines.push('    run cortex-register-tasks');
+    lines.push(
+      `Note: the app asks you to approve each task registration (${regStatus.total} prompts) — "always allow" is not offered for task creation, so stay at the keyboard.`,
+    );
     lines.push('Then confirm with: cortex tasks verify');
   }
 
