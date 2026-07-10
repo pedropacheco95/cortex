@@ -4,10 +4,11 @@
  *
  * A localhost-only, read-only Node HTTP server over `.cortex/constellation.json`:
  * re-reads the compiled map per request (Rule: a fresh scan is visible on
- * reload), filters it server-side through the locked presets, and serves
- * the single-page Cytoscape renderer. Never writes, never invokes the
- * compiler — a stale or missing map is reported (`404` + "run cortex scan"),
- * not rebuilt (renderer Rule 3/4).
+ * reload), filters it server-side through the locked presets, and serves the
+ * self-contained single-page canvas renderer (a deep-space map whose groups
+ * dissolve into their member artefacts on zoom — see `spa.ts`). Never writes,
+ * never invokes the compiler — a stale or missing map is reported (`404` +
+ * "run cortex scan"), not rebuilt (renderer Rule 3/4).
  *
  * v3.0 (build-order-v3 step 7 + the step-10 disposition): the two
  * anatomy-defined lenses (`anatomy-only`, `knowledge-only`) retire with the
@@ -19,7 +20,6 @@
 import * as fs from 'fs';
 import * as http from 'http';
 import * as path from 'path';
-import { createRequire } from 'module';
 import type { AddressInfo } from 'net';
 import type { Constellation, ConstellationNode } from './compile.js';
 import { SPA_HTML } from './spa.js';
@@ -123,9 +123,6 @@ export function applyPreset(constellation: Constellation, preset: string, domain
   };
 }
 
-/** Cytoscape's browser bundle, served locally from node_modules (no CDN — offline). */
-const CYTOSCAPE_DIST = createRequire(import.meta.url).resolve('cytoscape/dist/cytoscape.min.js');
-
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(typeof body === 'string' ? body : JSON.stringify(body, null, 2) + '\n');
@@ -170,9 +167,9 @@ function handleApi(root: string, url: URL, res: http.ServerResponse): void {
 
 /**
  * Build the (unlistened) HTTP server for `root`. Strictly read-only over the
- * project (Rule 3): handlers only ever read `.cortex/constellation.json` and
- * the cytoscape bundle. Exported unlistened so tests can drive it on an
- * ephemeral port; `serveConstellation` binds it for the CLI.
+ * project (Rule 3): handlers only ever read `.cortex/constellation.json`.
+ * Exported unlistened so tests can drive it on an ephemeral port;
+ * `serveConstellation` binds it for the CLI.
  */
 export function createServer(root: string): http.Server {
   const absRoot = path.resolve(root);
@@ -185,14 +182,6 @@ export function createServer(root: string): http.Server {
     if (url.pathname === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(SPA_HTML);
-    } else if (url.pathname === '/vendor/cytoscape.min.js') {
-      try {
-        const js = fs.readFileSync(CYTOSCAPE_DIST);
-        res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
-        res.end(js);
-      } catch {
-        sendJson(res, 404, { error: 'cytoscape bundle not found — reinstall dependencies.' });
-      }
     } else if (url.pathname === '/api/constellation') {
       handleApi(absRoot, url, res);
     } else {

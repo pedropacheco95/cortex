@@ -188,7 +188,7 @@ describe('AC: gh absence degrades to a notice', () => {
 
 // ===========================================================================
 describe('AC: Only the report is written', () => {
-  it('a full-tree snapshot differs only by pulse/hygiene-report.md', async () => {
+  it('a full-tree snapshot differs only by pulse/reports/hygiene.md', async () => {
     const root = makeCleanProject('only-report');
     const before = snapshotTree(root);
     await runHygiene(root, { ghBin: emptyGhStub() });

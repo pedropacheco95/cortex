@@ -152,13 +152,17 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
     TEST_TIMEOUT,
   );
 
-  it('GET / returns HTML with the Cytoscape container and a switcher naming exactly the three presets', async () => {
+  it('GET / returns HTML with the canvas, the chrome landmarks, and a switcher naming exactly the three presets', async () => {
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     const html = await res.text();
-    expect(html).toContain('id="cy"'); // the Cytoscape container element
-    expect(html).toContain('id="presets"');
+    // The canvas the map renders into (replaces the v2 Cytoscape container).
+    expect(html).toContain('<canvas id="constellation"');
+    // Chrome landmarks (stable id hooks documented in the renderer spec).
+    for (const id of ['id="stats"', 'id="search"', 'id="presets"', 'id="breadcrumb"', 'id="legend"', 'id="zoom-controls"', 'id="hint"']) {
+      expect(html).toContain(id);
+    }
     // The three v3 filtering lenses …
     for (const name of PRESET_NAMES) {
       expect(html).toContain(`data-preset="${name}"`);
@@ -171,13 +175,16 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
     expect(html.match(/data-preset="/g)).toHaveLength(3); // exactly three, no extras
   });
 
-  it('serves the cytoscape bundle locally from node_modules (no CDN — offline)', async () => {
+  it('is self-contained: no external <script src>, and the only external resource is the Google Fonts <link>', async () => {
     const html = await (await fetch(`${base}/`)).text();
-    expect(html).toContain('src="/vendor/cytoscape.min.js"');
-    expect(html).not.toMatch(/https?:\/\//); // no external references at all
-    const res = await fetch(`${base}/vendor/cytoscape.min.js`);
-    expect(res.status).toBe(200);
-    expect((await res.text()).length).toBeGreaterThan(10_000);
+    // Zero external scripts — all logic (incl. the embedded lod.ts functions) is inline.
+    expect(html).not.toMatch(/<script\b[^>]*\bsrc=/i);
+    // Every absolute URL points at Google Fonts and nowhere else (no CDN, no telemetry).
+    const urls = html.match(/https?:\/\/[^"')\s]+/g) ?? [];
+    expect(urls.length).toBeGreaterThan(0);
+    for (const u of urls) expect(u).toMatch(/fonts\.(googleapis|gstatic)\.com/);
+    // Exactly one loaded stylesheet: the fonts CSS (fallback stacks keep it readable offline).
+    expect(html.match(/rel="stylesheet"/g) ?? []).toHaveLength(1);
   });
 });
 
@@ -315,7 +322,6 @@ describe('AC renderer.8: serving is read-only', () => {
     async () => {
       const before = snapshotTree(root);
       await fetch(`${base}/`);
-      await fetch(`${base}/vendor/cytoscape.min.js`);
       for (const preset of PRESET_NAMES) {
         await fetch(`${base}/api/constellation?preset=${preset}&domain=schema`);
       }
