@@ -12,14 +12,18 @@ governed_by:
 
 # Constellation Insight Preset — serve-time overlay
 
-> **SUPERSEDED at v3 (build-order-v3 step 7 + the step-10 disposition; design
-> §8.3, §11 Q2).** The v2 serve-time `insight` overlay this spec describes is
-> DROPPED: it composed over `insight/map/graph.json`, a node set that no
-> longer exists after the v3 insight rebuild. `src/constellation/
-> insight-overlay.ts` is deleted, the `insight` preset returns the
-> unknown-preset 400, and the former `governs:` target no longer exists, so
-> the list is removed. A NEW v3 preset over the code-understanding graph
-> stays deferred (design §11 Q2 — "not central; defer"). Retained for lineage.
+> **SUPERSEDED at v3 (build-order-v3 step 7; design §8.3).** The v2 serve-time
+> `insight` overlay this spec describes is DROPPED: it composed over
+> `insight/map/graph.json`, a node set that no longer exists after the v3
+> insight rebuild. `src/constellation/insight-overlay.ts` is deleted, and the
+> former `governs:` target no longer exists, so the list is removed.
+> Build-order-v3 step 10 has since shipped a NEW, differently-designed v3
+> `insight` preset over the code-understanding graph (`insight/graph.json` +
+> `clusters.json`, schema §4.10.6) — see `constellation.insight-preset-v3`.
+> It is architecturally simpler than this spec's curated+overlay JOIN design:
+> the v3 preset renders the insight graph as its own self-contained map, never
+> joined onto curated nodes, and never touches `constellation.json`. This
+> spec is retained for lineage only — do not implement against it.
 
 ## Intent
 

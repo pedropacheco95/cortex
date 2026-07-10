@@ -12,6 +12,8 @@ The read-only graph compiler and renderer for humans. `cortex scan` produces `.c
 
 - `constellation.renderer` — localhost-only read-only server + Cytoscape SPA over the compiled map; five locked presets filtered server-side (`default`, `anatomy-only`, `knowledge-only`, `orphans`, `domain`); visual behaviour deferred to journey tier.
 
+- `constellation.insight-preset-v3` — the fourth, previously-deferred preset (build-order-v3 step 10, design §11 Q2 resolved): `?preset=insight` composes a self-contained map over `.cortex/insight/graph.json` + `clusters.json` at request time — architecturally separate from the curated compiler/renderer above, never touching `constellation.json`.
+
 _Planned coverage (not yet written):_
 
 - Compiling `.cortex/constellation.json` — a hierarchical node-group tree plus edges from frontmatter cross-references

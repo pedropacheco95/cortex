@@ -3,10 +3,13 @@
  * per spec AC, driving the real HTTP server on an ephemeral 127.0.0.1 port
  * over a real compiled fixture (`compile()` in a sandboxed tmp project —
  * v3: `cortex scan` IS the compiler; the anatomy scan half is retired).
- * The locked preset set is now default | orphans | domain; the anatomy-only /
- * knowledge-only lenses and the v2 serve-time `insight` overlay are retired
- * (unknown-preset 400). Visual behaviour is deliberately untested here
- * (journey tier, deferred — spec Notes).
+ * The switcher-facing preset set is default | orphans | domain | insight
+ * (build-order-v3 step 10 added the fourth, previously-deferred preset); the
+ * anatomy-only / knowledge-only v2 lenses remain retired (unknown-preset
+ * 400). The `insight` preset's own composition (real fixture insight/ files,
+ * dashed edges, empty-state, byte determinism) is covered in the sibling
+ * `insight-preset.test.ts`, not here. Visual behaviour is deliberately
+ * untested here (journey tier, deferred — spec Notes).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'fs';
@@ -152,7 +155,7 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
     TEST_TIMEOUT,
   );
 
-  it('GET / returns HTML with the canvas, the chrome landmarks, and a switcher naming exactly the three presets', async () => {
+  it('GET / returns HTML with the canvas, the chrome landmarks, and a switcher naming exactly the four presets', async () => {
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
@@ -163,16 +166,14 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
     for (const id of ['id="stats"', 'id="search"', 'id="presets"', 'id="breadcrumb"', 'id="legend"', 'id="zoom-controls"', 'id="hint"']) {
       expect(html).toContain(id);
     }
-    // The three v3 filtering lenses …
+    // The four v3 filtering lenses (build-order-v3 step 10 added `insight`) …
     for (const name of PRESET_NAMES) {
       expect(html).toContain(`data-preset="${name}"`);
     }
-    // … and nothing else: the retired anatomy lenses and the v2 insight
-    // overlay button are gone (build-order-v3 step 7 + step-10 disposition).
-    expect(html).not.toContain('data-preset="insight"');
+    // … and nothing else: the retired v2 anatomy lenses are gone.
     expect(html).not.toContain('data-preset="anatomy-only"');
     expect(html).not.toContain('data-preset="knowledge-only"');
-    expect(html.match(/data-preset="/g)).toHaveLength(3); // exactly three, no extras
+    expect(html.match(/data-preset="/g)).toHaveLength(4); // exactly four, no extras
   });
 
   it('is self-contained: no external <script src>, and the only external resource is the Google Fonts <link>', async () => {
@@ -213,11 +214,11 @@ describe('AC renderer.2: default preset returns the full compiled map', () => {
 // ===========================================================================
 
 describe('AC renderer.3 (v3): retired presets are rejected like any unknown preset', () => {
-  it('?preset=anatomy-only, ?preset=knowledge-only, ?preset=insight → 400 naming the three valid presets', async () => {
-    for (const retired of ['anatomy-only', 'knowledge-only', 'insight']) {
+  it('?preset=anatomy-only, ?preset=knowledge-only → 400 naming the four valid presets', async () => {
+    for (const retired of ['anatomy-only', 'knowledge-only']) {
       const { status, body } = await api(`?preset=${retired}`);
       expect(status).toBe(400);
-      expect(body.error).toContain('default, orphans, domain');
+      expect(body.error).toContain('default, orphans, domain, insight');
     }
   });
 });
@@ -282,7 +283,7 @@ describe('AC renderer.5: domain lens is parameterized and exact', () => {
 // ===========================================================================
 
 describe('AC renderer.6: unknown preset rejected', () => {
-  it('?preset=pretty → 400 naming the three valid presets', async () => {
+  it('?preset=pretty → 400 naming the four valid presets', async () => {
     const { status, body } = await api('?preset=pretty');
     expect(status).toBe(400);
     for (const name of PRESET_NAMES) expect(body.error).toContain(name);
@@ -322,11 +323,13 @@ describe('AC renderer.8: serving is read-only', () => {
     async () => {
       const before = snapshotTree(root);
       await fetch(`${base}/`);
+      // Covers all four switcher presets, incl. `insight` — this fixture has
+      // no `.cortex/insight/` dir, so that leg exercises the empty-result
+      // path (200 + emptyHint), still strictly read-only.
       for (const preset of PRESET_NAMES) {
         await fetch(`${base}/api/constellation?preset=${preset}&domain=schema`);
       }
       await fetch(`${base}/api/constellation?preset=bogus`);
-      await fetch(`${base}/api/constellation?preset=insight`); // retired-preset 400 path
       await fetch(`${base}/api/constellation?preset=domain`); // 400 path
       await fetch(`${base}/no-such-route`);
       const after = snapshotTree(root);

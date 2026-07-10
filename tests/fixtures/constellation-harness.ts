@@ -66,3 +66,109 @@ export function withoutGeneratedLine(content: string): string {
     .filter((l) => !/^\s*"generated":/.test(l))
     .join('\n');
 }
+
+// ===========================================================================
+// Insight fixtures (constellation.insight-preset-v3) — a fixture
+// `.cortex/insight/` tree (unscoped layout: no scope-registry.yaml) for
+// exercising `composeInsightPreset` without running the real extraction
+// pipeline. Shapes follow insight.storage-format §4.10.6 / §4.10.2.
+// ===========================================================================
+
+const FIXTURE_COMMIT = 'fedcba9';
+const FIXTURE_SHA256 = 'a'.repeat(64);
+
+export interface FixtureGraphNode {
+  id: string;
+  kind: 'file' | 'element' | 'concept';
+  label: string;
+}
+
+export interface FixtureGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  edge_type: string;
+  confidence: 'structural' | 'stated' | 'inferred' | 'ambiguous';
+  evidence: string;
+  confirmed_at_commit?: string;
+}
+
+/** `.cortex/insight/graph.json` (top-level, unscoped). */
+export function writeInsightGraph(
+  root: string,
+  nodes: FixtureGraphNode[],
+  edges: FixtureGraphEdge[],
+): string {
+  const doc = {
+    schemaVersion: '3.0',
+    generated: '2026-07-08T21:00:00.000Z',
+    built_at_commit: FIXTURE_COMMIT,
+    nodes,
+    edges: edges.map((e) => ({ confirmed_at_commit: FIXTURE_COMMIT, ...e })),
+  };
+  const p = path.join(root, '.cortex', 'insight', 'graph.json');
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(doc, null, 2) + '\n', 'utf-8');
+  return p;
+}
+
+export interface FixtureCluster {
+  id: string;
+  label: string;
+  members: string[];
+  rationale?: string;
+  scope?: string;
+}
+
+/** `.cortex/insight/clusters.json` (top-level — clusters are never scope-local). */
+export function writeInsightClusters(root: string, clusters: FixtureCluster[]): string {
+  const doc = {
+    schemaVersion: '3.0',
+    generated: '2026-07-08T21:00:00.000Z',
+    built_at_commit: FIXTURE_COMMIT,
+    clusters: clusters.map((c) => ({ rationale: 'fixture cluster', scope: 'global', ...c })),
+  };
+  const p = path.join(root, '.cortex', 'insight', 'clusters.json');
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(doc, null, 2) + '\n', 'utf-8');
+  return p;
+}
+
+/** `.cortex/insight/anatomy/<sourcePath>.md` — a per-file understanding
+ *  entry (§4.10.2). `mainPlayers` bullets should be pre-formatted markdown
+ *  (e.g. `` - `run` (lines 10-40) — does the thing.``) when the fixture
+ *  needs `element` range extraction to succeed. */
+export function writeInsightFileEntry(
+  root: string,
+  sourcePath: string,
+  opts: { purpose: string; mainPlayers?: string; extractionLevel?: 2 | 3 },
+): string {
+  const level = opts.extractionLevel ?? (opts.mainPlayers ? 3 : 2);
+  const fm = [
+    `path: ${sourcePath}`,
+    'extracted_at: 2026-07-08T21:00:00Z',
+    `extraction_level: ${level}`,
+    'size_lines: 42',
+    'size_tokens: 400',
+    'centrality: medium',
+    `built_at_commit: "${FIXTURE_COMMIT}"`,
+    `source_sha256: "${FIXTURE_SHA256}"`,
+  ].join('\n');
+  let body = `# ${sourcePath}\n\n## Purpose\n${opts.purpose}\n`;
+  if (level === 3) body += `\n## Main players\n${opts.mainPlayers ?? '- \`thing\` — does the thing.'}\n`;
+  body += `\n## Connections\nUses:\n- (none)\n\nUsed by:\n- (none)\n`;
+  const p = path.join(root, '.cortex', 'insight', 'anatomy', `${sourcePath}.md`);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, `---\n${fm}\n---\n\n${body}`, 'utf-8');
+  return p;
+}
+
+/** `.cortex/insight/concepts/<slug>.md` — a concept doc (free markdown, no
+ *  required frontmatter per §4.10.6's concept-doc convention). */
+export function writeInsightConcept(root: string, slug: string, excerpt: string, filesSection = ''): string {
+  const body = `# ${slug}\n\n${excerpt}\n${filesSection ? `\n## Files\n${filesSection}\n` : ''}`;
+  const p = path.join(root, '.cortex', 'insight', 'concepts', `${slug}.md`);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, body, 'utf-8');
+  return p;
+}

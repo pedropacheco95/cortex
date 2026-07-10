@@ -1,9 +1,16 @@
 /**
- * Atomic tests — `applyPreset` (constellation.renderer Rules 5-7). Pure
- * function coverage over a handcrafted §4.9 v3.0 constellation: every locked
- * preset predicate (default | orphans | domain — the anatomy-defined lenses
- * retired with the anatomy node kind), the filter closure (edge
- * both-endpoints, group pruning, counter recompute), and the 400 error paths.
+ * Atomic tests — `applyPreset` (constellation.renderer Rules 5-7) and the
+ * confidence-tier -> style mapping the insight preset's client rendering
+ * embeds (constellation.insight-preset-v3 Rule 5). Pure function coverage
+ * over a handcrafted §4.9 v3.0 constellation: every curated preset predicate
+ * (default | orphans | domain — the anatomy-defined lenses retired with the
+ * anatomy node kind), the filter closure (edge both-endpoints, group pruning,
+ * counter recompute), and the 400 error paths. `insight` (build-order-v3 step
+ * 10) is a fourth, real, switcher-facing preset (`PRESET_NAMES`) — but its
+ * composition is a wholly separate function (`composeInsightPreset`, covered
+ * at the spec layer against real fixture files), never a curated
+ * `applyPreset` filter, so calling `applyPreset` with `insight` directly is
+ * itself an unknown-preset 400 (documented below, not a regression).
  */
 import { describe, it, expect } from 'vitest';
 import { applyPreset, PRESET_NAMES } from '../../../src/constellation/server.js';
@@ -168,22 +175,32 @@ describe('applyPreset: domain', () => {
 });
 
 describe('applyPreset: unknown preset', () => {
-  it('rejects with 400 naming all three valid presets', () => {
+  it('rejects with 400 naming all four valid presets (the switcher-facing set, incl. insight)', () => {
     const result = applyPreset(makeConstellation(), 'pretty');
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
     expect(result.status).toBe(400);
     for (const name of PRESET_NAMES) expect(result.error).toContain(name);
-    expect(PRESET_NAMES).toEqual(['default', 'orphans', 'domain']);
+    expect(PRESET_NAMES).toEqual(['default', 'orphans', 'domain', 'insight']);
   });
 
-  it('the retired v2 lenses and the insight overlay are unknown presets now (v3.0)', () => {
-    for (const retired of ['anatomy-only', 'knowledge-only', 'insight']) {
+  it('the retired v2 anatomy lenses are unknown presets now (v3.0)', () => {
+    for (const retired of ['anatomy-only', 'knowledge-only']) {
       const result = applyPreset(makeConstellation(), retired);
       expect(result.ok).toBe(false);
       if (result.ok) throw new Error('unreachable');
       expect(result.status).toBe(400);
-      expect(result.error).toContain('default, orphans, domain');
+      expect(result.error).toContain('default, orphans, domain, insight');
     }
+  });
+
+  it('insight is a real preset (PRESET_NAMES) but NOT a curated applyPreset filter — composeInsightPreset owns it separately', () => {
+    const result = applyPreset(makeConstellation(), 'insight');
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.status).toBe(400);
+    // Still named as valid overall — the error lists the full switcher set,
+    // it just isn't a curated-filter preset THIS function implements.
+    expect(result.error).toContain('insight');
   });
 });

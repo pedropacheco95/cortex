@@ -713,7 +713,7 @@ Same discipline as v1 §16.2 / v2 §13 — shared substrate before dependents, s
 7. **Anatomy deprecation** — re-point anatomy's consumers (develop, tests, hooks, spec-drift) to insight; retire the anatomy-refresh loops; migrate read-time purpose capture into insight.
 8. **Skill integrations** — the `cortex insight` enrichment of develop/change-router/tests/ingest/onboard (§5.12), as a follow-up pass.
 9. **Ingestion re-home** — fold the atlas-only `cortex-ingest` into archive (§6.6).
-10. **Constellation preset** — if adopted (§11 open), a v3 insight preset over the code-understanding graph.
+10. **Constellation preset** — shipped: a v3 `insight` preset over the code-understanding graph (§11 Q2, resolved — see `constellation.insight-preset-v3`).
 
 ### 10.3 Load-bearing initial specs
 
@@ -723,10 +723,10 @@ The specs the build order most depends on being right first (drafted in the spec
 
 ## 11. Open questions
 
-Carried from the decisions record's "What's still open," plus the questions v3's supersession of v2 insight raises. Three earlier design calls (Q4, Q6, Q7) are now **resolved** and marked inline, their numbers kept stable so cross-references hold; the rest are deferred to the design/spec pass, not to further design conversation.
+Carried from the decisions record's "What's still open," plus the questions v3's supersession of v2 insight raises. Four earlier design calls (Q2, Q4, Q6, Q7) are now **resolved** and marked inline, their numbers kept stable so cross-references hold; the rest are deferred to the design/spec pass, not to further design conversation.
 
 1. **Storage-format details.** Exact JSON schema for `graph.json`, `tags.json`, `clusters.json` — field structure, edge-type enumeration, the discrete confidence-tier enum, cluster representation. (Decisions record; the study supplies inputs, §5.11.)
-2. **Constellation integration.** Whether v3 adds a *new* insight preset over the code-understanding graph (dashed edges for inferred, background regions for clusters) or the constellation stays curated-only. The decisions record files this as "not central; defer." Note the v2 insight preset (§8.3) is dropped regardless.
+2. **Resolved — constellation integration.** The project owner has since commissioned build-order-v3 step 10 (previously deferred, "not central"): v3 adds a *new* `insight` preset over the code-understanding graph, shipped as `constellation.insight-preset-v3`. It is architecturally simpler than the v2 insight preset it does NOT resurrect (§8.3's overlay-JOIN design stays dropped) — the v3 preset renders `insight/graph.json` + `clusters.json` as its own self-contained map (dashed edges for every insight edge, confidence-tier-driven opacity, cluster-hashed group colouring), never joined onto or read alongside the curated `constellation.json`.
 3. **Migration mechanics.** How the `cerebrum`→`compass` rename, the anatomy→insight absorption, and the duplicate-decisions removal are executed. Single-user so straightforward, but the anatomy→insight content move is more than a rename and needs specifying (§10.1 version-wiring note).
 4. **Resolved — ingestion skill name.** The archive ingestion skill is named `cortex-archive-ingest`; the existing atlas-only `cortex-ingest` folds into it as its atlas-routing extraction strategy rather than remaining a separate skill (§6.3, §6.6).
 5. **Document-type schema format.** What `archive/types/*.yaml` files contain and how the ingestion skill routes on them. Sketched, not specified.

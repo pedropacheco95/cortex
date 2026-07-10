@@ -7,8 +7,8 @@
  * re-condenses zooming out (the zoom-driven alpha curves live in `lod.ts` and
  * are embedded verbatim below — one tested source of truth, no drift). Around
  * the canvas: a glass top bar (logo, stats, search, and the preset switcher —
- * still naming exactly the locked presets `default`/`orphans`/`domain`, schema
- * §4.9 v3.0), a breadcrumb, a legend, zoom controls, a hover tooltip, and a
+ * now naming four presets, `default`/`orphans`/`domain`/`insight` (build-order-v3
+ * step 10 added the fourth, schema §4.9 v3.0 + §4.10.6), a breadcrumb, a legend, zoom controls, a hover tooltip, and a
  * slide-in detail panel. The browser does NO graph computation and never
  * fabricates data — every glyph and every line of chrome copy derives from the
  * real `id`/`module`/`label`/`group`/`ref` fields and the computed edge graph
@@ -28,6 +28,7 @@ import {
   goldenSpiralPoint,
   starRadius,
 } from './lod.js';
+import { confidenceStyle } from './insight-style.js';
 
 export const SPA_HTML = `<!doctype html>
 <html lang="en">
@@ -79,6 +80,8 @@ export const SPA_HTML = `<!doctype html>
   #legend-list .dot{width:9px;height:9px;border-radius:50%;flex:none;}
   #legend-list .lbl{flex:1;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   #legend-list .cnt{font-size:11px;font-family:var(--mono);color:var(--sub);flex:none;}
+  .kind-counts{display:flex;flex-wrap:wrap;gap:8px;padding:2px 6px 8px;font-size:11px;font-family:var(--mono);color:var(--text);border-bottom:1px solid var(--border);margin-bottom:4px;}
+  .kind-counts span{display:flex;align-items:center;gap:5px;}
   #zoom-controls{position:absolute;right:16px;bottom:16px;z-index:20;display:flex;flex-direction:column;gap:6px;align-items:center;}
   #zoom-pct{font-size:9.5px;font-family:var(--mono);color:var(--sub);padding:4px 8px;border-radius:7px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--border);margin-bottom:2px;}
   #zoom-controls button{width:38px;height:38px;border-radius:9px;border:1px solid var(--border);background:var(--panel);backdrop-filter:blur(14px);color:var(--text);font-size:18px;line-height:1;box-shadow:var(--shadow);}
@@ -147,6 +150,7 @@ export const SPA_HTML = `<!doctype html>
       <button data-preset="default" aria-pressed="true">Default</button>
       <button data-preset="orphans" aria-pressed="false">Orphans</button>
       <button data-preset="domain" aria-pressed="false">Domain</button>
+      <button data-preset="insight" aria-pressed="false">Insight</button>
       <input id="domain-input" placeholder="domain, e.g. schema" hidden>
     </div>
   </header>
@@ -177,6 +181,10 @@ export const SPA_HTML = `<!doctype html>
   ${goldenSpiralPoint.toString()}
   ${starRadius.toString()}
 
+  // --- Embedded verbatim from src/constellation/insight-style.ts (the ---
+  // --- confidence-tier -> dash/opacity/width mapping; unit-tested there). ---
+  ${confidenceStyle.toString()}
+
   var CLUSTER = { atlas: '#a892f7', compass: '#f2b45e', specs: '#6ea8f5' };
   var FALLBACK_HUE = '#8fa0c8';
   var UI = { text: '#eef1fb', shadow: 'rgba(5,6,11,0.9)' };
@@ -186,6 +194,23 @@ export const SPA_HTML = `<!doctype html>
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
+
+  // --- Insight-preset-only colour language (build-order-v3 step 10): node
+  // --- dots colour by KIND (file/element/concept) rather than by domain, and
+  // --- cluster stars hash their id to a small qualitative palette (distinct
+  // --- from the kind-dot colours) since there are 10+ clusters, too many for
+  // --- one fixed hue each — an engineering call, recorded in the spec Notes. ---
+  var KIND_COLOR = { file: '#6ea8f5', element: '#f2b45e', concept: '#a892f7' };
+  var CLUSTER_PALETTE = ['#6ea8f5', '#f2b45e', '#a892f7', '#5ecf9e', '#e8708a', '#61c9d8', '#d8a15e', '#9d8cf0', '#7fd1a0', '#f08a5e', '#c98bd9', '#8ba0f2'];
+  function clusterHue(id) {
+    var h = 0;
+    for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return CLUSTER_PALETTE[h % CLUSTER_PALETTE.length];
+  }
+  /** Artefact-dot colour: by kind for the insight preset, by domain otherwise. */
+  function nodeColor(n) { return state.preset === 'insight' ? (KIND_COLOR[n.module] || FALLBACK_HUE) : hue(n.domainId); }
+  /** Group-star/halo colour: cluster-hash for insight, by domain otherwise. */
+  function groupColor(g) { return state.preset === 'insight' ? clusterHue(g.id) : hue(g.domainId); }
 
   // --- DOM handles ---
   var wrap = document.getElementById('wrap');
@@ -244,11 +269,15 @@ export const SPA_HTML = `<!doctype html>
         dom.groupIds.push(ch.id);
         members.forEach(function (n, k) {
           var p = goldenSpiralPoint(k, 25);
-          var node = {
-            id: n.id, label: n.label, module: n.module, ref: n.ref,
+          // Widen the copy (rather than a side-map): spreads every field the
+          // server put on the node — id/label/module/ref for curated presets,
+          // PLUS purpose/cliPointer/conceptExcerpt/touchingFiles/owningFile/
+          // range for the insight preset (build-order-v3 step 10) — onto the
+          // scene node, then overrides only the layout-derived fields below.
+          var node = Object.assign({}, n, {
             groupId: ch.id, domainId: dd.id, wx: gcx0 + p.x, wy: gcy0 + p.y,
             wr: 5, ph: (nodes.length * 1.37) % 6.28, deg: 0
-          };
+          });
           nodes.push(node); byId[n.id] = node; grp.nodeIds.push(n.id);
         });
         if (grp.nodeIds.length) {
@@ -274,7 +303,10 @@ export const SPA_HTML = `<!doctype html>
     edges.forEach(function (e) {
       var a = byId[e.from], b = byId[e.to];
       if (!a || !b) return;
-      links.push({ a: a, b: b });
+      // Widen the link, too: dashed/confidence/evidence ride along for
+      // the insight preset's edge rendering + hover tooltip (undefined for
+      // curated edges, which have none of these fields).
+      links.push({ a: a, b: b, kind: e.kind, dashed: !!e.dashed, confidence: e.confidence, evidence: e.evidence });
       (linksByNode[a.id] = linksByNode[a.id] || []).push({ other: b.id, kind: e.kind, dir: 'out' });
       (linksByNode[b.id] = linksByNode[b.id] || []).push({ other: a.id, kind: e.kind, dir: 'in' });
     });
@@ -367,7 +399,36 @@ export const SPA_HTML = `<!doctype html>
     }
     return best ? { type: 'group', id: best.id } : null;
   }
-  function pickAt(mx, my) { return lodNodeAlpha > 0.5 ? pickNode(mx, my) : pickGroup(mx, my); }
+  /** Perpendicular distance from (px,py) to the segment (x1,y1)-(x2,y2). */
+  function distToSegment(px, py, x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1, lenSq = dx * dx + dy * dy;
+    var t = lenSq > 0 ? ((px - x1) * dx + (py - y1) * dy) / lenSq : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+  /** Nearest insight edge within an 8px screen threshold (explainability is
+   *  the module invariant, schema §4.10.6 — hovering an edge must be able to
+   *  surface its evidence). Threshold is an engineering call (spec Notes). */
+  var EDGE_HIT_PX = 8;
+  function pickLink(mx, my) {
+    if (!scene) return null;
+    var s = cam.s, best = null, bd = EDGE_HIT_PX;
+    for (var i = 0; i < scene.links.length; i++) {
+      var lk = scene.links[i];
+      var x1 = (lk.a.wx - cam.x) * s + W / 2, y1 = (lk.a.wy - cam.y) * s + H / 2;
+      var x2 = (lk.b.wx - cam.x) * s + W / 2, y2 = (lk.b.wy - cam.y) * s + H / 2;
+      var d = distToSegment(mx, my, x1, y1, x2, y2);
+      if (d < bd) { bd = d; best = lk; }
+    }
+    return best ? { type: 'edge', link: best } : null;
+  }
+  function pickAt(mx, my) {
+    if (state.preset === 'insight') {
+      var e = pickLink(mx, my);
+      if (e) return e;
+    }
+    return lodNodeAlpha > 0.5 ? pickNode(mx, my) : pickGroup(mx, my);
+  }
 
   // --- Camera moves ---
   function zoomToDomain(id) { var d = scene && scene.domainById[id]; if (!d) return; camT = { x: d.cx, y: d.cy, s: fit * 3.4 }; hideHint(); }
@@ -446,7 +507,7 @@ export const SPA_HTML = `<!doctype html>
     // Group haloes appear as the group dissolves.
     if (lod.nodeAlpha > 0.02) {
       scene.groups.forEach(function (g) {
-        var x = sx(g.cx), y = sy(g.cy), rr = g.spread * s * 1.5, col = hue(g.domainId);
+        var x = sx(g.cx), y = sy(g.cy), rr = g.spread * s * 1.5, col = groupColor(g);
         var gr = ctx.createRadialGradient(x, y, 0, x, y, rr);
         gr.addColorStop(0, hexWithAlpha(col, HALO_A * 0.7 * lod.nodeAlpha)); gr.addColorStop(1, hexWithAlpha(col, 0));
         ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.fill();
@@ -462,10 +523,23 @@ export const SPA_HTML = `<!doctype html>
       });
     }
 
-    // Node links (zoomed in).
+    // Node links (zoomed in). Insight-preset edges: ALWAYS dashed, opacity/
+    // width driven by confidence tier (constellation.insight-preset-v3 Rule
+    // 5) — never restyled by curated-preset rules below.
     if (lod.nodeAlpha > 0.02) {
       scene.links.forEach(function (lk) {
         var a = lk.a, b = lk.b;
+        if (state.preset === 'insight') {
+          var st = confidenceStyle(lk.confidence);
+          var edgeHover = hover && hover.type === 'edge' && hover.link === lk;
+          var op = edgeHover ? Math.min(1, st.opacity + 0.35) : (q && !(matchN(a) && matchN(b)) ? st.opacity * 0.25 : st.opacity);
+          ctx.setLineDash(st.dash);
+          ctx.strokeStyle = hexWithAlpha('#ffffff', op * lod.nodeAlpha);
+          ctx.lineWidth = edgeHover ? st.width + 0.8 : st.width;
+          ctx.beginPath(); ctx.moveTo(sx(a.wx), sy(a.wy)); ctx.lineTo(sx(b.wx), sy(b.wy)); ctx.stroke();
+          ctx.setLineDash([]);
+          return;
+        }
         var involved = (selNode && (a.id === sel || b.id === sel)) || (hover && hover.type === 'node' && (a.id === hover.id || b.id === hover.id));
         var col = hexWithAlpha('#8fa0c8', 0.1 * lod.nodeAlpha), wd = 1;
         if (involved) { col = hexWithAlpha(hue(a.domainId), 0.6); wd = 1.6; }
@@ -478,7 +552,7 @@ export const SPA_HTML = `<!doctype html>
     // Group stars (twinkling, glow gradient).
     if (lod.groupStarAlpha > 0.02) {
       scene.groups.forEach(function (g) {
-        var x = sx(g.cx), y = sy(g.cy), col = hue(g.domainId);
+        var x = sx(g.cx), y = sy(g.cy), col = groupColor(g);
         var isH = hover && hover.type === 'group' && hover.id === g.id;
         var a = lod.groupStarAlpha; if (q) a *= matchG(g) ? 1 : 0.16;
         var rad = Math.max(3, g.starR * s), tw = 0.7 + 0.3 * Math.sin(time * 0.0014 + g.cx * 0.01);
@@ -496,7 +570,7 @@ export const SPA_HTML = `<!doctype html>
       scene.nodes.forEach(function (n) {
         var x = sx(n.wx), y = sy(n.wy);
         if (x < -40 || x > W + 40 || y < -40 || y > H + 40) return;
-        var col = hue(n.domainId), rad = Math.max(2, n.wr * s), a = lod.nodeAlpha; if (q) a *= matchN(n) ? 1 : 0.12;
+        var col = nodeColor(n), rad = Math.max(2, n.wr * s), a = lod.nodeAlpha; if (q) a *= matchN(n) ? 1 : 0.12;
         var tw = 0.72 + 0.28 * Math.sin(time * 0.0016 + n.ph);
         var gr = Math.max(5, rad * 3), g = ctx.createRadialGradient(x, y, 0, x, y, gr);
         g.addColorStop(0, hexWithAlpha(col, 0.5 * a * tw)); g.addColorStop(0.5, hexWithAlpha(col, 0.13 * a * tw)); g.addColorStop(1, hexWithAlpha(col, 0));
@@ -535,7 +609,7 @@ export const SPA_HTML = `<!doctype html>
         ctx.font = '600 12px "Space Grotesk",system-ui,sans-serif'; ctx.fillText(g.label, x, y);
         if (lod.groupStarAlpha > 0.3) {
           ctx.font = '500 9px "IBM Plex Mono",monospace';
-          ctx.fillStyle = hexWithAlpha(hue(g.domainId), a * 0.9);
+          ctx.fillStyle = hexWithAlpha(groupColor(g), a * 0.9);
           ctx.fillText(String(g.count), x, y + 13);
         }
         ctx.shadowBlur = 0;
@@ -591,17 +665,28 @@ export const SPA_HTML = `<!doctype html>
       var d0 = scene.domainById[F.domainId];
       title = up(d0.label) + ' · GROUPS';
       rows = d0.groupIds.map(function (id) { return scene.groupById[id]; }).map(function (g) {
-        return { kind: 'group', id: g.id, color: hue(g.domainId), label: g.label, count: g.count };
+        return { kind: 'group', id: g.id, color: groupColor(g), label: g.label, count: g.count };
       });
     } else if (F.level === 'group' && F.groupId && scene.groupById[F.groupId]) {
       var g0 = scene.groupById[F.groupId];
       title = up(g0.label) + ' · ARTIFACTS';
       rows = g0.nodeIds.map(function (id) { return scene.byId[id]; }).map(function (n) {
-        return { kind: 'node', id: n.id, color: hue(n.domainId), label: n.label, count: n.deg };
+        return { kind: 'node', id: n.id, color: nodeColor(n), label: n.label, count: n.deg };
       });
     }
     legendTitleEl.textContent = title;
-    legendListEl.innerHTML = rows.map(function (row) {
+    // Insight preset: a kind-counts strip (file/element/concept) above the
+    // usual domain/group/node rows — the "node kinds -> legend + colors"
+    // requirement (constellation.insight-preset-v3 Notes).
+    var kindHtml = '';
+    if (state.preset === 'insight') {
+      var kc = { file: 0, element: 0, concept: 0 };
+      scene.nodes.forEach(function (n) { if (kc[n.module] !== undefined) kc[n.module]++; });
+      kindHtml = '<div class="kind-counts">' + ['file', 'element', 'concept'].map(function (k) {
+        return '<span>' + dot(KIND_COLOR[k], 8) + up(k) + ' ' + kc[k] + '</span>';
+      }).join('') + '</div>';
+    }
+    legendListEl.innerHTML = kindHtml + rows.map(function (row) {
       return '<button data-kind="' + row.kind + '" data-id="' + esc(row.id) + '">' +
         dot(row.color, 9) +
         '<span class="lbl">' + esc(row.label) + '</span>' +
@@ -617,7 +702,7 @@ export const SPA_HTML = `<!doctype html>
     var html = '';
     if (h.type === 'node') {
       var n = scene.byId[h.id]; if (!n) { tooltipEl.hidden = true; return; }
-      var col = hue(n.domainId);
+      var col = nodeColor(n);
       var kick = esc(scene.domainById[n.domainId].label) + ' · ' + esc(scene.groupById[n.groupId].label);
       html =
         '<div class="kick">' + dot(col, 8) + '<span style="color:' + col + ';">' + kick + '</span></div>' +
@@ -625,9 +710,20 @@ export const SPA_HTML = `<!doctype html>
         '<div class="path">' + esc(n.ref) + '</div>' +
         '<div class="desc">' + esc(n.module) + ' artifact — ' + n.deg + ' connection' + (n.deg === 1 ? '' : 's') + '.</div>' +
         '<div class="meta"><span>◇ ' + n.deg + ' LINKS</span><span>' + up(n.module) + '</span></div>';
+    } else if (h.type === 'edge') {
+      // Insight-only: hovering an edge surfaces its evidence — explainability
+      // is the module invariant (schema §4.10.6); curated edges carry no
+      // evidence/confidence and never reach this branch (pickLink is only
+      // wired up for the insight preset).
+      var lk = h.link;
+      html =
+        '<div class="kick"><span style="color:#eef1fb;">' + up(lk.confidence || '') + ' EDGE</span></div>' +
+        '<div class="tt">' + esc(lk.kind || '') + '</div>' +
+        '<div class="desc">' + esc(lk.evidence || '(no evidence recorded)') + '</div>' +
+        '<div class="meta"><span>' + esc(lk.a.label) + '</span><span>→</span><span>' + esc(lk.b.label) + '</span></div>';
     } else {
       var g = scene.groupById[h.id]; if (!g) { tooltipEl.hidden = true; return; }
-      var gcol = hue(g.domainId), ext = externalLinkCount(g.id);
+      var gcol = groupColor(g), ext = externalLinkCount(g.id);
       html =
         '<div class="kick">' + dot(gcol, 8) + '<span style="color:' + gcol + ';">' + up(scene.domainById[g.domainId].label) + ' · GROUP</span></div>' +
         '<div class="tt">' + esc(g.label) + '</div>' +
@@ -645,17 +741,39 @@ export const SPA_HTML = `<!doctype html>
     if (!state.selectedId || !scene) { detailEl.hidden = true; detailEl.innerHTML = ''; return; }
     var n = scene.byId[state.selectedId];
     if (!n) { detailEl.hidden = true; detailEl.innerHTML = ''; return; }
-    var col = hue(n.domainId);
+    var col = nodeColor(n);
     var kick = esc(scene.domainById[n.domainId].label) + ' · ' + esc(scene.groupById[n.groupId].label);
     var edgeRows = (scene.linksByNode[n.id] || []).map(function (e) {
       var other = scene.byId[e.other]; if (!other) return '';
       var arrow = e.dir === 'out' ? '→' : '←';
       return '<button data-kind="node" data-id="' + esc(other.id) + '">' +
-        dot(hue(other.domainId), 7) +
+        dot(nodeColor(other), 7) +
         '<span class="arr">' + arrow + '</span>' +
         '<span class="et">' + esc(other.label) + '</span>' +
         '<span class="ek">' + esc(e.kind) + '</span></button>';
     }).join('');
+    // Kind-specific body (insight preset: file/concept/element — schema
+    // §4.10.6 detail contract, constellation.insight-preset-v3 Rule 3); every
+    // other module value (curated presets) keeps the plain MODULE field.
+    var body;
+    if (n.module === 'file') {
+      body =
+        '<div class="esec">PURPOSE</div>' +
+        '<div class="dfield"><div class="v">' + esc(n.purpose || '(no purpose recorded)') + '</div></div>' +
+        '<div class="dfield"><div class="k">QUERY</div><div class="v">' + esc(n.cliPointer || '') + '</div></div>';
+    } else if (n.module === 'concept') {
+      var touching = (n.touchingFiles || []).map(esc).join('<br>');
+      body =
+        '<div class="esec">EXCERPT</div>' +
+        '<div class="dfield"><div class="v">' + esc(n.conceptExcerpt || '(no excerpt recorded)') + '</div></div>' +
+        '<div class="dfield"><div class="k">TOUCHING FILES · ' + (n.touchingFiles ? n.touchingFiles.length : 0) + '</div><div class="v">' + (touching || '(none)') + '</div></div>';
+    } else if (n.module === 'element') {
+      body =
+        '<div class="dfield"><div class="k">OWNING FILE</div><div class="v">' + esc(n.owningFile || '') +
+        (n.range ? ' (lines ' + esc(n.range) + ')' : '') + '</div></div>';
+    } else {
+      body = '<div class="dfield"><div class="k">MODULE</div><div class="v">' + esc(n.module) + '</div></div>';
+    }
     detailEl.innerHTML =
       '<div class="dhead">' +
         '<div class="dkick">' + dot(col, 10) + '<span style="color:' + col + ';">' + kick + '</span></div>' +
@@ -664,7 +782,7 @@ export const SPA_HTML = `<!doctype html>
       '<div class="dbody">' +
         '<div class="dtitle">' + esc(n.label) + '</div>' +
         '<div class="dref">' + esc(n.ref) + '</div>' +
-        '<div class="dfield"><div class="k">MODULE</div><div class="v">' + esc(n.module) + '</div></div>' +
+        body +
         '<div class="esec">EDGES · ' + n.deg + '</div>' +
         '<div class="elist">' + (edgeRows || '<div class="ek" style="padding:4px 2px;">No connections.</div>') + '</div>' +
       '</div>';
@@ -685,9 +803,26 @@ export const SPA_HTML = `<!doctype html>
     state.hover = null; state.selectedId = null;
     prevFocusKey = ''; prevZoomShown = -1;
     tooltipEl.hidden = true; syncDetail();
-    statsEl.textContent = scene.nodeCount + ' ARTIFACTS · ' + scene.groupCount + ' GROUPS · ' + scene.edgeCount + ' EDGES';
+    if (state.preset === 'insight') {
+      var c = map.counters || {};
+      statsEl.textContent = (c.files || 0) + ' FILES · ' + (c.elements || 0) + ' ELEMENTS · ' + (c.concepts || 0) + ' CONCEPTS · ' + (c.clusters || 0) + ' CLUSTERS';
+    } else {
+      statsEl.textContent = scene.nodeCount + ' ARTIFACTS · ' + scene.groupCount + ' GROUPS · ' + scene.edgeCount + ' EDGES';
+    }
     searchEl.placeholder = 'Search ' + scene.nodeCount + ' artifacts, groups, paths…';
     syncBreadcrumb(); syncLegend();
+  }
+
+  /** Reset every chrome surface to its no-scene state (missing map, error, or
+   *  the insight preset's honest empty result — Rule 2). */
+  function clearSceneChrome() {
+    scene = null;
+    statsEl.textContent = '';
+    searchEl.placeholder = 'Search artifacts, groups, paths…';
+    crumbEl.innerHTML = '';
+    legendTitleEl.textContent = ''; legendListEl.innerHTML = '';
+    tooltipEl.hidden = true;
+    state.selectedId = null; syncDetail();
   }
 
   function load(preset, domain) {
@@ -695,11 +830,14 @@ export const SPA_HTML = `<!doctype html>
     if (preset === 'domain') qy += '&domain=' + encodeURIComponent(domain || '');
     fetch(qy).then(function (res) {
       return res.json().then(function (body) {
-        if (!res.ok) { scene = null; showMessage(body.error || ('Request failed (' + res.status + ')')); return; }
+        if (!res.ok) { clearSceneChrome(); showMessage(body.error || ('Request failed (' + res.status + ')')); return; }
+        // The insight preset's honest empty result (no insight extracted yet)
+        // — a 200 with a client-consumable hint, not an error (Rule 2).
+        if (body.emptyHint) { clearSceneChrome(); showMessage(body.emptyHint); return; }
         showMessage('');
         onData(body);
       });
-    }).catch(function (err) { showMessage(String(err)); });
+    }).catch(function (err) { clearSceneChrome(); showMessage(String(err)); });
   }
 
   function setActivePreset(preset) {

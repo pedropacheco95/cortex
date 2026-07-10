@@ -96,5 +96,5 @@ Following the design doc's §16.2 implementation order:
 7. Anatomy deprecation — shipped (consumers re-pointed to insight; `.cortex/anatomy/` removed; the `anatomy/` specs SUPERSEDED-bannered)
 8. Skill integrations — shipped (the `cortex insight` enrichment pass across the specflow-* skills)
 9. Ingestion re-home — shipped (`cortex-ingest` folded into `cortex-archive-ingest` as the atlas extraction strategy)
-10. Constellation insight preset — deferred (design §11 Q2 open; not built)
+10. `constellation.insight-preset-v3` — implemented (design §11 Q2 resolved: a fourth `?preset=insight` constellation preset over the code-understanding graph, commissioned and shipped)
 11. `core-cli.tasks-register` — implemented (B-009 resolution: real Desktop-app registry registration + verify)
