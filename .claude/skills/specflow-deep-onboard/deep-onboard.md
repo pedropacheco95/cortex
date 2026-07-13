@@ -107,20 +107,20 @@ context — use targeted reads.
 
 ```bash
 # List specs from each pass
-ls onboarding-scratch/pass-a/specs/**/*.spec.md
-ls onboarding-scratch/pass-b/specs/**/*.spec.md
-ls onboarding-scratch/pass-c/specs/**/*.spec.md
+ls onboarding-scratch/pass-a/.specflow/specs/**/*.spec.md
+ls onboarding-scratch/pass-b/.specflow/specs/**/*.spec.md
+ls onboarding-scratch/pass-c/.specflow/specs/**/*.spec.md
 
 # Compare domain structures
-diff <(find onboarding-scratch/pass-a/specs -type d | sort) \
-     <(find onboarding-scratch/pass-b/specs -type d | sort)
+diff <(find onboarding-scratch/pass-a/.specflow/specs -type d | sort) \
+     <(find onboarding-scratch/pass-b/.specflow/specs -type d | sort)
 
 # Compare bug ledgers
 diff -r onboarding-scratch/pass-a/compass/bugs onboarding-scratch/pass-b/compass/bugs
 
 # Compare business spec lists
-ls onboarding-scratch/pass-a/specs-business/**/*.business.md
-ls onboarding-scratch/pass-b/specs-business/**/*.business.md
+ls onboarding-scratch/pass-a/.specflow/specs-business/**/*.business.md
+ls onboarding-scratch/pass-b/.specflow/specs-business/**/*.business.md
 ```
 
 Categorize every item into one of three buckets:

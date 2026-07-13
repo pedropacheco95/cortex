@@ -496,7 +496,7 @@ tests/
 │   └── {business-domain}/
 │       └── {outcome}.test.{ext}
 ├── scenario/                       # Layer 4: cross-journey workflows
-│   ├── .specflow/specs/                      # Scenario spec files (markdown)
+│   ├── specs/                      # Scenario spec files (markdown)
 │   │   ├── new-player-first-booking.md
 │   │   ├── class-cancellation-refund.md
 │   │   └── ...

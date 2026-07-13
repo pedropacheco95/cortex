@@ -78,8 +78,8 @@ python3 <skill-path>/scripts/build_viewer.py
 Common flags:
 
 ```
---specs-dir <path>       # developer specs (default: ./specs)
---business-dir <path>    # business specs (default: ./specs-business)
+--specs-dir <path>       # developer specs (default: ./.specflow/specs)
+--business-dir <path>    # business specs (default: ./.specflow/specs-business)
 --out <path>             # default: ./specs.html
 --test-results <path>    # default: ./test-results.json if present
 --link-map <path>        # default: ./link-map.md if present
@@ -112,7 +112,7 @@ After running, print a short summary covering: dev spec count + status breakdown
 ├── test-results.json               # OPTIONAL — see test-results schema in references/
 └── tests/
     └── scenarios/
-        └── .specflow/specs/                  # OPTIONAL — scenario spec markdown files for coverage
+        └── specs/                  # OPTIONAL — scenario spec markdown files for coverage
 ```
 
 `_index.md` and `_overview.md` are distinct at the tree root: `_index.md` is the engineering manifest (tooling, domain tree, status counts) and is parsed for project metadata; `_overview.md` is the human-readable prose explaining what the tree contains. Both can coexist; the viewer renders them in different places (dashboard vs root-folder pane). The viewer never double-renders the same content.

@@ -327,7 +327,7 @@ hides a real difference; a false spec-gap just produces a "no change needed" on 
 ## What This Skill Does NOT Do
 
 - **Does not execute changes.** It proposes. The change-router executes after approval.
-- **Does not modify bugs.md.** If the document reveals a bug, classify the item and note
+- **Does not modify the bug ledger (`.cortex/compass/bugs/`).** If the document reveals a bug, classify the item and note
   that specflow-bugs should diagnose it.
 - **Does not generate tests directly.** Tests are triggered after spec changes are applied
   (see "Post-Apply Test Sweep" below).

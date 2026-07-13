@@ -22,7 +22,7 @@ writer/verifier harness — you never edit project code directly.
 1. From the project root, run `cortex loop-test-runner --collect`
    (add `--tier atomic,spec,journey,scenario` or `--trigger manual` when the
    request calls for it; the default is the daily `atomic,spec` pair).
-2. Read `.cortex/pulse/.test-runner-worklist.json`. Failures already
+2. Read `.cortex/pulse/state/test-runner-worklist.json`. Failures already
    suppressed by an open test-runner-filed ledger entry appear under
    `suppressed` — leave them alone; resolving the ledger entry is what
    re-arms the test. Only the `pending` array needs judgment.
@@ -52,5 +52,6 @@ writer/verifier harness — you never edit project code directly.
 
 **The working tree is inviolate** (spec Rule 8): fixes live on
 `cortex/test-fix-*` branches built in fresh worktrees; the loop's only other
-writes are `.cortex/pulse/reports/test-failures.md`, the worklist dotfile, and NEW
+writes are `.cortex/pulse/reports/test-failures.md`, the worklist state file
+(`.cortex/pulse/state/test-runner-worklist.json`), and NEW
 `.cortex/compass/bugs/` case files. Never edit an existing ledger entry.

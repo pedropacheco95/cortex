@@ -123,27 +123,27 @@ targeted reads.
 
 ```bash
 # List specs from each pass
-find onboarding-scratch/pass-a/specs -name "*.spec.md" | sort
-find onboarding-scratch/pass-b/specs -name "*.spec.md" | sort
-find onboarding-scratch/pass-c/specs -name "*.spec.md" | sort
+find onboarding-scratch/pass-a/.specflow/specs -name "*.spec.md" | sort
+find onboarding-scratch/pass-b/.specflow/specs -name "*.spec.md" | sort
+find onboarding-scratch/pass-c/.specflow/specs -name "*.spec.md" | sort
 
 # Compare domain structures
-diff <(find onboarding-scratch/pass-a/specs -type d | sort) \
-     <(find onboarding-scratch/pass-b/specs -type d | sort)
+diff <(find onboarding-scratch/pass-a/.specflow/specs -type d | sort) \
+     <(find onboarding-scratch/pass-b/.specflow/specs -type d | sort)
 
 # Compare bug ledgers
 diff -r onboarding-scratch/pass-a/compass/bugs onboarding-scratch/pass-b/compass/bugs
 
 # Compare business spec lists
-find onboarding-scratch/pass-a/specs-business -name "*.business.md" | sort
-find onboarding-scratch/pass-b/specs-business -name "*.business.md" | sort
+find onboarding-scratch/pass-a/.specflow/specs-business -name "*.business.md" | sort
+find onboarding-scratch/pass-b/.specflow/specs-business -name "*.business.md" | sort
 ```
 
 **Content comparison** — for specs that exist in multiple passes, diff the file contents:
 
 ```bash
 # For each spec that exists in all 3 passes, check if content differs
-for spec in $(find onboarding-scratch/pass-a/specs -name "*.spec.md"); do
+for spec in $(find onboarding-scratch/pass-a/.specflow/specs -name "*.spec.md"); do
   base=$(echo $spec | sed 's|onboarding-scratch/pass-a/||')
   if [ -f "onboarding-scratch/pass-b/$base" ] && [ -f "onboarding-scratch/pass-c/$base" ]; then
     if ! diff -q "$spec" "onboarding-scratch/pass-b/$base" > /dev/null 2>&1 || \

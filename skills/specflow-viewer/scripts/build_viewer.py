@@ -9,7 +9,7 @@ assets/template.html as a single-file artefact.
 
 Usage:
     python3 build_viewer.py
-    python3 build_viewer.py --specs-dir specs --business-dir specs-business --out specs.html
+    python3 build_viewer.py --specs-dir .specflow/specs --business-dir .specflow/specs-business --out specs.html
     python3 build_viewer.py --test-results test-results.json
 """
 
@@ -1144,8 +1144,8 @@ def _html_escape(text: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Build a self-contained specs.html viewer")
-    ap.add_argument("--specs-dir", default="specs", help="path to developer specs (default: ./specs)")
-    ap.add_argument("--business-dir", default="specs-business", help="path to business specs (default: ./specs-business)")
+    ap.add_argument("--specs-dir", default=".specflow/specs", help="path to developer specs (default: ./.specflow/specs)")
+    ap.add_argument("--business-dir", default=".specflow/specs-business", help="path to business specs (default: ./.specflow/specs-business)")
     ap.add_argument("--out", default="specs.html", help="output file (default: ./specs.html)")
     ap.add_argument("--test-results", default=None, help="path to test-results.json (default: ./test-results.json if present)")
     ap.add_argument("--link-map", default=None, help="path to link-map.md (default: ./link-map.md if present)")
