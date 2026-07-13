@@ -23,7 +23,10 @@ export interface IgnoreInstance {
 }
 const _ignoreFactory = _cjsRequire('ignore') as () => IgnoreInstance;
 
-export const EXCLUDED_SEGMENTS = new Set(['node_modules', '.git', '.cortex']);
+// Cortex's own meta-directories are never in insight scope: the knowledge
+// layer (.cortex), the specs (.specflow), and the skill/settings bundles
+// (.claude) are not codebase, so they get no insight entries or refresh churn.
+export const EXCLUDED_SEGMENTS = new Set(['node_modules', '.git', '.cortex', '.specflow', '.claude']);
 
 /** True when any path segment is hard-excluded (never indexed, ever). */
 export function hasExcludedSegment(relPath: string): boolean {

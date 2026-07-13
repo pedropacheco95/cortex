@@ -14,7 +14,13 @@
 export const L1_SKIP_DIRS: ReadonlySet<string> = new Set([
   'node_modules',
   '.git',
-  '.cortex', // never index our own output
+  // Cortex's own meta-directories are never indexed: insight is understanding
+  // of the CODE, not of the knowledge layer (.cortex), the specs (.specflow),
+  // or the skill/settings bundles (.claude) — those have their own
+  // representations and would only add self-referential noise.
+  '.cortex',
+  '.specflow',
+  '.claude',
   '__pycache__',
   'dist',
   'build',

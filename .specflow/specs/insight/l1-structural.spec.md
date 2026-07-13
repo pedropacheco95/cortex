@@ -29,7 +29,8 @@ The Level 1 structural pass (build-order-v3 step 5a; v3 design §5.2) is the det
 
 1. **Deterministic Core, tree-sitter only (RULES 3, RULES 18, R-001).** The pass is pure parsing and graph arithmetic — no LLM SDK anywhere in its code path, and tree-sitter is the only parser used.
 2. **Skip-lists exclude mechanical and sensitive paths pre-triage (design §5.2, study adoption).** `node_modules`, build/output directories, lockfiles, and sensitive-file patterns (credentials, secrets) are excluded before any parsing or measurement — they never enter the graph, the size accounting, or the centrality ranking.
-3. **Centrality excludes mechanical hubs.** Files that are structurally central only because everything imports them mechanically (barrel files, generated indexes, config re-exports) are excluded from the centrality ranking, so L3-selection pressure (which reads centrality) lands on genuinely load-bearing files.
+3. **Cortex's own meta-directories are never indexed.** `.cortex/`, `.specflow/`, and `.claude/` are hard-excluded from both the L1 walk (`L1_SKIP_DIRS`) and the shared insight-scope filter (`EXCLUDED_SEGMENTS`): insight is understanding of the *codebase*, not of the knowledge layer, the spec trees, or the skill/settings bundles — each already has its own representation, and indexing them would only add self-referential entries and refresh churn.
+4. **Centrality excludes mechanical hubs.** Files that are structurally central only because everything imports them mechanically (barrel files, generated indexes, config re-exports) are excluded from the centrality ranking, so L3-selection pressure (which reads centrality) lands on genuinely load-bearing files.
 4. **Output is deterministic.** Two runs over an unchanged tree produce byte-identical output — same graph, same ordering, same centrality ranking — so downstream planning and the staleness ledger can diff meaningfully.
 
 ## Acceptance Criteria
@@ -42,9 +43,9 @@ The Level 1 structural pass (build-order-v3 step 5a; v3 design §5.2) is the det
 
 ### Skip-listed paths never enter the output
 
-- **Given** a tree containing `node_modules/`, a `dist/` build directory, `pnpm-lock.yaml`, and a file matching a sensitive pattern
+- **Given** a tree containing `node_modules/`, a `dist/` build directory, `pnpm-lock.yaml`, a file matching a sensitive pattern, and Cortex's own `.cortex/`, `.specflow/`, and `.claude/` directories
 - **When** the L1 pass runs
-- **Then** none of those paths appear in the graph, the size accounting, or the centrality ranking
+- **Then** none of those paths appear in the graph, the size accounting, or the centrality ranking — the three meta-directories are hard-excluded, so extraction produces no insight entries for them
 
 ### Mechanical hubs are excluded from centrality
 

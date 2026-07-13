@@ -102,7 +102,10 @@ real fields (`src/insight/l1.ts`, `serializeL1`):
   hubs excluded, degree-0 files omitted.
 - `skipped[]` — `{path, reason}` with reason ∈ `skip-list | sensitive |
   ignored | binary | oversized`. Skipped files get NO insight entry; never
-  "rescue" them.
+  "rescue" them. Cortex's own meta-directories — `.cortex/`, `.specflow/`,
+  `.claude/` — are hard-excluded as `skip-list` (insight is about the code,
+  not the knowledge layer, specs, or skill bundles); never plan a scope over
+  them or hand a sub-agent a file inside them.
 
 Also capture, once, the values every agent will stamp:
 `BUILT_AT_COMMIT=$(git rev-parse HEAD)` — one value for the whole run.

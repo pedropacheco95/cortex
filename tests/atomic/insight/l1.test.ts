@@ -150,6 +150,9 @@ describe('L1 triage', () => {
       JSON.stringify({ schemaVersion: '3.0', anatomy: { exclude: ['**/*.gen.ts'] } }),
     );
     write(root, 'src/types.gen.ts', 'export type G = 1;\n');
+    // Cortex's own meta-directories — never indexed (insight is about the code).
+    write(root, '.specflow/specs/auth/login.spec.md', '# login\n');
+    write(root, '.claude/skills/foo/SKILL.md', '# foo\n');
   });
   afterAll(() => cleanTmp(root));
 
@@ -167,8 +170,10 @@ describe('L1 triage', () => {
     expect(byPath.get('big/huge.txt')).toBe('oversized');
     expect(byPath.get('generated/')).toBe('ignored'); // .gitignore
     expect(byPath.get('src/types.gen.ts')).toBe('ignored'); // config anatomy.exclude
-    // .cortex is never indexed (own output)
+    // Cortex's own meta-directories are never indexed (insight is about the code).
     expect(byPath.get('.cortex/')).toBe('skip-list');
+    expect(byPath.get('.specflow/')).toBe('skip-list');
+    expect(byPath.get('.claude/')).toBe('skip-list');
   }, TEST_TIMEOUT);
 
   it('lists skipped paths in sorted total order', async () => {
