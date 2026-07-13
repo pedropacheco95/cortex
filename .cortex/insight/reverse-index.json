@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "5f24181",
+  "built_at_commit": "fd7b55b",
   "referenced_by": {
     "element:src/archive/scaffold.ts#scaffoldArchive": [
       "edge:calls:element:src/cli/init.ts#init->element:src/archive/scaffold.ts#scaffoldArchive"
@@ -21,8 +21,12 @@
     "element:src/constellation/server.ts#applyPreset": [
       "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#applyPreset"
     ],
+    "element:src/constellation/server.ts#composeInsightPreset": [
+      "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#composeInsightPreset"
+    ],
     "element:src/constellation/server.ts#handleApi": [
-      "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#applyPreset"
+      "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#applyPreset",
+      "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#composeInsightPreset"
     ],
     "element:src/hooks/cli.ts#main": [
       "edge:calls:element:src/hooks/cli.ts#main->element:src/hooks/cli.ts#runHook"
@@ -121,6 +125,16 @@
     "element:src/loops/report.ts#writePulseReport": [
       "edge:calls:element:src/loops/bug-triage.ts#writeBugTriageReport->element:src/loops/report.ts#writePulseReport"
     ],
+    "element:src/loops/skill-suggest.ts#proposeSkillCandidates": [
+      "edge:calls:element:src/loops/skill-suggest.ts#proposeSkillCandidates->element:src/loops/skill-suggest.ts#validateSkillCandidate",
+      "edge:calls:element:src/loops/skill-suggest.ts#runSkillSuggest->element:src/loops/skill-suggest.ts#proposeSkillCandidates"
+    ],
+    "element:src/loops/skill-suggest.ts#runSkillSuggest": [
+      "edge:calls:element:src/loops/skill-suggest.ts#runSkillSuggest->element:src/loops/skill-suggest.ts#proposeSkillCandidates"
+    ],
+    "element:src/loops/skill-suggest.ts#validateSkillCandidate": [
+      "edge:calls:element:src/loops/skill-suggest.ts#proposeSkillCandidates->element:src/loops/skill-suggest.ts#validateSkillCandidate"
+    ],
     "element:src/pulse/distil.ts#insightFileCovering": [
       "edge:semantically-similar-to:element:src/pulse/distil.ts#insightFileCovering->element:src/pulse/promote.ts#planPromotion"
     ],
@@ -173,6 +187,7 @@
       "edge:implements-concept:file:src/cli/claude-auth.ts->concept:writer-verifier-harness",
       "edge:imports:file:src/harness/run.ts->file:src/cli/claude-auth.ts",
       "edge:imports:file:src/loops/bug-triage.ts->file:src/cli/claude-auth.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/cli/claude-auth.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/cli/claude-auth.ts"
     ],
     "file:src/cli/cli.ts": [
@@ -225,14 +240,24 @@
       "edge:imports:file:src/constellation/compile.ts->file:src/paths.ts",
       "edge:imports:file:src/constellation/server.ts->file:src/constellation/compile.ts"
     ],
+    "file:src/constellation/insight-style.ts": [
+      "edge:imports:file:src/constellation/spa.ts->file:src/constellation/insight-style.ts"
+    ],
+    "file:src/constellation/lod.ts": [
+      "edge:imports:file:src/constellation/spa.ts->file:src/constellation/lod.ts"
+    ],
     "file:src/constellation/server.ts": [
       "concept:citation-graph",
       "edge:implements-concept:file:src/constellation/server.ts->concept:citation-graph",
       "edge:imports:file:src/constellation/server.ts->file:src/constellation/compile.ts",
-      "edge:imports:file:src/constellation/server.ts->file:src/constellation/spa.ts"
+      "edge:imports:file:src/constellation/server.ts->file:src/constellation/spa.ts",
+      "edge:imports:file:src/constellation/server.ts->file:src/insight/query.ts",
+      "edge:imports:file:src/constellation/server.ts->file:src/insight/storage.ts"
     ],
     "file:src/constellation/spa.ts": [
-      "edge:imports:file:src/constellation/server.ts->file:src/constellation/spa.ts"
+      "edge:imports:file:src/constellation/server.ts->file:src/constellation/spa.ts",
+      "edge:imports:file:src/constellation/spa.ts->file:src/constellation/insight-style.ts",
+      "edge:imports:file:src/constellation/spa.ts->file:src/constellation/lod.ts"
     ],
     "file:src/harness/run.ts": [
       "concept:writer-verifier-harness",
@@ -250,10 +275,15 @@
     "file:src/hooks/errors.ts": [
       "concept:hook-safety",
       "edge:implements-concept:file:src/hooks/errors.ts->concept:hook-safety",
+      "edge:imports:file:src/hooks/errors.ts->file:src/pulse/migrate.ts",
       "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/errors.ts",
       "edge:imports:file:src/hooks/pre-write.ts->file:src/hooks/errors.ts",
       "edge:imports:file:src/hooks/session-start.ts->file:src/hooks/errors.ts",
       "edge:imports:file:src/insight/refresh-fast.ts->file:src/hooks/errors.ts"
+    ],
+    "file:src/hooks/post-read.ts": [
+      "concept:hook-safety",
+      "edge:implements-concept:file:src/hooks/post-read.ts->concept:hook-safety"
     ],
     "file:src/hooks/post-write.ts": [
       "edge:imports:file:src/hooks/cli.ts->file:src/hooks/post-write.ts",
@@ -265,7 +295,8 @@
       "edge:imports:file:src/hooks/cli.ts->file:src/hooks/pre-read.ts",
       "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/errors.ts",
       "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/session-start.ts",
-      "edge:imports:file:src/hooks/pre-read.ts->file:src/insight/query.ts"
+      "edge:imports:file:src/hooks/pre-read.ts->file:src/insight/query.ts",
+      "edge:imports:file:src/hooks/pre-read.ts->file:src/pulse/migrate.ts"
     ],
     "file:src/hooks/pre-write.ts": [
       "concept:hook-safety",
@@ -326,6 +357,7 @@
     "file:src/insight/query.ts": [
       "concept:insight-query-engine",
       "edge:implements-concept:file:src/insight/query.ts->concept:insight-query-engine",
+      "edge:imports:file:src/constellation/server.ts->file:src/insight/query.ts",
       "edge:imports:file:src/hooks/pre-read.ts->file:src/insight/query.ts",
       "edge:imports:file:src/insight/cli.ts->file:src/insight/query.ts",
       "edge:imports:file:src/insight/query.ts->file:src/insight/entry.ts",
@@ -380,6 +412,7 @@
     "file:src/insight/storage.ts": [
       "concept:staleness-ledger",
       "edge:implements-concept:file:src/insight/storage.ts->concept:staleness-ledger",
+      "edge:imports:file:src/constellation/server.ts->file:src/insight/storage.ts",
       "edge:imports:file:src/insight/entry.ts->file:src/insight/storage.ts",
       "edge:imports:file:src/insight/query.ts->file:src/insight/storage.ts",
       "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/storage.ts",
@@ -430,6 +463,7 @@
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/report.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/report.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/verify-scheduled.ts->file:src/loops/report.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
@@ -443,12 +477,25 @@
       "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/checks/compass.ts",
       "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/index-build.ts"
     ],
+    "file:src/loops/skill-suggest.ts": [
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/cli/claude-auth.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts"
+    ],
     "file:src/loops/spec-drift.ts": [
       "concept:scan-and-report",
       "edge:implements-concept:file:src/loops/spec-drift.ts->concept:scan-and-report",
       "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/git-info.ts",
       "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/spec-drift.ts->file:src/paths.ts"
+    ],
+    "file:src/loops/test-runner.ts": [
+      "concept:always-write-pulse-report",
+      "concept:writer-verifier-harness",
+      "edge:implements-concept:file:src/loops/test-runner.ts->concept:always-write-pulse-report",
+      "edge:implements-concept:file:src/loops/test-runner.ts->concept:writer-verifier-harness"
     ],
     "file:src/loops/verify-scheduled.ts": [
       "edge:imports:file:src/loops/verify-scheduled.ts->file:src/loops/report.ts",
@@ -480,6 +527,7 @@
       "edge:implements-concept:file:src/pulse/distil.ts->concept:promotion-graduation-path",
       "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/distil.ts",
       "edge:imports:file:src/loops/bug-triage.ts->file:src/pulse/distil.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/cli/claude-auth.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
@@ -490,6 +538,7 @@
       "edge:calls:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
       "edge:calls:file:src/pulse/review.ts->file:src/pulse/fences.ts",
       "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/fences.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
       "edge:imports:file:src/pulse/review.ts->file:src/pulse/fences.ts"
     ],
@@ -503,6 +552,10 @@
       "edge:imports:file:src/pulse/hygiene.ts->file:src/paths.ts",
       "edge:imports:file:src/pulse/hygiene.ts->file:src/schema/checks/compass.ts",
       "edge:imports:file:src/pulse/hygiene.ts->file:src/schema/index-build.ts"
+    ],
+    "file:src/pulse/migrate.ts": [
+      "edge:imports:file:src/hooks/errors.ts->file:src/pulse/migrate.ts",
+      "edge:imports:file:src/hooks/pre-read.ts->file:src/pulse/migrate.ts"
     ],
     "file:src/pulse/promote.ts": [
       "concept:promotion-graduation-path",
@@ -523,6 +576,7 @@
     ],
     "file:src/pulse/suggestion-ids.ts": [
       "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/suggestion-ids.ts",
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/pulse/suggestion-ids.ts"
     ],
     "file:src/pulse/types.ts": [

@@ -1,12 +1,12 @@
 ---
 path: src/insight/refresh-daily.ts
-extracted_at: 2026-07-08T18:30:00Z
+extracted_at: 2026-07-12T01:10:00Z
 extraction_level: 3
 size_lines: 680
-size_tokens: 6503
+size_tokens: 6530
 centrality: high
-built_at_commit: "8248c76"
-source_sha256: "950b0e2d4a00c732ae96f7ff48c2555eebc60f2f663594a10b3807beb50e26fd"
+built_at_commit: "fd7b55b"
+source_sha256: "3f937a616074d1b00855852bb2db4696b9abb64fff0beef4785139ea81cf6d9f"
 ---
 # src/insight/refresh-daily.ts
 
@@ -16,25 +16,25 @@ Implements `cortex loop-insight-refresh --daily`, the middle tier of the three i
 
 ## Main players
 
-- `collectDaily` (lines 268–409) — the `--collect` bookend: classifies each flagged file (new/unchanged/real/significant/uncertain) via `classifyChange`, builds the scope-scoped invalidation plan and cross-scope edge list, and writes the daily worklist. [critical]
-- `applyDaily` (lines 463–625) — the `--apply` bookend: validates re-extracted candidates against the ledger sha, reconciles `ledger.json`, removes deleted-file rows, computes reverse-dependency staleness, re-confirms L4 edges touching L3-refreshed files, advances `cycle_commits`, prunes the fast worklist, and writes the pulse report. [critical]
-- `agedEdges` (lines 238–250) — the confidence-aging check: inferred/ambiguous edges whose `confirmed_at_commit` isn't among the last N refresh-cycle commits. [critical]
-- `rebuildReverseIndex` (lines 425–445) — rebuilds `referenced_by` per entity from the current graph's edges. [critical]
-- `owningScope` (lines 134–146) — longest-prefix scope match for a path, operating on a plain `ScopeRegistry`. [supporting]
+- `collectDaily` (lines 269–410) — the `--collect` bookend: classifies each flagged file (new/unchanged/real/significant/uncertain) via `classifyChange`, builds the scope-scoped invalidation plan and cross-scope edge list, and writes the daily worklist. [critical]
+- `applyDaily` (lines 464–626) — the `--apply` bookend: validates re-extracted candidates against the ledger sha, reconciles `ledger.json`, removes deleted-file rows, computes reverse-dependency staleness, re-confirms L4 edges touching L3-refreshed files, advances `cycle_commits`, prunes the fast worklist, and writes the pulse report. [critical]
+- `agedEdges` (lines 239–251) — the confidence-aging check: inferred/ambiguous edges whose `confirmed_at_commit` isn't among the last N refresh-cycle commits. [critical]
+- `rebuildReverseIndex` (lines 426–446) — rebuilds `referenced_by` per entity from the current graph's edges. [critical]
+- `owningScope` (lines 135–147) — longest-prefix scope match for a path, operating on a plain `ScopeRegistry`. [supporting]
 - `readConfidenceAgingCycles` (lines 75–86) — reads `insight.confidenceAgingCycles` from cortex.config.json, defaulting to 3. [supporting]
-- `headCommit` (lines 120–130) — short HEAD sha via `git rev-parse`, `'unknown'` on failure. [supporting]
+- `headCommit` (lines 121–131) — short HEAD sha via `git rev-parse`, `'unknown'` on failure. [supporting]
 
 ## Insights
 
-This file contains a SECOND, independent implementation of `owningScope`/`entityPath` distinct from query.ts's (same longest-prefix logic, different input shape — a plain `ScopeRegistry` here vs an `InsightLocation` there) — not a shared helper, so scope-resolution semantics can drift between the two call sites if only one is updated. Ledger rows for files outside the current worklist are left byte-untouched by design (spec Rule 5) — `applyDaily` only rewrites entries for candidates actually in the worklist, so untouched scopes stay cached. The reverse-dependency staleness update is a two-phase handshake across cycles: references surfaced THIS cycle are cleared from `ledger.stale`, and only NEW invalidations from this cycle's refreshed/removed paths are added for the NEXT cycle to re-verify (lines 528–543) — the surfaced set and the newly-added set are never the same set. The L4 "neighbourhood update" only re-confirms edges touching L3-refreshed files (line 550, `refreshedL3`) — an L2-only refresh never advances any edge's `confirmed_at_commit`.
+This file contains a SECOND, independent implementation of `owningScope`/`entityPath` distinct from query.ts's (same longest-prefix logic, different input shape — a plain `ScopeRegistry` here vs an `InsightLocation` there) — not a shared helper, so scope-resolution semantics can drift between the two call sites if only one is updated. Ledger rows for files outside the current worklist are left byte-untouched by design (spec Rule 5) — `applyDaily` only rewrites entries for candidates actually in the worklist, so untouched scopes stay cached. The reverse-dependency staleness update is a two-phase handshake across cycles: references surfaced THIS cycle are cleared from `ledger.stale`, and only NEW invalidations from this cycle's refreshed/removed paths are added for the NEXT cycle to re-verify (lines 529–544) — the surfaced set and the newly-added set are never the same set. The L4 "neighbourhood update" only re-confirms edges touching L3-refreshed files (line 551, `refreshedL3`) — an L2-only refresh never advances any edge's `confirmed_at_commit`. The pulse reorg (this cycle) split machine working state from human-read reports: worklists now live under `.cortex/pulse/state/` (was flat dotfiles directly in `pulse/`) and this loop's report moved to `.cortex/pulse/reports/insight-refresh.md` — pure path renames via a new `stateDir` helper (replacing the old `pulseDir`), no behavioural change.
 
 ## File map
 
-- Lines 1–97: module doc, imports, worklist/report constants, `readConfidenceAgingCycles`, `insightDir`/`pulseDir` path helpers.
-- Lines 99–162: shared insight-module readers (`readGraph`, `readReverseIndex`, `readScopeRegistry`, `headCommit`, `owningScope`, `entityPath`, `edgeTouchesPath`).
-- Lines 164–409: collect phase — worklist types (`DailyFileEntry`, `DailyWorklist`, etc.), `agedEdges`, `collectDaily`.
-- Lines 411–625: apply phase — `entryFileFor`, `rebuildReverseIndex`, `applyDaily` (ledger reconciliation, L4 re-confirmation, pulse report).
-- Lines 627–679: `runRefreshDaily` — the `--collect`/`--apply`/bare dispatcher.
+- Lines 1–98: module doc, imports, worklist/report constants, `readConfidenceAgingCycles`, `insightDir`/`stateDir` path helpers.
+- Lines 100–163: shared insight-module readers (`readGraph`, `readReverseIndex`, `readScopeRegistry`, `headCommit`, `owningScope`, `entityPath`, `edgeTouchesPath`).
+- Lines 165–410: collect phase — worklist types (`DailyFileEntry`, `DailyWorklist`, etc.), `agedEdges`, `collectDaily`.
+- Lines 412–626: apply phase — `entryFileFor`, `rebuildReverseIndex`, `applyDaily` (ledger reconciliation, L4 re-confirmation, pulse report).
+- Lines 628–680: `runRefreshDaily` — the `--collect`/`--apply`/bare dispatcher.
 
 ## Connections
 

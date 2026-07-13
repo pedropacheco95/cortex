@@ -1,12 +1,12 @@
 ---
 path: src/cli/templates.ts
-extracted_at: 2026-07-10T10:00:00Z
+extracted_at: 2026-07-12T01:10:00Z
 extraction_level: 2
-size_lines: 515
-size_tokens: 7501
+size_lines: 513
+size_tokens: 7442
 centrality: medium
-built_at_commit: "5f24181"
-source_sha256: "35feea6d9b01cce211a116a8ac962cc4ef96373ef03c79393ae39d3cf1f65948"
+built_at_commit: "fd7b55b"
+source_sha256: "0c46d1d0251d541887de29107f092b9b95448cb043e70ecfc7647c1fae58e8c3"
 ---
 # src/cli/templates.ts
 

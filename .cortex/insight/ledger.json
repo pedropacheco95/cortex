@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "5f24181",
+  "built_at_commit": "fd7b55b",
   "entries": {
     "src/archive/formats.ts": {
       "source_sha256": "03d8d1f1bcd89e507072668ddde57d8472afb8ee767f1675c3906c344b54a71c",
@@ -23,8 +23,8 @@
       "extraction_level": 3
     },
     "src/cli/init.ts": {
-      "source_sha256": "2bd4810e00c2cefe8b2ea5a46f1a97edf16ae6d94d58dedd72b170a37224dd53",
-      "built_at_commit": "5f24181",
+      "source_sha256": "c0f03cdd03d746a03e677421bb3a19189ba2e4f0b03377647c6014d68ef0f3cd",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 3
     },
     "src/cli/task-scoping.ts": {
@@ -38,8 +38,8 @@
       "extraction_level": 2
     },
     "src/cli/templates.ts": {
-      "source_sha256": "35feea6d9b01cce211a116a8ac962cc4ef96373ef03c79393ae39d3cf1f65948",
-      "built_at_commit": "5f24181",
+      "source_sha256": "0c46d1d0251d541887de29107f092b9b95448cb043e70ecfc7647c1fae58e8c3",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/constellation/compile.ts": {
@@ -47,15 +47,25 @@
       "built_at_commit": "8248c76",
       "extraction_level": 2
     },
-    "src/constellation/server.ts": {
-      "source_sha256": "94a8b2d24034ffecce8f1a0f9ab87f486af1791ec0e661a5db96a374bec7c561",
-      "built_at_commit": "8248c76",
+    "src/constellation/insight-style.ts": {
+      "source_sha256": "d3aa7856a17273dc8ccf2e7915038da87533f46abc2eb6aeb2abdf6552393987",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
-    "src/constellation/spa.ts": {
-      "source_sha256": "7ab24fe7a7c0d31e2902e9cb0ac647164ea825ea6fb9bc5eb93362b308397b80",
-      "built_at_commit": "8248c76",
+    "src/constellation/lod.ts": {
+      "source_sha256": "06c8e756751369b2ef690ba5eb5c0fc31c903a5a96f0de6e04f1b78700be9e79",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
+    },
+    "src/constellation/server.ts": {
+      "source_sha256": "3e2980d39f8b3ae1c75eb86b7bdd7b2bf4533f3e9dc035e9a0307c17a8aa0dbb",
+      "built_at_commit": "fd7b55b",
+      "extraction_level": 3
+    },
+    "src/constellation/spa.ts": {
+      "source_sha256": "3095b51f18c0df9a57e3c5f47ac5c69addb07c9a3c199cf45be276b2eab9fcaf",
+      "built_at_commit": "fd7b55b",
+      "extraction_level": 3
     },
     "src/harness/run.ts": {
       "source_sha256": "2fac16cdbc66af4c2c69aa8d14ab8b36bb4fff9bef5635c2a1b2ace284ee34f0",
@@ -68,8 +78,13 @@
       "extraction_level": 3
     },
     "src/hooks/errors.ts": {
-      "source_sha256": "b842e53b67132dcd84d53df70880a054d83a68f949c488d202af17605bffa9cd",
-      "built_at_commit": "8248c76",
+      "source_sha256": "b612b68aefbea5b3142e1381ed3f813c6b3b538b6980b07817646744c5882c3e",
+      "built_at_commit": "fd7b55b",
+      "extraction_level": 2
+    },
+    "src/hooks/post-read.ts": {
+      "source_sha256": "c2a3c66ac6d7c6fe5a3039cab72d50fd6dcfbe00079288b284ce3504ae8a13e0",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/hooks/post-write.ts": {
@@ -78,18 +93,18 @@
       "extraction_level": 2
     },
     "src/hooks/pre-read.ts": {
-      "source_sha256": "9d7bc4ffb6854dda923358a970726d79881f9e2217ccd1ac40498244c4bf2ff2",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "14660ea482e28282e8f18d313f5b7b31f7a5414e7371e4585eb285120878d60a",
+      "built_at_commit": "fd7b55b",
+      "extraction_level": 3
     },
     "src/hooks/pre-write.ts": {
-      "source_sha256": "cbe69958f67544a50ae5d36fc8d9436eee0b48bdf72a85602a2fa75a435d9156",
-      "built_at_commit": "8248c76",
+      "source_sha256": "861b175a74568c527b5c87dccee0ad0ef1f00258dc10747b69a2ee7a63edd08f",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/hooks/session-start.ts": {
-      "source_sha256": "1bee3741fa985337b52c846e2b99c5526f5c717c5985135bbb20d5fefe6423f2",
-      "built_at_commit": "8248c76",
+      "source_sha256": "69e2a5e35dfd076d4f645a2dfb69267c2f856b209f0d381a6c53b20980572717",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 3
     },
     "src/insight/cli.ts": {
@@ -133,18 +148,18 @@
       "extraction_level": 3
     },
     "src/insight/refresh-daily.ts": {
-      "source_sha256": "950b0e2d4a00c732ae96f7ff48c2555eebc60f2f663594a10b3807beb50e26fd",
-      "built_at_commit": "8248c76",
+      "source_sha256": "3f937a616074d1b00855852bb2db4696b9abb64fff0beef4785139ea81cf6d9f",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 3
     },
     "src/insight/refresh-fast.ts": {
-      "source_sha256": "00d0cb9f3355d98cf4885b922f246d70eca74b7a17c0231bbed0363a90b2ebfa",
-      "built_at_commit": "8248c76",
+      "source_sha256": "33db76641cac3ec49ea29957279a9dbe1e381b83d9fcb1741abfda8e287ba68e",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 3
     },
     "src/insight/refresh-full.ts": {
-      "source_sha256": "f839c9811cdb6f50733743e3751f15610753e69c9b7b62d173e26fb2674f6f43",
-      "built_at_commit": "8248c76",
+      "source_sha256": "09b0a87d110305084dbda0969cff028a07ce51364cee5c178518a83609955e7d",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/insight/scaffold.ts": {
@@ -153,8 +168,8 @@
       "extraction_level": 2
     },
     "src/insight/session-observe.ts": {
-      "source_sha256": "d4cf8a6fe9b79846d785ae9f91323971b5998ed00c48bed5d13941e8fa0b20b2",
-      "built_at_commit": "8248c76",
+      "source_sha256": "7d3673e3c69f9c1831bcad39bd834ac7ea91ff7c9d83b6bcfde47febf8e8cd23",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/insight/significance.ts": {
@@ -168,13 +183,13 @@
       "extraction_level": 3
     },
     "src/loops/atlas-staleness.ts": {
-      "source_sha256": "d6ed7eb917a9ab0909e5c2c23bb58320f0fe60cf9aa5be18f295da04f2262edf",
-      "built_at_commit": "8248c76",
+      "source_sha256": "079675a5ce64f38676894562e11f2625e15a565c6d465eac1ce409b4f5c53edb",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/loops/bug-triage.ts": {
-      "source_sha256": "a24f0ad080811ccbfe88dcfe207dbe16a6ffa67b01649ee4f33791725043f842",
-      "built_at_commit": "8248c76",
+      "source_sha256": "6c987a66cceb6b11e8935cdc01f443719776f778e320fdffc0ae677396d75ebe",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/loops/git-info.ts": {
@@ -183,33 +198,38 @@
       "extraction_level": 2
     },
     "src/loops/lint-scheduled.ts": {
-      "source_sha256": "af69491c3a24bff04a32381415c35d7a2dc4e77e191e0163719fa37c4ad87491",
-      "built_at_commit": "8248c76",
+      "source_sha256": "123614ee8a816678d99b4f63b21c984bb810e0e2e71c37577a2183afe00f5e5c",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/loops/onboarding-drift.ts": {
-      "source_sha256": "d0b657ec3de48ad706f9115568642d63ab7fbe8e7434f9821b33e74350dd0d77",
-      "built_at_commit": "8248c76",
+      "source_sha256": "98f02970c98eece6958460afeeb16cd34462e0a3983bd681bfc424ae7af7484b",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/loops/report.ts": {
-      "source_sha256": "b424a0fe6f383c85d8f6a1f98e5d467fb28b278c791749fa10a8bb2c6062e2ba",
-      "built_at_commit": "8248c76",
+      "source_sha256": "e97cd7203395b8f653f7c1401d89fdc553aeb224ce3dda7cfd27e1237fa10392",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 3
     },
     "src/loops/rule-decay.ts": {
-      "source_sha256": "cb6edd02ddce1351c2565682d2402f9e858dac2f66d400df55d39c7b0e17cda1",
-      "built_at_commit": "8248c76",
+      "source_sha256": "6eebc669cc4b601fb4b710bb8ee9d3f0038cb74e1cd89dbd2171011b0df7da28",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/loops/spec-drift.ts": {
-      "source_sha256": "f5e0ee3c82362a4e15a434d93914b35eabfa0e82ab02cc970ed788ec30d0e356",
-      "built_at_commit": "8248c76",
+      "source_sha256": "1198554859016bd57656a51243dcaff80e431d2600ee37126ecf4d1b119776f1",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
+    "src/loops/test-runner.ts": {
+      "source_sha256": "43d0750e8a8810a2ac92721930c101c6d1eb58c97c42960bfe01c46cdc20449f",
+      "built_at_commit": "fd7b55b",
+      "extraction_level": 3
+    },
     "src/loops/verify-scheduled.ts": {
-      "source_sha256": "c9fe95f95093d660a9577206a13e7c70e4c581e59412b3264a3d1025cf6f5441",
-      "built_at_commit": "8248c76",
+      "source_sha256": "5dffc1d2b57e5829737e9b882c24886fd03276375f0dc12898b829230c177990",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/paths.ts": {
@@ -228,8 +248,13 @@
       "extraction_level": 2
     },
     "src/pulse/hygiene.ts": {
-      "source_sha256": "1eb8bc69ea4e610f47f6f0011493280c7db35a40870053d92564eba7d3098fe5",
-      "built_at_commit": "8248c76",
+      "source_sha256": "fdb957ca0c2dfeba284ccc9a06280715676ebc241788a232df4e31e57ea9bde3",
+      "built_at_commit": "fd7b55b",
+      "extraction_level": 3
+    },
+    "src/pulse/migrate.ts": {
+      "source_sha256": "1acd5ff9297a86d6f5af3b6c12774bb366221d4b875c9ae9b8e19a9c3d584ab5",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/pulse/promote.ts": {
@@ -238,13 +263,13 @@
       "extraction_level": 2
     },
     "src/pulse/review.ts": {
-      "source_sha256": "d9552140afc869cb1ee6592a2912fb33d7f4de1332b3f0cf97f303b7d0ef5d79",
-      "built_at_commit": "8248c76",
+      "source_sha256": "4301475bc5d86f891ff7a5d29be9e49d25459cf52450a375f12440693eecefc1",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/pulse/suggestion-ids.ts": {
-      "source_sha256": "ff9ebf7cb5f68d22eee4d1e0cb1f593e1d5dbd03c66ad9ef29cf6067b0ac796d",
-      "built_at_commit": "8248c76",
+      "source_sha256": "c1d967f814ff0f3b5d583e81a6fdf35a662542319e3ecfdfa931ef4cc79ecb28",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/pulse/types.ts": {
@@ -303,8 +328,8 @@
       "extraction_level": 2
     },
     "src/schema/checks/layout.ts": {
-      "source_sha256": "9814068590439d98138036b1a78f04e2528cc6a151d18ced3c0d654477f98823",
-      "built_at_commit": "8248c76",
+      "source_sha256": "0255c351a4b0a337d2977ff968963b325b7cffd6dfed2c80ac8de891cbfee2ff",
+      "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
     "src/schema/checks/loop-md.ts": {
@@ -373,8 +398,127 @@
       "extraction_level": 2
     }
   },
-  "stale": [],
+  "stale": [
+    "concept:always-write-pulse-report",
+    "concept:dynamic-verb-dispatch",
+    "concept:hook-safety",
+    "concept:insight-refresh-loops",
+    "concept:llm-judgment-subprocess",
+    "concept:pulse-proposal-gate",
+    "concept:scaffolding",
+    "concept:scan-and-report",
+    "concept:session-observe-loop",
+    "concept:staleness-ledger",
+    "concept:task-scoping",
+    "edge:calls:element:src/cli/cli.ts#run->element:src/cli/init.ts#init",
+    "edge:calls:element:src/cli/init.ts#init->element:src/archive/scaffold.ts#scaffoldArchive",
+    "edge:calls:element:src/cli/init.ts#writeScheduledTasks->element:src/cli/task-scoping.ts#scopedTaskName",
+    "edge:calls:element:src/hooks/cli.ts#runHook->element:src/hooks/session-start.ts#run",
+    "edge:calls:element:src/insight/refresh-daily.ts#applyDaily->element:src/insight/entry.ts#parseEntry",
+    "edge:calls:element:src/insight/refresh-daily.ts#collectDaily->element:src/insight/significance.ts#classifyChange",
+    "edge:calls:element:src/insight/refresh-fast.ts#runInsightRefreshFast->element:src/insight/significance.ts#classifyChange",
+    "edge:calls:element:src/insight/refresh-full.ts#reportFull->element:src/insight/refresh-daily.ts#rebuildReverseIndex",
+    "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#auditEnrichments",
+    "edge:calls:element:src/insight/session-observe.ts#auditEnrichments->element:src/insight/entry.ts#parseEntry",
+    "edge:calls:element:src/loops/bug-triage.ts#runBugTriage->element:src/pulse/distil.ts#parseCandidatesFromOutput",
+    "edge:calls:element:src/loops/bug-triage.ts#writeBugTriageReport->element:src/loops/report.ts#writePulseReport",
+    "edge:calls:element:src/pulse/distil.ts#proposeFromCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds",
+    "edge:calls:element:src/pulse/review.ts#pulseCli->element:src/pulse/promote.ts#planPromotion",
+    "edge:calls:file:src/pulse/review.ts->file:src/pulse/fences.ts",
+    "edge:calls:file:src/pulse/review.ts->file:src/pulse/types.ts",
+    "edge:implements-concept:element:src/insight/refresh-daily.ts#runRefreshDaily->concept:insight-refresh-loops",
+    "edge:implements-concept:element:src/insight/refresh-fast.ts#runInsightRefreshFast->concept:insight-refresh-loops",
+    "edge:implements-concept:element:src/insight/refresh-full.ts#runRefreshFull->concept:insight-refresh-loops",
+    "edge:implements-concept:file:src/cli/init.ts->concept:dynamic-verb-dispatch",
+    "edge:implements-concept:file:src/cli/init.ts->concept:scaffolding",
+    "edge:implements-concept:file:src/cli/init.ts->concept:task-scoping",
+    "edge:implements-concept:file:src/hooks/post-read.ts->concept:hook-safety",
+    "edge:implements-concept:file:src/hooks/pre-read.ts->concept:hook-safety",
+    "edge:implements-concept:file:src/hooks/session-start.ts->concept:hook-safety",
+    "edge:implements-concept:file:src/insight/refresh-daily.ts->concept:staleness-ledger",
+    "edge:implements-concept:file:src/insight/session-observe.ts->concept:session-observe-loop",
+    "edge:implements-concept:file:src/loops/bug-triage.ts->concept:llm-judgment-subprocess",
+    "edge:implements-concept:file:src/loops/report.ts->concept:always-write-pulse-report",
+    "edge:implements-concept:file:src/loops/rule-decay.ts->concept:scan-and-report",
+    "edge:implements-concept:file:src/loops/spec-drift.ts->concept:scan-and-report",
+    "edge:implements-concept:file:src/pulse/review.ts->concept:pulse-proposal-gate",
+    "edge:imports:file:src/cli/cli.ts->file:src/cli/init.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/cli/task-scoping.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/insight/scaffold.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/paths.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
+    "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
+    "edge:imports:file:src/hooks/cli.ts->file:src/hooks/pre-read.ts",
+    "edge:imports:file:src/hooks/cli.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/errors.ts->file:src/pulse/migrate.ts",
+    "edge:imports:file:src/hooks/post-write.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/errors.ts",
+    "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/pre-read.ts->file:src/insight/query.ts",
+    "edge:imports:file:src/hooks/pre-read.ts->file:src/pulse/migrate.ts",
+    "edge:imports:file:src/hooks/pre-write.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/hooks/session-start.ts->file:src/hooks/errors.ts",
+    "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/entry.ts",
+    "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/l1-triage.ts",
+    "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/refresh-fast.ts",
+    "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/significance.ts",
+    "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/storage.ts",
+    "edge:imports:file:src/insight/refresh-daily.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/insight/refresh-fast.ts->file:src/hooks/errors.ts",
+    "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/exclude.ts",
+    "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/l1-triage.ts",
+    "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/significance.ts",
+    "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/storage.ts",
+    "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-daily.ts",
+    "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-fast.ts",
+    "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/storage.ts",
+    "edge:imports:file:src/insight/refresh-full.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/insight/refresh-full.ts->file:src/schema/checks/insight.ts",
+    "edge:imports:file:src/insight/session-observe.ts->file:src/insight/entry.ts",
+    "edge:imports:file:src/insight/session-observe.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/distil.ts",
+    "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/fences.ts",
+    "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/suggestion-ids.ts",
+    "edge:imports:file:src/loops/atlas-staleness.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/bug-triage.ts->file:src/cli/claude-auth.ts",
+    "edge:imports:file:src/loops/bug-triage.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/bug-triage.ts->file:src/pulse/distil.ts",
+    "edge:imports:file:src/loops/lint-scheduled.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/lint-scheduled.ts->file:src/paths.ts",
+    "edge:imports:file:src/loops/lint-scheduled.ts->file:src/schema/types.ts",
+    "edge:imports:file:src/loops/lint-scheduled.ts->file:src/schema/validate.ts",
+    "edge:imports:file:src/loops/onboarding-drift.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/loops/onboarding-drift.ts->file:src/insight/measure.ts",
+    "edge:imports:file:src/loops/onboarding-drift.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/onboarding-drift.ts->file:src/schema/checks/claude-md.ts",
+    "edge:imports:file:src/loops/onboarding-drift.ts->file:src/schema/checks/layout.ts",
+    "edge:imports:file:src/loops/report.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/git-info.ts",
+    "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/checks/compass.ts",
+    "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/index-build.ts",
+    "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts",
+    "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/git-info.ts",
+    "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/spec-drift.ts->file:src/paths.ts",
+    "edge:imports:file:src/loops/verify-scheduled.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/loops/verify-scheduled.ts->file:src/paths.ts",
+    "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/pulse/distil.ts->file:src/pulse/suggestion-ids.ts",
+    "edge:imports:file:src/pulse/hygiene.ts->file:src/loops/report.ts",
+    "edge:imports:file:src/pulse/review.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/pulse/review.ts->file:src/pulse/fences.ts",
+    "edge:imports:file:src/pulse/review.ts->file:src/pulse/promote.ts",
+    "edge:imports:file:src/pulse/review.ts->file:src/pulse/types.ts",
+    "edge:imports:file:src/schema/checks/layout.ts->file:src/schema/types.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/layout.ts"
+  ],
   "cycle_commits": [
+    "fd7b55b",
     "5f24181"
   ]
 }

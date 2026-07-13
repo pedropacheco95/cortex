@@ -1,12 +1,12 @@
 ---
 path: src/hooks/pre-write.ts
-extracted_at: 2026-07-08T21:00:00Z
+extracted_at: 2026-07-12T01:10:00Z
 extraction_level: 2
-size_lines: 200
-size_tokens: 1964
+size_lines: 199
+size_tokens: 1965
 centrality: medium
-built_at_commit: "8248c76"
-source_sha256: "cbe69958f67544a50ae5d36fc8d9436eee0b48bdf72a85602a2fa75a435d9156"
+built_at_commit: "fd7b55b"
+source_sha256: "861b175a74568c527b5c87dccee0ad0ef1f00258dc10747b69a2ee7a63edd08f"
 ---
 # src/hooks/pre-write.ts
 

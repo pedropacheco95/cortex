@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-10T10:00:00Z",
-  "built_at_commit": "5f24181",
+  "generated": "2026-07-12T03:12:03Z",
+  "built_at_commit": "fd7b55b",
   "nodes": [
     {
       "id": "concept:always-write-pulse-report",
@@ -237,6 +237,11 @@
       "id": "element:src/constellation/server.ts#applyPreset",
       "kind": "element",
       "label": "applyPreset"
+    },
+    {
+      "id": "element:src/constellation/server.ts#composeInsightPreset",
+      "kind": "element",
+      "label": "composeInsightPreset"
     },
     {
       "id": "element:src/constellation/server.ts#handleApi",
@@ -574,6 +579,21 @@
       "label": "writePulseReport"
     },
     {
+      "id": "element:src/loops/skill-suggest.ts#proposeSkillCandidates",
+      "kind": "element",
+      "label": "proposeSkillCandidates"
+    },
+    {
+      "id": "element:src/loops/skill-suggest.ts#runSkillSuggest",
+      "kind": "element",
+      "label": "runSkillSuggest"
+    },
+    {
+      "id": "element:src/loops/skill-suggest.ts#validateSkillCandidate",
+      "kind": "element",
+      "label": "validateSkillCandidate"
+    },
+    {
       "id": "element:src/pulse/distil.ts#DistilCandidateType",
       "kind": "element",
       "label": "DistilCandidateType"
@@ -789,6 +809,16 @@
       "label": "compile.ts"
     },
     {
+      "id": "file:src/constellation/insight-style.ts",
+      "kind": "file",
+      "label": "insight-style.ts"
+    },
+    {
+      "id": "file:src/constellation/lod.ts",
+      "kind": "file",
+      "label": "lod.ts"
+    },
+    {
       "id": "file:src/constellation/server.ts",
       "kind": "file",
       "label": "server.ts"
@@ -812,6 +842,11 @@
       "id": "file:src/hooks/errors.ts",
       "kind": "file",
       "label": "errors.ts"
+    },
+    {
+      "id": "file:src/hooks/post-read.ts",
+      "kind": "file",
+      "label": "post-read.ts"
     },
     {
       "id": "file:src/hooks/post-write.ts",
@@ -944,9 +979,19 @@
       "label": "rule-decay.ts"
     },
     {
+      "id": "file:src/loops/skill-suggest.ts",
+      "kind": "file",
+      "label": "skill-suggest.ts"
+    },
+    {
       "id": "file:src/loops/spec-drift.ts",
       "kind": "file",
       "label": "spec-drift.ts"
+    },
+    {
+      "id": "file:src/loops/test-runner.ts",
+      "kind": "file",
+      "label": "test-runner.ts"
     },
     {
       "id": "file:src/loops/verify-scheduled.ts",
@@ -972,6 +1017,11 @@
       "id": "file:src/pulse/hygiene.ts",
       "kind": "file",
       "label": "hygiene.ts"
+    },
+    {
+      "id": "file:src/pulse/migrate.ts",
+      "kind": "file",
+      "label": "migrate.ts"
     },
     {
       "id": "file:src/pulse/promote.ts",
@@ -1122,7 +1172,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "The fallback branch of run() calls `await init(target, { force, yes, noLlm, partial, ... })`.",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/cli/init.ts#init->element:src/archive/scaffold.ts#scaffoldArchive",
@@ -1131,7 +1181,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "writeSkeleton (called from init) calls `scaffoldArchive(cortexDir)` directly.",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/cli/init.ts#writeScheduledTasks->element:src/cli/task-scoping.ts#scopedTaskName",
@@ -1140,7 +1190,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "writeScheduledTasks calls `scopedTaskName(root, CANONICAL_TASK_NAMES[task.name] ?? task.name)` for every registered task and for each retired canonical name.",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#applyPreset",
@@ -1149,7 +1199,16 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "handleApi calls `applyPreset(constellation, preset, domain)` after parsing the request's query parameters.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#composeInsightPreset",
+      "source": "element:src/constellation/server.ts#handleApi",
+      "target": "element:src/constellation/server.ts#composeInsightPreset",
+      "edge_type": "calls",
+      "confidence": "structural",
+      "evidence": "handleApi's preset==='insight' branch calls composeInsightPreset(root) before the curated constellation.json read.",
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/hooks/cli.ts#main->element:src/hooks/cli.ts#runHook",
@@ -1167,7 +1226,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "`case 'session-start': return sessionStart(stdinJson);` where sessionStart is session-start.ts's run, imported as `run as sessionStart`.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/insight/cli.ts#insightCli->element:src/insight/query.ts#conceptQuery",
@@ -1248,7 +1307,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "applyDaily validates each re-extracted candidate entry via parseEntry (refresh-daily.ts:489)",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/insight/refresh-daily.ts#collectDaily->element:src/insight/significance.ts#classifyChange",
@@ -1257,7 +1316,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "collectDaily classifies each flagged file's change via classifyChange (refresh-daily.ts:328)",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/insight/refresh-fast.ts#runInsightRefreshFast->element:src/insight/significance.ts#classifyChange",
@@ -1266,7 +1325,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "runInsightRefreshFast filters cosmetic changes via classifyChange before flagging (refresh-fast.ts:243)",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/insight/refresh-full.ts#reportFull->element:src/insight/refresh-daily.ts#rebuildReverseIndex",
@@ -1275,7 +1334,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "reportFull rebuilds the reverse index via refresh-daily's rebuildReverseIndex once the regen validates clean (refresh-full.ts:215)",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#auditEnrichments",
@@ -1320,7 +1379,25 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "writeBugTriageReport delegates the actual file write to the shared writePulseReport helper",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:calls:element:src/loops/skill-suggest.ts#proposeSkillCandidates->element:src/loops/skill-suggest.ts#validateSkillCandidate",
+      "source": "element:src/loops/skill-suggest.ts#proposeSkillCandidates",
+      "target": "element:src/loops/skill-suggest.ts#validateSkillCandidate",
+      "edge_type": "calls",
+      "confidence": "structural",
+      "evidence": "proposeSkillCandidates calls validateSkillCandidate(raw) for each candidate in the passing-filter loop.",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:calls:element:src/loops/skill-suggest.ts#runSkillSuggest->element:src/loops/skill-suggest.ts#proposeSkillCandidates",
+      "source": "element:src/loops/skill-suggest.ts#runSkillSuggest",
+      "target": "element:src/loops/skill-suggest.ts#proposeSkillCandidates",
+      "edge_type": "calls",
+      "confidence": "structural",
+      "evidence": "runSkillSuggest's propose-file mode and bare-mode ok branch both call proposeSkillCandidates(absRoot, candidates, { now }).",
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:calls:element:src/pulse/distil.ts#proposeFromCandidates->element:src/pulse/suggestion-ids.ts#allocateSuggestionIds",
@@ -1455,7 +1532,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "module header names this as the daily tier of the three insight-refresh loops",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:element:src/insight/refresh-fast.ts#runInsightRefreshFast->concept:insight-refresh-loops",
@@ -1464,7 +1541,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "module header names this as the fast/post-commit tier of the three insight-refresh loops",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:element:src/insight/refresh-full.ts#runRefreshFull->concept:insight-refresh-loops",
@@ -1509,7 +1586,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "init() dynamically imports src/constellation/compile.ts to build the citation graph rather than statically importing it, mirroring cli.ts's convention.",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:scaffolding",
@@ -1518,7 +1595,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "writeSkeleton/upsertClaudeMd/mergeSettings/writeScheduledTasks create and repair the per-project runtime surface",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:task-scoping",
@@ -1527,7 +1604,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "writeScheduledTasks calls scopedTaskName(root, ...) to register and retire this project's tasks under scoped names.",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/cli/task-scoping.ts->concept:task-scoping",
@@ -1545,7 +1622,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "owns the _index.md prompt template text that init writes into each module directory",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/constellation/compile.ts->concept:citation-graph",
@@ -1563,7 +1640,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "Doc comment: 'A localhost-only, read-only Node HTTP server over .cortex/constellation.json.'",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/harness/run.ts->concept:writer-verifier-harness",
@@ -1590,7 +1667,16 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "appendHookError's entire body is wrapped in try/catch with the comment 'the appender itself must never throw — it is the degradation path of the warn-never-block invariant'.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:implements-concept:file:src/hooks/post-read.ts->concept:hook-safety",
+      "source": "file:src/hooks/post-read.ts",
+      "target": "concept:hook-safety",
+      "edge_type": "implements-concept",
+      "confidence": "stated",
+      "evidence": "deterministic Core PostToolUse hook: never calls an LLM, always silent (exit 0, empty stdout), warn-never-block",
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/hooks/pre-read.ts->concept:hook-safety",
@@ -1599,7 +1685,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "Doc comment: 'Warn-never-block: always exit 0; silence is the common case ... internal errors degrade to silence + hook-errors.md.'",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/hooks/pre-write.ts->concept:hook-safety",
@@ -1608,7 +1694,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "Doc comment: 'Never blocks: no deny, no ask, no updatedInput, never exit 2 (Rule 2).'",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/hooks/session-start.ts->concept:hook-safety",
@@ -1617,7 +1703,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "The top-level catch block returns a fallback payload rather than throwing or exiting non-zero, per its own doc comment on self-applied degradation.",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/insight/cli.ts->concept:insight-query-engine",
@@ -1671,7 +1757,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "reconciles ledger.json and the reverse-dependency staleness set on every --apply",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/insight/scaffold.ts->concept:scaffolding",
@@ -1716,7 +1802,7 @@
       "edge_type": "implements-concept",
       "confidence": "structural",
       "evidence": "writePulseReport is the single shared write authority called by all 13 importers regardless of their run outcome",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/loops/rule-decay.ts->concept:scan-and-report",
@@ -1735,6 +1821,24 @@
       "confidence": "structural",
       "evidence": "scanSpecDrift walks the spec tree and git history to produce typed DriftSuspect findings written exactly once",
       "confirmed_at_commit": "8248c76"
+    },
+    {
+      "id": "edge:implements-concept:file:src/loops/test-runner.ts->concept:always-write-pulse-report",
+      "source": "file:src/loops/test-runner.ts",
+      "target": "concept:always-write-pulse-report",
+      "edge_type": "implements-concept",
+      "confidence": "stated",
+      "evidence": "every exit path of runTestRunner overwrites .cortex/pulse/reports/test-failures.md via writePulseReport (Rule 9, always-write)",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:implements-concept:file:src/loops/test-runner.ts->concept:writer-verifier-harness",
+      "source": "file:src/loops/test-runner.ts",
+      "target": "concept:writer-verifier-harness",
+      "edge_type": "implements-concept",
+      "confidence": "stated",
+      "evidence": "reuses runWriterVerifier/resolveMaxIterations from src/harness/run.ts rather than reimplementing the code-fix harness",
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/paths.ts->concept:citation-graph",
@@ -1779,7 +1883,7 @@
       "edge_type": "implements-concept",
       "confidence": "structural",
       "evidence": "runHygiene composes six independent check functions, each producing a HygieneSection, into one report",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:implements-concept:file:src/pulse/promote.ts->concept:promotion-graduation-path",
@@ -1869,7 +1973,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/archive/scaffold.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/init.ts",
@@ -1878,7 +1982,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/cli.ts imports src/cli/init.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
@@ -1887,7 +1991,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/archive/scaffold.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/task-scoping.ts",
@@ -1896,7 +2000,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/cli/task-scoping.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
@@ -1905,7 +2009,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/insight/scaffold.ts",
@@ -1914,7 +2018,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/insight/scaffold.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/paths.ts",
@@ -1923,7 +2027,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/paths.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
@@ -1932,7 +2036,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/schema/validate.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
@@ -1941,7 +2045,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/tasks-register.ts imports src/cli/init.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/task-scoping.ts",
@@ -1959,7 +2063,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/tasks-register.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/constellation/compile.ts->file:src/paths.ts",
@@ -1977,7 +2081,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/constellation/server.ts imports src/constellation/compile.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/constellation/server.ts->file:src/constellation/spa.ts",
@@ -1986,7 +2090,43 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/constellation/server.ts imports src/constellation/spa.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/constellation/server.ts->file:src/insight/query.ts",
+      "source": "file:src/constellation/server.ts",
+      "target": "file:src/insight/query.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { locateInsight, loadUnifiedGraph, fileQuery, conceptQuery, mainPlayers } from '../insight/query.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/constellation/server.ts->file:src/insight/storage.ts",
+      "source": "file:src/constellation/server.ts",
+      "target": "file:src/insight/storage.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { parseGraphV3, parseClustersV3, type ClusterV3 } from '../insight/storage.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/constellation/spa.ts->file:src/constellation/insight-style.ts",
+      "source": "file:src/constellation/spa.ts",
+      "target": "file:src/constellation/insight-style.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { confidenceStyle } from './insight-style.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/constellation/spa.ts->file:src/constellation/lod.ts",
+      "source": "file:src/constellation/spa.ts",
+      "target": "file:src/constellation/lod.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { clamp, hexWithAlpha, computeLOD, focusLevel, clampScale, goldenSpiralPoint, starRadius } from './lod.js'",
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/harness/run.ts->file:src/cli/claude-auth.ts",
@@ -2013,7 +2153,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/cli.ts imports src/hooks/pre-read.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/cli.ts->file:src/hooks/pre-write.ts",
@@ -2022,7 +2162,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/cli.ts imports src/hooks/pre-write.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/cli.ts->file:src/hooks/session-start.ts",
@@ -2031,7 +2171,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/cli.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/hooks/errors.ts->file:src/pulse/migrate.ts",
+      "source": "file:src/hooks/errors.ts",
+      "target": "file:src/pulse/migrate.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/hooks/errors.ts imports src/pulse/migrate.ts",
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/post-write.ts->file:src/hooks/session-start.ts",
@@ -2040,7 +2189,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/post-write.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/errors.ts",
@@ -2049,7 +2198,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/pre-read.ts imports src/hooks/errors.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/session-start.ts",
@@ -2058,7 +2207,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/pre-read.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/pre-read.ts->file:src/insight/query.ts",
@@ -2067,7 +2216,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/pre-read.ts imports src/insight/query.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/hooks/pre-read.ts->file:src/pulse/migrate.ts",
+      "source": "file:src/hooks/pre-read.ts",
+      "target": "file:src/pulse/migrate.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/hooks/pre-read.ts imports src/pulse/migrate.ts",
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/pre-write.ts->file:src/hooks/errors.ts",
@@ -2076,7 +2234,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/pre-write.ts imports src/hooks/errors.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/pre-write.ts->file:src/hooks/session-start.ts",
@@ -2085,7 +2243,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/pre-write.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
@@ -2094,7 +2252,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/session-start.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/hooks/session-start.ts->file:src/hooks/errors.ts",
@@ -2103,7 +2261,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/session-start.ts imports src/hooks/errors.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/cli.ts->file:src/insight/query.ts",
@@ -2175,7 +2333,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-daily.ts imports src/insight/entry.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/l1-triage.ts",
@@ -2184,7 +2342,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-daily.ts imports src/insight/l1-triage.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/refresh-fast.ts",
@@ -2193,7 +2351,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-daily.ts imports src/insight/refresh-fast.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/significance.ts",
@@ -2202,7 +2360,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-daily.ts imports src/insight/significance.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-daily.ts->file:src/insight/storage.ts",
@@ -2211,7 +2369,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-daily.ts imports src/insight/storage.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-daily.ts->file:src/loops/report.ts",
@@ -2220,7 +2378,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-daily.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-fast.ts->file:src/hooks/errors.ts",
@@ -2229,7 +2387,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-fast.ts imports src/hooks/errors.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/exclude.ts",
@@ -2238,7 +2396,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-fast.ts imports src/insight/exclude.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/l1-triage.ts",
@@ -2247,7 +2405,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-fast.ts imports src/insight/l1-triage.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/significance.ts",
@@ -2256,7 +2414,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-fast.ts imports src/insight/significance.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-fast.ts->file:src/insight/storage.ts",
@@ -2265,7 +2423,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-fast.ts imports src/insight/storage.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-daily.ts",
@@ -2274,7 +2432,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-full.ts imports src/insight/refresh-daily.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/refresh-fast.ts",
@@ -2283,7 +2441,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-full.ts imports src/insight/refresh-fast.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-full.ts->file:src/insight/storage.ts",
@@ -2301,7 +2459,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/refresh-full.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/refresh-full.ts->file:src/schema/checks/insight.ts",
@@ -2319,7 +2477,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/scaffold.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/session-observe.ts->file:src/insight/entry.ts",
@@ -2337,7 +2495,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/session-observe.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/distil.ts",
@@ -2382,7 +2540,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/atlas-staleness.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/atlas-staleness.ts->file:src/schema/index-build.ts",
@@ -2391,7 +2549,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/atlas-staleness.ts imports src/schema/index-build.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/bug-triage.ts->file:src/cli/claude-auth.ts",
@@ -2409,7 +2567,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/bug-triage.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/bug-triage.ts->file:src/pulse/distil.ts",
@@ -2427,7 +2585,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/lint-scheduled.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/lint-scheduled.ts->file:src/paths.ts",
@@ -2463,7 +2621,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/onboarding-drift.ts->file:src/insight/measure.ts",
@@ -2481,7 +2639,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/onboarding-drift.ts->file:src/schema/checks/claude-md.ts",
@@ -2508,7 +2666,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/report.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/git-info.ts",
@@ -2526,7 +2684,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/rule-decay.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/rule-decay.ts->file:src/schema/checks/compass.ts",
@@ -2547,6 +2705,51 @@
       "confirmed_at_commit": "8248c76"
     },
     {
+      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/cli/claude-auth.ts",
+      "source": "file:src/loops/skill-suggest.ts",
+      "target": "file:src/cli/claude-auth.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { AUTH_FAILURE_PATTERN } from '../cli/claude-auth.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
+      "source": "file:src/loops/skill-suggest.ts",
+      "target": "file:src/loops/report.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { writePulseReport } from './report.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
+      "source": "file:src/loops/skill-suggest.ts",
+      "target": "file:src/pulse/distil.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { collectCorpus, normaliseText, readPendingSections, readUnexpiredDismissals, isDismissed, readThresholdN, parseCandidatesFromOutput, CORPUS_FILE } from '../pulse/distil.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts",
+      "source": "file:src/loops/skill-suggest.ts",
+      "target": "file:src/pulse/fences.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { chooseOuterFence } from '../pulse/fences.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
+      "id": "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts",
+      "source": "file:src/loops/skill-suggest.ts",
+      "target": "file:src/pulse/suggestion-ids.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "source import statement: import { allocateSuggestionIds } from '../pulse/suggestion-ids.js'",
+      "confirmed_at_commit": "fd7b55b"
+    },
+    {
       "id": "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/git-info.ts",
       "source": "file:src/loops/spec-drift.ts",
       "target": "file:src/loops/git-info.ts",
@@ -2562,7 +2765,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/spec-drift.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/spec-drift.ts->file:src/paths.ts",
@@ -2580,7 +2783,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/verify-scheduled.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/loops/verify-scheduled.ts->file:src/paths.ts",
@@ -2607,7 +2810,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/distil.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "5f24181"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/distil.ts->file:src/pulse/fences.ts",
@@ -2643,7 +2846,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/hygiene.ts imports src/insight/exclude.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/hygiene.ts->file:src/insight/storage.ts",
@@ -2652,7 +2855,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/hygiene.ts imports src/insight/storage.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/hygiene.ts->file:src/loops/git-info.ts",
@@ -2661,7 +2864,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/hygiene.ts imports src/loops/git-info.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/hygiene.ts->file:src/loops/report.ts",
@@ -2670,7 +2873,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/hygiene.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/hygiene.ts->file:src/paths.ts",
@@ -2679,7 +2882,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/hygiene.ts imports src/paths.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/hygiene.ts->file:src/schema/checks/compass.ts",
@@ -2688,7 +2891,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/hygiene.ts imports src/schema/checks/compass.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/hygiene.ts->file:src/schema/index-build.ts",
@@ -2697,7 +2900,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/hygiene.ts imports src/schema/index-build.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/review.ts->file:src/cli/templates.ts",
@@ -2706,7 +2909,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/review.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "8248c76"
+      "confirmed_at_commit": "fd7b55b"
     },
     {
       "id": "edge:imports:file:src/pulse/review.ts->file:src/pulse/fences.ts",

@@ -23,3 +23,4 @@ Used by:
 ## Insights
 
 - Includes a stale-worktree sweep/prune (bug B-002): if the harness is killed mid-run (e.g. a stub reading stdin times out), `finally` cleanup never runs and a `cortex-harness-*` git worktree is orphaned against the real repo; the sweep reclaims these on a later run rather than relying on a clean exit. (claude-sessions/pedropacheco1/75ef81a0-97bd-4fa1-8c2a-72ddb2d98405)
+- The workspace is a `git worktree add --detach` created at HEAD with no ref, so the harness (and the test-runner loop that drives it) is structurally incapable of reproducing working-tree-only failures: a test that fails only because of uncommitted changes passes in the isolated HEAD worktree, so fix-stage yields zero fixes. Working-tree-only failures (e.g. an in-flight refactor's SKILL.md pin breakage) are a report-not-fix outcome, not a harness bug. (claude-sessions/pedropacheco1/134bdeaa-a914-4959-a083-d96adb0dbd94)
