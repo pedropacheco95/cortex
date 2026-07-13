@@ -7,8 +7,10 @@ description: >-
   layer", "map this codebase", "run the initial extraction", "Cortex doesn't
   understand this codebase yet", or "refresh insight for <file/scope/concept>";
   when a scheduled task invokes the extraction directly; or when an insight
-  refresh loop (the daily/full 5e loops) hands this skill a dirty-file
-  worklist to re-extract. Runs four phases: a deterministic L1 structural pass
+  refresh loop (cortex-loop-insight-refresh-daily, a member of the daily
+  bundle, or cortex-loop-insight-refresh-full, a member of the weekly-quality
+  bundle) hands this skill a dirty-file worklist to re-extract. Runs four
+  phases: a deterministic L1 structural pass
   (Core), extraction planning with a scope registry, parallel per-scope L2/L3
   execution, and cross-scope L4 unification. There is no
   `cortex extract-insight` CLI command — this skill IS the extraction.
@@ -46,7 +48,8 @@ Determine the mode before doing anything (design §5.11):
 1. **Initial extraction** — no usable `.cortex/insight/` layer exists (or the
    user asks for a rebuild). Run all four phases below.
 2. **Scheduled dirty-only refresh** — invoked by the insight refresh loops
-   (build-order 5e: daily/full). The invoking loop has already done the
+   (cortex-loop-insight-refresh-daily in the daily bundle, or
+   cortex-loop-insight-refresh-full in the weekly-quality bundle). The invoking loop has already done the
    triage (hash compare, structural filter, Haiku significance pass) and
    hands you a **worklist**: file paths with target levels (L2 or L3) plus
    any concepts/edges invalidated via `reverse-index.json`. Execute exactly
@@ -69,8 +72,9 @@ a scope already checkpointed complete.
 ## Phase 1 — L1 structural pass (deterministic, Core)
 
 L1 is Core library code, not a CLI verb: **as of now `cortex insight` exposes
-only the v2 query surface (`query|get|neighbors|list`, `src/cli/cli.ts`) and
-there is no `cortex insight l1` command.** A dedicated verb may be wired
+only the v3 query surface (`file|concept|element`, `src/insight/cli.ts`;
+the v2 `query|get|neighbors|list` verbs are retired) and there is no
+`cortex insight l1` command.** A dedicated verb may be wired
 later by the `insight.cli` spec — if one exists when you run, prefer it.
 Until then, call the library directly (`runL1` + `serializeL1` from the
 installed Cortex package's `dist/insight/l1.js`):
@@ -158,8 +162,10 @@ Write two durable/transient records:
 
 **Auto-run vs. confirm gate (design §5.3).** Check `cortex.config.json` for
 an `insight.extractionAutoRunThreshold` block — **it does not exist yet**
-(the current `insight` config keys are `clusterCarryOverJaccard`,
-`promotionMinAgeDays`, `promotionMinObservations`); config wiring is a
+(the `insight` block's only current keys — `clusterCarryOverJaccard`,
+`promotionMinAgeDays`, `promotionMinObservations` — are v2.0 mechanics
+superseded at 3.0 and tolerated only for back-compat, addendum A10.0; no
+v3.0 insight config keys have landed); config wiring is a
 future Core change. Until it lands, apply this conservative in-skill
 default — auto-run only when ALL hold:
 
@@ -273,7 +279,8 @@ enforce that your writes must honour:
 - **No CLI wrapper** — never invent or reference a `cortex extract-insight`
   command; you are invoked as a skill only.
 - **No refresh triage** — deciding *which* files are dirty (hash compare,
-  significance detection, Haiku triage) belongs to the 5e refresh loops; in
+  significance detection, Haiku triage) belongs to the insight-refresh-daily
+  and insight-refresh-full loops; in
   dirty-only mode you receive the worklist, you never compute it.
 - **No session observation** — capturing in-session corrections and
   enrichments into entries is `cortex-loop-session-observe`'s job.
