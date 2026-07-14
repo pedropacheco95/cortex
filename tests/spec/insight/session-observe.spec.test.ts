@@ -23,6 +23,9 @@ import {
 import { CORPUS_FILE, proposeFromCandidates, SUGGESTIONS_FILE } from '../../../src/pulse/distil.js';
 import { pulseCli } from '../../../src/pulse/review.js';
 import { checkPulse } from '../../../src/schema/checks/pulse.js';
+import { checkRules } from '../../../src/schema/checks/compass.js';
+import { checkProvenance } from '../../../src/schema/checks/provenance.js';
+import { buildIndex } from '../../../src/schema/index-build.js';
 
 const NOW = new Date('2026-07-08T12:00:00Z');
 
@@ -216,7 +219,7 @@ describe('AC: extraction-owned sections are never touched by this loop', () => {
 });
 
 describe('AC: a gated convention becomes a compass-targeted proposal, never a direct write', () => {
-  it('emits an S-NNN rule-candidate section targeting .cortex/compass/; compass itself is unchanged', async () => {
+  it('emits an S-NNN rule-candidate section targeting a Core-computed .cortex/compass/rules/R-NNN file; compass itself is unchanged', async () => {
     const root = collected('rule');
     const proposals = path.join(root, 'proposals.json');
     fs.writeFileSync(
@@ -225,7 +228,8 @@ describe('AC: a gated convention becomes a compass-targeted proposal, never a di
         {
           type: 'rule-candidate',
           pattern: 'all new API routes must validate input with the shared schema validator',
-          proposedTarget: '.cortex/compass/preferences.md',
+          title: 'API routes must validate input with the shared schema validator',
+          governedGlobs: ['src/api/**/*.ts'],
           proposedText: 'All new API routes must validate input with the shared schema validator.',
           sessionIds: ['sess-1'],
         },
@@ -237,12 +241,78 @@ describe('AC: a gated convention becomes a compass-targeted proposal, never a di
     const rep = report(root);
     expect(rep).toMatch(/## S-\d{3}:/);
     expect(rep).toContain('**Type:** rule-candidate');
-    expect(rep).toContain('**Target:** .cortex/compass/preferences.md');
+    expect(rep).toMatch(/\*\*Target:\*\* \.cortex\/compass\/rules\/R-001-/);
+    expect(rep).toContain('**Proposed file:**');
+    expect(rep).not.toContain('**Proposed addition:**');
+    expect(rep).toContain('id: R-001');
+    expect(rep).toContain('governs:');
+    expect(rep).toContain('src/api/**/*.ts');
+    expect(rep).toContain('derives_from: claude-sessions/pedro/sess-1');
     expect(gatedClean(root)).toBe(true); // the gate applies it, not this loop
     expect(fs.readFileSync(path.join(root, '.cortex', 'compass', 'preferences.md'), 'utf-8')).toBe('# Preferences\n');
     // the section is schema-clean under check.pulse
     const violations = await checkPulse(root);
     expect(violations.filter((v) => v.severity === 'error')).toEqual([]);
+  });
+
+  it('round-trips through pulse-accept: creates a schema-valid R-NNN rule file against an empty rules/ dir', async () => {
+    const root = collected('rule-accept');
+    const proposals = path.join(root, 'proposals.json');
+    fs.writeFileSync(
+      proposals,
+      JSON.stringify([
+        {
+          type: 'rule-candidate',
+          pattern: 'all new API routes must validate input with the shared schema validator',
+          proposedText: 'All new API routes must validate input with the shared schema validator.',
+          sessionIds: ['sess-1'],
+        },
+      ]),
+      'utf-8',
+    );
+    expect(fs.existsSync(path.join(root, '.cortex', 'compass', 'rules'))).toBe(false);
+    applyObserve(root, { now: NOW, proposalsFile: proposals, user: 'pedro' });
+    expect(await pulseCli('pulse-accept', ['S-001'], root)).toBe(0);
+    const ruleFiles = fs.readdirSync(path.join(root, '.cortex', 'compass', 'rules'));
+    expect(ruleFiles).toHaveLength(1);
+    expect(ruleFiles[0]).toMatch(/^R-001-/);
+    const written = fs.readFileSync(path.join(root, '.cortex', 'compass', 'rules', ruleFiles[0] as string), 'utf-8');
+    expect(written).toContain('id: R-001');
+    expect(written).toContain('governs:');
+    expect(written).toContain('derives_from: claude-sessions/pedro/sess-1');
+    const index = await buildIndex(root);
+    const violations = [...(await checkRules(root, index)), ...(await checkProvenance(root))];
+    expect(violations.filter((v) => v.severity === 'error')).toEqual([]);
+  });
+
+  it('two rule-candidates in one apply batch get distinct, non-colliding R-NNN ids', async () => {
+    const root = collected('rule-two');
+    const proposals = path.join(root, 'proposals.json');
+    fs.writeFileSync(
+      proposals,
+      JSON.stringify([
+        {
+          type: 'rule-candidate',
+          pattern: 'convention one',
+          proposedText: 'Convention one text.',
+          sessionIds: ['sess-1'],
+        },
+        {
+          type: 'rule-candidate',
+          pattern: 'convention two',
+          proposedText: 'Convention two text.',
+          sessionIds: ['sess-1'],
+        },
+      ]),
+      'utf-8',
+    );
+    applyObserve(root, { now: NOW, proposalsFile: proposals, user: 'pedro' });
+    expect(await pulseCli('pulse-accept', ['S-001'], root)).toBe(0);
+    expect(await pulseCli('pulse-accept', ['S-002'], root)).toBe(0);
+    const ruleFiles = fs.readdirSync(path.join(root, '.cortex', 'compass', 'rules')).sort();
+    expect(ruleFiles).toHaveLength(2);
+    expect(ruleFiles[0]).toMatch(/^R-001-/);
+    expect(ruleFiles[1]).toMatch(/^R-002-/);
   });
 });
 
@@ -295,7 +365,6 @@ describe('AC: a dismissed candidate is not re-proposed', () => {
         {
           type: 'rule-candidate',
           pattern: 'all new API routes must validate input with the shared schema validator',
-          proposedTarget: '.cortex/compass/preferences.md',
           proposedText: 'All new API routes must validate input.',
           sessionIds: ['sess-1'],
         },
@@ -364,7 +433,6 @@ describe('AC: the loop never writes gated content directly under any classificat
         {
           type: 'rule-candidate',
           pattern: 'route-2 convention',
-          proposedTarget: '.cortex/compass/preferences.md',
           proposedText: 'Route-2 convention text.',
           sessionIds: ['sess-1'],
         },

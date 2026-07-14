@@ -77,9 +77,10 @@ gate as a typed proposal, with no exception.
 5. Write the gated candidates to a scratchpad JSON array (empty array when
    none), each object one of:
    ```json
-   {"type": "rule-candidate", "pattern": "<the observed convention>",
-    "proposedTarget": ".cortex/compass/<file>.md",
-    "proposedText": "<the rule text to append>",
+   {"type": "rule-candidate", "pattern": "<the observed convention, verbatim enough for dismissal matching>",
+    "title": "<a short display title for the rule>",
+    "governedGlobs": ["<glob(s) of files/paths this rule should govern>"],
+    "proposedText": "<the rule body text>",
     "sessionIds": ["<session-id>"]}
    ```
    ```json
@@ -87,14 +88,19 @@ gate as a typed proposal, with no exception.
     "reasoning": "<the narrative: on DATE we chose X because Y>",
     "sessionIds": ["<session-id>"]}
    ```
-   (A `decision-candidate` needs no target or frontmatter — Core drafts the
-   schema-valid `atlas/decisions/YYYY-MM-DD-<slug>.md` proposal file from it,
-   carrying the claude-sessions provenance.)
+   Neither shape needs a target or frontmatter — Core computes the `R-NNN` id
+   and drafts the schema-valid `.cortex/compass/rules/R-NNN-<slug>.md` (resp.
+   `atlas/decisions/YYYY-MM-DD-<slug>.md`) proposal file from it, carrying the
+   claude-sessions provenance. `governedGlobs` is the one judgment call Core
+   can't make (R-001: no LLM judgment in Core) — infer it from the rule's
+   content and the codebase layout; omit it only when you're not confident,
+   Core falls back to `["**/*"]`.
 6. Run `cortex loop-session-observe --apply --proposals <file>` (plain
    `--apply` when there were no gated candidates). The deterministic close
    audits your entry writes (section boundaries + provenance trailers),
    verifies compass/atlas are untouched, allocates S-ids from the shared
-   counter, writes the typed proposal sections into
+   counter, drafts the schema-conformant rule/decision file for each gated
+   candidate and writes the typed proposal sections into
    `.cortex/pulse/reports/session-observe.md`, and advances the observed-session
    state. A non-zero exit means you violated a write boundary — fix the
    entries (revert the offending sections) and re-run apply.

@@ -417,9 +417,17 @@ export function auditEnrichments(absRoot: string): EnrichmentAudit {
 export type ObserveCandidate =
   | {
       type: 'rule-candidate';
-      /** The observed convention, verbatim enough for dismissal matching. */
+      /** The observed convention, verbatim enough for dismissal/carry-forward matching
+       *  (the matching key — NOT the display title, per B-010). */
       pattern: string;
-      proposedTarget: string;
+      /** Display title for the section heading and the drafted rule's `title`
+       *  frontmatter; derived from `pattern` (truncated) when absent. */
+      title?: string;
+      /** Glob list for the drafted rule's `governs:` frontmatter — the one field
+       *  Core cannot infer (R-001: no LLM judgment in Core); supplied by the skill.
+       *  Falls back to `["**\/*"]` when absent/malformed so old/malformed proposals
+       *  never hard-fail. */
+      governedGlobs?: string[];
       proposedText: string;
       sessionIds: string[];
     }
@@ -445,12 +453,22 @@ function isNonEmptyStringArray(v: unknown): v is string[] {
 export function validateObserveCandidate(raw: unknown): ObserveCandidate | null {
   if (!isRecord(raw)) return null;
   if (raw['type'] === 'rule-candidate') {
-    const { pattern, proposedTarget, proposedText, sessionIds } = raw;
+    const { pattern, title, governedGlobs, proposedText, sessionIds } = raw;
     if (typeof pattern !== 'string' || pattern.trim() === '') return null;
-    if (typeof proposedTarget !== 'string' || !proposedTarget.startsWith('.cortex/compass/') || proposedTarget.includes('..')) return null;
     if (typeof proposedText !== 'string' || proposedText.trim() === '') return null;
     if (!isNonEmptyStringArray(sessionIds)) return null;
-    return { type: 'rule-candidate', pattern, proposedTarget, proposedText, sessionIds };
+    // title/governedGlobs are TOLERANTLY shape-checked: absent or malformed →
+    // dropped rather than failing the candidate (Core computes/falls back).
+    const validTitle = typeof title === 'string' && title.trim() !== '' ? title : undefined;
+    const validGlobs = isNonEmptyStringArray(governedGlobs) ? governedGlobs : undefined;
+    return {
+      type: 'rule-candidate',
+      pattern,
+      ...(validTitle !== undefined ? { title: validTitle } : {}),
+      ...(validGlobs !== undefined ? { governedGlobs: validGlobs } : {}),
+      proposedText,
+      sessionIds,
+    };
   }
   if (raw['type'] === 'decision-candidate') {
     const { title, slug, reasoning, sessionIds } = raw;
@@ -527,23 +545,133 @@ interface SectionDraft {
   norm: string;
 }
 
-function candidateSectionText(id: string, candidate: ObserveCandidate, now: Date, user: string): string {
+/** Display title for a rule-candidate: the explicit `title` when present, else
+ *  `pattern` truncated (never the reverse — `pattern` stays the untruncated
+ *  dismissal-matching key, B-010). */
+function ruleTitle(candidate: Extract<ObserveCandidate, { type: 'rule-candidate' }>): string {
+  if (candidate.title !== undefined && candidate.title.trim() !== '') return candidate.title.trim();
+  const p = candidate.pattern.trim();
+  return p.length > 80 ? `${p.slice(0, 77)}...` : p;
+}
+
+/** Lowercased-hyphenated filename slug for a rule (mirrors `decisionSlug`). */
+function ruleSlug(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+  return slug || 'rule';
+}
+
+/**
+ * Next unused `R-NNN` id: scans `.cortex/compass/rules/` on disk for existing
+ * `R-NNN[-slug].md` files AND ids already allocated earlier in the SAME apply
+ * batch (`allocatedInBatch`, mutated in place) — so two rule-candidates
+ * proposed in one run never collide even before either lands on disk (B-010).
+ */
+function nextRuleId(absRoot: string, allocatedInBatch: Set<string>): string {
+  const rulesDir = path.join(absRoot, '.cortex', 'compass', 'rules');
+  let existing: string[] = [];
+  try {
+    existing = fs.readdirSync(rulesDir);
+  } catch {
+    existing = [];
+  }
+  let max = 0;
+  for (const name of existing) {
+    const m = /^R-(\d{3,})(?:-|\.md$)/.exec(name);
+    if (m?.[1]) max = Math.max(max, parseInt(m[1], 10));
+  }
+  for (const id of allocatedInBatch) {
+    const m = /^R-(\d{3,})$/.exec(id);
+    if (m?.[1]) max = Math.max(max, parseInt(m[1], 10));
+  }
+  const id = `R-${String(max + 1).padStart(3, '0')}`;
+  allocatedInBatch.add(id);
+  return id;
+}
+
+/**
+ * The full proposed rule file (schema §4.2), mirroring `decisionFilePayload()`:
+ * Core computes the `R-NNN` id and filename deterministically, builds
+ * schema-conformant frontmatter — `id`, `title`, a `source` list pointing at
+ * the pulse report itself (the one artefact guaranteed to exist and back a
+ * session-mined convention; `resolveRelativePath()` resolves it), `governs`
+ * from the candidate's `governedGlobs` (falling back to `["**\/*"]`), and a
+ * `provenance` block carrying the claude-sessions refs (cited-not-resolved,
+ * schema §6/A6) — and the proposed text as the body. Accept writes this
+ * verbatim to `.cortex/compass/rules/R-NNN-<slug>.md` (B-010 fix).
+ */
+export function ruleFilePayload(
+  candidate: Extract<ObserveCandidate, { type: 'rule-candidate' }>,
+  absRoot: string,
+  user: string,
+  allocatedRuleIds: Set<string>,
+): { targetRel: string; payload: string } {
+  const id = nextRuleId(absRoot, allocatedRuleIds);
+  const title = ruleTitle(candidate);
+  const slug = ruleSlug(title);
+  const targetRel = `.cortex/compass/rules/${id}-${slug}.md`;
+
+  const reportAbs = path.join(reportsDir(absRoot), SESSION_OBSERVE_REPORT_FILE);
+  const ruleFileAbs = path.join(absRoot, targetRel);
+  const sourceRel = path.relative(path.dirname(ruleFileAbs), reportAbs).split(path.sep).join('/');
+
+  const governs = candidate.governedGlobs && candidate.governedGlobs.length > 0 ? candidate.governedGlobs : ['**/*'];
+  const governsYaml = governs.map((g) => `  - ${JSON.stringify(g)}`).join('\n');
+  const provenance = candidate.sessionIds
+    .map((sid) => `  - derives_from: claude-sessions/${user}/${sid}`)
+    .join('\n');
+
+  const payload = [
+    '---',
+    `id: ${id}`,
+    `title: ${JSON.stringify(title)}`,
+    'source:',
+    `  - ${sourceRel}`,
+    'governs:',
+    governsYaml,
+    'provenance:',
+    provenance,
+    'confidence: INFERRED',
+    '---',
+    '',
+    `# ${id} — ${title}`,
+    '',
+    candidate.proposedText.replace(/\n+$/, ''),
+    '',
+  ].join('\n');
+  return { targetRel, payload };
+}
+
+function candidateSectionText(
+  id: string,
+  candidate: ObserveCandidate,
+  now: Date,
+  user: string,
+  absRoot: string,
+  allocatedRuleIds: Set<string>,
+): string {
   const source = `session-observe (sessions: ${candidate.sessionIds.join(', ')})`;
   if (candidate.type === 'rule-candidate') {
-    const title = candidate.pattern.length > 80 ? `${candidate.pattern.slice(0, 77)}...` : candidate.pattern;
-    const fence = chooseOuterFence(candidate.proposedText);
+    const title = ruleTitle(candidate);
+    const { targetRel, payload } = ruleFilePayload(candidate, absRoot, user, allocatedRuleIds);
+    const fence = chooseOuterFence(payload);
     return [
       `## ${id}: ${title}`,
       '',
       '**Type:** rule-candidate',
       `**Source:** ${source}`,
-      `**Target:** ${candidate.proposedTarget}`,
+      `**Target:** ${targetRel}`,
       `**Pattern:** ${candidate.pattern}`,
       '',
-      '**Proposed addition:**',
+      '**Proposed file:**',
       '',
       fence,
-      candidate.proposedText,
+      payload,
       fence,
     ].join('\n');
   }
@@ -645,9 +773,10 @@ export function applyObserve(root: string, opts: ObserveApplyOptions = {}): Obse
   }
 
   const ids = allocateSuggestionIds(absRoot, fresh.length);
+  const allocatedRuleIds = new Set<string>();
   const sections: SectionDraft[] = fresh.map((candidate, i) => ({
     id: ids[i] as string,
-    text: candidateSectionText(ids[i] as string, candidate, now, user),
+    text: candidateSectionText(ids[i] as string, candidate, now, user, absRoot, allocatedRuleIds),
     norm: normaliseText(candidate.type === 'rule-candidate' ? candidate.pattern : candidate.title),
   }));
   counts.proposed = sections.length;

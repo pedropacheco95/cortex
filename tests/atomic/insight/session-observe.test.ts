@@ -23,6 +23,7 @@ import {
   validateObserveCandidate,
   decisionSlug,
   decisionFilePayload,
+  ruleFilePayload,
   splitEntrySections,
   PROVENANCE_TRAILER_RE,
   SESSION_OBSERVE_STATE_FILE,
@@ -33,6 +34,7 @@ import { pulseCli } from '../../../src/pulse/review.js';
 import { SUGGESTION_TYPES, isTargetPermitted, permittedRoots } from '../../../src/pulse/types.js';
 import { checkPulse } from '../../../src/schema/checks/pulse.js';
 import { checkAtlas } from '../../../src/schema/checks/atlas.js';
+import { checkRules } from '../../../src/schema/checks/compass.js';
 import { checkProvenance } from '../../../src/schema/checks/provenance.js';
 import { buildIndex } from '../../../src/schema/index-build.js';
 import { CANONICAL_TASK_NAMES } from '../../../src/cli/task-scoping.js';
@@ -299,7 +301,8 @@ describe('candidate validation and decision drafting', () => {
       validateObserveCandidate({
         type: 'rule-candidate',
         pattern: 'validate input with the shared schema validator',
-        proposedTarget: '.cortex/compass/preferences.md',
+        title: 'API routes must validate input',
+        governedGlobs: ['src/api/**/*.ts'],
         proposedText: 'All new API routes must validate input with the shared schema validator.',
         sessionIds: ['sess-1'],
       }),
@@ -316,22 +319,13 @@ describe('candidate validation and decision drafting', () => {
     expect(validateObserveCandidate(null)).toBeNull();
     expect(validateObserveCandidate({ type: 'promotion' })).toBeNull();
     expect(
-      validateObserveCandidate({
-        type: 'rule-candidate',
-        pattern: 'x',
-        proposedTarget: '.cortex/atlas/decisions/x.md', // wrong root for a rule
-        proposedText: 'y',
-        sessionIds: ['s'],
-      }),
+      validateObserveCandidate({ type: 'rule-candidate', proposedText: 'y', sessionIds: ['s'] }), // missing pattern
     ).toBeNull();
     expect(
-      validateObserveCandidate({
-        type: 'rule-candidate',
-        pattern: 'x',
-        proposedTarget: '.cortex/compass/../../etc/passwd',
-        proposedText: 'y',
-        sessionIds: ['s'],
-      }),
+      validateObserveCandidate({ type: 'rule-candidate', pattern: 'x', sessionIds: ['s'] }), // missing proposedText
+    ).toBeNull();
+    expect(
+      validateObserveCandidate({ type: 'rule-candidate', pattern: 'x', proposedText: 'y', sessionIds: [] }), // empty sessionIds
     ).toBeNull();
     expect(
       validateObserveCandidate({ type: 'decision-candidate', title: 'x', reasoning: 'y', sessionIds: [] }),
@@ -339,6 +333,33 @@ describe('candidate validation and decision drafting', () => {
     expect(
       validateObserveCandidate({ type: 'decision-candidate', title: 'x', reasoning: 'y', sessionIds: ['s'], slug: 'a/b' }),
     ).toBeNull();
+  });
+
+  it('title/governedGlobs are TOLERANT: absent or malformed falls back instead of rejecting the candidate', () => {
+    // no title, no governedGlobs at all — still valid (Core derives/falls back)
+    const bare = validateObserveCandidate({
+      type: 'rule-candidate',
+      pattern: 'x',
+      proposedText: 'y',
+      sessionIds: ['s'],
+    });
+    expect(bare).not.toBeNull();
+    expect((bare as { title?: string }).title).toBeUndefined();
+    expect((bare as { governedGlobs?: string[] }).governedGlobs).toBeUndefined();
+
+    // malformed governedGlobs (not an array of strings) and an empty-string title
+    // are dropped, not treated as a hard failure (old/malformed proposals JSON).
+    const malformed = validateObserveCandidate({
+      type: 'rule-candidate',
+      pattern: 'x',
+      title: '   ',
+      governedGlobs: 'not-an-array',
+      proposedText: 'y',
+      sessionIds: ['s'],
+    });
+    expect(malformed).not.toBeNull();
+    expect((malformed as { title?: string }).title).toBeUndefined();
+    expect((malformed as { governedGlobs?: string[] }).governedGlobs).toBeUndefined();
   });
 
   it('decisionSlug lowercases, hyphenates, and never returns empty', () => {
@@ -359,6 +380,69 @@ describe('candidate validation and decision drafting', () => {
     expect(payload).toContain('- derives_from: claude-sessions/pedro/sess-1');
     expect(payload).toContain('- derives_from: claude-sessions/pedro/sess-2');
     expect(payload).toContain('Because ingress.');
+  });
+
+  it('ruleFilePayload drafts §4.2-conformant frontmatter (B-010: the rule-candidate equivalent of decisionFilePayload)', () => {
+    const root = tmp('rule-payload');
+    const allocated = new Set<string>();
+    const { targetRel, payload } = ruleFilePayload(
+      {
+        type: 'rule-candidate',
+        pattern: 'validate input with the shared schema validator',
+        title: 'API routes must validate input',
+        governedGlobs: ['src/api/**/*.ts'],
+        proposedText: 'All new API routes must validate input with the shared schema validator.',
+        sessionIds: ['sess-1', 'sess-2'],
+      },
+      root,
+      'pedro',
+      allocated,
+    );
+    expect(targetRel).toBe('.cortex/compass/rules/R-001-api-routes-must-validate-input.md');
+    expect(payload).toContain('id: R-001');
+    expect(payload).toContain('title: "API routes must validate input"');
+    expect(payload).toContain('source:');
+    expect(payload).toContain('../../pulse/reports/session-observe.md');
+    expect(payload).toContain('governs:');
+    expect(payload).toContain('"src/api/**/*.ts"');
+    expect(payload).toContain('- derives_from: claude-sessions/pedro/sess-1');
+    expect(payload).toContain('- derives_from: claude-sessions/pedro/sess-2');
+    expect(payload).toContain('All new API routes must validate input with the shared schema validator.');
+    expect(allocated.has('R-001')).toBe(true);
+  });
+
+  it('ruleFilePayload falls back to governs: ["**/*"] when governedGlobs is absent', () => {
+    const root = tmp('rule-payload-fallback');
+    const { payload } = ruleFilePayload(
+      { type: 'rule-candidate', pattern: 'x', proposedText: 'y', sessionIds: ['s'] },
+      root,
+      'pedro',
+      new Set<string>(),
+    );
+    expect(payload).toContain('governs:');
+    expect(payload).toContain('"**/*"');
+  });
+
+  it('ruleFilePayload allocates the next R-NNN from existing on-disk rule files, and never collides within one batch', () => {
+    const root = tmp('rule-payload-scan');
+    fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-001-existing.md'), '# existing\n', 'utf-8');
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-004-gap.md'), '# gap\n', 'utf-8');
+    const allocated = new Set<string>();
+    const first = ruleFilePayload(
+      { type: 'rule-candidate', pattern: 'first', proposedText: 'a', sessionIds: ['s'] },
+      root,
+      'pedro',
+      allocated,
+    );
+    const second = ruleFilePayload(
+      { type: 'rule-candidate', pattern: 'second', proposedText: 'b', sessionIds: ['s'] },
+      root,
+      'pedro',
+      allocated,
+    );
+    expect(first.targetRel).toBe('.cortex/compass/rules/R-005-first.md');
+    expect(second.targetRel).toBe('.cortex/compass/rules/R-006-second.md');
   });
 });
 
@@ -433,6 +517,113 @@ describe('decision-candidate in the typed pulse gate', () => {
       `---\nkind: pulse-session-observe\ngenerated: 2026-07-08T12:00:00Z\nloop: cortex-loop-session-observe\n---\n\n` +
         `## S-009: Escapee\n\n**Type:** decision-candidate\n**Source:** session-observe (sessions: s)\n` +
         `**Target:** .cortex/atlas/decisions/../../../evil.md\n\n**Proposed file:**\n\n\`\`\`\nbody\n\`\`\`\n`,
+      'utf-8',
+    );
+    expect(await pulseCli('pulse-accept', ['S-009'], root)).toBe(1);
+    expect(fs.existsSync(path.join(root, 'evil.md'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// B-010: rule-candidate — the same round-trip decision-candidate already had,
+// which the bug lacked. A `rule-candidate` proposal must be `cortex
+// pulse-accept`-able against an EMPTY .cortex/compass/rules/, and the landed
+// file must pass check.rules (id/title/source/governs) + check.provenance.
+// ---------------------------------------------------------------------------
+describe('rule-candidate in the typed pulse gate (B-010 fix)', () => {
+  it('renders a **Proposed file:** section targeting a Core-computed .cortex/compass/rules/R-NNN path', () => {
+    const root = makeGitProject('rule-render');
+    collectFor(root);
+    const proposals = path.join(root, 'proposals.json');
+    fs.writeFileSync(
+      proposals,
+      JSON.stringify([
+        {
+          type: 'rule-candidate',
+          pattern: 'validate input with the shared schema validator',
+          title: 'API routes must validate input',
+          governedGlobs: ['src/api/**/*.ts'],
+          proposedText: 'All new API routes must validate input with the shared schema validator.',
+          sessionIds: ['sess-1'],
+        },
+      ]),
+      'utf-8',
+    );
+    applyObserve(root, { now: NOW, proposalsFile: proposals, user: 'pedro' });
+    const rep = fs.readFileSync(reportPath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
+    expect(rep).toContain('**Type:** rule-candidate');
+    expect(rep).toMatch(/\*\*Target:\*\* \.cortex\/compass\/rules\/R-001-/);
+    expect(rep).toContain('**Proposed file:**');
+    expect(rep).not.toContain('**Proposed addition:**');
+  });
+
+  it('accept creates a schema-valid rule file against an EMPTY .cortex/compass/rules/ (the bug: this used to fail "Target file does not exist")', async () => {
+    const root = makeGitProject('rule-accept-empty');
+    expect(fs.existsSync(path.join(root, '.cortex', 'compass', 'rules'))).toBe(false);
+    collectFor(root);
+    const proposals = path.join(root, 'proposals.json');
+    fs.writeFileSync(
+      proposals,
+      JSON.stringify([
+        {
+          type: 'rule-candidate',
+          pattern: 'validate input with the shared schema validator',
+          title: 'API routes must validate input',
+          governedGlobs: ['src/api/**/*.ts'],
+          proposedText: 'All new API routes must validate input with the shared schema validator.',
+          sessionIds: ['sess-1'],
+        },
+      ]),
+      'utf-8',
+    );
+    applyObserve(root, { now: NOW, proposalsFile: proposals, user: 'pedro' });
+    expect(await pulseCli('pulse-accept', ['S-001'], root)).toBe(0);
+
+    const ruleFiles = fs.readdirSync(path.join(root, '.cortex', 'compass', 'rules'));
+    expect(ruleFiles).toHaveLength(1);
+    expect(ruleFiles[0]).toBe('R-001-api-routes-must-validate-input.md');
+    const written = fs.readFileSync(path.join(root, '.cortex', 'compass', 'rules', ruleFiles[0] as string), 'utf-8');
+    expect(written).toContain('id: R-001');
+    expect(written).toContain('title: "API routes must validate input"');
+    expect(written).toContain('governs:');
+    expect(written).toContain('derives_from: claude-sessions/pedro/sess-1');
+
+    const index = await buildIndex(root);
+    const ruleViolations = await checkRules(root, index);
+    expect(ruleViolations.filter((v) => v.severity === 'error')).toEqual([]);
+    expect(await checkProvenance(root)).toEqual([]);
+  });
+
+  it('two rule-candidates accepted from the same apply batch get distinct, non-colliding R-NNN ids', async () => {
+    const root = makeGitProject('rule-two-batch');
+    collectFor(root);
+    const proposals = path.join(root, 'proposals.json');
+    fs.writeFileSync(
+      proposals,
+      JSON.stringify([
+        { type: 'rule-candidate', pattern: 'convention one', proposedText: 'Convention one.', sessionIds: ['sess-1'] },
+        { type: 'rule-candidate', pattern: 'convention two', proposedText: 'Convention two.', sessionIds: ['sess-1'] },
+      ]),
+      'utf-8',
+    );
+    applyObserve(root, { now: NOW, proposalsFile: proposals, user: 'pedro' });
+    expect(await pulseCli('pulse-accept', ['S-001'], root)).toBe(0);
+    expect(await pulseCli('pulse-accept', ['S-002'], root)).toBe(0);
+    const ruleFiles = fs.readdirSync(path.join(root, '.cortex', 'compass', 'rules')).sort();
+    expect(ruleFiles).toEqual(['R-001-convention-one.md', 'R-002-convention-two.md']);
+
+    const index = await buildIndex(root);
+    expect((await checkRules(root, index)).filter((v) => v.severity === 'error')).toEqual([]);
+  });
+
+  it('accept refuses a rule-candidate targeting outside compass/ (defence in depth; Core never emits this)', async () => {
+    const root = makeGitProject('rule-accept-refuse');
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
+    fs.writeFileSync(
+      reportPath(root, 'session-observe.md'),
+      `---\nkind: pulse-session-observe\ngenerated: 2026-07-08T12:00:00Z\nloop: cortex-loop-session-observe\n---\n\n` +
+        `## S-009: Escapee\n\n**Type:** rule-candidate\n**Source:** session-observe (sessions: s)\n` +
+        `**Target:** .cortex/compass/../../../evil.md\n\n**Proposed file:**\n\n\`\`\`\nbody\n\`\`\`\n`,
       'utf-8',
     );
     expect(await pulseCli('pulse-accept', ['S-009'], root)).toBe(1);
