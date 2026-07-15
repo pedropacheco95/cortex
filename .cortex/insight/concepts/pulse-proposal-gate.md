@@ -1,6 +1,6 @@
 # pulse-proposal-gate
 
-The propose-don’t-mutate boundary: loops and distillation only write typed suggestion proposals to .cortex/pulse/, and the sole path that mutates gated layers (compass/atlas/specs) is the human-driven review/promote gate, constrained to the permitted target roots.
+The propose-don’t-mutate boundary: loops and distillation only write typed suggestion proposals to .cortex/pulse/, and the sole path that mutates gated layers (compass/atlas, plus RULES.md and a narrow insight/map exception) is the human-driven review/promote gate, constrained to the permitted target roots.
 
 ## Files
 

@@ -5,7 +5,6 @@ A Core-deterministic bookend around a single LLM call: spawn `claude -p <prompt>
 ## Files
 
 - src/loops/bug-triage.ts
-- src/loops/skill-suggest.ts
 - src/pulse/distil.ts
 
 ## Related concepts

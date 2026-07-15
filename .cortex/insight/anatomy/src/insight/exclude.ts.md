@@ -1,18 +1,18 @@
 ---
 path: src/insight/exclude.ts
-extracted_at: 2026-07-08T18:30:00Z
+extracted_at: 2026-07-14T01:10:58Z
 extraction_level: 2
-size_lines: 70
-size_tokens: 686
+size_lines: 72
+size_tokens: 706
 centrality: medium
-built_at_commit: "8248c76"
-source_sha256: "cf0ac5595cc3c7ca619b7e4ed522337d4c768e754f1478f293a6926b515d36f6"
+built_at_commit: "c170f95"
+source_sha256: "7f20a632a0d91b5ee942d4345f1684465eeb9fa374a40acb66b1c8279e41eeca"
 ---
 # src/insight/exclude.ts
 
 ## Purpose
 
-Shared path-exclusion logic deciding whether a path is in insight scope: hard-excluded segments (`node_modules`/`.git`/`.cortex`) are never indexed regardless of config, and `.gitignore` plus config-declared excludes (the new `insight.exclude` key unioned with the legacy `anatomy.exclude` for back-compat) widen the exclusion further. It is the single scope-agreement point shared by the L1 walk, the fast refresh tier, and the pulse hygiene sweep.
+Shared path-exclusion logic deciding whether a path is in insight scope: hard-excluded segments (`node_modules`/`.git`/`.cortex`/`.specflow`/`.claude`) are never indexed regardless of config — Cortex's own meta-directories (knowledge layer, specs, skill/settings bundles) are not codebase and would only add self-referential noise — and `.gitignore` plus config-declared excludes (the new `insight.exclude` key unioned with the legacy `anatomy.exclude` for back-compat) widen the exclusion further. It is the single scope-agreement point shared by the L1 walk, the fast refresh tier, and the pulse hygiene sweep.
 
 ## Connections
 

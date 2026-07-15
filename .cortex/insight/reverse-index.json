@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "fd7b55b",
+  "built_at_commit": "9720847",
   "referenced_by": {
     "element:src/archive/scaffold.ts#scaffoldArchive": [
       "edge:calls:element:src/cli/init.ts#init->element:src/archive/scaffold.ts#scaffoldArchive"
@@ -100,11 +100,39 @@
       "edge:implements-concept:element:src/insight/refresh-full.ts#runRefreshFull->concept:insight-refresh-loops"
     ],
     "element:src/insight/session-observe.ts#applyObserve": [
-      "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#auditEnrichments"
+      "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#auditEnrichments",
+      "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#candidateSectionText",
+      "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#validateObserveCandidate",
+      "edge:calls:element:src/insight/session-observe.ts#runSessionObserve->element:src/insight/session-observe.ts#applyObserve"
     ],
     "element:src/insight/session-observe.ts#auditEnrichments": [
       "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#auditEnrichments",
       "edge:calls:element:src/insight/session-observe.ts#auditEnrichments->element:src/insight/entry.ts#parseEntry"
+    ],
+    "element:src/insight/session-observe.ts#candidateSectionText": [
+      "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#candidateSectionText",
+      "edge:calls:element:src/insight/session-observe.ts#candidateSectionText->element:src/insight/session-observe.ts#decisionFilePayload",
+      "edge:calls:element:src/insight/session-observe.ts#candidateSectionText->element:src/insight/session-observe.ts#ruleFilePayload"
+    ],
+    "element:src/insight/session-observe.ts#collectObserve": [
+      "edge:calls:element:src/insight/session-observe.ts#runSessionObserve->element:src/insight/session-observe.ts#collectObserve"
+    ],
+    "element:src/insight/session-observe.ts#decisionFilePayload": [
+      "edge:calls:element:src/insight/session-observe.ts#candidateSectionText->element:src/insight/session-observe.ts#decisionFilePayload"
+    ],
+    "element:src/insight/session-observe.ts#nextRuleId": [
+      "edge:calls:element:src/insight/session-observe.ts#ruleFilePayload->element:src/insight/session-observe.ts#nextRuleId"
+    ],
+    "element:src/insight/session-observe.ts#ruleFilePayload": [
+      "edge:calls:element:src/insight/session-observe.ts#candidateSectionText->element:src/insight/session-observe.ts#ruleFilePayload",
+      "edge:calls:element:src/insight/session-observe.ts#ruleFilePayload->element:src/insight/session-observe.ts#nextRuleId"
+    ],
+    "element:src/insight/session-observe.ts#runSessionObserve": [
+      "edge:calls:element:src/insight/session-observe.ts#runSessionObserve->element:src/insight/session-observe.ts#applyObserve",
+      "edge:calls:element:src/insight/session-observe.ts#runSessionObserve->element:src/insight/session-observe.ts#collectObserve"
+    ],
+    "element:src/insight/session-observe.ts#validateObserveCandidate": [
+      "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#validateObserveCandidate"
     ],
     "element:src/insight/significance.ts#classifyChange": [
       "edge:calls:element:src/insight/refresh-daily.ts#collectDaily->element:src/insight/significance.ts#classifyChange",
@@ -463,7 +491,6 @@
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/report.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/report.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/spec-drift.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/verify-scheduled.ts->file:src/loops/report.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
@@ -479,10 +506,8 @@
     ],
     "file:src/loops/skill-suggest.ts": [
       "edge:imports:file:src/loops/skill-suggest.ts->file:src/cli/claude-auth.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/distil.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts"
+      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/fences.ts"
     ],
     "file:src/loops/spec-drift.ts": [
       "concept:scan-and-report",
@@ -576,7 +601,6 @@
     ],
     "file:src/pulse/suggestion-ids.ts": [
       "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/suggestion-ids.ts",
-      "edge:imports:file:src/loops/skill-suggest.ts->file:src/pulse/suggestion-ids.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/pulse/suggestion-ids.ts"
     ],
     "file:src/pulse/types.ts": [

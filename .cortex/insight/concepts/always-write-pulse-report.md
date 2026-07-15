@@ -10,7 +10,6 @@ Every loop always writes its pulse report via the shared writePulseReport helper
 - src/loops/onboarding-drift.ts
 - src/loops/report.ts
 - src/loops/rule-decay.ts
-- src/loops/skill-suggest.ts
 - src/loops/spec-drift.ts
 - src/loops/verify-scheduled.ts
 - src/pulse/distil.ts
