@@ -2,30 +2,41 @@
 name: cortex-loop-session-observe
 description: >-
   Session-observation loop for a Cortex project — the v3 successor to v2's
-  insight-gaps. Use for the scheduled session-observe task, or when the user
-  says "run the session-observe loop", "what did we learn this session", or
+  insight-gaps, and the primary producer of automatic, ungated project
+  learning. Use for the scheduled session-observe task, or when the user says
+  "run the session-observe loop", "what did we learn this session", or
   "capture session observations". Runs `cortex loop-session-observe
   --collect`, reads the unobserved sessions from the shared corpus, infers
-  durable knowledge (user corrections, gotchas hit, non-obvious behaviour,
-  patterns established), routes it by type — ungated observations enrich
-  insight per-file entries directly with claude-sessions provenance;
-  conventions/rules become rule-candidate and decisions become
-  decision-candidate pulse proposals — then runs `cortex loop-session-observe
+  durable knowledge (project context stated in passing, user corrections,
+  gotchas hit, non-obvious behaviour, patterns established), classifies each
+  with a prefer-ungated tiebreaker, and enriches directly with no approval —
+  project-wide context into insight/observations/, per-file facts into
+  insight per-file entries — carrying claude-sessions provenance; only the
+  minority that should bind future work becomes a rule-candidate or
+  decision-candidate pulse proposal — then runs `cortex loop-session-observe
   --apply --proposals <file>` and summarises .cortex/pulse/reports/session-observe.md.
 ---
 
 # cortex-loop-session-observe
 
 You are the judgment middle between two deterministic Core bookends (spec
-insight.session-observe Rule 8). The CLI collects the worklist and audits the
-result; you — this session — do the observation and routing judgment. You
-already ARE a Claude session: **never spawn a nested `claude` subprocess.**
+insight.session-observe Rule 10). The CLI collects the worklist and audits
+the result; you — this session — do the observation, classification, and
+enrichment judgment. You already ARE a Claude session:
+**never spawn a nested `claude` subprocess.**
 
-**The loop-write invariant (RULES 7, spec Rule 5):** your only direct writes
-are the `## Insights` / `## Query pointers` sections of existing insight
-per-file entries (machine-owned, ungated) and the proposals JSON scratch
-file. Everything gated — compass, atlas, RULES.md — goes through the pulse
-gate as a typed proposal, with no exception.
+**The hierarchy inverts from how this loop first shipped.** Being useful is
+the fast, ungated path: what a session teaches lands directly in
+`.cortex/insight/` with no per-item approval — that is this loop's *primary*
+job now. Graduation to a hard rule or decision is the slow, gated path,
+reserved for the minority that must genuinely bind future work.
+
+**The loop-write invariant (RULES 7, spec Rule 7):** your only direct writes
+are `.cortex/insight/observations/*.md` (and `_index.md`), the `## Insights`
+/ `## Query pointers` sections of existing insight per-file entries
+(machine-owned, ungated), and the proposals JSON scratch file. Everything
+gated — compass, atlas, RULES.md — goes through the pulse gate as a typed
+proposal, with no exception.
 
 1. From the project root, run `cortex loop-session-observe --collect`. Read
    `.cortex/pulse/state/session-observe-worklist.json` — the sessions not yet
@@ -36,14 +47,45 @@ gate as a typed proposal, with no exception.
    `.cortex/pulse/state/session-corpus.json` (the shared corpus — the same file
    `cortex-pulse-distil` reads; never rebuild it yourself). Infer **durable**
    knowledge from how each session actually went:
+   - project context stated in passing (audience, scale, deployment shape,
+     working style, stated intent — anything about the project as a whole,
+     not one file);
    - corrections the user made;
    - gotchas hit (things that cost investigation time);
    - non-obvious behaviour discovered in the codebase;
    - patterns or conventions established.
    Be conservative: session noise is not knowledge. Skip anything an
    unexpired entry in `.cortex/pulse/dismissed.md` already covers.
-3. Route every observation into **exactly one** of three types (spec Rule 1):
-   - **Ungated codebase observation** (a fact about a specific file — a
+3. Classify every observation into **exactly one** of four routes (spec Rule
+   1), applying the **tiebreaker**: when in doubt between an ungated
+   observation and a gated rule, classify it ungated (spec Rule 4). The gate
+   is for knowledge *confirmed* to bind future work — something said once,
+   however important it sounds, is observation, not law.
+   - **Project-context observation** (about the project as a whole, not any
+     one file — spec Rule 2): read existing entries under
+     `.cortex/insight/observations/` first to check whether a themed entry
+     already exists (`audience.md`, `scale.md`, `deployment.md`,
+     `working-style.md`, `stated-intent.md`, or another kebab-case theme you
+     name) —
+     - **new theme:** create the entry (and `observations/_index.md`, if the
+       directory doesn't exist yet) with frontmatter `kind:
+       insight-observation`, `updated: <now, ISO-8601 UTC>`, `salient`
+       (below), `sessions: [claude-sessions/<user>/<session-id>]`, and
+       current-truth prose body — no log, no bullet list;
+     - **re-encounter** (the same fact restated or reconfirmed): append the
+       session id to `sessions:`, bump `updated`, and only touch the body if
+       the newer session sharpens the wording — never create a second entry
+       or a second bullet;
+     - **contradiction** (a session superseding the entry's current truth):
+       rewrite the body in place to the newer truth (newest session wins),
+       append the session id to `sessions:` (the trail is additive — earlier
+       ids are never dropped), bump `updated`;
+     - **salience is your judgment, not Core's:** set `salient: true` only
+       when the observation was stated forcefully — an "ALWAYS"/"never", an
+       explicit imperative, a forceful correction — never mechanically from
+       recurrence alone. Leave `salient: false` for anything stated in
+       passing, even on a first mention.
+   - **Per-file codebase observation** (a fact about a specific file — a
      quirk, a convention it exemplifies, navigation guidance): append it
      DIRECTLY to that file's insight entry
      (`.cortex/insight/anatomy/<path>.md` or
@@ -56,24 +98,27 @@ gate as a typed proposal, with no exception.
        (`<user>` = your OS username);
      - NEVER touch `## Purpose`, `## Main players`, `## File map`,
        `## Connections`, or the frontmatter — those are extraction-owned
-       (spec Rule 2), and the apply bookend will fail the run if they change;
+       (spec Rule 3), and the apply bookend will fail the run if they change;
      - do not duplicate an item the entry already carries;
      - **if the file has no insight entry, skip it with a note in your
        summary — never create entries; creation is extraction's job**
        (`cortex-extract-insight`).
-   - **Gated convention or rule** (something that should bind future work,
-     not just describe one file): a `rule-candidate` object in your proposals
-     JSON — never a direct compass write.
+   - **Gated convention or rule** (confirmed to bind future work, not just
+     describe one file or project context): a `rule-candidate` object in
+     your proposals JSON — never a direct compass write.
    - **Decision** (the reasoning behind a choice worth preserving): a
      `decision-candidate` object in your proposals JSON — never a direct
      atlas write.
-4. **The distil boundary (spec Rule 6):** distil mines *cross-session
-   repetition* over a wider window; you capture *in-context, per-session*
-   observations. If an observation is repetition-shaped — the same
-   correction/preference stated across several sessions — leave it to
-   `cortex-pulse-distil`; do not propose it here. (Distil's already-covered
-   filter treats patterns you enriched into insight entries as promotion
-   material, so enriching once here is enough.)
+4. **The distil boundary, resolved (spec Rule 8):** distil mines
+   *cross-session repetition* over a wider window; you capture *in-context,
+   per-session* observations. Enrich the observation once — into
+   `insight/observations/` or a per-file entry, whichever grain fits — and
+   stop there. Do not propose a `rule-candidate` yourself just because a
+   pattern feels repetitive: the `sessions:` trail you're building on the
+   observations entry (or the provenance trailers on a per-file entry) *is*
+   the shared evidence `cortex-pulse-distil` reads for cross-session
+   recurrence; it proposes graduation from that trail on its own schedule,
+   not you, and not here.
 5. Write the gated candidates to a scratchpad JSON array (empty array when
    none), each object one of:
    ```json
@@ -97,16 +142,19 @@ gate as a typed proposal, with no exception.
    Core falls back to `["**/*"]`.
 6. Run `cortex loop-session-observe --apply --proposals <file>` (plain
    `--apply` when there were no gated candidates). The deterministic close
-   audits your entry writes (section boundaries + provenance trailers),
-   verifies compass/atlas are untouched, allocates S-ids from the shared
-   counter, drafts the schema-conformant rule/decision file for each gated
-   candidate and writes the typed proposal sections into
-   `.cortex/pulse/reports/session-observe.md`, and advances the observed-session
-   state. A non-zero exit means you violated a write boundary — fix the
-   entries (revert the offending sections) and re-run apply.
+   audits your entry writes (section boundaries, provenance trailers, and
+   observations frontmatter shape), verifies compass/atlas are untouched,
+   allocates S-ids from the shared counter, drafts the schema-conformant
+   rule/decision file for each gated candidate and writes the typed proposal
+   sections into `.cortex/pulse/reports/session-observe.md`, and advances the
+   observed-session state. A non-zero exit means you violated a write
+   boundary — fix the entries (revert the offending sections) and re-run
+   apply.
 7. Read `.cortex/pulse/reports/session-observe.md` and summarise to the user:
-   sessions observed, entries enriched, proposals written (their S-ids and
-   types), any files skipped for lack of an entry, and any violations.
+   sessions observed, project-context observations created or updated (with
+   theme and whether it was a fresh entry, a re-encounter, or a
+   contradiction), per-file entries enriched, proposals written (their S-ids
+   and types), any files skipped for lack of an entry, and any violations.
 
 Gated proposals are reviewed with `cortex pulse-list` / `pulse-accept` /
 `pulse-reject` — never apply them yourself.

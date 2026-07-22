@@ -13,7 +13,7 @@ The engineering specs for the `.cortex/insight/` module at v3: the ungated, quer
 - `insight.cli` — the three deterministic query verbs `cortex insight file|concept|element`, all `--json`, no LLM at query time; the scoped/flat difference invisible to the caller.
 - `insight.extract-skill` — `cortex-extract-insight`, the plan-not-pipeline initial extraction: L1 consumption, scope planning, parallel per-scope L2/L3 execution, cross-scope L4 unification, checkpointed resumability.
 - `insight.refresh-loops` — the fast (post-commit, deterministic), daily (hybrid significance triage), and full (weekly ground-truth L4) maintenance loops, plus reverse-dependency invalidation, confidence-aging, and scope-scoped invalidation.
-- `insight.session-observe` — `cortex-loop-session-observe`: type-routed session observation — ungated observations enrich per-file entries directly with session provenance; conventions and decisions become typed pulse proposals.
+- `insight.session-observe` — `cortex-loop-session-observe`: type-routed session observation, now headlined by ungated, automatic learning rather than the pulse gate. Project-context observations (audience, scale, working style — anything not scoped to one file) enrich the new `insight/observations/` themed-entry surface (schema §4.10.11, 3.1) directly; per-file observations still enrich per-file entries directly; both carry session provenance. Only the minority that must bind future work — a convention, a decision — becomes a `rule-candidate`/`decision-candidate` pulse proposal.
 
 **v2 lineage (SUPERSEDED-bannered, retained for history):**
 

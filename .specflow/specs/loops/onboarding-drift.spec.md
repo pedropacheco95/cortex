@@ -16,7 +16,7 @@ governs:
 
 ## Intent
 
-`cortex loop-onboarding-drift` (monthly, design §11.4 item 7) checks the scaffolding that directs Claude into Cortex — the CLAUDE.md managed block and every `_index.md` — against the current schema's templates and budgets, and writes refresh proposals to `pulse/reports/scaffolding-review.md`. Propose-don't-mutate: refreshing is the human running init-style updates, never this loop.
+`cortex loop-onboarding-drift` (monthly, design §11.4 item 7) checks the scaffolding that directs Claude into Cortex — the CLAUDE.md managed block and every `_index.md` — against the current schema's templates and budgets, and writes refresh proposals to `pulse/reports/scaffolding-review.md`. Propose-don't-mutate: refreshing is the human running `cortex sync` (spec `core-cli.sync`), never this loop.
 
 ## Entities
 
@@ -29,7 +29,7 @@ governs:
 1. **Command + bundle.** `cortex loop-onboarding-drift` + shipped `skills/cortex-loop-onboarding-drift/SKILL.md` (registers the `onboarding-drift` task under `--partial`).
 2. **Drift signals (v1):** (a) the CLAUDE.md block's marker version differs from `schemaVersion`, or the block is missing; (b) an `_index.md` missing a §7.1 required heading (reuse the validator's `check.index-shape` logic, don't reimplement); (c) an `_index.md` over the 300-token budget (chars/4); (d) a `.cortex/` directory whose `_index.md` is byte-identical to the shipped template while its directory content has since gained artefacts — a hint the prompt was never localised. Each finding proposes a concrete refresh action.
 3. **Always-write (schema §4.5):** explicit "Scaffolding is current." when quiet.
-4. **Read-only Core** (R-001): proposes `cortex init --force`-style refreshes; performs none.
+4. **Read-only Core** (R-001): proposes `cortex sync` refreshes; performs none.
 
 ## Acceptance Criteria
 

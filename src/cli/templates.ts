@@ -306,27 +306,67 @@ One folder per business domain so stakeholders can find outcomes by area without
 reading implementation detail.
 `;
 
-/** §8 CLAUDE.md managed block, exact template with substitutions applied. */
+/**
+ * §8 CLAUDE.md managed block, exact template with substitutions applied.
+ * Reproduces cortex-schema.md §8 VERBATIM — both H2 sections (`## Cortex`
+ * and `## Cortex Insight`), including the `insight/observations/` line added
+ * at 3.1. (Sync round finding: the pre-existing template here had silently
+ * drifted from §8 — it carried only the first H2 section with different
+ * bullet wording and was missing the whole `## Cortex Insight` block/the
+ * observations line entirely. Fixed to match the schema exactly; no test
+ * pinned the old wording, and the schema document itself is the load-bearing
+ * contract here, not this file.)
+ */
 export function claudeMdBlock(projectName: string): string {
   return `<!-- cortex:start v${SCHEMA_VERSION} -->
 ## Cortex
 
 Cortex is active on **${projectName}**. The knowledge layer lives in \`.cortex/\`:
 
-- \`compass/\` — rules, preferences, and the bug ledger. The "must".
+- \`compass/\` — rules, conventions, and the bug ledger. The "why" and the "must".
 - \`atlas/\` — stakeholders, decisions (narrative), domain terms, source materials.
 - \`archive/\` — ingested source documents (client specs, transcripts, contracts) and their structured extractions.
-- \`insight/\` — ungated, queryable inferred/observed knowledge layer (\`cortex insight\` to query).
+- \`insight/\` — inferred understanding of the codebase itself. See "Cortex Insight" below.
 
 **Protocol:** before working a task, read the relevant \`_index.md\` first — they are
 prompts that tell you what to read and when. For "why" questions, grep \`compass/\` and
 \`atlas/\`. For unfamiliar terms, check \`atlas/domain/\`. Follow frontmatter
 cross-references (the citation graph) to trace any claim to its source.
 
-Specs are the source of truth: \`.specflow/specs-business/\` (outcomes) and \`.specflow/specs/\` (implementation),
-linked by \`implements:\`/\`implemented_by:\`. Don't let the trees drift.
+Specs are the source of truth: \`.specflow/specs-business/\` (outcomes) and
+\`.specflow/specs/\` (implementation), linked by \`implements:\`/\`implemented_by:\`. Don't
+let the trees drift.
 
 Modules present: ${PRESENT_MODULES}. Schema: ${SCHEMA_VERSION}.
+
+## Cortex Insight
+
+This project has a Cortex insight layer at .cortex/insight/ that
+contains rich per-file understanding, concept extraction, and
+semantic connections across the codebase. It is queryable via
+the \`cortex insight\` CLI.
+
+Read the file itself when you're going to modify it, need exact
+syntax, or the change requires knowing every line. Query insight
+instead when you're trying to understand what a file does, whether
+it's relevant, how it relates, or what its main pieces are — a
+richer resume than reading 500 lines and remembering fragments.
+Consult insight first; read the file when you need exactness.
+
+Before substantive work on any file, query its insight entry.
+Before changes touching multiple files or a concept, query the
+concept. This is not optional.
+
+- cortex insight file <path>      — rich per-file understanding
+- cortex insight concept <name>   — how a concept lives in the code
+- cortex insight element <query>  — atomic element (may return
+  "no rich entry"; still discoverable via the file entry)
+
+Also check \`insight/observations/\` for session-learned context
+(audience, scale, intent) the code alone can't show.
+
+Insight is inferred, not curated. Where it conflicts with a compass
+rule or a spec, the gated layer wins — context, not authority.
 <!-- cortex:end -->`;
 }
 

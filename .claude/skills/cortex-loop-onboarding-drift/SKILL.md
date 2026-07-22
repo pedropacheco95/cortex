@@ -17,8 +17,10 @@ work; you run it, read it, and report it.
 2. Read `.cortex/pulse/reports/scaffolding-review.md`.
 3. Summarise the refresh proposals to the user: managed-block version drift,
    malformed or over-budget `_index.md` prompts, and never-localised template
-   indexes (flagged as heuristic hints) — with the proposed refresh actions.
+   indexes (flagged as heuristic hints) — with the proposed refresh actions,
+   naming `cortex sync` as the command that applies them.
 
-**Never mutate anything.** Do not run `cortex init --force`, edit CLAUDE.md,
-or rewrite any `_index.md` — refreshing is the human's action
+**Never mutate anything.** Do not run `cortex sync`, edit CLAUDE.md,
+or rewrite any `_index.md` — refreshing is the human's action, via
+`cortex sync` (spec `core-cli.sync`), never this loop
 (loops.onboarding-drift, propose-don't-mutate).

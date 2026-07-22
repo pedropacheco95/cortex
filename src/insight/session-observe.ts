@@ -45,6 +45,7 @@ import { allocateSuggestionIds } from '../pulse/suggestion-ids.js';
 import { chooseOuterFence } from '../pulse/fences.js';
 import { writePulseReport } from '../loops/report.js';
 import { parseEntry } from './entry.js';
+import { checkInsightObservations } from '../schema/checks/insight.js';
 
 export const SESSION_OBSERVE_WORKLIST_FILE = 'session-observe-worklist.json';
 export const SESSION_OBSERVE_STATE_FILE = 'session-observe-state.json';
@@ -328,8 +329,11 @@ export interface EnrichmentAudit {
  * Audit the working tree after the skill's ungated writes: touched entries
  * still parse (§4.10.2); frontmatter and extraction-owned sections are
  * byte-identical to the HEAD baseline; every line added to `## Insights` /
- * `## Query pointers` carries the claude-sessions provenance trailer; and no
- * gated path (`compass/`, `atlas/`, `RULES.md`) was touched directly.
+ * `## Query pointers` carries the claude-sessions provenance trailer; every
+ * `insight/observations/` entry file still satisfies the §4.10.11 frontmatter
+ * shape (spec Rule 2, reusing check.insight-observations — the same contract
+ * the standalone validator enforces, never re-implemented here); and no gated
+ * path (`compass/`, `atlas/`, `RULES.md`) was touched directly.
  */
 export function auditEnrichments(absRoot: string): EnrichmentAudit {
   const audit: EnrichmentAudit = { valid: [], violations: [], notes: [] };
@@ -345,6 +349,15 @@ export function auditEnrichments(absRoot: string): EnrichmentAudit {
       `gated path modified directly: ${entry.rel} (${entry.status.trim() || 'changed'}) — ` +
         'this loop proposes via pulse, never writes compass/atlas/RULES.md (RULES 7).',
     );
+  }
+
+  // Project-context observations (spec Rule 2, schema §4.10.11): whatever the
+  // loop wrote this run must still satisfy the per-entry frontmatter shape —
+  // reuse the validator check wholesale rather than re-deriving its rules.
+  for (const violation of checkInsightObservations(absRoot)) {
+    if (violation.severity === 'error') {
+      audit.violations.push(`${path.relative(absRoot, violation.location.path)}: ${violation.message}`);
+    }
   }
 
   for (const entry of gitStatus(absRoot, ['.cortex/insight'])) {

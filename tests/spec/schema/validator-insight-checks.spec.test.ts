@@ -599,3 +599,102 @@ Per-file understanding of the codebase.
     expect(v).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// check.insight-observations (§4.10.11, new at 3.1) — the session-learned
+// project-context surface, `insight/observations/`.
+// ---------------------------------------------------------------------------
+
+const GOOD_OBSERVATION = `---
+kind: insight-observation
+updated: 2026-07-14T09:00:00Z
+salient: false
+sessions:
+  - claude-sessions/pedro/9f2c1ab-scale-fixture
+---
+
+The project is meant for roughly 1000 concurrent users at launch — not
+a hyperscale target.
+`;
+
+describe('check.insight-observations', () => {
+  it('tolerates an entirely absent observations/ directory', async () => {
+    const root = tmp('obs-absent');
+    makeInsightProject(root);
+    expect(await violationsFor(root, 'check.insight-observations')).toEqual([]);
+  });
+
+  it('a well-formed themed entry produces no violation', async () => {
+    const root = tmp('obs-clean');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/_index.md', '# Observations\n\n**Read this when:** …\n\n**What\'s here:** scale.md\n');
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION);
+    expect(await violationsFor(root, 'check.insight-observations')).toEqual([]);
+  });
+
+  it('errors on a wrong/missing "kind"', async () => {
+    const root = tmp('obs-bad-kind');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION.replace('kind: insight-observation', 'kind: observation'));
+    const errors = (await violationsFor(root, 'check.insight-observations')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.location.key === 'kind' && e.clause === '§4.10.11')).toBe(true);
+  });
+
+  it('errors on a missing/non-datetime "updated"', async () => {
+    const root = tmp('obs-bad-updated');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION.replace('updated: 2026-07-14T09:00:00Z', 'updated: soon'));
+    const errors = (await violationsFor(root, 'check.insight-observations')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.location.key === 'updated')).toBe(true);
+  });
+
+  it('errors on a non-boolean "salient"', async () => {
+    const root = tmp('obs-bad-salient');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION.replace('salient: false', 'salient: maybe'));
+    const errors = (await violationsFor(root, 'check.insight-observations')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.location.key === 'salient')).toBe(true);
+  });
+
+  it('errors on an empty "sessions" list', async () => {
+    const root = tmp('obs-empty-sessions');
+    makeInsightProject(root);
+    writeInsight(
+      root,
+      'observations/scale.md',
+      GOOD_OBSERVATION.replace('sessions:\n  - claude-sessions/pedro/9f2c1ab-scale-fixture', 'sessions: []'),
+    );
+    const errors = (await violationsFor(root, 'check.insight-observations')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.location.key === 'sessions')).toBe(true);
+  });
+
+  it('errors on a malformed claude-sessions reference (check.provenance\'s ref grammar, reused)', async () => {
+    const root = tmp('obs-bad-session-ref');
+    makeInsightProject(root);
+    writeInsight(
+      root,
+      'observations/scale.md',
+      GOOD_OBSERVATION.replace('claude-sessions/pedro/9f2c1ab-scale-fixture', 'pedro/9f2c1ab-scale-fixture'),
+    );
+    const errors = (await violationsFor(root, 'check.insight-observations')).filter((v) => v.severity === 'error');
+    expect(errors.some((e) => e.location.key === 'sessions' && e.message.includes('not a well-formed'))).toBe(true);
+  });
+
+  it('a present but empty observations/ directory (no entries yet) is clean', async () => {
+    const root = tmp('obs-dir-no-entries');
+    makeInsightProject(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'insight', 'observations'), { recursive: true });
+    expect(await violationsFor(root, 'check.insight-observations')).toEqual([]);
+  });
+
+  it('an observations/ directory missing its own _index.md fires check.index-present, not check.insight-observations', async () => {
+    const root = tmp('obs-missing-index');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION);
+    const presentErrors = (await violationsFor(root, 'check.index-present')).filter(
+      (v) => v.location.path.includes(path.join('insight', 'observations')),
+    );
+    expect(presentErrors).toHaveLength(1);
+    expect(await violationsFor(root, 'check.insight-observations')).toEqual([]);
+  });
+});

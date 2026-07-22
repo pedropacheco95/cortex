@@ -24,7 +24,7 @@ exists only for humans at a terminal; it would spawn one).
 3. Perform the pattern judgment **in this session**. Be conservative
    (design §10.3): one-offs are filtered out, only patterns with repeated
    evidence become candidates, and every candidate cites the session ids it was
-   seen in. Two lenses:
+   seen in. Three lenses:
    - **Rule-shaped patterns** — corrections the user made, stated preferences,
      environment facts. These become `rule-candidate` proposals targeting a
      `.cortex/compass/<file>.md`.
@@ -34,6 +34,17 @@ exists only for humans at a terminal; it would spawn one).
      opposed to a single preference/convention, which is rule-shaped). These
      become `skill-proposal` proposals targeting a NEW
      `.claude/skills/<name>/SKILL.md`.
+   - **Observations-trail lens (schema §4.10.11).** Also read
+     `.cortex/insight/observations/*.md` — the project-context surface
+     `cortex-loop-session-observe` writes ungated. Each entry's `sessions:`
+     list is a provenance trail of every session that stated or re-confirmed
+     it; treat an entry whose `sessions:` count meets `distilThresholdN` the
+     same as any other recurring corpus pattern — a `rule-candidate` (or
+     `decision-candidate`, if the content is decision-shaped) citing that
+     entry's own `sessions:` ids as evidence. Don't re-derive the pattern
+     from scratch by re-reading every session it came from; the entry's
+     trail already **is** the evidence. Leave entries below the threshold
+     alone — they're read, not proposed.
 
    **Skip explicit memory-commit utterances** ("remember this", "commit this
    to memory", "this should be a rule", "remember this for next time") — these

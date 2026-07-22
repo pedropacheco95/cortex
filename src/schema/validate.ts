@@ -24,6 +24,7 @@ import {
   checkInsightScopeRegistry,
   checkInsightLedger,
   checkInsightGraph,
+  checkInsightObservations,
 } from './checks/insight.js';
 import { checkArchiveLayout, checkArchiveMetadata, checkArchiveType } from './checks/archive.js';
 
@@ -147,6 +148,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...checkInsightScopeRegistry(root));
   allViolations.push(...checkInsightLedger(root));
   allViolations.push(...checkInsightGraph(root));
+  allViolations.push(...checkInsightObservations(root));
 
   // Archive-module checks (§4.4, new at v3.0) — tolerant of an absent archive/
   allViolations.push(...checkArchiveLayout(root));

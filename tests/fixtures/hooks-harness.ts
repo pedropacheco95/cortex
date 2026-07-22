@@ -123,6 +123,40 @@ export function readIfExists(p: string): string | null {
   return fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
 }
 
+// ---------------------------------------------------------------------------
+// Project-context observations (schema §4.10.11) — `.cortex/insight/
+// observations/<theme>.md`, the SessionStart digest's data source.
+// ---------------------------------------------------------------------------
+
+export interface ObservationEntryOptions {
+  salient?: boolean;
+  /** Number of `sessions:` entries to synthesize (frequency signal). */
+  sessionsCount?: number;
+  updated?: string;
+  body?: string;
+}
+
+/** Write a schema-valid `insight/observations/<theme>.md` entry. */
+export function writeObservationEntry(root: string, theme: string, opts: ObservationEntryOptions = {}): string {
+  const dir = path.join(root, '.cortex', 'insight', 'observations');
+  fs.mkdirSync(dir, { recursive: true });
+  const p = path.join(dir, `${theme}.md`);
+  const sessionsCount = opts.sessionsCount ?? 1;
+  const sessions = Array.from({ length: sessionsCount }, (_, i) => `claude-sessions/pedro/session-${i}`);
+  const frontmatter = [
+    '---',
+    'kind: insight-observation',
+    `updated: '${opts.updated ?? '2026-07-14T09:00:00Z'}'`,
+    `salient: ${opts.salient ?? false}`,
+    sessions.length > 0 ? 'sessions:' : 'sessions: []',
+    ...sessions.map((s) => `  - ${s}`),
+    '---',
+  ].join('\n');
+  const body = opts.body ?? `The ${theme} observation body. Extra detail follows this first sentence.`;
+  fs.writeFileSync(p, `${frontmatter}\n\n${body}\n`);
+  return p;
+}
+
 export function hookErrorsPath(root: string): string {
   return path.join(root, '.cortex', 'pulse', 'reports', 'hook-errors.md');
 }

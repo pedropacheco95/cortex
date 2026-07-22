@@ -2,9 +2,11 @@
  * SessionStart hook (spec hooks.session-start).
  *
  * Injects the schema §5 pointer payload (<100 tokens) on every session source,
- * plus a one-line hygiene summary when `pulse/reports/hygiene.md` is fresh.
- * Warn-never-block, self-applied: every internal error degrades to whatever
- * part of the payload is still derivable and logs to pulse/hook-errors.md.
+ * plus a one-line hygiene summary when `pulse/reports/hygiene.md` is fresh,
+ * plus a separately-budgeted (<=150 tokens) observations digest (schema
+ * §4.10.11) when `insight/observations/` has a qualifying entry. Warn-never-
+ * block, self-applied: every internal error degrades to whatever part of the
+ * payload is still derivable and logs to pulse/hook-errors.md.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -30,6 +32,14 @@ const DEFAULT_FRESHNESS_HOURS = 48;
 /** The v3 five-module roster (schema §1) — anatomy removed at build-order-v3 step 7. */
 const MODULE_DIRS = ['compass', 'atlas', 'archive', 'insight', 'pulse'];
 const HOOK_NAME = 'session-start';
+
+/** Budget: schema §4.10.11 — observations digest <=150 tokens (chars/4), separate pool from MAX_PAYLOAD_CHARS. */
+const MAX_OBSERVATIONS_DIGEST_CHARS = 592;
+/** schema §4.10.11: an entry qualifies when `salient: true` OR `sessions.length >= 3`. */
+const OBSERVATIONS_QUALIFY_SESSIONS = 3;
+const OBSERVATIONS_DIR_REL = '.cortex/insight/observations';
+const OBSERVATIONS_POINTER = ' (more: .cortex/insight/observations/).';
+const OBSERVATIONS_PREFIX = 'Observations: ';
 
 function silent(): HookRunResult {
   return { exitCode: 0, stdout: '' };
@@ -60,6 +70,105 @@ function firstSummaryLine(body: string): string {
     return trimmed.replace(/\s+/g, ' ');
   }
   return 'report available';
+}
+
+/** First sentence of an observation entry's body prose — the digest's "gist". */
+function firstGist(body: string): string {
+  for (const line of body.split('\n')) {
+    const trimmed = line.replace(/^[-*>\s]+/, '').trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const normalized = trimmed.replace(/\s+/g, ' ');
+    const sentence = normalized.match(/^[^.!?]*[.!?]/);
+    return sentence ? sentence[0] : normalized;
+  }
+  return 'noted.';
+}
+
+interface QualifyingObservation {
+  /** Theme = the entry filename minus `.md` (schema §4.10.11 layout). */
+  theme: string;
+  salient: boolean;
+  sessionsCount: number;
+  gist: string;
+}
+
+/**
+ * Rule 4 / §4.10.11: read `.cortex/insight/observations/*.md` (skipping
+ * `_index.md`), qualify each entry (`salient: true` OR `sessions.length >= 3`),
+ * and report any per-entry parse failure for the caller to log — never throws.
+ * Absent directory → empty result, no errors (AC "absent directory is silent").
+ */
+function readQualifyingObservations(root: string): {
+  entries: QualifyingObservation[];
+  errors: { file: string; failure: string }[];
+} {
+  const entries: QualifyingObservation[] = [];
+  const errors: { file: string; failure: string }[] = [];
+  const dir = path.join(root, '.cortex', 'insight', 'observations');
+  if (!fs.existsSync(dir)) return { entries, errors };
+
+  let filenames: string[];
+  try {
+    filenames = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.md') && f !== '_index.md')
+      .sort();
+  } catch (err) {
+    errors.push({ file: OBSERVATIONS_DIR_REL, failure: `directory unreadable: ${(err as Error).message}` });
+    return { entries, errors };
+  }
+
+  for (const filename of filenames) {
+    const relFile = `${OBSERVATIONS_DIR_REL}/${filename}`;
+    try {
+      const parsed = matter(fs.readFileSync(path.join(dir, filename), 'utf-8'));
+      const data = parsed.data as Record<string, unknown>;
+      const salient = data['salient'] === true;
+      const sessions = Array.isArray(data['sessions']) ? data['sessions'] : [];
+      if (!salient && sessions.length < OBSERVATIONS_QUALIFY_SESSIONS) continue;
+      entries.push({
+        theme: filename.replace(/\.md$/, ''),
+        salient,
+        sessionsCount: sessions.length,
+        gist: firstGist(parsed.content),
+      });
+    } catch (err) {
+      errors.push({ file: relFile, failure: `frontmatter unparseable: ${(err as Error).message}` });
+    }
+  }
+  return { entries, errors };
+}
+
+/**
+ * Render qualifying entries as compact "theme: gist" one-liners inside the
+ * <=150-token (592-char) digest budget, dropping lowest-priority entries
+ * first. Priority (deterministic, documented per the amendment's ask):
+ * salient entries before frequency-only ones, then by `sessions` count
+ * descending, then alphabetically by theme for a stable tie-break.
+ */
+function renderObservationsDigest(entries: QualifyingObservation[]): string | null {
+  if (entries.length === 0) return null;
+  const ordered = [...entries].sort((a, b) => {
+    if (a.salient !== b.salient) return a.salient ? -1 : 1;
+    if (a.sessionsCount !== b.sessionsCount) return b.sessionsCount - a.sessionsCount;
+    return a.theme.localeCompare(b.theme);
+  });
+  const oneLiners = ordered.map((e) => `${e.theme}: ${e.gist}`);
+
+  const fits = (n: number): boolean =>
+    (OBSERVATIONS_PREFIX + oneLiners.slice(0, n).join('; ') + OBSERVATIONS_POINTER).length <=
+    MAX_OBSERVATIONS_DIGEST_CHARS;
+
+  let included = 0;
+  while (included < oneLiners.length && fits(included + 1)) included += 1;
+
+  if (included === 0) {
+    // Not even the top-priority entry fits whole — truncate its text to budget.
+    const room = MAX_OBSERVATIONS_DIGEST_CHARS - OBSERVATIONS_PREFIX.length - OBSERVATIONS_POINTER.length;
+    const truncated = (oneLiners[0] ?? '').slice(0, Math.max(0, room));
+    return OBSERVATIONS_PREFIX + truncated + OBSERVATIONS_POINTER;
+  }
+  return OBSERVATIONS_PREFIX + oneLiners.slice(0, included).join('; ') + OBSERVATIONS_POINTER;
 }
 
 export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<HookRunResult> {
@@ -138,6 +247,16 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
 
     let payload = lines.join('\n');
     if (payload.length > MAX_PAYLOAD_CHARS) payload = payload.slice(0, MAX_PAYLOAD_CHARS);
+
+    // Rule 4 / schema §4.10.11: observations digest, separately budgeted (<=150
+    // tok), additive to the pointer-plus-hygiene payload above.
+    const { entries: qualifying, errors: obsErrors } = readQualifyingObservations(root);
+    for (const err of obsErrors) {
+      appendHookError(root, { hook: HOOK_NAME, file: err.file, failure: err.failure }, now);
+    }
+    const digest = renderObservationsDigest(qualifying);
+    if (digest) payload += '\n' + digest;
+
     return envelope(payload);
   } catch (err) {
     // Last-resort degradation: never throw to the runner, never exit non-zero.

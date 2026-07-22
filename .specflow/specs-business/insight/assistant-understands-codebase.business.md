@@ -6,7 +6,6 @@ implemented_by:
   - ../../specs/insight/cli.spec.md
   - ../../specs/insight/extract-skill.spec.md
   - ../../specs/insight/refresh-loops.spec.md
-  - ../../specs/insight/session-observe.spec.md
   - ../../specs/insight/l1-structural.spec.md
 ---
 
@@ -16,7 +15,7 @@ implemented_by:
 
 When this works, Claude stops treating an unfamiliar codebase as a blank page. Point Cortex at a project — any project, seen for the first time or worked in for years — and a persistent, queryable understanding of the *source code itself* builds up: what each file is for, its important pieces, the non-obvious things worth knowing before touching it, and how it connects to the rest of the codebase, including connections no import statement reveals. That understanding survives across sessions, travels with the project on clone, and keeps itself current as the code moves — so the fifth session on a codebase starts as grounded as the fiftieth.
 
-## Who This Is For
+## Who this is for
 
 The AI assistant working a task in a Cortex-managed project — and, through it, the developer, who no longer pays the cost of the assistant re-deriving context it should already have, and no longer watches the assistant confidently pattern-match to a generic codebase's conventions instead of this one's.
 
@@ -54,5 +53,6 @@ The AI assistant working a task in a Cortex-managed project — and, through it,
 
 ## Notes
 
-- This outcome supersedes the v2 outcome of the same shape (`insight.assistant-has-project-knowledge-when-working`) for the codebase-understanding half of that promise; the corrections-and-promotion half (an unreviewed note graduating into reviewed knowledge) is out of scope here and is expected to be re-specified separately against the v3 layout once this substrate ships.
-- The six dev specs in `implemented_by:` split the promise: `insight.l1-structural` is the deterministic structural raw material; `insight.storage-format` fixes what the understanding looks like on disk; `insight.cli` is how it's asked for; `insight.extract-skill` is how it first comes into being; `insight.refresh-loops` is how it stays true over time; `insight.session-observe` is how what sessions learn enriches it.
+- This outcome supersedes the v2 outcome of the same shape (`insight.assistant-has-project-knowledge-when-working`) for the codebase-understanding half of that promise; the corrections-and-promotion half (an unreviewed note graduating into reviewed knowledge) is out of scope here and is expected to be re-specified separately against the v3 layout once this substrate ships. That re-specification has now happened: `assistant-learns-from-sessions.business.md` closes the loop this note anticipated.
+- The five dev specs in `implemented_by:` split the promise: `insight.l1-structural` is the deterministic structural raw material; `insight.storage-format` fixes what the understanding looks like on disk; `insight.cli` is how it's asked for; `insight.extract-skill` is how it first comes into being; `insight.refresh-loops` is how it stays true over time.
+- `insight.session-observe` no longer appears above — its `implements:` now points at `assistant-learns-from-sessions.business.md`, whose automatic, ungated learning is its primary promise. The loop still enriches per-file entries in service of this outcome (a deliberate cross-reference, not a link, since `implements:` is single-valued): a session-observed fact about one file lands here; a session-observed fact about the project as a whole lands in the sibling outcome's `insight/observations/` surface instead.

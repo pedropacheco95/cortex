@@ -11,6 +11,7 @@ import {
   cleanTmp,
   makeCortexProject,
   writeHygieneReport,
+  writeObservationEntry,
   hookErrorsPath,
   parseEnvelope,
   isoHoursAgo,
@@ -172,6 +173,105 @@ describe('degradation (Rule 6, warn-never-block)', () => {
     expect(exitCode).toBe(0);
     expect(parseEnvelope(stdout).additionalContext).toContain('Cortex is active');
     expect(fs.readFileSync(hookErrorsPath(root), 'utf-8')).toContain('cortex.config.json');
+  });
+});
+
+describe('observations digest (Rule 4, schema §4.10.11)', () => {
+  it('qualifying entries (salient or sessions>=3) render as compact one-liners plus the pointer', async () => {
+    const root = tmp('obs-qualify');
+    makeCortexProject(root);
+    writeObservationEntry(root, 'deployment', {
+      salient: true,
+      sessionsCount: 1,
+      body: 'Target environment is macOS-only for v1. More detail here.',
+    });
+    writeObservationEntry(root, 'working-style', {
+      salient: false,
+      sessionsCount: 3,
+      body: 'Pedro prefers delegating actual work to subagents. Extra prose.',
+    });
+    writeObservationEntry(root, 'audience', { salient: false, sessionsCount: 1 });
+    const { stdout } = await run(stdinFor(root), { now: NOW });
+    const ctx = parseEnvelope(stdout).additionalContext;
+    expect(ctx).toContain('Observations:');
+    expect(ctx).toContain('deployment: Target environment is macOS-only for v1.');
+    expect(ctx).toContain('working-style: Pedro prefers delegating actual work to subagents.');
+    expect(ctx).not.toContain('audience:');
+    expect(ctx).toContain('(more: .cortex/insight/observations/)');
+  });
+
+  it('no qualifying entries → digest omitted entirely', async () => {
+    const root = tmp('obs-none');
+    makeCortexProject(root);
+    writeObservationEntry(root, 'audience', { salient: false, sessionsCount: 1 });
+    writeObservationEntry(root, 'scale', { salient: false, sessionsCount: 2 });
+    const { stdout } = await run(stdinFor(root), { now: NOW });
+    const ctx = parseEnvelope(stdout).additionalContext;
+    expect(ctx).toContain('Cortex is active');
+    expect(ctx).not.toContain('Observations:');
+  });
+
+  it('absent observations/ directory → silent, no digest, no hook-errors entry', async () => {
+    const root = tmp('obs-absent');
+    makeCortexProject(root);
+    const { stdout } = await run(stdinFor(root), { now: NOW });
+    expect(parseEnvelope(stdout).additionalContext).not.toContain('Observations:');
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('_index.md in observations/ is never treated as an entry', async () => {
+    const root = tmp('obs-index');
+    makeCortexProject(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'insight', 'observations'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.cortex', 'insight', 'observations', '_index.md'),
+      '# Observations — index\n\n**Read this when:** always.\n',
+    );
+    writeObservationEntry(root, 'deployment', { salient: true });
+    const { stdout } = await run(stdinFor(root), { now: NOW });
+    const ctx = parseEnvelope(stdout).additionalContext;
+    const obsLine = ctx.split('\n').find((l) => l.startsWith('Observations:')) ?? '';
+    expect(obsLine).toContain('deployment:');
+    expect(obsLine).not.toContain('_index:');
+  });
+
+  it('malformed entry frontmatter degrades: other entries still digest, hook-errors gains an entry', async () => {
+    const root = tmp('obs-badentry');
+    makeCortexProject(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'insight', 'observations'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.cortex', 'insight', 'observations', 'broken.md'),
+      '---\nsalient: [unclosed\n---\nbroken body',
+    );
+    writeObservationEntry(root, 'deployment', { salient: true });
+    const { exitCode, stdout } = await run(stdinFor(root), { now: NOW });
+    expect(exitCode).toBe(0);
+    const ctx = parseEnvelope(stdout).additionalContext;
+    expect(ctx).toContain('Observations:');
+    expect(ctx).toContain('deployment:');
+    const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
+    expect(log).toContain('hook: session-start');
+    expect(log).toContain('observations/broken.md');
+  });
+
+  it('truncates lowest-priority entries first to respect the 150-token digest budget', async () => {
+    const root = tmp('obs-budget');
+    makeCortexProject(root);
+    // Many qualifying entries with long bodies — the digest must still fit
+    // its own 150-token (592-char) budget, keeping the highest-priority ones.
+    for (let i = 0; i < 20; i++) {
+      writeObservationEntry(root, `theme-${i}`, {
+        salient: i === 0,
+        sessionsCount: i === 0 ? 1 : 3,
+        body: `Observation number ${i} with a fair amount of descriptive prose padding it out. `.repeat(3),
+      });
+    }
+    const { stdout } = await run(stdinFor(root), { now: NOW });
+    const ctx = parseEnvelope(stdout).additionalContext;
+    const obsLine = ctx.split('\n').find((l) => l.startsWith('Observations:')) ?? '';
+    expect(obsLine.length / 4).toBeLessThanOrEqual(150);
+    // theme-0 is the sole salient entry — highest priority, must survive truncation.
+    expect(obsLine).toContain('theme-0:');
   });
 });
 

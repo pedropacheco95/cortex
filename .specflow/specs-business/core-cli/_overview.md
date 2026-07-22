@@ -12,6 +12,8 @@ A fast, predictable command-line tool. The outcome is that a developer sets Cort
 
 - **A developer runs Cortex on every project without collisions** — scoped, scannable task names; each project sees only its own; one-command migration for legacy names.
 
+- **A developer keeps an existing project current** — one command repairs missing scaffolding (a lost CLAUDE.md block being the motivating case) and brings skills, upkeep prompts, and orientation content up to what's installed, with no re-init and no data loss; a schema gap too wide to bridge safely is refused, not half-applied.
+
 _Planned outcomes (not yet written):_
 
 - **Everyday operations that just work** — common actions complete fast and behave the same way every time.

@@ -13,6 +13,12 @@
  *  - check.insight-graph          (§4.10.6, error)  — graph/tags/clusters
  *    shapes at the module root and per scope (dangling edge endpoint →
  *    warning; non-total-ordered serialization → warning).
+ *  - check.insight-observations   (§4.10.11, new at 3.1, error) — per-entry
+ *    frontmatter (kind/updated/salient/sessions) under `insight/observations/`,
+ *    reusing check.provenance's claude-sessions ref shape for `sessions`
+ *    members; tolerant of the whole directory being absent. `_index.md`
+ *    presence/shape there is already covered by check.index-present /
+ *    check.index-shape (layout.ts) — not re-checked here.
  *
  * Every check tolerates an entirely absent `insight/` module (build-order-v3
  * spine convention). A legacy v2 `insight/map/` directory on disk is
@@ -27,8 +33,10 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import matter from 'gray-matter';
 import type { Violation } from '../types.js';
 import { parseEntry } from '../../insight/entry.js';
+import { CLAUDE_SESSION_REF_PATTERN } from '../provenance-index.js';
 import {
   parseGraphV3,
   parseTagsV3,
@@ -39,6 +47,7 @@ import {
   scopeRegistryAsymmetries,
   orderingIssues,
   isNodeId,
+  isIsoDatetime,
 } from '../../insight/storage.js';
 
 function insightDir(root: string): string {
@@ -355,6 +364,67 @@ export function checkInsightGraph(root: string): Violation[] {
       }
       for (const issue of orderingIssues('clusters', doc)) {
         warn(clustersPath, `${issue} — serialization must be deterministic and total-ordered (§4.10.6)`);
+      }
+    }
+  }
+
+  return violations;
+}
+
+// ---------------------------------------------------------------------------
+// check.insight-observations (§4.10.11, error; new at 3.1) — the
+// session-learned project-context surface, `insight/observations/`.
+// ---------------------------------------------------------------------------
+
+/** Themed entry files directly under `observations/` — excludes `_index.md`,
+ *  whose own presence/shape is layout.ts's job (check.index-present /
+ *  check.index-shape), not this check's. */
+function observationEntryFiles(observationsDir: string): string[] {
+  const out: string[] = [];
+  for (const entry of fs.readdirSync(observationsDir, { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== '_index.md') {
+      out.push(path.join(observationsDir, entry.name));
+    }
+  }
+  return out;
+}
+
+export function checkInsightObservations(root: string): Violation[] {
+  const violations: Violation[] = [];
+  const observationsDir = path.join(insightDir(root), 'observations');
+  if (!fs.existsSync(observationsDir)) return violations; // §1 convention: absent directory tolerated
+
+  for (const filePath of observationEntryFiles(observationsDir)) {
+    const err = (key: string, message: string): void => {
+      violations.push({ severity: 'error', check: 'check.insight-observations', clause: '§4.10.11', location: { path: filePath, key }, message });
+    };
+
+    let data: Record<string, unknown>;
+    try {
+      data = matter(fs.readFileSync(filePath, 'utf-8')).data as Record<string, unknown>;
+    } catch (e) {
+      err('frontmatter', `unparseable frontmatter: ${(e as Error).message}`);
+      continue;
+    }
+
+    if (data['kind'] !== 'insight-observation') {
+      err('kind', 'frontmatter "kind" must be the literal string "insight-observation"');
+    }
+    if (!isIsoDatetime(data['updated'])) {
+      err('updated', 'frontmatter "updated" must be a non-empty ISO datetime');
+    }
+    if (typeof data['salient'] !== 'boolean') {
+      err('salient', 'frontmatter "salient" must be a boolean');
+    }
+    if (!Array.isArray(data['sessions']) || data['sessions'].length === 0) {
+      err('sessions', 'frontmatter "sessions" must be a non-empty list of claude-sessions/<user>/<session-id> references');
+    } else {
+      for (const ref of data['sessions'] as unknown[]) {
+        // Reuses check.provenance's claude-sessions ref grammar (§6/A6):
+        // shape-checked only, never resolved on disk.
+        if (typeof ref !== 'string' || !CLAUDE_SESSION_REF_PATTERN.test(ref)) {
+          err('sessions', `sessions entry ${JSON.stringify(ref)} is not a well-formed claude-sessions/<user>/<session-id> reference`);
+        }
       }
     }
   }

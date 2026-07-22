@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Thin argv wrapper for `cortex init` (spec core-cli.init), the
- * `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
+ * Thin argv wrapper for `cortex init` (spec core-cli.init), `cortex sync`
+ * (spec core-cli.sync — the existing-project repair/upgrade path init's own
+ * refusal message now names), the `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
  * `cortex insight file|concept|element [--json]` — the read-only insight
  * query surface (spec insight.cli, Rule 1; §4.10.8),
@@ -469,6 +470,25 @@ export async function run(argv: string[]): Promise<number> {
     }
     console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|plan|register|verify`.');
     return 1;
+  }
+
+  // `cortex sync` — repair/upgrade an EXISTING project (spec core-cli.sync).
+  // No --force flag (Rule 12: every write is a merge/append/judgment-gated
+  // upgrade, never an unconditional overwrite).
+  if (argv[0] === 'sync') {
+    const yes = argv.includes('--yes') || argv.includes('-y');
+    const positional = argv.slice(1).filter((a) => !a.startsWith('-'));
+    const target = positional[0] ?? '.';
+    try {
+      const { sync } = await import('./sync.js');
+      const { exitCode, summary } = await sync(target, { yes });
+      if (exitCode === 0) console.log(summary);
+      else console.error(summary);
+      return exitCode;
+    } catch (err) {
+      console.error(`cortex sync: ${(err as Error).message}`);
+      return 1;
+    }
   }
 
   // Otherwise argv is everything after `cortex init`.

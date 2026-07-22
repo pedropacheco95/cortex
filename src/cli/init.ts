@@ -11,8 +11,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { fileURLToPath } from 'url';
-import * as readline from 'readline/promises';
 import { scaffoldInsight } from '../insight/scaffold.js';
 import { scaffoldArchive } from '../archive/scaffold.js';
 import { validate } from '../schema/validate.js';
@@ -25,23 +23,34 @@ import {
   SPECS_OVERVIEW_TEMPLATE,
   SPECS_BUSINESS_OVERVIEW_TEMPLATE,
   SCHEDULED_TASKS,
-  claudeMdBlock,
-  scheduledTaskSkillMd,
   COMPASS_ENVIRONMENT_TEMPLATE,
   COMPASS_DO_NOT_REPEAT_TEMPLATE,
   pulseDismissedTemplate,
 } from './templates.js';
-// Schema §9.1 project scoping for the Rule 13 task writer (core-cli.task-scoping).
-import {
-  CANONICAL_TASK_NAMES,
-  RETIRED_CANONICAL_TASK_NAMES,
-  scopedTaskName,
-  hashScopedTaskName,
-  resolveScopedTaskName,
-  taskDirProjectRoot,
-} from './task-scoping.js';
 // Schema §2.3 re-rooted spec trees (specflow.reorg).
 import { specsRoot, businessRoot, SPECS_REL, BUSINESS_REL } from '../paths.js';
+// Rules 4, 10, 11, 12, 13 — the scaffolding mechanism shared with `cortex
+// sync` (spec core-cli.sync Notes: "the same internal scaffolding module
+// this spec exposes as cortex sync"). Re-exported below where external
+// modules/tests still import these names from init.js.
+import {
+  installSkills,
+  upsertClaudeMd,
+  mergeSettings,
+  installGitHook,
+  writeScheduledTasks,
+  registrationSummaryLines,
+  stripRetiredGitHookLines,
+  GIT_HOOK_INVOCATION,
+} from './scaffold.js';
+export {
+  writeScheduledTasks,
+  stripRetiredGitHookLines,
+  GIT_HOOK_INVOCATION,
+  INSIGHT_GIT_HOOK_INVOCATION,
+  RETIRED_GIT_HOOK_INVOCATION,
+} from './scaffold.js';
+export type { TaskSkillGap, ScheduledTasksResult } from './scaffold.js';
 
 export interface InitOptions {
   force?: boolean;
@@ -182,50 +191,8 @@ function readConfig(root: string): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 4 — skills install
+// Rule 4 — skills install: mechanism moved to scaffold.ts (shared with sync).
 // ---------------------------------------------------------------------------
-
-function packageRoot(): string {
-  // src/cli/init.ts → package root is two levels up (same for dist/cli/init.js).
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-}
-
-async function confirmOverwrite(name: string): Promise<boolean> {
-  // Non-interactive (no TTY) means "preserve the user's copy".
-  if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    const answer = await rl.question(`Skill bundle "${name}" already exists in .claude/skills/. Overwrite? [y/N] `);
-    return /^y(es)?$/i.test(answer.trim());
-  } finally {
-    rl.close();
-  }
-}
-
-async function installSkills(root: string, yes: boolean): Promise<{ installed: number; preserved: number }> {
-  const targetDir = path.join(root, '.claude', 'skills');
-  fs.mkdirSync(targetDir, { recursive: true });
-
-  const srcDir = path.join(packageRoot(), 'skills');
-  if (!fs.existsSync(srcDir)) return { installed: 0, preserved: 0 };
-
-  let installed = 0;
-  let preserved = 0;
-  const bundles = fs.readdirSync(srcDir, { withFileTypes: true }).filter((e) => e.isDirectory());
-  for (const bundle of bundles) {
-    const target = path.join(targetDir, bundle.name);
-    if (fs.existsSync(target) && !yes) {
-      const overwrite = await confirmOverwrite(bundle.name);
-      if (!overwrite) {
-        preserved++;
-        continue;
-      }
-    }
-    fs.cpSync(path.join(srcDir, bundle.name), target, { recursive: true });
-    installed++;
-  }
-  return { installed, preserved };
-}
 
 // ---------------------------------------------------------------------------
 // Rule 7 — preferences draft (deterministic extraction)
@@ -441,268 +408,11 @@ The bug ledger now lives at \`.cortex/compass/bugs/\` — one file per bug
 }
 
 // ---------------------------------------------------------------------------
-// Rule 10 — CLAUDE.md managed block
+// Rules 10, 11, 12, 13 & 17 — CLAUDE.md, hooks, git hook, Desktop scheduled
+// tasks: mechanism moved to scaffold.ts (shared with sync); --partial's
+// skill-gating (Rule 17) stays inline in the writeScheduledTasks mechanism
+// there, unchanged.
 // ---------------------------------------------------------------------------
-
-function upsertClaudeMd(root: string): 'created' | 'inserted' | 'updated' | 'unchanged' {
-  const claudeMdPath = path.join(root, 'CLAUDE.md');
-  let projectName = path.basename(root);
-  try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')) as Record<string, unknown>;
-    if (typeof pkg['name'] === 'string' && pkg['name']) projectName = pkg['name'];
-  } catch {
-    /* fall back to directory name */
-  }
-  const block = claudeMdBlock(projectName);
-
-  if (!fs.existsSync(claudeMdPath)) {
-    fs.writeFileSync(claudeMdPath, block + '\n', 'utf-8');
-    return 'created';
-  }
-
-  const content = fs.readFileSync(claudeMdPath, 'utf-8');
-  const blockRe = /<!-- cortex:start[^\n]*?-->[\s\S]*?<!-- cortex:end -->/;
-  if (blockRe.test(content)) {
-    const nextContent = content.replace(blockRe, block);
-    if (nextContent === content) return 'unchanged';
-    fs.writeFileSync(claudeMdPath, nextContent, 'utf-8');
-    return 'updated';
-  }
-
-  const sep = content.endsWith('\n') ? '\n' : '\n\n';
-  fs.writeFileSync(claudeMdPath, content + sep + block + '\n', 'utf-8');
-  return 'inserted';
-}
-
-// ---------------------------------------------------------------------------
-// Rule 11 — hooks registration (.claude/settings.json deep-merge)
-// ---------------------------------------------------------------------------
-
-interface HookEntry {
-  event: string;
-  matcher?: string;
-  command: string;
-}
-
-function cortexHookEntries(preRead: boolean): HookEntry[] {
-  const entries: HookEntry[] = [
-    { event: 'SessionStart', command: 'cortex hook session-start' },
-    { event: 'PreToolUse', matcher: 'Write|Edit', command: 'cortex hook pre-write' },
-    { event: 'PostToolUse', matcher: 'Write|Edit', command: 'cortex hook post-write' },
-  ];
-  // The Read pair registers and unregisters together under the one
-  // hooks.preRead flag (schema §5, §10.1 — default true).
-  if (preRead) {
-    entries.push({ event: 'PreToolUse', matcher: 'Read', command: 'cortex hook pre-read' });
-    entries.push({ event: 'PostToolUse', matcher: 'Read', command: 'cortex hook post-read' });
-  }
-  return entries;
-}
-
-function mergeSettings(root: string, preRead: boolean): string[] {
-  const settingsPath = path.join(root, '.claude', 'settings.json');
-  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-
-  let settings: Record<string, unknown> = {};
-  if (fs.existsSync(settingsPath)) {
-    try {
-      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as Record<string, unknown>;
-    } catch {
-      // Rule 16: never destroy an unparseable settings file.
-      throw new Error(`.claude/settings.json exists but is not valid JSON; fix it and re-run cortex init`);
-    }
-  }
-
-  const hooks = { ...((settings['hooks'] as Record<string, unknown> | undefined) ?? {}) };
-  const registered: string[] = [];
-
-  for (const entry of cortexHookEntries(preRead)) {
-    const existingRaw = hooks[entry.event];
-    const eventArr: unknown[] = Array.isArray(existingRaw) ? [...existingRaw] : [];
-    const already = eventArr.some((e) => JSON.stringify(e).includes(entry.command));
-    if (!already) {
-      const hookObj: Record<string, unknown> = {
-        ...(entry.matcher !== undefined ? { matcher: entry.matcher } : {}),
-        hooks: [{ type: 'command', command: entry.command }],
-      };
-      eventArr.push(hookObj);
-    }
-    hooks[entry.event] = eventArr;
-    registered.push(entry.matcher ? `${entry.event}(${entry.matcher})` : entry.event);
-  }
-
-  const merged = { ...settings, hooks };
-  fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2) + '\n', 'utf-8');
-  return registered;
-}
-
-// ---------------------------------------------------------------------------
-// Rule 12 — git post-commit hook
-// ---------------------------------------------------------------------------
-
-/** The exact command the installed post-commit hook calls (Rule 12; schema
- *  §9.1: `cortex-loop-insight-refresh-fast` is the git hook, not a scheduled
- *  task). SOLE invocation since build-order-v3 step 7 consolidated the hook —
- *  the anatomy fast tier is retired. */
-export const GIT_HOOK_INVOCATION = 'cortex insight-refresh-fast';
-/** Retained alias (some callers/tests referenced the insight-specific name
- *  while the dual-line hook existed). */
-export const INSIGHT_GIT_HOOK_INVOCATION = GIT_HOOK_INVOCATION;
-/** The retired v1/v2 anatomy invocation — init strips this line (and its
- *  comment) from an existing post-commit hook (step-7 migration). */
-export const RETIRED_GIT_HOOK_INVOCATION = 'cortex anatomy-refresh-fast';
-
-const GIT_HOOK_SNIPPETS: ReadonlyArray<{ invocation: string; comment: string }> = [
-  {
-    invocation: GIT_HOOK_INVOCATION,
-    comment: '# Cortex: fast deterministic insight change-flagging after each commit (no LLM, no extraction)',
-  },
-];
-
-function gitHookSnippet(entry: { invocation: string; comment: string }): string {
-  return `\n${entry.comment}\n${entry.invocation} >/dev/null 2>&1 || true\n`;
-}
-
-/**
- * Idempotently remove the retired anatomy invocation from an existing hook:
- * every line whose command is `cortex anatomy-refresh-fast` is dropped, along
- * with an immediately preceding `# Cortex:` comment line (the shape init
- * itself wrote). User content is otherwise untouched. Line-based on purpose —
- * exact-string matching would miss redirection suffixes.
- */
-export function stripRetiredGitHookLines(content: string): string {
-  const lines = content.split('\n');
-  const out: string[] = [];
-  for (const line of lines) {
-    if (line.trimStart().startsWith(RETIRED_GIT_HOOK_INVOCATION)) {
-      // Drop the retired invocation; also drop the Cortex comment above it.
-      const prev = out[out.length - 1] ?? '';
-      if (prev.trimStart().startsWith('# Cortex:')) out.pop();
-      // Collapse the blank separator the snippet carried, if doubled.
-      if ((out[out.length - 1] ?? '') === '' && (out[out.length - 2] ?? '') === '') out.pop();
-      continue;
-    }
-    out.push(line);
-  }
-  return out.join('\n');
-}
-
-function installGitHook(root: string): 'created' | 'appended' | 'already-installed' | 'skipped-no-git' {
-  const gitDir = path.join(root, '.git');
-  if (!fs.existsSync(gitDir) || !fs.statSync(gitDir).isDirectory()) return 'skipped-no-git';
-
-  const hooksDir = path.join(gitDir, 'hooks');
-  fs.mkdirSync(hooksDir, { recursive: true });
-  const hookPath = path.join(hooksDir, 'post-commit');
-
-  if (fs.existsSync(hookPath)) {
-    const original = fs.readFileSync(hookPath, 'utf-8');
-    // Step-7 migration: strip the retired anatomy line before reconciling.
-    let content = stripRetiredGitHookLines(original);
-    let appended = false;
-    for (const entry of GIT_HOOK_SNIPPETS) {
-      if (content.includes(entry.invocation)) continue;
-      const sep = content.endsWith('\n') ? '' : '\n';
-      content = content + sep + gitHookSnippet(entry);
-      appended = true;
-    }
-    if (content !== original) fs.writeFileSync(hookPath, content, 'utf-8');
-    fs.chmodSync(hookPath, 0o755);
-    return appended ? 'appended' : 'already-installed';
-  }
-
-  fs.writeFileSync(hookPath, `#!/bin/sh${GIT_HOOK_SNIPPETS.map(gitHookSnippet).join('')}`, 'utf-8');
-  fs.chmodSync(hookPath, 0o755);
-  return 'created';
-}
-
-// ---------------------------------------------------------------------------
-// Rules 13 & 17 — Desktop scheduled tasks (Rule 17: --partial skill gating)
-// ---------------------------------------------------------------------------
-
-export interface TaskSkillGap {
-  task: string;
-  missingSkills: string[];
-}
-
-export interface ScheduledTasksResult {
-  written: number;
-  preserved: number;
-  /** Rule 17 (--partial): tasks not registered because a required skill is absent. */
-  skipped: TaskSkillGap[];
-  /** Default mode: tasks registered anyway whose required skill is currently absent. */
-  lacking: TaskSkillGap[];
-  /** Retired canonical tasks (schema §9.1 deregistration) removed for THIS project. */
-  retired: string[];
-}
-
-/** A required skill is "present" iff it exists as a directory in <root>/.claude/skills/. */
-function missingRequiredSkills(root: string, requiredSkills: string[]): string[] {
-  return requiredSkills.filter((skill) => {
-    const dir = path.join(root, '.claude', 'skills', skill);
-    return !(fs.existsSync(dir) && fs.statSync(dir).isDirectory());
-  });
-}
-
-/**
- * Write the SKILL.md prompt PAYLOADS under `~/.claude/scheduled-tasks/` (and
- * remove this project's retired scoped dirs). Payloads are NOT registration
- * (B-009): the Desktop app never scans this directory — `cortex tasks
- * register` (tasks-register.ts, which reuses this writer) upserts the app's
- * own `scheduled-tasks.json` registry.
- */
-export function writeScheduledTasks(home: string, force: boolean, root: string, partial: boolean): ScheduledTasksResult {
-  const baseDir = path.join(home, '.claude', 'scheduled-tasks');
-  let written = 0;
-  let preserved = 0;
-  const skipped: TaskSkillGap[] = [];
-  const lacking: TaskSkillGap[] = [];
-  const retired: string[] = [];
-  // §9.1 deregistration: retired canonical tasks are removed under THIS
-  // project's scoped names only — both the plain form and the hash-fallback
-  // form dirs from before the naming revision (other projects' entries are
-  // never touched: the hash form embeds this project's path hash, and the
-  // plain form is removed only here, for this root's slug).
-  for (const canonical of RETIRED_CANONICAL_TASK_NAMES) {
-    for (const name of [scopedTaskName(root, canonical), hashScopedTaskName(root, canonical)]) {
-      const retiredDir = path.join(baseDir, name);
-      if (!fs.existsSync(retiredDir)) continue;
-      // Plain-form guard: never remove a same-slug dir another project owns.
-      const owner = taskDirProjectRoot(retiredDir);
-      if (owner !== undefined && owner !== path.resolve(root)) continue;
-      fs.rmSync(retiredDir, { recursive: true, force: true });
-      if (!retired.includes(canonical)) retired.push(canonical);
-    }
-  }
-  for (const task of SCHEDULED_TASKS) {
-    const missingSkills = missingRequiredSkills(root, task.requiredSkills);
-    if (missingSkills.length > 0) {
-      if (partial) {
-        // Rule 17: skip the task entirely — its prompt's skill(s) are not installed.
-        skipped.push({ task: task.name, missingSkills });
-        continue;
-      }
-      // Default mode: register regardless, but the summary warns about the gap.
-      lacking.push({ task: task.name, missingSkills });
-    }
-    // §9.1 project-scoped registration identity (core-cli.task-scoping Rules
-    // 2-3): exists/preserve/overwrite keys on THIS project's resolved scoped
-    // path only (plain `<slug>-<canonical>`, hash6 fallback when the plain
-    // name is owned by another project), so other projects' tasks and
-    // non-Cortex entries are never counted, listed, overwritten, or
-    // skipped-with-notice.
-    const scoped = resolveScopedTaskName(baseDir, root, CANONICAL_TASK_NAMES[task.name] ?? task.name);
-    const skillPath = path.join(baseDir, scoped, 'SKILL.md');
-    if (fs.existsSync(skillPath) && !force) {
-      preserved++;
-      continue;
-    }
-    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
-    fs.writeFileSync(skillPath, scheduledTaskSkillMd(task, scoped, root), 'utf-8');
-    written++;
-  }
-  return { written, preserved, skipped, lacking, retired };
-}
 
 // ---------------------------------------------------------------------------
 // init — the 17 rules in order
@@ -728,7 +438,11 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   if (fs.existsSync(cortexDir) && !force) {
     return {
       exitCode: 2,
-      summary: `cortex init: refused — .cortex/ already exists at ${cortexDir}. Re-run with --force to re-initialise (merges and appends only; overwrites remain --force-gated). Nothing was written.`,
+      // Rule 1 (amended for core-cli.sync): the existing-project path is now
+      // `cortex sync` — repair/upgrade an existing project without a forced
+      // re-init. `--force` still re-runs init itself for the rare case a
+      // from-scratch re-init is truly wanted.
+      summary: `cortex init: refused — .cortex/ already exists at ${cortexDir}. Run \`cortex sync\` to repair or upgrade this existing project (or re-run \`cortex init --force\` to re-initialise from scratch — merges and appends only; overwrites remain --force-gated). Nothing was written.`,
     };
   }
 
@@ -856,21 +570,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   const { registrationStatus } = await import('./tasks-register.js');
   const appSupportDir = opts.appSupportDir ?? path.join(home, 'Library', 'Application Support', 'Claude');
   const regStatus = registrationStatus({ projectRoot: absRoot, home, appSupportDir });
-  if (regStatus.unregistered.length === 0) {
-    lines.push(
-      `Scheduled tasks: all ${regStatus.total} registered with the Claude Desktop app (cadences from the canonical table) — confirm anytime with \`cortex tasks verify\`.`,
-    );
-  } else {
-    lines.push(
-      `Scheduled tasks: payloads ready — ${regStatus.unregistered.length} of ${regStatus.total} not yet registered with the Claude Desktop app (cadences apply once registered).`,
-    );
-    lines.push('To activate them: open this folder in Claude Desktop (new session) and say:');
-    lines.push('    run cortex-register-tasks');
-    lines.push(
-      `Note: the app asks you to approve each task registration (${regStatus.total} prompts) — "always allow" is not offered for task creation, so stay at the keyboard.`,
-    );
-    lines.push('Then confirm with: cortex tasks verify');
-  }
+  lines.push(...registrationSummaryLines(regStatus));
 
   if (errors.length > 0) {
     lines.push(`Self-validation: FAILED — ${errors.length} violation(s):`);

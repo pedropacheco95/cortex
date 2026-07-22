@@ -18,6 +18,7 @@ import {
   cleanTmp,
   makeCortexProject,
   writeHygieneReport,
+  writeObservationEntry,
   hookErrorsPath,
   parseEnvelope,
   isoHoursAgo,
@@ -121,6 +122,67 @@ describe('AC session-start.5: payload respects the token budget', () => {
       const ctx = parseEnvelope(stdout).additionalContext;
       expect(ctx.length / 4).toBeLessThan(100);
     }
+  });
+});
+
+describe('AC session-start.6: qualifying observations render as a compact digest', () => {
+  it('deployment (salient) + working-style (sessions>=3) digest; audience (non-qualifying) covered by the pointer', async () => {
+    const root = tmp('ss6');
+    makeCortexProject(root);
+    writeObservationEntry(root, 'deployment', {
+      salient: true,
+      sessionsCount: 1,
+      body: 'Target environment is a single macOS binary. Extra detail follows.',
+    });
+    writeObservationEntry(root, 'working-style', {
+      salient: false,
+      sessionsCount: 3,
+      body: 'Pedro likes tests written before implementation. Extra detail follows.',
+    });
+    writeObservationEntry(root, 'audience', { salient: false, sessionsCount: 1 });
+    const { exitCode, stdout } = await runHook(
+      'session-start',
+      stdinJson({ hook_event_name: 'SessionStart', source: 'startup', cwd: root }),
+    );
+    expect(exitCode).toBe(0);
+    const ctx = parseEnvelope(stdout).additionalContext;
+    expect(ctx).toContain('deployment: Target environment is a single macOS binary.');
+    expect(ctx).toContain('working-style: Pedro likes tests written before implementation.');
+    expect(ctx).not.toContain('audience:');
+    expect(ctx).toContain('(more: .cortex/insight/observations/)');
+    const obsLine = ctx.split('\n').find((l) => l.startsWith('Observations:')) ?? '';
+    expect(obsLine.length / 4).toBeLessThanOrEqual(150);
+  });
+});
+
+describe('AC session-start.7: no qualifying observations omits the digest entirely', () => {
+  it('every entry salient:false and sessions<3 → no Observations line, hygiene/pointer unaffected', async () => {
+    const root = tmp('ss7');
+    makeCortexProject(root);
+    writeHygieneReport(root, isoHoursAgo(1, new Date()), 'fresh and fine.');
+    writeObservationEntry(root, 'audience', { salient: false, sessionsCount: 1 });
+    writeObservationEntry(root, 'scale', { salient: false, sessionsCount: 2 });
+    const { stdout } = await runHook(
+      'session-start',
+      stdinJson({ hook_event_name: 'SessionStart', source: 'startup', cwd: root }),
+    );
+    const ctx = parseEnvelope(stdout).additionalContext;
+    expect(ctx).toContain('Hygiene: fresh and fine.');
+    expect(ctx).not.toContain('Observations:');
+  });
+});
+
+describe('AC session-start.8: absent observations directory is silent, not an error', () => {
+  it('no insight/observations/ at all → digest omitted, no hook-errors entry, exit 0', async () => {
+    const root = tmp('ss8');
+    makeCortexProject(root);
+    const { exitCode, stdout } = await runHook(
+      'session-start',
+      stdinJson({ hook_event_name: 'SessionStart', source: 'startup', cwd: root }),
+    );
+    expect(exitCode).toBe(0);
+    expect(parseEnvelope(stdout).additionalContext).not.toContain('Observations:');
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 });
 

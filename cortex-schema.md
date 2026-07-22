@@ -1,10 +1,12 @@
 # Cortex Schema — The Contract Between Core and Skills
 
-**Schema version:** `3.0`
+**Schema version:** `3.1`
 **Status:** v3.0 draft for review by Pedro. This file is the **living contract** and is revised in place at each version — the v2.0 text is preserved in git history. (Unlike the design documents, which are frozen records.)
 **Depends on:** `cortex-design.md` (the v1 design doc, frozen), `cortex-v2-design.md` (the v2 design doc, frozen), and `cortex-v3-design.md` (the v3 design doc). Where design and schema disagree, this document wins on file formats, frontmatter, cross-references, and versioning — that is its job. Where the design docs are silent or vague, this document **makes the decision** (see §0) rather than deferring.
 
 **3.0 is a MAJOR bump** (§10.2): `cerebrum/` renames to `compass/` (rule/bug ids and their content-keyed constellation node prefixes are unchanged — the rename is path-only); `anatomy/` is removed, its content absorbed into `insight/`; `archive/` is added as a new module for ingested source documents (mixed git policy per-artefact); `insight/` is rebuilt wholesale — a leveled (L1–L4), scoped, per-file understanding of the codebase itself replaces the v2.0 concept-map-over-curated-artefacts layout; `provenance:`/`derives_from:` frontmatter is added to compass rules, both spec trees, and atlas decisions; decisions gain a single home (`atlas/decisions/` only — the `cerebrum/decisions.md`/`compass/decisions.md` artefact no longer exists); and the loop/scheduled-task roster changes (anatomy-refresh and the v2.0 insight-refresh/gaps pair retire; three insight-refresh tiers plus `cortex-loop-session-observe` take their place). Folded in from `cortex-schema-v3-addendum.md` at build-order-v3 step 1 (design §10.2) — see git history for the addendum's drafting record and the fold-in commit.
+
+**3.1 is a MINOR bump** (§10.2 — additive, backward-compatible: a new artefact kind): one addition — `insight/observations/`, the session-learned **project-context observation** surface (a directory of themed entry files, each carrying an importance signal derived from frequency and emphasis — revised in place from an earlier single-file draft, no project having shipped on it), written ungated by `cortex-loop-session-observe` under the same machine-owned-ungated allowance as its per-file enrichments (§4.10.11; layout §1; Decision 13), plus its validator check `check.insight-observations` (Appendix A). Nothing existing is removed, renamed, or made required; a `3.0` project validates clean under a `3.1` validator per §10.2, and no migration ships.
 
 This is the load-bearing artefact named in design §3.2. **Cortex Core implements it; Skills consume it; both reference it by version** (recorded in `.cortex/cortex.config.json`, §10). It is precise enough that the schema validator (`.specflow/specs/schema/validator.spec.md`) can be implemented mechanically from it.
 
@@ -48,7 +50,7 @@ These were underspecified or contradictory in `cortex-design.md`. Each was **loc
 
 Where `cortex-v2-design.md` left an open question that this contract must commit on, the recommended disposition (approved with the design doc) is adopted and **marked** here.
 
-13. **The loop-write invariant is restated: a loop never mutates gated content.** Compass, atlas, `RULES.md`, and both spec trees change only through the human gate (`pulse-accept`) or under direct human review; machine-owned ungated state (v2.0: anatomy, `insight/map/*.json`) is maintained directly by its designated owner loop; ungated observational content (v2.0: `insight/map/*.md`, plus the one file-list line in `insight/_index.md`) is written directly by its designated producer, with provenance. This supersedes v1's "writes only to `.cortex/pulse/`" phrasing and retires its growing exception list (test-runner and bug-triage keep their narrow, reported exceptions per their specs). (v2 design §4.4, flags F1/F6; §9) **v3.0 amendment:** anatomy no longer exists; the machine-owned-ungated allowance re-points wholly to `insight/` (§4.10) — the three insight-refresh loops maintain it directly, and `cortex-loop-session-observe` writes ungated per-file enrichments directly while proposing any gated compass/atlas content through the pulse gate (never mutating gated content itself). (design §9; addendum A7.3)
+13. **The loop-write invariant is restated: a loop never mutates gated content.** Compass, atlas, `RULES.md`, and both spec trees change only through the human gate (`pulse-accept`) or under direct human review; machine-owned ungated state (v2.0: anatomy, `insight/map/*.json`) is maintained directly by its designated owner loop; ungated observational content (v2.0: `insight/map/*.md`, plus the one file-list line in `insight/_index.md`) is written directly by its designated producer, with provenance. This supersedes v1's "writes only to `.cortex/pulse/`" phrasing and retires its growing exception list (test-runner and bug-triage keep their narrow, reported exceptions per their specs). (v2 design §4.4, flags F1/F6; §9) **v3.0 amendment:** anatomy no longer exists; the machine-owned-ungated allowance re-points wholly to `insight/` (§4.10) — the three insight-refresh loops maintain it directly, and `cortex-loop-session-observe` writes ungated per-file enrichments and project-context observations (`insight/observations/`, §4.10.11 — new at 3.1) directly while proposing any gated compass/atlas content through the pulse gate (never mutating gated content itself). (design §9; addendum A7.3)
 
 14. **Cluster ids are label-slugs with carry-over matching (OQ1 disposition).** `cluster:<label-slug>`; a full rebuild reuses an existing cluster's id and label when member-set Jaccard ≥ `insight.clusterCarryOverJaccard` (default 0.5; highest match wins, ties broken by id order). (§4.10.2, v2.0) **v3.0 note:** the exact cluster-representation and carry-over nuances for the rebuilt v3.0 `clusters.json` (§4.10.6) are addendum-deferred to the insight storage-format spec (design §10.3, §11 Q1; addendum A4.6, A10.1) — this decision's Jaccard-carry-over *principle* is the starting point, not yet re-locked for the new shape.
 
@@ -136,6 +138,9 @@ Where `cortex-v3-design.md` explicitly left a concrete shape open beyond what it
 │   ├── scope-registry.yaml                   scope tree (scoped extractions only, §4.10.3)
 │   ├── ledger.json                           staleness ledger (§4.10.4)
 │   ├── reverse-index.json                    reverse-dependency index (§4.10.5)
+│   ├── observations/                         session-learned project context — grain-of-salt, ungated, themed entry files (§4.10.11, new at 3.1; absent until the loop's first observation)
+│   │   ├── _index.md
+│   │   └── <theme>.md                        e.g. audience.md, scale.md, deployment.md, working-style.md, stated-intent.md
 │   ├── scopes/                               present only for scoped extractions
 │   │   └── <scope>/
 │   │       ├── anatomy/                      per-file entries within the scope
@@ -577,7 +582,7 @@ The compiled citation graph the constellation renderer serves (design §12.8). E
 
 Design §5, §5.8. **The entire v2.0 `insight/map/` contract (v2.0 §4.10 and its subsections) is superseded.** v3.0 insight is a leveled, scoped, per-file understanding of the *source code itself*, not a concept-map over the curated artefact set (design §8.3). It remains **ungated** (§4.10.0).
 
-**The trust contract (carried forward, unchanged in substance).** Insight is inferred, not curated: **context, not authority.** Where insight conflicts with a compass rule or a spec, the gated layer wins. It never carries write-time enforcement authority (no PreWrite reads insight, §5) and no hook injects it (a CLAUDE.md directive, not a hook, §8). Committed in full (Decision 1's fourth git-policy quadrant: machine-owned **and** committed).
+**The trust contract (carried forward, unchanged in substance).** Insight is inferred, not curated: **context, not authority.** Where insight conflicts with a compass rule or a spec, the gated layer wins. It never carries write-time enforcement authority (no PreWrite reads insight, §5) and, with one narrow exception, no hook injects it (a CLAUDE.md directive, not a hook, §8): the SessionStart observations digest (§4.10.11, new at 3.1) is the sole sanctioned injection — a small, separately-budgeted, qualifying-entries-only surfacing of `insight/observations/`, not a general insight-injection precedent. Committed in full (Decision 1's fourth git-policy quadrant: machine-owned **and** committed).
 
 #### 4.10.1 Two layouts — scoped and unscoped
 
@@ -774,6 +779,64 @@ Both under `pulse/` (gitignored, transient; §4.5 header conventions apply — `
 
 **Validated by** `check.pulse` (header presence; loose otherwise — transient).
 
+#### 4.10.11 Project-context observations — `insight/observations/` (new at 3.1; directory shape revised in place — see note below)
+
+Design §9's session-observation role, extended (a MINOR addition per §10.2). Sessions teach more than per-file facts: scale expectations, audience, stated intent, working knowledge the user mentions in conversation and never files as a rule or a decision. Those observations previously had no home — the per-file entries (§4.10.2) are the wrong grain, and the pulse gate (§4.5) is the wrong weight for context that binds nothing. `insight/observations/` is that home: a directory of small, committed, **themed entry files** of project-level, session-learned observations, machine-owned ungated under the same Decision 13 allowance as the per-file enrichments, with `cortex-loop-session-observe` as its **sole writer**.
+
+**Revision note.** 3.1 first drafted this surface as a single flat file (`observations.md`, one dated bullet per observation, no importance model). No project has shipped on 3.1 — this repo runs schema 3.0 (`.cortex/cortex.config.json` `schemaVersion`) and the validator's `supportedMajor`/`supportedMinor` are still pinned at `2`/`0` (§10.3 note) — so the surface is revised **in place**, still `new at 3.1`, rather than bumped to a further MINOR. The single-file shape is reversed: themed entries age better than a log. A correction to "the team is targeting ~1000 users" rewrites one `scale.md` entry; in the flat-file design it would have had to contradict a sibling bullet several lines up, leaving the reader to reconcile two truths. Per-entry importance and provenance (below) also need per-entry structure — a shared `updated` timestamp for the whole file could not tell two observations of different age apart.
+
+**Layout:**
+
+```
+.cortex/insight/observations/
+├── _index.md                  active prompt (§7.1 shape — see index note below)
+├── audience.md                 e.g. who the project is for
+├── scale.md                    e.g. expected load / user count
+├── deployment.md                e.g. target environment
+├── working-style.md             e.g. how the user likes to work
+├── stated-intent.md             e.g. explicitly stated goals
+└── <theme>.md                   any other theme the loop identifies
+```
+
+`<theme>` is a kebab-case slug chosen by the writing loop, not a closed enum — new themes appear as sessions teach new kinds of context. Each file is one themed entry: current-truth prose, not a log.
+
+**Index carve-out (judgment call).** `insight/observations/` gets its own minimal `_index.md`, following the general §7.1 active-prompt shape, rather than being folded into the §7.1 pulse-subdirectory (B-008) carve-out. The carve-out exists for machine-bookkeeping directories nobody browses (`pulse/state/`, `pulse/reports/`); `observations/` is closer in kind to `atlas/decisions/` or `compass/bugs/` — a themed collection meant to be read — so it gets the same treatment as those, not the pulse exemption.
+
+**Frontmatter — required (per entry file):** `kind` (string const `insight-observation`), `updated` (iso-datetime — last write to this entry), `salient` (bool — the emphasis flag, below), `sessions` (list<`claude-sessions/<user>/<session-id>`> — the frequency trail: every session that stated or re-confirmed this observation; §6, addendum A6 — cited-not-resolved, shape-checked only).
+
+```yaml
+---
+kind: insight-observation
+updated: 2026-07-14T09:00:00Z
+salient: true
+sessions:
+  - claude-sessions/pedro/9f2c1ab-…
+  - claude-sessions/pedro/a41e0cd-…
+---
+
+The project is meant for roughly 1000 concurrent users at launch — not
+a hyperscale target. Pedro has said this more than once when reviewing
+capacity-sensitive designs.
+```
+
+**Body:** the observation prose, current-truth only — no history log, no bullet-per-session. A re-encounter of a known observation appends the new session id to `sessions:` and bumps `updated`, refining the prose if the newer session sharpens it; a session contradicting an existing observation rewrites the body in place to the newer truth (newest session wins) and appends its session id — the `sessions:` trail is kept in both cases, because it **is** the evidence record (frequency, below, is read directly off it).
+
+**Two-signal importance, derived not declared.** An entry's importance is the **max** of two signals, neither of which is itself stored as an importance value:
+- **Frequency** — the count of distinct sessions in `sessions:`. Purely mechanical; no judgment involved.
+- **Emphasis** — `salient: true`, set at capture time by an LLM judgment (the session-observe loop, never Core) when the user stated the observation forcefully: an "ALWAYS"/"never", an explicit imperative, or a forceful correction of a prior assumption. A single forceful session can outrank a dozen mild ones.
+
+Nothing computes or stores a combined score; consumers (the digest, below) apply the qualification rule directly.
+
+**Digest injection — the SessionStart hook (§5).** `insight/observations/` is no longer un-injected: the SessionStart payload carries a compact **observations digest** alongside the existing hygiene line. An entry **qualifies** for the digest when `salient: true` OR its `sessions:` count is ≥ 3 (a threshold, not yet a config key — a `pulse`-style future candidate per the §10.1 conventions, e.g. `insight.observationsDigestThreshold`). Qualifying entries render as compact one-liners (theme + gist, not full prose) inside a hard **≤150-token** budget — small next to the existing hygiene line, consistent with this document's existing per-hook budget discipline (§5, §7.1, §8) — plus a one-line pointer to `.cortex/insight/observations/` for the tail of non-qualifying entries. Absent `observations/`, or no qualifying entry, the digest line is omitted entirely (the zero-overhead convention used throughout §5). This directly amends the 3.1 draft's "No hook injects this file" clause — it was written for the single-file shape and undersells the digest's value once entries carry an importance signal worth surfacing at session start; SessionStart stays warn-never-block, pure file I/O, no network call.
+
+**The trust contract, sharpened.** §4.10's trust contract applies in full — inferred, not curated; context, not authority — with one addition specific to this surface: an observation here is something **said or learned in a session and never re-confirmed through the gate**. It is taken with a grain of salt by construction; where it conflicts with a compass rule, an atlas decision, or a spec, the gated layer wins, always. An observation that hardens into something that should *bind* future work leaves this surface only as a typed pulse proposal (`rule-candidate`/`decision-candidate`, §4.5.1) — never by silent graduation. No hook *fabricates or elevates* this content — the digest above surfaces it verbatim, it never rewrites it into a stronger claim — and the surface carries no enforcement authority.
+
+**Distil coordination.** The `sessions:` provenance trail on each entry is the shared evidence surface between session-observe and `cortex-pulse-distil` (§4.5.1's `rule-candidate` row already names distil as a producer). An observation recurring across enough sessions is exactly the repetition signal distil looks for; distil reads `insight/observations/` alongside its own session-corpus scan and, on a qualifying recurrence, proposes graduation through the existing `rule-candidate`/`decision-candidate` machinery (§4.5.1) — the same gate, not a second one. This resolves the previously-open question of a separate double-proposal mechanism: there isn't one — observations and distil share one evidence trail and one gate. The exact recurrence threshold distil applies (which may differ from the digest's display threshold above) is a spec-pass detail owned by `cortex-pulse-distil`'s own spec, not fixed here.
+
+**Query surface — flagged, not specified.** The `cortex insight` CLI (§4.10.8) does not gain a verb at 3.1. Whether a fourth verb (e.g. `cortex insight observations`) is warranted is a **flagged spec-pass decision owned by `insight.cli`**; until it lands, entries are read directly — each is deliberately small, and the §7.4 index names the directory.
+
+**Validated by** `check.insight-observations` (new at 3.1; revised for the directory shape): tolerant of `insight/observations/` being entirely absent (§1 convention — a project whose loop has observed nothing yet validates clean); when present, each entry file's frontmatter (`kind`, `updated`, `salient`, `sessions`) is present and typed, each `sessions` member is a well-formed `claude-sessions/<user>/<id>` reference (shape-checked only, per `check.provenance`), and `insight/observations/_index.md` is present and well-formed per `check.index-shape`.
+
 ---
 
 ## 5. Hook payload contracts
@@ -782,7 +845,7 @@ From design §5, §6.3, §9.3. All hooks are pure Node file I/O, **warn-never-bl
 
 | Hook | Trigger | Injects | Budget |
 |---|---|---|---|
-| `SessionStart` | new session | Pointer block (below) | <100 tok |
+| `SessionStart` | new session | Pointer block (below), plus a qualifying-entries **observations digest** (§4.10.11) when `insight/observations/` has one | <100 tok pointer block; the digest is separately budgeted at ≤150 tok on top (never folded into the 100), omitted entirely when no entry qualifies |
 | `PreToolUse` (Write/Edit) | before a write | One warning per matching rule (below), read from `compass/rules/` (re-rooted from `cerebrum/rules/`, addendum A1.5) | ~0 avg |
 | `PostToolUse` (Write/Edit) | after a write | **Nothing (v3.0).** The v2.0 anatomy writeback (`tokens`/`sha256`/`last_seen`/`needs_purpose_refresh` on an `anatomy/files.md` row) is removed — `anatomy/` no longer exists (addendum A7.3). Schema 3.0 specifies **no replacement side-effect** (resolved at build-order-v3 step 7): intra-commit change tracking is owned by the post-commit fast tier (`cortex insight-refresh-fast`, §9); the hook stays registered and is a pure no-op. | n/a |
 | `PreToolUse` (Read) | before a read | **Insight per-file entry summary (resolved at build-order-v3 step 7, design §5.10).** Data source: the target path's insight entry (§4.10.2), resolved scoped-or-flat by the query layer. (a) The payload's `{{PURPOSE}}` is the **first line of the entry's `## Purpose` section**; `{{TOKENS}}` is the entry's `size_tokens`; `{{APPLICABLE_RULE_IDS}}` stays compass-derived (`governs` glob match — unchanged); the legacy `{{SPEC_LINKS}}` field is **dropped** (its role lives in the entry's Connections section, read via `cortex insight file`, not injected — §5's no-insight-hook trust rationale caps this hook at the one-line purpose summary). (b) When the target path has **no insight entry**, the hook injects **nothing** — graceful absence, never fabrication: extraction owns entry creation. Template below. | summary <50 tok (RULES 11); <75 tok with the writeback invitation (the v2.0 two-budget precedent) |
@@ -793,8 +856,9 @@ From design §5, §6.3, §9.3. All hooks are pure Node file I/O, **warn-never-bl
 Cortex is active (schema {{SCHEMA_VERSION}}). See .cortex/_index.md.
 Modules: {{PRESENT_MODULES}}.
 {{#if fresh hygiene-report}}Hygiene: {{ONE_LINE_SUMMARY}} (.cortex/pulse/reports/hygiene.md).{{/if}}
+{{#if qualifying observations}}Observations: {{OBSERVATIONS_DIGEST}} (more: .cortex/insight/observations/).{{/if}}
 ```
-The hygiene line is included only if `.cortex/pulse/reports/hygiene.md` exists and its `generated` is within `cortex.config.json` `pulse.hygieneFreshnessHours` (default 48). The hook **reads** the report; it never re-runs hygiene (design §10.4).
+The hygiene line is included only if `.cortex/pulse/reports/hygiene.md` exists and its `generated` is within `cortex.config.json` `pulse.hygieneFreshnessHours` (default 48). The hook **reads** the report; it never re-runs hygiene (design §10.4). The observations line is included only if `insight/observations/` has at least one qualifying entry (§4.10.11 — `salient: true` or `sessions:` count ≥ 3); `{{OBSERVATIONS_DIGEST}}` renders every qualifying entry as a compact one-liner within its own **≤150-token** budget, separate from and additional to the pointer block's <100-token figure above — the two never share a pool. Absent `insight/observations/`, or zero qualifying entries, the line is omitted entirely, same convention as the hygiene line.
 
 **PreToolUse (Write/Edit) warning** — emitted once per compass rule whose `governs` glob matches the target path OR whose `check.pattern` matches the proposed content:
 ```
@@ -814,9 +878,9 @@ If this purpose is wrong or stale after reading, emit: <cortex:purpose file="{{P
 
 **Envelope (pinned to the Claude Code hooks API, verified 2026-07-02).** All Cortex hooks communicate via **exit 0 + stdout JSON**: SessionStart emits `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": …}}`; the PreWrite warning emits `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "additionalContext": …}}`; PostWrite and PostRead emit nothing (empty stdout). No Cortex hook ever exits 2, exits non-zero, or emits `deny`/`ask` — warn-never-block is enforced by the envelope itself. Hook-internal errors degrade (operation proceeds) and append to `pulse/reports/hook-errors.md` (§4.5). Registration entries use the command signature `cortex hook <name>` — that prefix is the **ownership marker** (the JSON transposition of §8's CLAUDE.md marker idiom); tooling manages only entries carrying it.
 
-**No insight hook (unchanged from v2.0).** The insight module adds **no** hook and no field to any existing hook payload. Insight is pull-only via the CLI (§4.10.8). Injecting unreviewed inferred content at SessionStart or PreRead would spend the trust budget on the layer with the weakest trust warrant, and the enforcement channel (PreWrite) reads compass precisely because compass is gated (v2 design §7.4; addendum A1.5, A4.0). The hook table above is unchanged in this regard from v1/v2.0.
+**No insight hook, save one narrow exception (v2.0 stance, carved out at 3.1).** The insight module adds no hook of its own and, PreRead/PostRead aside, no field to any *other* existing hook payload. Insight is pull-only via the CLI (§4.10.8) for everything except one thing: the SessionStart row now also carries the qualifying-entries **observations digest** (§4.10.11, new at 3.1) — a small, separately-budgeted (≤150 tok), omit-when-empty surfacing of `insight/observations/`, not a precedent for injecting the rest of insight. Injecting unreviewed inferred content at SessionStart or PreRead *beyond that one digest* would spend the trust budget on the layer with the weakest trust warrant, and the enforcement channel (PreWrite) reads compass precisely because compass is gated (v2 design §7.4; addendum A1.5, A4.0). The hook table above is otherwise unchanged in this regard from v1/v2.0.
 
-**Validated by** `check.hook-config`: the hook entries `cortex init` writes to `.claude/settings.json` match the registered hooks; the Read-pair entries (PreRead + PostRead, together) are present iff `cortex.config.json` `hooks.preRead` is true — which is the default. The payload *text* is the hooks' contract with Claude, asserted by the hook specs' tests, not by the validator.
+**Validated by** `check.hook-config`: the hook entries `cortex init` (or `cortex sync`, refreshing an existing project's registration) writes to `.claude/settings.json` match the registered hooks; the Read-pair entries (PreRead + PostRead, together) are present iff `cortex.config.json` `hooks.preRead` is true — which is the default. The payload *text* is the hooks' contract with Claude, asserted by the hook specs' tests, not by the validator.
 
 ---
 
@@ -959,8 +1023,9 @@ cross-file or concept-touching changes, query the concept
 Layout: per-file entries under anatomy/ (or scopes/<scope>/anatomy/
 when scoped); concepts under concepts/; the semantic graph in
 graph.json / tags.json / clusters.json; the scope tree in
-scope-registry.yaml. Kept current by the insight-refresh loops
-(fast / daily / full) and enriched by cortex-loop-session-observe.
+scope-registry.yaml; session-learned context (grain of salt) under
+observations/. Kept current by the insight-refresh loops (fast /
+daily / full) and enriched by cortex-loop-session-observe.
 ```
 
 **Validated by** `check.insight-index` (redefined) + `check.index-shape`: body names insight as ungated/unreviewed and references `cortex insight` (`warning` if the trust-model line is absent).
@@ -970,6 +1035,8 @@ scope-registry.yaml. Kept current by the insight-refresh loops
 ## 8. CLAUDE.md Cortex section template
 
 `cortex init` injects this block into the project's CLAUDE.md (design §6.1). Hard budget **<400 tokens** for the whole Cortex section (both H2 blocks below combined; RULES 11). Substitution points in `{{…}}`.
+
+**Acknowledged overage.** By this document's chars/4 estimate the filled block below runs to roughly **590 tokens** — already over the stated <400 budget before the one-line `insight/observations/` addition below (which itself was trimmed as tight as it will bear), and over by a wide enough margin (~190 tokens) that this predates the 3.1 work entirely. This schema does not silently widen the stated budget to match: **<400 remains the target**, and this block needs its own RULES-11 trim pass, independent of and not owned by this amendment — flagged here rather than quietly tolerated.
 
 ```markdown
 <!-- cortex:start v{{SCHEMA_VERSION}} -->
@@ -1016,12 +1083,15 @@ concept. This is not optional.
 - cortex insight element <query>  — atomic element (may return
   "no rich entry"; still discoverable via the file entry)
 
+Also check `insight/observations/` for session-learned context
+(audience, scale, intent) the code alone can't show.
+
 Insight is inferred, not curated. Where it conflicts with a compass
 rule or a spec, the gated layer wins — context, not authority.
 <!-- cortex:end -->
 ```
 
-The `<!-- cortex:start … -->`/`<!-- cortex:end -->` markers delimit the managed block so `cortex init` can update it idempotently without touching the rest of CLAUDE.md. *(v3.0 interpretive note: the addendum (A1.8, A4.8) specifies the `## Cortex` bullet re-root and the `## Cortex Insight` block verbatim; the one-line `archive/` bullet above is this schema's own necessary addition for a module the addendum introduces but didn't separately spec a CLAUDE.md bullet for. Reviewed at v3.0 fold-in cleanup: the wording (one-clause description plus a parenthetical example list) matches the voice and detail level of the `compass/`/`atlas/`/`insight/` bullets above it — no change needed.)* **Validated by** `check.claude-md`: if CLAUDE.md exists, the managed block is well-formed and its `v…` matches `cortex.config.json`.
+The `<!-- cortex:start … -->`/`<!-- cortex:end -->` markers delimit the managed block so `cortex init` (on a fresh project) or `cortex sync` (repairing/upgrading an existing one) can update it idempotently without touching the rest of CLAUDE.md — both write the same block by the same marker contract; `cortex sync`'s own scope and behaviour are specified by its dev spec, not here. *(v3.0 interpretive note: the addendum (A1.8, A4.8) specifies the `## Cortex` bullet re-root and the `## Cortex Insight` block verbatim; the one-line `archive/` bullet above is this schema's own necessary addition for a module the addendum introduces but didn't separately spec a CLAUDE.md bullet for. Reviewed at v3.0 fold-in cleanup: the wording (one-clause description plus a parenthetical example list) matches the voice and detail level of the `compass/`/`atlas/`/`insight/` bullets above it — no change needed.)* **Validated by** `check.claude-md`: if CLAUDE.md exists, the managed block is well-formed and its `v…` matches `cortex.config.json`.
 
 ---
 
@@ -1041,8 +1111,8 @@ touch. You start cold every run — Cortex is how you recover what prior runs le
 only through the human gate — write proposals to `.cortex/pulse/` and the user applies
 them via `cortex pulse-accept <id>`. You MAY maintain machine-owned ungated state directly
 only if you are its designated owner loop (insight, in full — the three insight-refresh
-loops and `cortex-loop-session-observe`'s ungated per-file enrichments, §4.10; addendum
-A7.3). Everything else is a proposal. (The narrow, spec-governed exceptions are the
+loops and `cortex-loop-session-observe`'s ungated per-file enrichments and project-context
+observations, §4.10, §4.10.11; addendum A7.3). Everything else is a proposal. (The narrow, spec-governed exceptions are the
 test-runner's writer/verifier code path and bug-triage's fill-only classification.)
 
 **Conform to the schema.** Every artefact you write carries schema-valid frontmatter
@@ -1085,7 +1155,7 @@ with a **hash6 collision fallback** applied only when the plain name is already 
 
 Example: a project at `/Users/me/dev/api` names its tasks `api-daily`, `api-weekly-curation`, `api-weekly-quality`, `api-test-runner`, `api-monthly-review`; a second, same-named project colliding on a plain name falls back to `api-a3f2b1-daily`, ….
 
-**Payload vs. registration (B-009 correction; final mechanism).** A `~/.claude/scheduled-tasks/<scoped-name>/SKILL.md` directory is a prompt **payload** only — writing it registers nothing, because the Desktop app never scans that directory. **Registration** is an entry in the app's own registry, a `scheduled-tasks.json` under `~/Library/Application Support/Claude/claude-code-sessions/<uuid>/<uuid>/` (shape `{"scheduledTasks": [...], "recordedSkips": {...}}`; entries carry `id` = the scoped name, `cronExpression`, `enabled`, `filePath` = the absolute payload SKILL.md path, `createdAt` epoch ms, `cwd`, `useWorktree`, `permissionMode`) — a registry the app holds **in memory**, loaded once per launch and rewritten wholesale on every task event. The mechanism therefore has three parts: `cortex init` writes the payloads and prints the registration instructions; **registration itself happens in a Claude Desktop session via the `cortex-register-tasks` skill**, which reads `cortex tasks plan --json` (Core's authoritative plan) and drives the app's own internal `mcp__scheduled-tasks__*` MCP tools; `cortex tasks verify` detects silent loss. `cortex tasks register` — the direct registry write, upserting only the fields Cortex owns and preserving foreign entries and unknown fields verbatim — remains a **guarded fallback** that refuses to run while the Desktop app is running (in-memory clobber/wipe hazard; spec `core-cli.tasks-register`).
+**Payload vs. registration (B-009 correction; final mechanism).** A `~/.claude/scheduled-tasks/<scoped-name>/SKILL.md` directory is a prompt **payload** only — writing it registers nothing, because the Desktop app never scans that directory. **Registration** is an entry in the app's own registry, a `scheduled-tasks.json` under `~/Library/Application Support/Claude/claude-code-sessions/<uuid>/<uuid>/` (shape `{"scheduledTasks": [...], "recordedSkips": {...}}`; entries carry `id` = the scoped name, `cronExpression`, `enabled`, `filePath` = the absolute payload SKILL.md path, `createdAt` epoch ms, `cwd`, `useWorktree`, `permissionMode`) — a registry the app holds **in memory**, loaded once per launch and rewritten wholesale on every task event. The mechanism therefore has three parts: `cortex init` writes the payloads and prints the registration instructions on a fresh project — `cortex sync` refreshes those same payloads (and re-prints the instructions) on an existing one, e.g. after a bundle's member roster changes, without touching registration state itself; **registration itself happens in a Claude Desktop session via the `cortex-register-tasks` skill**, which reads `cortex tasks plan --json` (Core's authoritative plan) and drives the app's own internal `mcp__scheduled-tasks__*` MCP tools; `cortex tasks verify` detects silent loss. `cortex tasks register` — the direct registry write, upserting only the fields Cortex owns and preserving foreign entries and unknown fields verbatim — remains a **guarded fallback** that refuses to run while the Desktop app is running (in-memory clobber/wipe hazard; spec `core-cli.tasks-register`).
 
 **The task name is registration identity only** — the SKILL.md frontmatter `name:` carries the scoped bundle name, but the prompt body invokes each *member loop's underlying skill* by its real name (`cortex-pulse-hygiene`, `specflow-lint`, …), one after another. Tooling recognises its own project's tasks by the plain `<slug>-<canonical>` name (disambiguated by the ownership marker) or the `<slug>-<hash>-` fallback prefix plus a canonical suffix, and ignores every other project's.
 
@@ -1127,7 +1197,7 @@ The validator declares a `supportedMajor` and `supportedMinor`. Reading `cortex.
 
 ### 10.4 Migration
 
-A MAJOR bump ships a migration that `cortex migrate` (or `cortex init` on an existing project) applies. Moved/renamed paths leave a **deprecation marker** at the old location pointing at the new one (design §8.5), retained until the next MAJOR. Migrations are deterministic Core operations — no LLM.
+A MAJOR bump ships a migration that `cortex migrate` (or `cortex init` on an existing project) applies. Moved/renamed paths leave a **deprecation marker** at the old location pointing at the new one (design §8.5), retained until the next MAJOR. Migrations are deterministic Core operations — no LLM. `cortex sync` — the standalone scaffolding-repair/upgrade command (§8, §9.1, §5) — is not a migration path: on a MAJOR schema lag it defers to this policy (refusing, or handing off to `cortex migrate`) rather than attempting a scaffolding refresh against a contract it doesn't recognize; its own deferral behaviour is specified by its dev spec.
 
 **1.0→2.0 waiver (Decision 19 / v2 design flag F5).** This requirement is explicitly **waived for the 1.0→2.0 transition only**: there are no external users, and the Cortex repository itself moves `specs/`→`.specflow/specs/` (etc.) and gains `insight/` as part of the v2 build. No `cortex migrate` for 2.0 ships and no deprecation markers are left at the old `specs/` roots. The policy holds in full for every **future** MAJOR, once external users exist. (`cortex init` on a pre-2.0 project without the migration would treat the old trees as absent — acceptable because no such external project exists.)
 
@@ -1165,6 +1235,7 @@ The mechanical check set (one row ⇒ one implementable check). Grouped by the d
 | `check.insight-scope-registry` (new) | `scope-registry.yaml` shape, path resolution, `depends_on` acyclicity | §4.10.3 | error |
 | `check.insight-ledger` (new) | `ledger.json` + `reverse-index.json` shapes and node-id well-formedness | §4.10.4, §4.10.5 | error |
 | `check.insight-graph` | `graph.json`/`tags.json`/`clusters.json` shapes (redefined: new node-id grammar, `edge_type`/`confidence` enums, non-empty `evidence`) | §4.10.6 | error (edge endpoint absent from `nodes` → warning) |
+| `check.insight-observations` (new at 3.1; directory shape) | `insight/observations/` per-entry frontmatter (`kind`, `updated`, `salient`, `sessions`) + well-formed `claude-sessions/<user>/<id>` refs in `sessions`; entry-directory `_index.md` present; tolerates the whole directory being absent | §4.10.11 | error |
 | `check.xref-resolve` | all paths/IDs resolve | §6 | error |
 | `check.xref-symmetry` | `implements`↔`implemented_by` | §6 | error |
 | `check.xref-unique` | global ID uniqueness | §6 | error |
@@ -1179,8 +1250,8 @@ The mechanical check set (one row ⇒ one implementable check). Grouped by the d
 
 **Reconciliation note (RULES 19).** Design §10.1 directs "rename `check.cerebrum-*` → `check.compass-*`." No check was ever literally named `check.cerebrum-*` in v2.0 — the cerebrum-reading checks were `check.rule`, `check.bug`, `check.layout`, `check.index-shape`, `check.rule-governs-resolves`. Their **IDs stay stable** (content-role-keyed, exactly as rule/bug node prefixes are content-keyed and survive the directory rename); only the **paths they read** re-root to `compass/`. This fold-in applies the design's *intent* (re-root every cerebrum-reading check) and records that the literal rename has no target (addendum A0.3). Separately: the addendum's own §A8 delta table omits `check.atlas` from its "re-rooted/redefined" list, while its §A0.3 change ledger explicitly includes `check.atlas` among the 11 re-rooted checks (`cerebrum_rules`→`compass_rules`) — an internal inconsistency in the addendum. This schema resolves it by including `check.atlas`'s re-root here (per A0.3 and per A2.2, which explicitly names `check.atlas` as the enforcer of the `compass_rules` rename) — flagged for Pedro's awareness, not silently reconciled.
 
-**Check count.** The addendum's own tally (A0.3, A8) states "28 at v2.0 → 32 at v3.0 (added 7, removed 5)" — that arithmetic does not reconcile (28 + 7 − 5 = 30, not 32), and it does not match a plain enumeration of the v2.0 Appendix A table's distinct check IDs either (33, not 28) — both are **pre-existing inconsistencies inherited from the source documents**, not introduced by this fold-in, and are flagged here rather than silently "corrected" with an invented number. The authoritative source of truth is the enumerated table above, not any running total. By the same enumeration method used for v2.0 (33 distinct IDs), applying addendum A0.3's stated delta (+7 added, −5 removed, IDs otherwise stable) yields **35** distinct check IDs at v3.0 — confirmed by direct enumeration of the table above (33 rows, two of which each name two check IDs joined by `/`: `check.index-present`/`check.index-shape` and `check.overview-present`/`check.overview-shape`, for 35 distinct IDs total).
+**Check count.** The addendum's own tally (A0.3, A8) states "28 at v2.0 → 32 at v3.0 (added 7, removed 5)" — that arithmetic does not reconcile (28 + 7 − 5 = 30, not 32), and it does not match a plain enumeration of the v2.0 Appendix A table's distinct check IDs either (33, not 28) — both are **pre-existing inconsistencies inherited from the source documents**, not introduced by this fold-in, and are flagged here rather than silently "corrected" with an invented number. The authoritative source of truth is the enumerated table above, not any running total. By the same enumeration method used for v2.0 (33 distinct IDs), applying addendum A0.3's stated delta (+7 added, −5 removed, IDs otherwise stable) yields **35** distinct check IDs at v3.0 — confirmed by direct enumeration of the table above (33 rows at 3.0, two of which each name two check IDs joined by `/`: `check.index-present`/`check.index-shape` and `check.overview-present`/`check.overview-shape`, for 35 distinct IDs total). The 3.1 MINOR adds exactly one check — `check.insight-observations` (§4.10.11) — for **36** distinct check IDs at 3.1.
 
 ---
 
-**End of schema v3.0.** Folded in from `cortex-schema-v3-addendum.md` (build-order-v3 step 1; see git history for the addendum's drafting record and the fold-in commit). Changes from 2.0: `cerebrum/` renamed `compass/` (rule/bug ids unchanged); `anatomy/` removed, absorbed into `insight/`; `archive/` added (ingested documents + extractions, mixed git policy); `insight/` rebuilt wholesale (leveled L1–L4 per-file entries, scoped/unscoped layouts, new JSON shapes with a discrete confidence-tier enum and a path-derived node-id grammar, a staleness ledger, and a reverse-dependency index); the `cortex insight file/concept/element` query CLI (supersedes `query/get/neighbors/list`); the `cortex-extract-insight` skill I/O contract; `provenance:`/`derives_from:` frontmatter on compass rules, both spec trees, and atlas decisions, with a backward-traversal index; decisions single-homed to `atlas/decisions/` (`compass/decisions.md` does not exist); the pulse typed-suggestion enum gains `decision-candidate`; the scheduled-task/loop roster changes (anatomy-refresh and the v2.0 insight-refresh/gaps pair retire; three insight-refresh tiers plus `cortex-loop-session-observe` take their place); the CLAUDE.md template and `loop.md` re-rooted; and the version-gate wiring (`schemaVersion: "3.0"`; validator `supportedMajor`/`supportedMinor` activation is deferred to build-order-v3 step 2, coupled with the rename). Next: build-order-v3 step 2 (module migration + version-gate activation).
+**End of schema v3.1.** 3.1 is a MINOR addition over 3.0 (§10.2): `insight/observations/` — ungated, session-learned project-context observations, themed one-entry-per-file with a two-signal (frequency/emphasis) importance model and a SessionStart digest, written by `cortex-loop-session-observe` — plus its validator check `check.insight-observations` (§4.10.11, §1, Appendix A); nothing removed, renamed, or made required. (The directory shape above revises 3.1's original single-file draft in place — no project shipped on the earlier shape.) The 3.0 fold-in record follows. Folded in from `cortex-schema-v3-addendum.md` (build-order-v3 step 1; see git history for the addendum's drafting record and the fold-in commit). Changes from 2.0: `cerebrum/` renamed `compass/` (rule/bug ids unchanged); `anatomy/` removed, absorbed into `insight/`; `archive/` added (ingested documents + extractions, mixed git policy); `insight/` rebuilt wholesale (leveled L1–L4 per-file entries, scoped/unscoped layouts, new JSON shapes with a discrete confidence-tier enum and a path-derived node-id grammar, a staleness ledger, and a reverse-dependency index); the `cortex insight file/concept/element` query CLI (supersedes `query/get/neighbors/list`); the `cortex-extract-insight` skill I/O contract; `provenance:`/`derives_from:` frontmatter on compass rules, both spec trees, and atlas decisions, with a backward-traversal index; decisions single-homed to `atlas/decisions/` (`compass/decisions.md` does not exist); the pulse typed-suggestion enum gains `decision-candidate`; the scheduled-task/loop roster changes (anatomy-refresh and the v2.0 insight-refresh/gaps pair retire; three insight-refresh tiers plus `cortex-loop-session-observe` take their place); the CLAUDE.md template and `loop.md` re-rooted; and the version-gate wiring (`schemaVersion: "3.0"`; validator `supportedMajor`/`supportedMinor` activation is deferred to build-order-v3 step 2, coupled with the rename). Next: build-order-v3 step 2 (module migration + version-gate activation).
