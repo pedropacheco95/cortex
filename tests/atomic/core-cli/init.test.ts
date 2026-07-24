@@ -232,6 +232,51 @@ describe('Rule 3: skeleton', () => {
 });
 
 // ---------------------------------------------------------------------------
+// CLAUDE.md project-name derivation (scaffold.ts upsertClaudeMd) — a scoped
+// npm package name must not leak its scope into the human-facing label.
+// ---------------------------------------------------------------------------
+describe('CLAUDE.md project-name derivation strips a leading npm scope', () => {
+  it('a scoped package.json name has its scope stripped ("@scope/name" -> "name")', async () => {
+    const root = makeTmpDir('scoped-name-proj');
+    const home = makeTmpDir('scoped-name-home');
+    try {
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: '@pedropacheco95/cortex' }));
+      await init(root, { noLlm: true, home, ...DARWIN });
+      const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain('Cortex is active on **cortex**.');
+      expect(content).not.toContain('@pedropacheco95');
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+
+  it('an unscoped package.json name is used unchanged', async () => {
+    const root = makeTmpDir('unscoped-name-proj');
+    const home = makeTmpDir('unscoped-name-home');
+    try {
+      fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'demo-app' }));
+      await init(root, { noLlm: true, home, ...DARWIN });
+      const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain('Cortex is active on **demo-app**.');
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+
+  it('no readable package.json falls back to the directory basename', async () => {
+    const root = makeTmpDir('no-pkg-name-proj');
+    const home = makeTmpDir('no-pkg-name-home');
+    try {
+      await init(root, { noLlm: true, home, ...DARWIN });
+      const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain(`Cortex is active on **${path.basename(root)}**.`);
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+});
+
+// ---------------------------------------------------------------------------
 // Rule 3 — archive module scaffolding (schema §4.4, new at v3.0)
 // ---------------------------------------------------------------------------
 describe('Rule 3: archive module scaffolding', () => {

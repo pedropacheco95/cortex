@@ -134,7 +134,12 @@ export function upsertClaudeMd(root: string): 'created' | 'inserted' | 'updated'
   let projectName = path.basename(root);
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')) as Record<string, unknown>;
-    if (typeof pkg['name'] === 'string' && pkg['name']) projectName = pkg['name'];
+    if (typeof pkg['name'] === 'string' && pkg['name']) {
+      // Strip a leading npm scope (@scope/name -> name) — the scope is
+      // package-registry bookkeeping, not part of the human-facing label.
+      const scoped = /^@[^/]+\/(.+)$/.exec(pkg['name']);
+      projectName = scoped?.[1] ?? pkg['name'];
+    }
   } catch {
     /* fall back to directory name */
   }

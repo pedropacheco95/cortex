@@ -66,6 +66,16 @@ export interface SyncOptions {
   platform?: string;
   /** Testability seam: the Desktop app-support root (see core-cli.init InitOptions). */
   appSupportDir?: string;
+  /**
+   * Optional progress sink (spec Rule 13). Called once as each rule boundary
+   * begins, so a caller can surface "still working" feedback during the slow
+   * steps (skill-bundle sync, scheduled-task payload refresh, self-validation)
+   * instead of the whole run appearing to hang. Absent by default: behaviour
+   * (including the returned `summary`) is byte-identical whether or not this
+   * is supplied. Never called from inside a `promptYesNo` loop — see the
+   * B-012 comment below for why prompt/progress ordering matters here.
+   */
+  onProgress?: (message: string) => void;
 }
 
 export interface SyncResult {
@@ -409,10 +419,19 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   }
 
   // Rule 3 — CLAUDE.md managed block (same mechanism as init Rule 10).
+  opts.onProgress?.('Refreshing the CLAUDE.md managed block…');
   const claudeMdState = upsertClaudeMd(absRoot);
 
   // Rule 4 — _index.md template refresh (localisation-aware).
+  opts.onProgress?.('Refreshing _index.md templates…');
   const indexResult = refreshIndexes(absRoot);
+
+  // Cheap bundle count for the Rule 5 progress message below — a directory
+  // listing, not the hashing syncSkillBundles itself does.
+  const skillsSrcDir = path.join(packageRoot(), 'skills');
+  const skillBundleCount = fs.existsSync(skillsSrcDir)
+    ? fs.readdirSync(skillsSrcDir, { withFileTypes: true }).filter((e) => e.isDirectory()).length
+    : 0;
 
   // B-012: ONE shared readline interface for every "modified since install"
   // prompt this whole run may ask — Rule 5 (skill bundles) AND Rule 8 (task
@@ -424,16 +443,25 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   let skillResult: SkillSyncResult;
   let taskResult: TaskPayloadSyncResult;
   try {
-    // Rule 5 — skill-bundle upgrade (marker-judged).
+    // Rule 5 — skill-bundle upgrade (marker-judged). Progress fires BEFORE
+    // the call — syncSkillBundles may prompt via `rl`, and a progress line
+    // must never land between a prompt being issued and it being answered
+    // (see Rule 13/B-012 above).
+    opts.onProgress?.(`Syncing skill bundles (${skillBundleCount} to check)…`);
     skillResult = await syncSkillBundles(absRoot, yes, rl);
 
     // Rule 6 — hooks merge (same mechanism as init Rule 11).
+    opts.onProgress?.('Merging hooks into .claude/settings.json…');
     var registeredHooks = mergeSettings(absRoot, preRead); // eslint-disable-line no-var
 
     // Rule 7 — git post-commit hook (same mechanism as init Rule 12).
+    opts.onProgress?.('Installing the git post-commit hook…');
     var gitHookState = installGitHook(absRoot); // eslint-disable-line no-var
 
-    // Rule 8 — scheduled-task payload refresh (marker-judged) + registration status.
+    // Rule 8 — scheduled-task payload refresh (marker-judged) + registration
+    // status. Same ordering constraint as Rule 5: fires BEFORE the call,
+    // never from inside syncScheduledTaskPayloads' own prompt loop.
+    opts.onProgress?.('Refreshing scheduled-task payloads…');
     taskResult = await syncScheduledTaskPayloads(home, absRoot, yes, rl);
   } finally {
     rl?.close();
@@ -443,6 +471,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   // state: trivially true — nothing above reads or writes those trees.
 
   // Rule 10 — self-validation.
+  opts.onProgress?.('Running self-validation…');
   const report = await validate(absRoot, { root: absRoot });
   const errors = report.violations.filter((v) => v.severity === 'error');
   const warnings = report.violations.filter((v) => v.severity === 'warning');

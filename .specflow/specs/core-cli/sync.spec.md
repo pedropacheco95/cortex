@@ -38,6 +38,7 @@ governs:
 10. **Self-validation.** After all steps, run `schema.validator` over the project. Sync succeeds (exit 0) only if the report is conformant (zero errors); otherwise it prints the violations and exits 1. Warnings do not fail sync.
 11. **Summary.** Print a summary naming every change made or considered: CLAUDE.md block created/updated/already-current, each `_index.md` refreshed vs. left-as-localised, each skill bundle installed/upgraded/skipped-user-modified, hooks merged, git hook state, each task payload refreshed/left-as-localised, and the Rule 8 registration-status instruction block or one-liner. Exit codes: 0 success, 1 self-validation failure, 2 preflight refusal, 3 version-gate refusal (Rule 2).
 12. **No silent destruction.** Every write to a pre-existing file is a merge, an append, or an upgrade gated by Rules 4/5/8's unmodified check — never an unconditional overwrite. This rule wins over any step above if they conflict. Sync has no `--force` flag: unlike init, which uses `--force` to permit re-running against an existing `.cortex/` at all, sync is designed to run repeatedly against an existing project by default, so there is nothing for `--force` to unlock.
+13. **Progress output (optional, side-channel).** `sync()` accepts an optional `onProgress` callback (`SyncOptions.onProgress`). When supplied, it fires once at the start of each of Rules 3, 4, 5, 6, 7, 8, and 10 — the steps slow or silent enough that their absence of feedback reads as a hang — naming the step about to run. Rules 5 and 8 may prompt interactively (`promptYesNo`, the B-012 shared-readline interface); this rule's calls for those two steps land immediately before `syncSkillBundles`/`syncScheduledTaskPayloads` are invoked, never from inside either function's own prompt loop, so a progress line can never interleave with an unanswered prompt. When `onProgress` is omitted, nothing about the run changes — no progress output exists and behaviour is byte-identical to a build that predates this rule. The CLI dispatch (`cortex sync`) supplies an `onProgress` that writes each message to **stderr**, prefixed `cortex sync: `, one line per call — stdout carries only the Rule 11 summary, so a piped or redirected `cortex sync` still yields just the report. Progress is a side-channel: it changes nothing about the returned `summary`, the exit code, or any file this spec's other rules write.
 
 ## Acceptance Criteria
 
@@ -116,6 +117,14 @@ governs:
 - **Given** a project on which `cortex sync` has just completed successfully
 - **When** `cortex sync` runs again immediately
 - **Then** no file's bytes change, no new skill or task upgrades occur, and the summary reports everything already current
+
+### Progress output arrives at rule boundaries, never disturbs the summary
+
+- **Given** a project with a valid, current `.cortex/cortex.config.json` and an `onProgress` collector function passed to `sync()`
+- **When** `cortex sync` runs
+- **Then** the collector receives one message for each of Rules 3, 4, 5, 6, 7, 8, and 10, in that order
+- **And** the returned `summary` is identical to a run against the same project with no `onProgress` supplied
+- **And given** no `onProgress` is supplied at all, nothing about the run's behaviour or output changes from a build that predates Rule 13
 
 ## Notes
 

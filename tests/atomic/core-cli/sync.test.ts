@@ -354,3 +354,47 @@ describe('Rule 9: sync never writes compass/atlas/archive/insight content or pul
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 });
+
+// ---------------------------------------------------------------------------
+// Rule 13 — optional progress sink: absent-by-default parity, rule-boundary
+// order, and summary byte-identity regardless of whether it's supplied.
+// ---------------------------------------------------------------------------
+describe('Rule 13: optional progress sink', () => {
+  it('with no onProgress supplied, sync behaves exactly as before this rule existed', async () => {
+    const { root, home } = await bootstrap('r13-none');
+    const result = await sync(root, { home, ...DARWIN_SYNC });
+    expect(result.exitCode).toBe(0);
+    expect(result.summary).toContain('cortex sync — summary');
+    cleanTmp(root); cleanTmp(home);
+  }, TEST_TIMEOUT);
+
+  it('with an onProgress collector, messages arrive in rule order (3, 4, 5, 6, 7, 8, 10)', async () => {
+    const { root, home } = await bootstrap('r13-order');
+    const messages: string[] = [];
+    const result = await sync(root, { home, ...DARWIN_SYNC, onProgress: (m) => messages.push(m) });
+    expect(result.exitCode).toBe(0);
+    expect(messages).toEqual([
+      'Refreshing the CLAUDE.md managed block…',
+      'Refreshing _index.md templates…',
+      expect.stringMatching(/^Syncing skill bundles \(\d+ to check\)…$/),
+      'Merging hooks into .claude/settings.json…',
+      'Installing the git post-commit hook…',
+      'Refreshing scheduled-task payloads…',
+      'Running self-validation…',
+    ]);
+    cleanTmp(root); cleanTmp(home);
+  }, TEST_TIMEOUT);
+
+  it('the returned summary is byte-identical whether or not onProgress is supplied', async () => {
+    const { root, home } = await bootstrap('r13-summary-parity');
+    const withoutCallback = await sync(root, { home, ...DARWIN_SYNC });
+    // Immediate re-run against the same, now-current project (the idempotent
+    // double-run AC) — this time with a collector attached — isolates the
+    // presence of onProgress as the only variable between the two summaries.
+    const messages: string[] = [];
+    const withCallback = await sync(root, { home, ...DARWIN_SYNC, onProgress: (m) => messages.push(m) });
+    expect(withCallback.summary).toBe(withoutCallback.summary);
+    expect(messages.length).toBe(7);
+    cleanTmp(root); cleanTmp(home);
+  }, TEST_TIMEOUT);
+});

@@ -481,7 +481,10 @@ export async function run(argv: string[]): Promise<number> {
     const target = positional[0] ?? '.';
     try {
       const { sync } = await import('./sync.js');
-      const { exitCode, summary } = await sync(target, { yes });
+      const onProgress = (message: string): void => {
+        process.stderr.write(`cortex sync: ${message}\n`);
+      };
+      const { exitCode, summary } = await sync(target, { yes, onProgress });
       if (exitCode === 0) console.log(summary);
       else console.error(summary);
       return exitCode;
