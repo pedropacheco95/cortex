@@ -4,7 +4,7 @@
  * block and every `_index.md` under `.cortex/` against the current schema's
  * templates and budgets, and writes refresh proposals to
  * `.cortex/pulse/reports/scaffolding-review.md` — nothing else. Propose-don't-mutate:
- * refreshing is the human running init-style updates.
+ * refreshing is the human running `cortex sync` (spec core-cli.sync).
  *
  * Reuse (Rule 2): heading checks come from the validator's
  * `check.index-shape` (src/schema/checks/layout.ts); the managed-block parse
@@ -51,7 +51,7 @@ function readConfigSchemaVersion(root: string): string | null {
 export function checkClaudeMdVersion(root: string): DriftFinding[] {
   const claudeMdPath = path.join(root, 'CLAUDE.md');
   const schemaVersion = readConfigSchemaVersion(root);
-  const refresh = 'run `cortex init --force` to refresh the managed block';
+  const refresh = 'run `cortex sync` to refresh the managed block';
 
   if (!fs.existsSync(claudeMdPath)) {
     return [{ finding: 'CLAUDE.md is missing (no managed block directs Claude into Cortex)', action: refresh }];
@@ -91,7 +91,7 @@ export function checkIndexHeadings(root: string): DriftFinding[] {
     .filter((v) => v.check === 'check.index-shape' && v.message.includes('missing'))
     .map((v) => ({
       finding: `\`${path.relative(root, v.location.path)}\` — ${v.message} (consistent with check.index-shape)`,
-      action: 'restore the §7.1 shape (`cortex init --force` rewrites the template), then re-localise the prompt',
+      action: 'restore the §7.1 shape (`cortex sync` rewrites the template), then re-localise the prompt',
     }));
 }
 
@@ -207,7 +207,7 @@ export async function runOnboardingDrift(root = '.', opts: { now?: Date } = {}):
   lines.push(
     '---',
     '',
-    `Checks: CLAUDE.md managed-block version vs schemaVersion; _index.md §7.1 headings (via check.index-shape); _index.md ${INDEX_TOKEN_BUDGET}-token budget (chars/4); template-identical indexes in grown directories (heuristic hint, never an error). Propose-don't-mutate: refreshes are \`cortex init --force\`-style human actions.`,
+    `Checks: CLAUDE.md managed-block version vs schemaVersion; _index.md §7.1 headings (via check.index-shape); _index.md ${INDEX_TOKEN_BUDGET}-token budget (chars/4); template-identical indexes in grown directories (heuristic hint, never an error). Propose-don't-mutate: refreshes are \`cortex sync\`-style human actions.`,
   );
 
   writePulseReport(

@@ -34,7 +34,7 @@ describe('signal (a): CLAUDE.md managed-block version vs schemaVersion', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]?.finding).toContain('v0.9');
     expect(findings[0]?.finding).toContain('1.0');
-    expect(findings[0]?.action).toContain('cortex init --force');
+    expect(findings[0]?.action).toContain('cortex sync');
   });
 
   it('flags a CLAUDE.md with no managed block', () => {

@@ -33,6 +33,30 @@ async function bootstrap(label: string): Promise<{ root: string; home: string }>
   return { root, home };
 }
 
+/**
+ * B-011 fix: the `cortex sync`/`cortex init` CLI dispatch (cli.ts) never
+ * accepts an injected `home` — by design, real usage should resolve
+ * `os.homedir()`, and there is no test-only backdoor flag on the actual CLI
+ * surface. So any test that exercises the CLI dispatcher (`run([...])`,
+ * rather than calling `sync()`/`init()` directly with an explicit `home`
+ * option) MUST redirect `os.homedir()` itself for the duration of the call —
+ * otherwise a full run through `sync`'s scheduled-task-payload step writes
+ * real files under the ACTUAL `~/.claude/scheduled-tasks/`. On POSIX (this
+ * project is macOS-only, RULES.md rule 5), `os.homedir()` reads `$HOME`
+ * first, so temporarily overriding the environment variable is sufficient
+ * and needs no fragile spy on the `os` module namespace.
+ */
+async function withHomeEnv<T>(home: string, fn: () => Promise<T>): Promise<T> {
+  const original = process.env['HOME'];
+  process.env['HOME'] = home;
+  try {
+    return await fn();
+  } finally {
+    if (original === undefined) delete process.env['HOME'];
+    else process.env['HOME'] = original;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Rule 1 — preflight refusal wording
 // ---------------------------------------------------------------------------
@@ -106,11 +130,39 @@ describe('Rule 12: sync has no --force flag', () => {
     const origLog = console.log;
     console.log = (msg: string) => logs.push(msg);
     try {
-      const exitCode = await run(['sync', root, '--force']);
+      // B-011: this exercises the real CLI dispatcher (no `home` seam on the
+      // actual `cortex sync` surface), so `os.homedir()` MUST be redirected
+      // to the fixture for the duration of the call — see withHomeEnv.
+      const exitCode = await withHomeEnv(home, () => run(['sync', root, '--force']));
       expect(exitCode).toBe(0);
     } finally {
       console.log = origLog;
     }
+    cleanTmp(root); cleanTmp(home);
+  }, TEST_TIMEOUT);
+});
+
+// ---------------------------------------------------------------------------
+// B-011 regression: the CLI dispatch never escapes an injected/stubbed home
+// ---------------------------------------------------------------------------
+describe('B-011 regression: cortex sync CLI dispatch honours a stubbed os.homedir(), never the real one', () => {
+  it('scheduled-task payloads land under the stubbed home, not the real one', async () => {
+    const { root, home } = await bootstrap('b011-regression');
+    const logs: string[] = [];
+    const origLog = console.log;
+    console.log = (msg: string) => logs.push(msg);
+    try {
+      const exitCode = await withHomeEnv(home, () => run(['sync', root]));
+      expect(exitCode).toBe(0);
+    } finally {
+      console.log = origLog;
+    }
+    // Proves the dispatch resolved `home` through `os.homedir()` (the only
+    // seam sync.ts reads when no `home` option is passed) rather than some
+    // other hardcoded or cached path: the payloads exist under the stub.
+    const scheduledTasksDir = path.join(home, '.claude', 'scheduled-tasks');
+    expect(fs.existsSync(scheduledTasksDir)).toBe(true);
+    expect(fs.readdirSync(scheduledTasksDir).length).toBe(5);
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 });
@@ -137,7 +189,11 @@ describe('CLI dispatch: cortex sync', () => {
     console.error = (msg: string) => errors.push(msg);
     let exitCode: number;
     try {
-      exitCode = await run(['sync', bareRoot]);
+      // Belt-and-suspenders (B-011): this path exits at the preflight
+      // existence check before `home` is ever used for I/O, so it was never
+      // actually unsafe — but redirecting os.homedir() here too means this
+      // test stays safe even if a future refactor moves the preflight order.
+      exitCode = await withHomeEnv(home, () => run(['sync', bareRoot]));
     } finally {
       console.error = origErr;
     }

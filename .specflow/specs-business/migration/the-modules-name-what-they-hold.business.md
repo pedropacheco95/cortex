@@ -12,7 +12,7 @@ implemented_by:
 
 When this works, anyone reading `.cortex/` — a developer, a contributor, or Claude itself — can tell what a module is for from its name alone, without having to remember a metaphor. The module that governs rules, conventions, and the bug ledger is called `compass`, because that is what it does: it tells the project which way to go. And every fact the project tracks — starting with its decisions — lives in exactly one place. There is no longer a "same data, two views" arrangement where a decision recorded in one file can quietly drift out of sync with its copy in another. A fact is written once, and everything that depends on it points back to that one place.
 
-## Who This Is For
+## Who this is for
 
 Developers and contributors working in a Cortex-managed project, and the Claude sessions that read `.cortex/` on their behalf. Anyone who has ever had to ask "wait, is `cerebrum` the rules module or the knowledge module?" or found a decision described one way in one file and a different way in another.
 

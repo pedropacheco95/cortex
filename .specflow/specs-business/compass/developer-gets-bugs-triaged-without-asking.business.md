@@ -11,7 +11,7 @@ implemented_by:
 
 When this works, filing a problem is enough: a daily pass picks up every open entry in the problem ledger, classifies the unclassified ones against the seven-kinds framework — naming where in the chain the break lives and what kind of fix it needs — and double-checks the already-classified ones, reporting where its judgment differs from the filed one. The ledger stays an active queue, not a graveyard.
 
-## Who This Is For
+## Who this is for
 
 Developers on Cortex-managed projects who file problems as they notice them and want the thinking-about-them to happen on schedule, not when someone remembers.
 

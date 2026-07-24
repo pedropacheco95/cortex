@@ -13,7 +13,7 @@ implemented_by:
 
 When this works, the two questions that quietly rot a specification-driven project — "is the spec tree still structurally sound?" and "does every promise still have the tests it's owed?" — get answered daily, in writing, without anyone asking. Structural breaks and coverage gaps surface as dated reports the morning after they appear, not months later during an audit.
 
-## Who This Is For
+## Who this is for
 
 Developers running spec-first projects under Cortex, where the spec tree is the contract and silent decay of that contract is the failure mode.
 

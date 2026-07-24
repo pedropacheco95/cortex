@@ -11,7 +11,7 @@ implemented_by:
 
 When this works, nobody has to take a rule, a spec, or a decision on faith. Ask "why does this rule exist" and the answer is one hop away — a document Cortex holds, an atlas decision, or at minimum "someone typed this directly, no external authority claimed." And the question runs backward too: when a client renegotiates a requirement, or a stakeholder decision gets revisited, Cortex can immediately show everything that was built on top of it — every rule, every spec — so a renegotiation isn't followed by a silent, unnoticed drift between what's authorized and what's enforced.
 
-## Who This Is For
+## Who this is for
 
 Developers who inherit a rule or a spec and need to know whether it's still justified; stakeholders and project owners who need to know, when something they agreed to changes, exactly what downstream content that touches.
 

@@ -47,27 +47,51 @@ export function packageRoot(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 }
 
-/** Generic non-interactive-safe y/N prompt: no TTY on either stream → false
- *  ("preserve the user's copy" is always the non-interactive default). */
-export async function promptYesNo(promptText: string): Promise<boolean> {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    const answer = await rl.question(promptText);
-    return /^y(es)?$/i.test(answer.trim());
-  } finally {
-    rl.close();
-  }
+/**
+ * B-012 fix: creating and closing a brand-new `readline.Interface` on
+ * `process.stdin`/`process.stdout` for EVERY question in a run that asks
+ * several in a row (one per differing skill bundle, then one per differing
+ * task payload) is a known Node.js footgun — rapid sequential
+ * create-question-close cycles on the SAME stdin can drop or misattribute
+ * buffered input between interfaces, so an answer the user typed can be lost
+ * on one question while adjacent ones behave normally. Callers that ask more
+ * than one question in a single command invocation (`cortex sync`, `cortex
+ * init`'s skill install loop) MUST create ONE interface up front via this
+ * helper and pass it to every `promptYesNo` call in that run, closing it once
+ * at the end — never one-per-question.
+ */
+export function createPromptInterface(): readline.Interface | undefined {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return undefined;
+  return readline.createInterface({ input: process.stdin, output: process.stdout });
 }
 
-async function confirmOverwrite(name: string): Promise<boolean> {
-  return promptYesNo(`Skill bundle "${name}" already exists in .claude/skills/. Overwrite? [y/N] `);
+/**
+ * Generic non-interactive-safe y/N prompt: no TTY on either stream → false
+ * ("preserve the user's copy" is always the non-interactive default).
+ * Pass a `rl` from `createPromptInterface()` when asking more than one
+ * question in the same run (B-012) — omit it only for a genuine single-shot
+ * caller, which falls back to the old create-one-throwaway-interface shape.
+ */
+export async function promptYesNo(promptText: string, rl?: readline.Interface): Promise<boolean> {
+  if (rl !== undefined) {
+    const answer = await rl.question(promptText);
+    return /^y(es)?$/i.test(answer.trim());
+  }
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
+  const owned = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await owned.question(promptText);
+    return /^y(es)?$/i.test(answer.trim());
+  } finally {
+    owned.close();
+  }
 }
 
 /**
  * `cortex init` Rule 4 mechanism — install every shipped skill bundle absent
  * locally; prompt (or `--yes`) before overwriting one that already exists.
- * Unchanged behaviour (moved verbatim from init.ts); writes no marker.
+ * Unchanged behaviour (moved verbatim from init.ts) aside from the B-012
+ * shared-interface fix below; writes no marker.
  */
 export async function installSkills(root: string, yes: boolean): Promise<{ installed: number; preserved: number }> {
   const targetDir = path.join(root, '.claude', 'skills');
@@ -79,17 +103,24 @@ export async function installSkills(root: string, yes: boolean): Promise<{ insta
   let installed = 0;
   let preserved = 0;
   const bundles = fs.readdirSync(srcDir, { withFileTypes: true }).filter((e) => e.isDirectory());
-  for (const bundle of bundles) {
-    const target = path.join(targetDir, bundle.name);
-    if (fs.existsSync(target) && !yes) {
-      const overwrite = await confirmOverwrite(bundle.name);
-      if (!overwrite) {
-        preserved++;
-        continue;
+  // B-012: ONE shared interface for every "already exists" prompt this call
+  // may ask, not one create/close cycle per bundle.
+  const rl = yes ? undefined : createPromptInterface();
+  try {
+    for (const bundle of bundles) {
+      const target = path.join(targetDir, bundle.name);
+      if (fs.existsSync(target) && !yes) {
+        const overwrite = await promptYesNo(`Skill bundle "${bundle.name}" already exists in .claude/skills/. Overwrite? [y/N] `, rl);
+        if (!overwrite) {
+          preserved++;
+          continue;
+        }
       }
+      fs.cpSync(path.join(srcDir, bundle.name), target, { recursive: true });
+      installed++;
     }
-    fs.cpSync(path.join(srcDir, bundle.name), target, { recursive: true });
-    installed++;
+  } finally {
+    rl?.close();
   }
   return { installed, preserved };
 }

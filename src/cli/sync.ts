@@ -41,9 +41,11 @@ import {
   resolveScopedTaskName,
   taskDirProjectRoot,
 } from './task-scoping.js';
+import type { Interface as ReadlineInterface } from 'readline/promises';
 import {
   packageRoot,
   promptYesNo,
+  createPromptInterface,
   upsertClaudeMd,
   mergeSettings,
   installGitHook,
@@ -172,7 +174,7 @@ export interface SkillSyncResult {
   skippedUserModified: string[];
 }
 
-async function syncSkillBundles(root: string, yes: boolean): Promise<SkillSyncResult> {
+async function syncSkillBundles(root: string, yes: boolean, rl?: ReadlineInterface): Promise<SkillSyncResult> {
   const result: SkillSyncResult = { installed: [], upgraded: [], alreadyCurrent: [], skippedUserModified: [] };
   const targetDir = path.join(root, '.claude', 'skills');
   fs.mkdirSync(targetDir, { recursive: true });
@@ -222,6 +224,7 @@ async function syncSkillBundles(root: string, yes: boolean): Promise<SkillSyncRe
     } else {
       const overwrite = await promptYesNo(
         `Skill bundle "${bundle.name}" was modified since install (or has unknown provenance). Overwrite with the upgraded shipped version? [y/N] `,
+        rl,
       );
       if (overwrite) doUpgrade();
       else result.skippedUserModified.push(bundle.name);
@@ -242,7 +245,12 @@ export interface TaskPayloadSyncResult {
   retired: string[];
 }
 
-async function syncScheduledTaskPayloads(home: string, root: string, yes: boolean): Promise<TaskPayloadSyncResult> {
+async function syncScheduledTaskPayloads(
+  home: string,
+  root: string,
+  yes: boolean,
+  rl?: ReadlineInterface,
+): Promise<TaskPayloadSyncResult> {
   const baseDir = path.join(home, '.claude', 'scheduled-tasks');
   const result: TaskPayloadSyncResult = { written: [], refreshed: [], alreadyCurrent: [], localised: [], retired: [] };
 
@@ -306,10 +314,28 @@ async function syncScheduledTaskPayloads(home: string, root: string, yes: boolea
     } else {
       const overwrite = await promptYesNo(
         `Scheduled task payload "${scoped}" was modified since install (or has unknown provenance). Overwrite with the upgraded shipped version? [y/N] `,
+        rl,
       );
       if (overwrite) doRefresh();
       else result.localised.push(canonical);
     }
+  }
+
+  // B-012 defensive invariant: every payload this run actually wrote or
+  // refreshed MUST end this function with a marker whose hash matches its
+  // on-disk content. Every branch above already writes both together in the
+  // same synchronous block, so this is normally a no-op — it exists as a
+  // structural guarantee against exactly the symptom B-012 reported (a
+  // payload's SKILL.md updated with no matching marker), regardless of root
+  // cause, rather than trusting per-branch bookkeeping alone.
+  for (const canonical of [...result.written, ...result.refreshed]) {
+    const scoped = resolveScopedTaskName(baseDir, root, canonical);
+    const dir = path.join(baseDir, scoped);
+    const skillPath = path.join(dir, 'SKILL.md');
+    const markerPath = path.join(dir, INSTALLED_MARKER_FILENAME);
+    if (!fs.existsSync(skillPath)) continue;
+    const hash = sha256Hex(fs.readFileSync(skillPath, 'utf-8'));
+    if (readInstalledMarker(markerPath)?.sha256 !== hash) writeInstalledMarker(markerPath, hash);
   }
 
   return result;
@@ -388,17 +414,30 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   // Rule 4 — _index.md template refresh (localisation-aware).
   const indexResult = refreshIndexes(absRoot);
 
-  // Rule 5 — skill-bundle upgrade (marker-judged).
-  const skillResult = await syncSkillBundles(absRoot, yes);
+  // B-012: ONE shared readline interface for every "modified since install"
+  // prompt this whole run may ask — Rule 5 (skill bundles) AND Rule 8 (task
+  // payloads) share it, rather than each differing item creating and closing
+  // its own interface on the same stdin (the create/close-per-question
+  // pattern that can drop or misattribute a buffered answer between rapid
+  // sequential prompts).
+  const rl = yes ? undefined : createPromptInterface();
+  let skillResult: SkillSyncResult;
+  let taskResult: TaskPayloadSyncResult;
+  try {
+    // Rule 5 — skill-bundle upgrade (marker-judged).
+    skillResult = await syncSkillBundles(absRoot, yes, rl);
 
-  // Rule 6 — hooks merge (same mechanism as init Rule 11).
-  const registeredHooks = mergeSettings(absRoot, preRead);
+    // Rule 6 — hooks merge (same mechanism as init Rule 11).
+    var registeredHooks = mergeSettings(absRoot, preRead); // eslint-disable-line no-var
 
-  // Rule 7 — git post-commit hook (same mechanism as init Rule 12).
-  const gitHookState = installGitHook(absRoot);
+    // Rule 7 — git post-commit hook (same mechanism as init Rule 12).
+    var gitHookState = installGitHook(absRoot); // eslint-disable-line no-var
 
-  // Rule 8 — scheduled-task payload refresh (marker-judged) + registration status.
-  const taskResult = await syncScheduledTaskPayloads(home, absRoot, yes);
+    // Rule 8 — scheduled-task payload refresh (marker-judged) + registration status.
+    taskResult = await syncScheduledTaskPayloads(home, absRoot, yes, rl);
+  } finally {
+    rl?.close();
+  }
 
   // Rule 9 — never touches compass/atlas/archive/insight content or pulse
   // state: trivially true — nothing above reads or writes those trees.

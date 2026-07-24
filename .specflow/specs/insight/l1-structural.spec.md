@@ -31,7 +31,7 @@ The Level 1 structural pass (build-order-v3 step 5a; v3 design §5.2) is the det
 2. **Skip-lists exclude mechanical and sensitive paths pre-triage (design §5.2, study adoption).** `node_modules`, build/output directories, lockfiles, and sensitive-file patterns (credentials, secrets) are excluded before any parsing or measurement — they never enter the graph, the size accounting, or the centrality ranking.
 3. **Cortex's own meta-directories are never indexed.** `.cortex/`, `.specflow/`, and `.claude/` are hard-excluded from both the L1 walk (`L1_SKIP_DIRS`) and the shared insight-scope filter (`EXCLUDED_SEGMENTS`): insight is understanding of the *codebase*, not of the knowledge layer, the spec trees, or the skill/settings bundles — each already has its own representation, and indexing them would only add self-referential entries and refresh churn.
 4. **Centrality excludes mechanical hubs.** Files that are structurally central only because everything imports them mechanically (barrel files, generated indexes, config re-exports) are excluded from the centrality ranking, so L3-selection pressure (which reads centrality) lands on genuinely load-bearing files.
-4. **Output is deterministic.** Two runs over an unchanged tree produce byte-identical output — same graph, same ordering, same centrality ranking — so downstream planning and the staleness ledger can diff meaningfully.
+5. **Output is deterministic.** Two runs over an unchanged tree produce byte-identical output — same graph, same ordering, same centrality ranking — so downstream planning and the staleness ledger can diff meaningfully.
 
 ## Acceptance Criteria
 

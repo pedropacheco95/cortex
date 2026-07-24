@@ -11,7 +11,7 @@ implemented_by:
 
 When this works, no document that ever authorized a rule, a spec, or a decision lives only in someone's inbox or a chat thread nobody can find again. A client sends a v2.1 spec, a stakeholder emails a compliance requirement, a call gets transcribed — whatever the shape, it enters Cortex through one systematic pipeline, the same way every time. The document itself is kept verbatim, forever, even after it's superseded by a newer version — because the audit question is never "what does the current spec say" alone, it's "what did we agree to, and when did it change." Nobody has to remember which of three ingestion tools to reach for, or improvise a new folder convention for a document type Cortex hasn't seen before.
 
-## Who This Is For
+## Who this is for
 
 Developers and stakeholders on a Cortex-managed project who need downstream rules, specs, and decisions to be traceable back to whatever authorized them — and who need old versions of client/stakeholder documents to still be there when a dispute or a renegotiation makes "what did v2.0 actually say" a live question.
 

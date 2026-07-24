@@ -37,7 +37,7 @@ describe('AC: Version-lagging CLAUDE.md block flagged', () => {
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
     expect(body).toContain('v0.9');
     expect(body).toContain('1.0');
-    expect(body).toContain('cortex init --force');
+    expect(body).toContain('cortex sync');
   });
 });
 
