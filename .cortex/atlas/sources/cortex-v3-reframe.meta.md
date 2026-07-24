@@ -2,7 +2,7 @@
 id: source.cortex-v3-reframe
 kind: design-doc
 captured: 2026-07-07T12:00:00Z
-origin: support_documents/cortex_architecture_decisions.md (architecture decisions record, uploaded to repo)
+origin: support_documentation/cortex_architecture_decisions.md (architecture decisions record, uploaded to repo)
 ---
 
 # Cortex Insight Extraction — Design Decisions (v3 reframe)

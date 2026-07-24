@@ -6,5 +6,6 @@ cortex init’s idempotent creation and repair of the per-project runtime surfac
 
 - src/archive/scaffold.ts
 - src/cli/init.ts
+- src/cli/scaffold.ts
 - src/cli/templates.ts
 - src/insight/scaffold.ts

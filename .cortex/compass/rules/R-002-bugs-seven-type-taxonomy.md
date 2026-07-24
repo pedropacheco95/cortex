@@ -2,7 +2,6 @@
 id: R-002
 title: Bug ledger entries use the seven-type taxonomy
 source:
-  - ../../../cortex-design.md
   - ../../../cortex-schema.md
 governs:
   - ".cortex/compass/bugs/**/*.md"

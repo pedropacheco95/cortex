@@ -3,7 +3,6 @@ id: R-003
 title: Dev spec `implements:` is singular, never a list
 source:
   - ../../../cortex-schema.md
-  - ../../../cortex-design.md
 governs:
   - ".specflow/specs/**/*.spec.md"
 related_specs:

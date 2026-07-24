@@ -17,7 +17,7 @@ The two trees are bidirectionally linked:
 
 If you change a developer spec in a way that invalidates the business spec it implements, update the business spec in the same change. Drift between the two trees is a bug.
 
-The build order in `build-order.md` defines implementation sequence (see also the design doc `cortex-design.md` §16.2). NOTE: the spec trees are currently SCAFFOLDED STRUCTURE ONLY — no specs have been written yet.
+The build order in `build-order-v3.md` defines implementation sequence (see also the design doc `cortex-v3-design.md` §10). NOTE: the spec trees are currently SCAFFOLDED STRUCTURE ONLY — no specs have been written yet.
 
 ## Build Loop
 

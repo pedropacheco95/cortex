@@ -1,14 +1,48 @@
 {
-  "name": "cortex",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@pedropacheco95/cortex",
+  "version": "1.0.0",
+  "description": "A globally-installed Node.js CLI for Claude Code that builds and maintains a persistent, actively-refreshed knowledge layer (.cortex/) linking a codebase's structure, conventions, specs, tests, and runtime scaffolding.",
   "type": "module",
+  "license": "MIT",
+  "author": "Pedro Pacheco",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedropacheco95/cortex.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pedropacheco95/cortex/issues"
+  },
+  "homepage": "https://github.com/pedropacheco95/cortex#readme",
+  "keywords": [
+    "claude-code",
+    "codebase-understanding",
+    "knowledge-graph",
+    "cli",
+    "spec-driven",
+    "tree-sitter"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "darwin"
+  ],
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:atomic": "vitest run tests/atomic",
     "test:spec": "vitest run tests/spec",
-    "dev": "node dist/schema/cli.js"
+    "dev": "node dist/cli/cli.js",
+    "prepublishOnly": "pnpm build && pnpm test"
   },
   "dependencies": {
     "fast-glob": "^3.3.3",

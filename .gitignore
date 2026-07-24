@@ -8,3 +8,17 @@
 node_modules/
 dist/
 .DS_Store
+
+# internal design/build records — not shipped publicly
+support_documentation/
+
+# machine-local Claude Code settings
+.claude/settings.local.json
+
+# standard noise
+*.log
+.env
+.env.*
+coverage/
+.vitest/
+*.tsbuildinfo

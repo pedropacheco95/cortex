@@ -3,7 +3,7 @@ id: R-001
 title: Cortex Core makes no LLM calls
 source:
   - ../../../RULES.md
-  - ../../../cortex-design.md
+  - ../../../cortex-v3-design.md
 governs:
   - "src/schema/**/*.ts"
   - "src/insight/**/*.ts"

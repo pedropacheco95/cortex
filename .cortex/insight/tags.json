@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-10T12:01:33Z",
-  "built_at_commit": "5f24181",
+  "generated": "2026-07-19T03:15:09Z",
+  "built_at_commit": "76d4b04",
   "vocabulary": [
     {
       "tag": "S-NNN-namespace",
@@ -232,6 +232,10 @@
       "kind": "concern"
     },
     {
+      "tag": "tostring-embedding",
+      "kind": "pattern"
+    },
+    {
       "tag": "transactional-compute-then-write",
       "kind": "pattern"
     },
@@ -257,6 +261,13 @@
     }
   ],
   "assignments": {
+    "file:src/archive/formats.ts": [
+      "gray-matter",
+      "yaml-parsing"
+    ],
+    "file:src/archive/scaffold.ts": [
+      "deterministic-core"
+    ],
     "file:src/cli/claude-auth.ts": [
       "writer-verifier"
     ],
@@ -271,11 +282,23 @@
     "file:src/cli/task-scoping.ts": [
       "scheduled-tasks"
     ],
+    "file:src/cli/tasks-register.ts": [
+      "cli",
+      "scheduled-tasks"
+    ],
     "file:src/cli/templates.ts": [
       "cli"
     ],
     "file:src/constellation/compile.ts": [
       "constellation"
+    ],
+    "file:src/constellation/insight-style.ts": [
+      "constellation",
+      "tostring-embedding"
+    ],
+    "file:src/constellation/lod.ts": [
+      "constellation",
+      "tostring-embedding"
     ],
     "file:src/constellation/server.ts": [
       "constellation"
@@ -291,6 +314,10 @@
       "warn-never-block"
     ],
     "file:src/hooks/errors.ts": [
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/post-read.ts": [
       "hooks",
       "warn-never-block"
     ],
@@ -411,6 +438,11 @@
       "scan-and-report",
       "spec-content-drift"
     ],
+    "file:src/loops/test-runner.ts": [
+      "scheduled-loop",
+      "seven-type-taxonomy",
+      "writer-verifier"
+    ],
     "file:src/loops/verify-scheduled.ts": [
       "coverage-gap",
       "scan-and-report",
@@ -438,6 +470,10 @@
       "gray-matter",
       "hygiene-sweep",
       "scan-and-report"
+    ],
+    "file:src/pulse/migrate.ts": [
+      "core-pulse-infra",
+      "never-throws-wrapper"
     ],
     "file:src/pulse/promote.ts": [
       "core",
@@ -542,6 +578,10 @@
     ],
     "file:src/schema/version.ts": [
       "validator"
+    ],
+    "file:src/sessions/read.ts": [
+      "never-throws-wrapper",
+      "session-corpus"
     ]
   }
 }

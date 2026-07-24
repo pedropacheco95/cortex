@@ -2,7 +2,7 @@
  * Spec tests for insight.cli — the three v3 `cortex insight` query commands
  * (file / concept / element; schema §4.10.8, superseding v2's
  * query/get/neighbors/list). One describe per Acceptance Criterion in
- * support_documents/v3-spec-drafts/specs/insight/cli.spec.md. Runs against
+ * .specflow/specs/insight/cli.spec.md. Runs against
  * the committed hand-authored fixtures — flat (tests/fixtures/valid) and
  * scoped (tests/fixtures/insight-scoped) — plus tmp dirs for the
  * absent-module and malformed cases. Deterministic Core (RULES 3): the CLI

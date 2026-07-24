@@ -1,6 +1,6 @@
 /**
- * Spec-level tests — insight.session-observe (support_documents/v3-spec-drafts
- * specs/insight/session-observe.spec.md; design §9, §8.2). Each AC is a
+ * Spec-level tests — insight.session-observe (.specflow/specs/insight/
+ * session-observe.spec.md; design §9, §8.2). Each AC is a
  * labelled describe over a real git fixture: route-by-type (ungated → entry
  * enrichment with claude-sessions provenance; convention → rule-candidate
  * compass proposal; decision → decision-candidate atlas proposal),

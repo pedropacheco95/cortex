@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "fd7b55b",
+  "built_at_commit": "76d4b04",
   "entries": {
     "src/archive/formats.ts": {
       "source_sha256": "03d8d1f1bcd89e507072668ddde57d8472afb8ee767f1675c3906c344b54a71c",
@@ -18,14 +18,24 @@
       "extraction_level": 2
     },
     "src/cli/cli.ts": {
-      "source_sha256": "ea28eba19d21263df3fba6cc5d0a5268ffc161db09855d8c715b3ce8ea81827f",
-      "built_at_commit": "5f24181",
+      "source_sha256": "4ae61a2067cb32b1b2dccbee7c6c46ae8c727d669d068b87b7f57b7286c244ec",
+      "built_at_commit": "bcbda52",
       "extraction_level": 3
     },
     "src/cli/init.ts": {
-      "source_sha256": "c0f03cdd03d746a03e677421bb3a19189ba2e4f0b03377647c6014d68ef0f3cd",
-      "built_at_commit": "fd7b55b",
+      "source_sha256": "d123e6457f63f8b14fabfaf283c16a09d26874bbd24cd12ae193b435b08433f7",
+      "built_at_commit": "bcbda52",
       "extraction_level": 3
+    },
+    "src/cli/scaffold.ts": {
+      "source_sha256": "08b5c98251478092a61649b4140038f03494a1f7119b93b14bb6d39edb9dfdaa",
+      "built_at_commit": "bcbda52",
+      "extraction_level": 2
+    },
+    "src/cli/sync.ts": {
+      "source_sha256": "9bba47d050a84dc53c8f032c55b8c1613cf56f99f69df686cb7240b0466f2179",
+      "built_at_commit": "bcbda52",
+      "extraction_level": 2
     },
     "src/cli/task-scoping.ts": {
       "source_sha256": "acc60130cc686ce95a26f673ec30aa3d0d2bf33d492196743797d1c338c3f191",
@@ -38,8 +48,8 @@
       "extraction_level": 2
     },
     "src/cli/templates.ts": {
-      "source_sha256": "0c46d1d0251d541887de29107f092b9b95448cb043e70ecfc7647c1fae58e8c3",
-      "built_at_commit": "fd7b55b",
+      "source_sha256": "2a046cbb448929642717e46792f86d88c046df34a5ca356ececbff39235fab64",
+      "built_at_commit": "bcbda52",
       "extraction_level": 2
     },
     "src/constellation/compile.ts": {
@@ -103,8 +113,8 @@
       "extraction_level": 2
     },
     "src/hooks/session-start.ts": {
-      "source_sha256": "69e2a5e35dfd076d4f645a2dfb69267c2f856b209f0d381a6c53b20980572717",
-      "built_at_commit": "fd7b55b",
+      "source_sha256": "ced4b08bd36fef2649f95812fdc90e4b130e103c3ab057b38a91227f20585fd9",
+      "built_at_commit": "bcbda52",
       "extraction_level": 3
     },
     "src/insight/cli.ts": {
@@ -168,8 +178,8 @@
       "extraction_level": 2
     },
     "src/insight/session-observe.ts": {
-      "source_sha256": "fc4f650a4cde22ee72e755480cbbc548185548200a88fe55a7fca2823fce9892",
-      "built_at_commit": "9720847",
+      "source_sha256": "cc3e3215234c3d4efaba798435baf6b0f9c5d7ec39d1672738c58c86472e8dd0",
+      "built_at_commit": "bcbda52",
       "extraction_level": 3
     },
     "src/insight/significance.ts": {
@@ -323,9 +333,9 @@
       "extraction_level": 2
     },
     "src/schema/checks/insight.ts": {
-      "source_sha256": "98878bf3ef0b8c7e834a51f7ef55ae4db9500425a4da146d898c1ec6da74d2cb",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "b28a944e850bf19ac4fcb2f5b5b8ea79a4b69349f51bb4bd19989315f4cc8fa2",
+      "built_at_commit": "bcbda52",
+      "extraction_level": 3
     },
     "src/schema/checks/layout.ts": {
       "source_sha256": "0255c351a4b0a337d2977ff968963b325b7cffd6dfed2c80ac8de891cbfee2ff",
@@ -383,8 +393,8 @@
       "extraction_level": 3
     },
     "src/schema/validate.ts": {
-      "source_sha256": "9fe3210e7b8bc04029c0fa3b62be2517065e506a643f63286b7b299203e3abdd",
-      "built_at_commit": "8248c76",
+      "source_sha256": "1aebe6c04a158535eb3514669d83ed56d75da208666a576931556b7a37c14a3b",
+      "built_at_commit": "bcbda52",
       "extraction_level": 3
     },
     "src/schema/version.ts": {
@@ -398,19 +408,10 @@
       "extraction_level": 2
     }
   },
-  "stale": [
-    "concept:session-observe-loop",
-    "edge:calls:element:src/insight/session-observe.ts#applyObserve->element:src/insight/session-observe.ts#auditEnrichments",
-    "edge:calls:element:src/insight/session-observe.ts#auditEnrichments->element:src/insight/entry.ts#parseEntry",
-    "edge:implements-concept:file:src/insight/session-observe.ts->concept:session-observe-loop",
-    "edge:imports:file:src/insight/session-observe.ts->file:src/insight/entry.ts",
-    "edge:imports:file:src/insight/session-observe.ts->file:src/loops/report.ts",
-    "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/fences.ts",
-    "edge:imports:file:src/insight/session-observe.ts->file:src/pulse/suggestion-ids.ts"
-  ],
+  "stale": [],
   "cycle_commits": [
-    "9720847",
-    "c170f95",
-    "fd7b55b"
+    "bcbda52",
+    "76d4b04",
+    "9720847"
   ]
 }

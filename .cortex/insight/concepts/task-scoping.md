@@ -4,5 +4,5 @@ Project-scoped naming of Claude Desktop scheduled tasks so one global `~/.claude
 
 ## Files
 
-- src/cli/init.ts
+- src/cli/scaffold.ts
 - src/cli/task-scoping.ts
