@@ -1,6 +1,6 @@
 ---
 id: core-cli.developer-keeps-existing-project-current
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/core-cli/sync.spec.md
 ---

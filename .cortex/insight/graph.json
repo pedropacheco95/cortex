@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-19T03:15:09Z",
+  "generated": "2026-07-25T01:15:12Z",
   "built_at_commit": "76d4b04",
   "nodes": [
     {
@@ -114,6 +114,11 @@
       "label": "scaffoldArchive"
     },
     {
+      "id": "element:src/cli/cli.ts#PULSE_LOOP_COMMANDS",
+      "kind": "element",
+      "label": "PULSE_LOOP_COMMANDS"
+    },
+    {
       "id": "element:src/cli/cli.ts#parseLoopFlags",
       "kind": "element",
       "label": "parseLoopFlags"
@@ -167,6 +172,26 @@
       "id": "element:src/cli/init.ts#writeSkeleton",
       "kind": "element",
       "label": "writeSkeleton"
+    },
+    {
+      "id": "element:src/cli/scaffold.ts#createPromptInterface",
+      "kind": "element",
+      "label": "createPromptInterface"
+    },
+    {
+      "id": "element:src/cli/scaffold.ts#installSkills",
+      "kind": "element",
+      "label": "installSkills"
+    },
+    {
+      "id": "element:src/cli/scaffold.ts#promptYesNo",
+      "kind": "element",
+      "label": "promptYesNo"
+    },
+    {
+      "id": "element:src/cli/scaffold.ts#writeScheduledTasks",
+      "kind": "element",
+      "label": "writeScheduledTasks"
     },
     {
       "id": "element:src/cli/task-scoping.ts#hashScopedTaskName",
@@ -1009,6 +1034,16 @@
       "label": "init.ts"
     },
     {
+      "id": "file:src/cli/scaffold.ts",
+      "kind": "file",
+      "label": "scaffold.ts"
+    },
+    {
+      "id": "file:src/cli/sync.ts",
+      "kind": "file",
+      "label": "sync.ts"
+    },
+    {
       "id": "file:src/cli/task-scoping.ts",
       "kind": "file",
       "label": "task-scoping.ts"
@@ -1387,7 +1422,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "The fallback branch of run() calls `await init(target, { force, yes, noLlm, partial, ...timeoutMs })` (cli.ts:491).",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#applyPreset",
@@ -1981,7 +2016,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "run() dispatches nearly every verb via `await import(...)` rather than static imports (20 dynamic-import call sites); only src/cli/init.ts is statically imported.",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:dynamic-verb-dispatch",
@@ -2000,6 +2035,15 @@
       "confidence": "stated",
       "evidence": "writeSkeleton/upsertClaudeMd/mergeSettings/writeScheduledTasks create and repair the per-project runtime surface.",
       "confirmed_at_commit": "bcbda52"
+    },
+    {
+      "id": "edge:implements-concept:file:src/cli/scaffold.ts->concept:scaffolding",
+      "source": "file:src/cli/scaffold.ts",
+      "target": "concept:scaffolding",
+      "edge_type": "implements-concept",
+      "confidence": "stated",
+      "evidence": "concept entry scaffolding.md lists src/cli/scaffold.ts among the files that implement it; the file's own header doc comment describes itself as the shared scaffolding mechanism behind both cortex init and cortex sync",
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:implements-concept:file:src/cli/task-scoping.ts->concept:task-scoping",
@@ -2314,7 +2358,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "concept entry always-write-pulse-report.md lists src/loops/onboarding-drift.ts among the files that implement it",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:implements-concept:file:src/loops/onboarding-drift.ts->concept:scan-and-report",
@@ -2323,7 +2367,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "concept entry scan-and-report.md lists src/loops/onboarding-drift.ts among the files that implement it",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:implements-concept:file:src/loops/report.ts->concept:always-write-pulse-report",
@@ -2719,7 +2763,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/cli.ts imports src/cli/init.ts",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/sync.ts",
+      "source": "file:src/cli/cli.ts",
+      "target": "file:src/cli/sync.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/cli/sync.ts: the `sync` verb dynamically imports `sync` and forwards `--yes`/target plus the new onProgress stderr sink",
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/task-scoping.ts",
@@ -2728,7 +2781,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/cli/task-scoping.ts: the `tasks rename` verb dynamically imports and calls `tasksRename` directly",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/tasks-register.ts",
@@ -2737,7 +2790,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/cli/tasks-register.ts: `cortex tasks plan|register|verify` dynamically imports `tasksPlan`, `registerTasks`, `verifyTasks`, `desktopAppRunning` and supplies the real home/app-support-dir/process-check",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/constellation/server.ts",
@@ -2746,7 +2799,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/constellation/server.ts: dynamically imports `serveConstellation`, `DEFAULT_PORT` for the `cortex constellation [--port N]` verb.",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/pulse/distil.ts",
@@ -2755,7 +2808,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/pulse/distil.ts: the `pulse-distil` verb dynamically imports `runDistil`, which now also carries the workflow-mining lens formerly served by the retired `loop-skill-suggest` verb.",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/pulse/migrate.ts",
@@ -2764,7 +2817,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/pulse/migrate.ts: dynamically imports `migratePulseLayout` to run the full one-shot pulse-tree migration as a CLI command.",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
@@ -2774,6 +2827,15 @@
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/archive/scaffold.ts",
       "confirmed_at_commit": "bcbda52"
+    },
+    {
+      "id": "edge:imports:file:src/cli/init.ts->file:src/cli/scaffold.ts",
+      "source": "file:src/cli/init.ts",
+      "target": "file:src/cli/scaffold.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/cli/scaffold.ts",
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/tasks-register.ts",
@@ -2819,6 +2881,78 @@
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/schema/validate.ts",
       "confirmed_at_commit": "bcbda52"
+    },
+    {
+      "id": "edge:imports:file:src/cli/scaffold.ts->file:src/cli/task-scoping.ts",
+      "source": "file:src/cli/scaffold.ts",
+      "target": "file:src/cli/task-scoping.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/scaffold.ts imports src/cli/task-scoping.ts",
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/scaffold.ts->file:src/cli/templates.ts",
+      "source": "file:src/cli/scaffold.ts",
+      "target": "file:src/cli/templates.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/scaffold.ts imports src/cli/templates.ts",
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/scaffold.ts",
+      "source": "file:src/cli/sync.ts",
+      "target": "file:src/cli/scaffold.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/cli/scaffold.ts (packageRoot, promptYesNo, createPromptInterface, upsertClaudeMd, mergeSettings, installGitHook, registrationSummaryLines, marker helpers)",
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/task-scoping.ts",
+      "source": "file:src/cli/sync.ts",
+      "target": "file:src/cli/task-scoping.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/cli/task-scoping.ts (project-scoped task naming, same as init)",
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/tasks-register.ts",
+      "source": "file:src/cli/sync.ts",
+      "target": "file:src/cli/tasks-register.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "insight entry for src/cli/sync.ts declares a source-level dependency on src/cli/tasks-register.ts: dynamically imports `registrationStatus` at the end of sync() for the same read-only Desktop-registration check init also runs",
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/templates.ts",
+      "source": "file:src/cli/sync.ts",
+      "target": "file:src/cli/templates.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/cli/templates.ts (SCHEMA_VERSION, CORTEX_INDEXES, index templates, SCHEDULED_TASKS)",
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/sync.ts->file:src/schema/validate.ts",
+      "source": "file:src/cli/sync.ts",
+      "target": "file:src/schema/validate.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/schema/validate.ts (validate, Rule 10 self-validation)",
+      "confirmed_at_commit": "0438f32"
+    },
+    {
+      "id": "edge:imports:file:src/cli/sync.ts->file:src/schema/version.ts",
+      "source": "file:src/cli/sync.ts",
+      "target": "file:src/schema/version.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/schema/version.ts (SUPPORTED_MAJOR, Rule 2 major-version gate)",
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
@@ -3475,7 +3609,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "bcbda52"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/loops/onboarding-drift.ts->file:src/insight/measure.ts",
@@ -3484,7 +3618,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/insight/measure.ts",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/loops/onboarding-drift.ts->file:src/loops/report.ts",
@@ -3493,7 +3627,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/loops/report.ts",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/loops/onboarding-drift.ts->file:src/schema/checks/claude-md.ts",
@@ -3502,7 +3636,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/schema/checks/claude-md.ts",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/loops/onboarding-drift.ts->file:src/schema/checks/layout.ts",
@@ -3511,7 +3645,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/schema/checks/layout.ts",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "0438f32"
     },
     {
       "id": "edge:imports:file:src/loops/report.ts->file:src/cli/templates.ts",

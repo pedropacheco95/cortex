@@ -1,6 +1,6 @@
 ---
 id: insight.assistant-learns-from-sessions
-status: draft
+status: implemented
 implemented_by:
   - ../../specs/insight/session-observe.spec.md
 ---

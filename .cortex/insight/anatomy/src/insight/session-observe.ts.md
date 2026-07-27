@@ -44,6 +44,8 @@ The B-010 matching-key/display-title split is easy to get backwards: `pattern` (
 
 The pulse reorg split what used to be one `pulseDir` helper into `stateDir` (worklist, observed-state, corpus — under `pulse/state/`) and `reportsDir` (the report — under `pulse/reports/`); it's a pure path change with no behavioural difference, but easy to miss when diffing against an older version of this file.
 
+`applyObserve`'s report footer duplicates across successive runs. The always-write body appends the closing "Ungated observations were written directly..." paragraph exactly once (after the `emitted` loop), but `emitted` also includes `pending.map((p) => p.raw)` from `readPendingSections` (shared with `pulse/distil.ts`) — and that helper's `raw` capture for the LAST `## S-NNN` heading in a report runs to end-of-file (`parseSuggestionSections`, `src/pulse/distil.ts`), which includes the very same closing paragraph from the prior run. So whenever at least one carried-forward pending candidate is last in the file, each apply cycle bakes in one more copy of the footer on top of the fresh one appended after it — confirmed by `grep -c` on the live report returning 15 occurrences (up from 8 observed in an earlier session). Cosmetic only — it does not affect parsing (`parseSuggestionSections` is fence/heading-aware, not footer-aware) — but it compounds every run and was not yet filed as a ledger bug. (claude-sessions/pedropacheco1/797a3f69-2c76-4d6a-86b4-3a9dd6910913)
+
 ## File map
 
 - Lines 1–30: module doc — the two deterministic bookends and what the agentic skill does in between.
