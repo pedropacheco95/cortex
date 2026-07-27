@@ -25,6 +25,7 @@ import {
   gitInit,
   recordingStub,
   writeUndocumentedFiles,
+  snapshotTree,
 } from '../../fixtures/init-harness.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -46,6 +47,71 @@ describe('Rule 1: preflight', () => {
   it('existing .cortex/ with --force proceeds (exit 0)', async () => {
     const result = await init(root, { noLlm: true, force: true, home, ...DARWIN });
     expect(result.exitCode).toBe(0);
+  }, TEST_TIMEOUT);
+});
+
+// ---------------------------------------------------------------------------
+// Rule 1 (nested-layer guard, B-013) — refuse a target at or beneath an
+// existing Cortex layer; never bypassable by --force; no false positive on a
+// normal project root that merely contains a `.cortex/` child.
+// ---------------------------------------------------------------------------
+describe('Rule 1: nested-layer guard (B-013)', () => {
+  let projectRoot: string;
+  let layerDir: string;
+  let home: string;
+  beforeAll(async () => {
+    projectRoot = makeTmpDir('nested-proj');
+    home = makeTmpDir('nested-home');
+    // A genuine Cortex layer — produced by a real init, not hand-rolled.
+    await init(projectRoot, { noLlm: true, home, ...DARWIN });
+    layerDir = path.join(projectRoot, '.cortex');
+  }, TEST_TIMEOUT);
+  afterAll(() => { cleanTmp(projectRoot); cleanTmp(home); });
+
+  it('targeting the .cortex layer directory itself is refused, exit 2, nothing written, names the project root', async () => {
+    const before = snapshotTree(projectRoot);
+    const beforeHome = snapshotTree(home);
+    const result = await init(layerDir, { noLlm: true, home, ...DARWIN });
+    expect(result.exitCode).toBe(2);
+    expect(result.summary).toContain('inside an existing Cortex layer');
+    expect(result.summary).toContain(layerDir);
+    expect(result.summary).toContain(projectRoot);
+    expect(result.summary).toContain('Nothing was written');
+    expect(snapshotTree(projectRoot)).toEqual(before);
+    expect(snapshotTree(home)).toEqual(beforeHome);
+  }, TEST_TIMEOUT);
+
+  it('--force does NOT override the nested-layer refusal', async () => {
+    const before = snapshotTree(projectRoot);
+    const result = await init(layerDir, { noLlm: true, force: true, home, ...DARWIN });
+    expect(result.exitCode).toBe(2);
+    expect(result.summary).toContain('inside an existing Cortex layer');
+    expect(result.summary).toContain('Not bypassable by --force');
+    expect(snapshotTree(projectRoot)).toEqual(before);
+  }, TEST_TIMEOUT);
+
+  it('a subdirectory well inside the layer (.cortex/insight) is also refused', async () => {
+    const before = snapshotTree(projectRoot);
+    const nestedTarget = path.join(layerDir, 'insight');
+    const result = await init(nestedTarget, { noLlm: true, home, ...DARWIN });
+    expect(result.exitCode).toBe(2);
+    expect(result.summary).toContain('inside an existing Cortex layer');
+    expect(result.summary).toContain(layerDir);
+    expect(result.summary).toContain(projectRoot);
+    expect(snapshotTree(projectRoot)).toEqual(before);
+  }, TEST_TIMEOUT);
+
+  it('a normal project root that merely contains a .cortex/ child is not a false positive (inits fine)', async () => {
+    const freshRoot = makeTmpDir('nested-nonfp-proj');
+    const freshHome = makeTmpDir('nested-nonfp-home');
+    try {
+      const result = await init(freshRoot, { noLlm: true, home: freshHome, ...DARWIN });
+      expect(result.exitCode).toBe(0);
+      expect(result.summary).not.toContain('inside an existing Cortex layer');
+      expect(fs.existsSync(path.join(freshRoot, '.cortex', 'cortex.config.json'))).toBe(true);
+    } finally {
+      cleanTmp(freshRoot); cleanTmp(freshHome);
+    }
   }, TEST_TIMEOUT);
 });
 

@@ -408,6 +408,31 @@ The bug ledger now lives at \`.cortex/compass/bugs/\` — one file per bug
 }
 
 // ---------------------------------------------------------------------------
+// Rule 1 (nested-layer guard) — refuse when the target sits at or beneath an
+// existing Cortex layer instead of at a project root (B-013).
+// ---------------------------------------------------------------------------
+
+/**
+ * Walk `absRoot`'s ancestor chain (including itself). If any directory in
+ * that chain is named `.cortex` AND carries its own `cortex.config.json` —
+ * the definitive Cortex-layer marker — the target is at or beneath a real
+ * Cortex layer. A directory merely named `.cortex` with no config (e.g. a
+ * fresh empty dir) does not count: only a directory a `.cortex/` layer
+ * genuinely owns triggers this.
+ */
+function findEnclosingCortexLayer(absRoot: string): { layerDir: string; projectRoot: string } | null {
+  let dir = absRoot;
+  for (;;) {
+    if (path.basename(dir) === '.cortex' && fs.existsSync(path.join(dir, 'cortex.config.json'))) {
+      return { layerDir: dir, projectRoot: path.dirname(dir) };
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return null; // reached the filesystem root
+    dir = parent;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Rules 10, 11, 12, 13 & 17 — CLAUDE.md, hooks, git hook, Desktop scheduled
 // tasks: mechanism moved to scaffold.ts (shared with sync); --partial's
 // skill-gating (Rule 17) stays inline in the writeScheduledTasks mechanism
@@ -434,6 +459,24 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
       summary: `cortex init: refused — Cortex v1 requires macOS (darwin); this platform reports "${platform}". Nothing was written.`,
     };
   }
+  // Rule 1 (nested-layer guard, B-013) — refuse when the target itself is a
+  // `.cortex` directory of an existing layer, or nested beneath one (e.g. a
+  // subdirectory of `.cortex/`). Distinct from the existing-`.cortex`-child
+  // gate just below: that one refuses "this dir already HAS a `.cortex`
+  // child"; this one refuses "this dir IS/is BENEATH a `.cortex` layer". A
+  // normal project root that merely contains a `.cortex/` child (the everyday
+  // case) is untouched by this check — only a directory literally named
+  // `.cortex` carrying the layer's own `cortex.config.json` marker matches.
+  // Never bypassable by `--force`: initialising inside `.cortex/` is never
+  // intentional.
+  const enclosingLayer = findEnclosingCortexLayer(absRoot);
+  if (enclosingLayer) {
+    return {
+      exitCode: 2,
+      summary: `cortex init: refused — the target ${absRoot} is inside an existing Cortex layer (${enclosingLayer.layerDir}). Cortex manages a project from its ROOT, not from inside .cortex/. Run \`cortex init\` (or \`cortex sync\`) at ${enclosingLayer.projectRoot} instead. Nothing was written. (Not bypassable by --force.)`,
+    };
+  }
+
   const cortexDir = path.join(absRoot, '.cortex');
   if (fs.existsSync(cortexDir) && !force) {
     return {

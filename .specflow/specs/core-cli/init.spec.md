@@ -26,7 +26,7 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 
 ## Rules
 
-1. **Preflight.** Refuse (exit 2, nothing written) when: `.cortex/` already exists and `--force` was not given — the refusal message names `cortex sync` as the existing-project path (repair/upgrade without a forced re-init, spec `core-cli.sync`); or the platform is not macOS (`darwin`) — v1 is macOS-only (design §3, RULES.md rule 5) and init is where that gate lives.
+1. **Preflight.** Refuse (exit 2, nothing written) when: `.cortex/` already exists and `--force` was not given — the refusal message names `cortex sync` as the existing-project path (repair/upgrade without a forced re-init, spec `core-cli.sync`); or the platform is not macOS (`darwin`) — v1 is macOS-only (design §3, RULES.md rule 5) and init is where that gate lives; or the target itself sits at or beneath an existing Cortex layer — a directory named `.cortex` carrying its own `cortex.config.json` (the target IS such a directory, or is nested inside one, e.g. a subdirectory of `.cortex/`) — in which case the refusal message names the project root (that layer directory's parent) and tells the user to run `cortex init` or `cortex sync` there instead. This third condition is **never bypassed by `--force`**: initialising inside a `.cortex/` layer is never an intentional action, unlike the other two conditions where `--force`/a corrected platform is a legitimate way past the gate. It is distinct from the existing-`.cortex/`-exists condition above: that one fires when the target directory already *has* a `.cortex/` child; this one fires when the target directory *is, or is beneath,* a `.cortex/` layer itself — a normal project root that merely contains a `.cortex/` child (the everyday case) is unaffected.
 2. **Gitignore (schema Decision 1).** Append exactly the four regenerable/sensitive/transient paths — `.cortex/anatomy/`, `.cortex/atlas/sources/`, `.cortex/pulse/`, `.cortex/constellation.json` — to `.gitignore`, creating it if absent. Never `.cortex/` wholesale. Idempotent: lines already present are not duplicated.
 3. **Skeleton.** Create the full `.cortex/` layout per schema §1, populating every directory's `_index.md` from the schema §7.1 active-prompt templates (not empty placeholders), and write `cortex.config.json` with the current `schemaVersion` and the §10.1 defaults.
 4. **Skills install.** Copy the skill bundles shipped inside the npm package into the project's `.claude/skills/`. If a bundle already exists there, prompt before overwriting (`--yes` accepts all; declining preserves the user's copy). Init installs whatever bundles the installed package version ships — it does not hardcode a count.
@@ -68,6 +68,14 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Given** the process platform reports `linux`
 - **When** `cortex init` runs
 - **Then** init exits 2 with a message naming macOS as the v1 requirement, and nothing is written
+
+### Target inside an existing Cortex layer refused, not even by --force
+
+- **Given** a project already under Cortex management at `<root>` (its `.cortex/cortex.config.json` exists)
+- **When** `cortex init <root>/.cortex` runs — or any path nested beneath it, e.g. `<root>/.cortex/insight` — with or without `--force`
+- **Then** init exits 2 and nothing is written anywhere, in the target or in `~/.claude/`
+- **And** the refusal message names `<root>` as the project root and tells the user to run `cortex init` (or `cortex sync`) there instead
+- **And** given instead a normal, unrelated project root that merely contains its own `.cortex/` child (the everyday case), this guard does not fire and init proceeds (or refuses only per the pre-existing existing-`.cortex/`-exists condition, exactly as before this change) — the guard matches only when the target itself is a `.cortex` directory (or nested beneath one) carrying the layer's own `cortex.config.json` marker
 
 ### Gitignore additions are exact and idempotent
 
