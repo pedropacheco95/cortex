@@ -12,6 +12,8 @@ Confidence that the product does what it should. The outcome is that every inten
 
 - **Spec work draws on everything the project already knows** — plans consult the map/rules/decisions first, generated tests enforce recorded conventions, problems land in the shared ledger.
 
+- **A diagnosis names the cause, and a test proves the behaviour** — bugs are investigated before they are classified, and no test enters the suite that was never watched failing for the right reason.
+
 _Planned outcomes (not yet written):_
 
 - **Every intended behaviour written down** — what the product should do is captured, not assumed.

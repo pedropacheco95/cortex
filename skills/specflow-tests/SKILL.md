@@ -12,12 +12,26 @@ description: >
 
 # Specflow Testing
 
+## The Iron Law
+
+NO TEST ENTERS THE SUITE UNTIL IT HAS BEEN WATCHED FAILING FOR THE RIGHT REASON
+
+Violating the letter of this law is violating the spirit. If you find yourself constructing a
+reading under which this test does not need watching, that construction is the violation.
+
+Hardening mechanisms per `skills/_conventions/hardening.md`.
+
 ## Core Principle
 
 **A test that does not execute is not a test.** A test file that exists but throws on
 import, crashes on setup, or stubs its assertions with `expect(true).toBe(true)` is
 documentation, not a test. Testing is not complete until every test runs, passes or
 fails for legitimate reasons, and the verification agent confirms quality.
+
+**A test that has only ever been seen passing is not yet evidence.** Green tells you nothing
+on its own: the test may be right, may assert nothing, or may be exercising a different path
+than the one it names. All three look identical from the outside. The one cheap moment to tell
+them apart is before the implementation exists — see *Watch it fail correctly* below.
 
 ## Agent Architecture
 
@@ -139,9 +153,52 @@ Each step touches a different dev spec's slice.
 **Scenario** — A realistic workflow crossing multiple business specs. Full sandbox. Every
 business spec must appear in at least one scenario's `covers:` list.
 
+#### Watch it fail correctly
+
+Every new test is run **before** its implementation exists, and its failure is read.
+
+1. Write the test.
+2. Run it. It must fail.
+3. **Read the failure message.** Is this the failure the test exists to produce — the assertion
+   you wrote, failing on the value you meant to check?
+4. Only then write the implementation.
+
+Step 3 is the whole mechanism, and it is the step that gets skipped. "It failed" is not the
+observation; *why* it failed is. A test that fails on any of these is **broken, not red**:
+
+- `Cannot find module` / import error — the test never ran
+- `undefined is not a function` — a misspelled symbol or an unbuilt export
+- a fixture or factory that does not exist
+- a crash in `beforeEach` / setup, before the assertion is reached
+- a failure in a *different* assertion than the one under test
+
+A broken test goes green the moment you fix the breakage — regardless of whether the behaviour
+is right. It has proved nothing, and it will sit in the suite forever looking like it has.
+Fix the test, re-run it, and observe the *right* failure before moving on.
+
+**Delete premature code.** If implementation code was written before its test, delete it and
+rewrite it after the test is red. Do not keep it, do not adapt it, do not "use it as a starting
+point". Code that already exists pulls the test toward describing what the code does rather
+than what the spec requires — you will write an assertion that passes on the first run and
+learn nothing. Deleting twenty lines you already wrote feels wasteful; shipping a suite that
+agrees with the implementation by construction is what it costs to avoid it.
+
+**Record the observation.** For each generated test, the verification report notes that it was
+watched failing for the right reason before it went green. A test that was only ever seen
+passing is reported as **unverified**, not silently counted as covered.
+
+| Thought/Excuse | Reality |
+|---|---|
+| "The code already exists, so writing the test first is pointless." | Then the test is being written to agree with the code, which is the failure mode, not an exception to it. Delete the code or accept that this test verifies nothing but its own consistency. |
+| "It failed, that's good enough — I don't need to read why." | Half of first-run failures are import errors, typos, and missing fixtures. You are one `Cannot find module` away from a test that goes green on a fix that has nothing to do with the behaviour. |
+| "Running it twice is slow." | Run the one test, not the suite. The second run is the only evidence you will ever get that the assertion can distinguish right from wrong. |
+| "The assertion is obviously correct." | Obviously-correct assertions are how `expect(result).toBeDefined()` ends up guarding a function that returns the wrong value. Obvious to you is not the same as sensitive to the bug. |
+| "Deleting working code to rewrite it is wasteful." | The code is not working — nothing has verified it. You are protecting an unverified artefact at the cost of the only mechanism that would have verified it. |
+
 #### Rules for generation agents
 
 - Use fixtures and harness from Phases 0 and 1. No inline mock setup that bypasses infra.
+- Watch every new test fail for the right reason before implementing against it (above).
 - Every test must have real assertions. `expect(true).toBe(true)` is forbidden.
 - If a test cannot be written because infrastructure doesn't support it (e.g., needs
   Playwright), do NOT write a stub. Flag the gap: "criterion X needs [capability]."
@@ -248,6 +305,10 @@ The verification agent writes `.cortex/pulse/reports/verification.md`:
 - Files scanned: [N]
 - Clean: [N]
 - Failures: [list] ← must be 0
+
+## Red-first observation
+- Watched failing for the right reason before implementation: [N]
+- Unverified (only ever seen passing): [list] ← reported, never silently counted as covered
 
 ## Coverage completeness
 - Atomic: [N]/[N] criteria covered by executing tests

@@ -9,6 +9,8 @@ The spec-and-test lineage absorbed into Cortex: the conventions of the two spec 
 **Specs written:**
 
 - `specflow.cortex-awareness` — the three-tier awareness pass over all eleven specflow-* skills (deep: develop/tests/change-router; moderate: onboarding/ingest/new-project/spec-editor; light: viewer/lint/bugs incl. the §4.3 ledger correctness fix), shipped in the package so init installs the aware versions.
+- `specflow.bugs-root-cause-gate` — the Phase-1 root-cause investigation gate prepended to `specflow-bugs`: no bug type may be named until the failure has been read, reproduced, dated against recent changes, and localised by instrumenting component boundaries. The seven-type tree and ledger output are unchanged.
+- `specflow.tests-red-green` — watch-it-fail-correctly and delete-premature-code in `specflow-tests`: a new test must be observed failing *for the right reason* before its implementation exists, and code written ahead of its test is deleted rather than adapted.
 
 _Planned (not yet written):_
 

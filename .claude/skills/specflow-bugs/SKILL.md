@@ -17,6 +17,19 @@ description: >
 
 # Specflow: Bug Diagnosis
 
+## The Iron Law
+
+NO CLASSIFICATION WITHOUT ROOT CAUSE FIRST
+
+Violating the letter of this law is violating the spirit. If you find yourself constructing a
+reading under which this bug does not need investigating, that construction is the violation.
+
+A bug report is a symptom. The diagnostic tree below is sound, but it is only as good as what
+you feed it — classify a symptom and you will get a confident type for the wrong layer.
+Phase 1 exists to make the tree's input an observation instead of a story.
+
+Hardening mechanisms per `skills/_conventions/hardening.md`.
+
 ## Core Principle
 
 In a spec-managed project, a bug is never just "wrong code." Every bug is a signal that
@@ -42,7 +55,70 @@ Two entry points:
    identifies which spec and criterion each failure maps to, classifies the root cause, and
    produces the change plan for each failure.
 
-## The Seven Bug Types
+## Phase 1: Root-Cause Investigation
+
+**This runs before the diagnostic tree, on every bug, from both entry points.** Four steps.
+None of them is a formality.
+
+**1. Read the actual error.** The full output — stack trace, failing assertion, the values on
+both sides of it, the log lines immediately before. Not the user's paraphrase, not the first
+line, not a summary someone else wrote. The paraphrase is where the wrong layer gets suggested
+to you; the trace is where the truth is.
+
+**2. Reproduce it.** Run the failing case yourself and see it fail. If you cannot reproduce it,
+say so explicitly and record what you tried — that is a legitimate outcome, and it changes what
+you are allowed to conclude (see the gate below).
+
+**3. Check what changed recently.** `git log` and `git diff` around the affected surface. A
+failure that appeared this week usually has a cause from this week. This step is cheap and
+routinely collapses the search space to one commit.
+
+**4. Instrument the component boundaries.** Find where the wrong value *first* appears. Log or
+inspect the value on each side of each boundary it crosses — the API edge, the function
+boundary, the serialisation step, the storage write. You are looking for the first place the
+value is wrong, not the place it is most visibly wrong.
+
+Reasoning about which component is *likely* at fault is not step 4. Step 4 is observing which
+component *is* at fault. These feel similar from the inside and are not the same thing: the
+first is a hypothesis, the second is the evidence that selects among hypotheses.
+
+### HARD GATE
+
+Do NOT name a bug type, and do NOT write a ledger file, until Phase 1 has produced evidence.
+
+**"This one is too simple to need investigation."** That thought is this gate's most common
+failure mode, and it is wrong in the same way every time: the bug looks simple because you have
+already assumed a cause, and the assumption is exactly what Phase 1 is for. If the bug really is
+simple, Phase 1 costs one command and confirms it. If it is not, you just avoided filing a
+confident classification at the wrong layer — which is worse than no classification, because
+the ledger is believed.
+
+**If you could not reproduce it:** gather data, file what you observed, and mark the entry
+unreproduced with the attempts recorded. Do **not** assign a confident type on the strength of
+the report alone. An unreproduced report is a data-gathering task, not a diagnosis.
+
+**The evidence travels with the classification.** The ledger entry records what you observed
+and which observation selected the type. A reader six months from now must be able to tell your
+diagnosis from a guess; without the evidence line, the two look identical.
+
+### Rationalization table
+
+| Thought/Excuse | Reality |
+|---|---|
+| "The fix is obvious — I can see the bug in the code." | You can see *a* bug. Whether it is *this* bug is precisely what you have not checked. The obvious fix at the wrong layer is the most expensive outcome available here, because it also closes the ticket. |
+| "The stack trace is just noise from the framework." | The noise is the framework's frames; the signal is which of *your* frames is deepest in it. You are skipping the one artefact that names a file and a line. |
+| "This is clearly the same as the bug we fixed last week." | Then reproducing it takes thirty seconds and you will have proof. "Clearly the same" is a hypothesis with a strong feeling attached, and this ledger already has entries that were re-filed at a different layer after exactly this thought. |
+| "Reproducing it is slow / needs a real environment." | Then say so in the entry and mark it unreproduced. Slowness is a reason to record a weaker conclusion, never a reason to record a strong one you did not earn. |
+| "The user already told me what's wrong." | The user told you what they *saw*. They are reporting a symptom from outside the system, which is the one vantage point from which layer cannot be determined. Their report is the input to Phase 1, not a substitute for it. |
+| "I'll investigate properly once I've narrowed it down with the tree." | The tree's first question is which spec governs the behaviour — you cannot answer it without knowing which component is actually misbehaving. Backwards order, and it terminates in a plausible answer either way. |
+
+> **Noted for later, not built here.** This gate is a local instance of a general mechanism —
+> *escalate on the way out*: when a chosen layer keeps failing to hold the fix, the response is
+> to change altitude rather than retry at the same level. The 5-round review ladder in
+> `specflow-develop` is another instance. Generalising the two is deferred
+> (`plans_and_handoffs/plans/2026-08-03.md` §5); do not build it inside this skill.
+
+## Phase 2: The Seven Bug Types
 
 Every bug in a Specflow project traces to exactly one of these root causes:
 
@@ -397,8 +473,11 @@ The user provides test output (copy-pasted, or points to a log file). For each f
 
 2. **Read the spec.** Load the spec file and find the criterion.
 
-3. **Classify the failure.** Walk the diagnostic tree starting at step 5 (the spec and
-   criterion exist — that's why a test exists). The question is whether:
+3. **Run Phase 1 on the failure, then classify.** Test output is an error, not a diagnosis:
+   read the assertion and both its values, re-run the single failing test to confirm it fails
+   the same way, and check what changed since it last passed. Only then walk the diagnostic
+   tree starting at step 5 (the spec and criterion exist — that's why a test exists). The
+   question is whether:
    - The test correctly encodes the spec and code is wrong (code bug → simplest case)
    - The test misinterprets the criterion (Type 7 — wrong test)
    - The criterion itself is wrong or incomplete (Type 1 or 3 — spec issue)
@@ -419,6 +498,8 @@ Group related failures into one bug entry when they share a root cause.
 
 When operating as the bug diagnosis agent:
 
+- **Never classify before Phase 1.** The Iron Law is the first instruction in this skill for a
+  reason: a type named from a symptom is a guess wearing a diagnosis's clothes.
 - **Never skip the diagnostic tree.** Even if the fix seems obvious, walk the tree. The
   "obvious" fix is often at the wrong layer.
 - **Never modify specs, tests, or code.** This skill diagnoses. The change-router executes.
