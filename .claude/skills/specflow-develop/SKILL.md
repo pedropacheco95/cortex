@@ -89,7 +89,8 @@ before coding (skip this section cleanly when `.cortex/` is absent):
    touched domain — they record why the current approach was chosen; never undo a
    recorded decision silently.
 5. **Insight queries (when `.cortex/insight/` exists).** A first-class workflow step,
-   not a footnote — it recurs at Step 1 and Step 4a below. Before writing code for ANY
+   not a footnote — it recurs at Step 4a below (the planning-time queries moved
+   to `specflow-plan` with the Explore step). Before writing code for ANY
    file the plan will modify, run `cortex insight file <path>` — the rich per-file
    entry (purpose, main players, connections) is the resume; still read the file
    itself when modifying it, because modification needs exact syntax, not a summary.
@@ -131,6 +132,12 @@ The depth level affects every subsequent step:
 | Review ladder | Per task | Per task | Per task, per child | Per task, per child |
 | Gaps | Document inline | Document inline | Collect from children | Collect + cross-domain gaps |
 
+**Orchestration cap (temporary).** Until the writer/verifier harness ships (build-order-v3
+step 11), sub-agents cannot spawn sub-agents, so depth stays capped at **Minimal or Light**: if
+a scope would trigger Standard or Full, split the batch rather than retrying at a lower depth
+mid-run. The review ladder's round-4 escalation is unaffected — a fresh implementer is a
+sibling agent, not another level of recursion.
+
 **The depth is set once at the start and flows to all children.** A Full-depth slice
 agent spawns Standard-depth domain agents, which spawn Minimal or Light spec agents.
 Children never escalate above the depth their parent set for them.
@@ -165,10 +172,6 @@ Each sub-agent receives: its tasks from the plan, its specs and tests, the codin
 the plan's exploration summary, and file paths to relevant existing code.
 
 Sub-agents run this same skill recursively. When they complete, proceed to Step 5.
-
-**The depth is set once at the start and flows to all children.** A Full-depth slice agent
-spawns Standard-depth domain agents, which spawn Minimal or Light spec agents. Children never
-escalate above the depth their parent set for them.
 
 ### Step 3: Watch the test fail first
 
