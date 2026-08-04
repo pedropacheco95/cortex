@@ -6,7 +6,7 @@ This is the stakeholder-facing tree. It describes what Cortex does and why it ma
 
 ## What it covers
 
-Cortex helps a developer (and the AI assistant working alongside them) genuinely understand a codebase — its structure, its rules, its history, and its intended behaviour — so that work stays grounded and knowledge compounds instead of evaporating. The outcomes are organised into fifteen groups:
+Cortex helps a developer (and the AI assistant working alongside them) genuinely understand a codebase — its structure, its rules, its history, and its intended behaviour — so that work stays grounded and knowledge compounds instead of evaporating. The outcomes are organised into sixteen groups:
 
 - **A single, stable contract** — every part of the system and every contributor agrees on how project knowledge is shaped and named, so artefacts compose instead of drifting.
 - **A fast, predictable command-line tool** — set Cortex up in one step and run everyday operations without surprises or waiting on an AI.
@@ -23,6 +23,7 @@ Cortex helps a developer (and the AI assistant working alongside them) genuinely
 - **Every authoritative document captured, once** — client specs, transcripts, and contracts enter through one pipeline, kept verbatim forever, with superseded versions preserved.
 - **Every rule traces to its authority** — ask why a rule exists and the answer is one hop away; ask what depends on a changed source and the full list comes back.
 - **Modules named for what they hold** — anyone reading the knowledge layer can tell what each part is for from its name, and every fact lives in exactly one place.
+- **Work that can be trusted as done** — completion claims carry evidence, and the disciplines that produce that evidence hold under pressure, whichever build process the project runs.
 
 Each outcome is linked to the engineering specs that deliver it, so a reader can move sideways from "what we promise" to "how it's built".
 

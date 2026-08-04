@@ -1,12 +1,12 @@
 ---
 path: src/cli/init.ts
-extracted_at: 2026-07-23T12:00:00Z
+extracted_at: 2026-07-29T01:10:00Z
 extraction_level: 3
-size_lines: 588
-size_tokens: 6555
+size_lines: 631
+size_tokens: 7135
 centrality: high
-built_at_commit: "bcbda52"
-source_sha256: "d123e6457f63f8b14fabfaf283c16a09d26874bbd24cd12ae193b435b08433f7"
+built_at_commit: "b18781f"
+source_sha256: "a324fde0033e1b5c8b675cbabc93a27300603158fc3a7cfbdf843c4309a8f0df"
 ---
 # src/cli/init.ts
 
@@ -14,7 +14,8 @@ source_sha256: "d123e6457f63f8b14fabfaf283c16a09d26874bbd24cd12ae193b435b08433f7
 Implements `cortex init` — the day-1 bootstrap that scaffolds the entire `.cortex/` knowledge layer (compass, atlas, archive, insight, pulse skeletons plus config), installs Skill bundles, drafts deterministic preferences from project metadata, scaffolds the two spec trees, migrates a legacy `bugs.md`, compiles the constellation, manages the CLAUDE.md block, registers Claude Code hooks and the git post-commit hook, writes Desktop scheduled tasks (with `--partial` skill-gating), and self-validates — all as pure deterministic file I/O with zero LLM/network calls. As of the sync-round factoring, Rules 4/10/11/12/13/17's actual mechanism (skills install, CLAUDE.md block, hooks merge, git hook, scheduled-task payload writer, the registration-summary lines) lives in the new `src/cli/scaffold.ts`, shared verbatim with `cortex sync`; this file imports that mechanism, re-exports the pieces external callers/tests still expect from `init.js`, and keeps only what is genuinely init-specific (preflight, gitignore, skeleton, preferences draft, spec-tree scaffolding, bugs.md migration, and the 17-rule orchestration itself).
 
 ## Main players
-- `init` (lines 421–588) — the top-level orchestrator running the seventeen rules in sequence: preflight, gitignore, skeleton, skills (via scaffold.ts), preferences, spec trees, bug migration, constellation compile, CLAUDE.md (via scaffold.ts), hooks (via scaffold.ts), git hook (via scaffold.ts), scheduled tasks (via scaffold.ts), self-validation, summary. [critical]
+- `init` (lines 446–631) — the top-level orchestrator running the seventeen rules in sequence: preflight (now including the B-013 nested-layer guard), gitignore, skeleton, skills (via scaffold.ts), preferences, spec trees, bug migration, constellation compile, CLAUDE.md (via scaffold.ts), hooks (via scaffold.ts), git hook (via scaffold.ts), scheduled tasks (via scaffold.ts), self-validation, summary. [critical]
+- `findEnclosingCortexLayer` (lines 423–433) — B-013 fix: walks `absRoot`'s ancestor chain looking for a directory literally named `.cortex` that also carries its own `cortex.config.json` (the definitive layer marker); returns `{layerDir, projectRoot}` on a hit or `null`. A directory merely named `.cortex` with no config doesn't count. [critical]
 - `writeSkeleton` (lines 126–183) — writes every `.cortex/` directory's `_index.md`, merges `cortex.config.json`, preserves compass leaves, pre-creates the pulse/ subdivided layout (`reports/`, `state/`, `state/reads/`, `extraction/`), and delegates to `scaffoldInsight`/`scaffoldArchive`. [critical]
 - `draftPreferences` (lines 201–287) — deterministically extracts stack facts (package.json, tsconfig.json, eslint config, pyproject.toml, README.md) into a draft `.cortex/compass/preferences.md`, never overwritten once written. [supporting]
 - `migrateBugs` (lines 328–408) — one-time migration of a legacy root `bugs.md` into `.cortex/compass/bugs/B-NNN-<slug>.md` files with monotonic numbering, leaving a deprecation marker behind. [supporting]
@@ -31,6 +32,7 @@ Re-imported from src/cli/scaffold.ts (now the mechanism's home, no longer define
 - Rule 3's `writeSkeleton` pre-creates the pulse/ subdivided layout (`reports/`, `state/`, `state/reads/`, `extraction/`) on day-1 (B-008 pulse reorg) purely so a fresh project shows the organised structure immediately — every writer already `mkdir -p`s its target on demand, so this is a first-impression nicety, not a functional dependency; `pulse/` stays gitignored, so no `.gitkeep` is written into the pre-created dirs.
 - The post-scaffold instruction block warns that the Desktop app offers no "always allow" for scheduled-task creation and prompts once per bundle (5 prompts) — added after real use showed the app demanding per-call approval with no batch-approve. (claude-sessions/pedropacheco1/3bac199d-2d61-471f-b48b-f91c871cd282)
 - `--partial` gates Desktop scheduled-task registration on whether each task's required skill dir exists under `.claude/skills/`; tasks whose skill is absent are skipped (named in the summary) rather than erroring — this is what makes `cortex init` usable mid-construction as loop skills are added incrementally; re-running `--partial` later auto-registers newly-available tasks. (claude-sessions/pedropacheco1/75ef81a0-97bd-4fa1-8c2a-72ddb2d98405)
+- B-013 fix: `init` now refuses (exit 2, nothing written, not bypassable by `--force`) when the target directory itself is, or sits beneath, an existing Cortex layer — distinct from the pre-existing "this dir already has a `.cortex` child" gate just below it, which refuses the opposite direction. Only a directory literally named `.cortex` carrying its own `cortex.config.json` marker trips it, so a normal project root that merely contains a `.cortex/` child is untouched. Fixes the prior bug where running `cortex init` inside `.cortex/` scaffolded a nested layer.
 
 ## File map
 - Lines 1–54: module doc comment, imports (now including the scaffold.ts mechanism imports and re-exports), `InitOptions`/`InitResult` interfaces.
@@ -41,7 +43,8 @@ Re-imported from src/cli/scaffold.ts (now the mechanism's home, no longer define
 - Lines 293–311: Rule 8 spec-tree scaffolding (`scaffoldSpecTrees`).
 - Lines 317–408: Rule 9 legacy bugs.md migration (`extractField`, `migrateBugs`).
 - Lines 410–415: Rules 10–13 & 17 note — CLAUDE.md/hooks/git-hook/scheduled-tasks mechanism moved to scaffold.ts.
-- Lines 417–588: `init` — the full seventeen-rule orchestration and summary assembly, including the B-009 read-only registration-status check via `tasks-register.ts` and the shared `registrationSummaryLines` tail.
+- Lines 423–433: `findEnclosingCortexLayer` (B-013 nested-layer guard helper).
+- Lines 446–631: `init` — the full seventeen-rule orchestration and summary assembly, now opening with the B-013 nested-layer refusal ahead of the pre-existing preflight checks, including the B-009 read-only registration-status check via `tasks-register.ts` and the shared `registrationSummaryLines` tail.
 
 ## Connections
 Uses:

@@ -19,6 +19,7 @@
 - `archive/` — ingested source documents and the one type-routed ingestion skill
 - `provenance/` — `derives_from:` frontmatter, `check.provenance`, and the backward-traversal index
 - `migration/` — the v3 module migration (compass rename, decisions single-home)
+- `discipline/` — process-agnostic discipline primitives both process profiles invoke (verification gate, hardening convention)
 
 ## Dependency Graph
 
@@ -50,6 +51,8 @@ Current edges (`A → depends on B`):
 - `core-cli.tasks-register` → `core-cli.init`, `core-cli.task-scoping`
 - `loops.test-runner` → `loops.writer-verifier`, `loops.bug-triage`, `schema.validator`, `core-cli.init`
 - `specflow.cortex-awareness` → `core-cli.init`, `schema.validator`
+- `discipline.verification-skill` → `core-cli.init`
+- `discipline.hardening-convention` → (no dependencies — a standalone authoring recipe)
 
 v3 edges (`build-order-v3.md`):
 

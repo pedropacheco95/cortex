@@ -23,8 +23,8 @@
       "extraction_level": 3
     },
     "src/cli/init.ts": {
-      "source_sha256": "d123e6457f63f8b14fabfaf283c16a09d26874bbd24cd12ae193b435b08433f7",
-      "built_at_commit": "bcbda52",
+      "source_sha256": "a324fde0033e1b5c8b675cbabc93a27300603158fc3a7cfbdf843c4309a8f0df",
+      "built_at_commit": "b18781f",
       "extraction_level": 3
     },
     "src/cli/scaffold.ts": {
@@ -410,8 +410,8 @@
   },
   "stale": [],
   "cycle_commits": [
+    "b18781f",
     "0438f32",
-    "bcbda52",
-    "76d4b04"
+    "bcbda52"
   ]
 }

@@ -22,3 +22,6 @@ support_documentation/
 coverage/
 .vitest/
 *.tsbuildinfo
+
+# Local working notes — session plans and handoffs, not part of the repo
+plans_and_handoffs/
