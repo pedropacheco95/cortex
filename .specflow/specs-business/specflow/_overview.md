@@ -12,6 +12,10 @@ Confidence that the product does what it should. The outcome is that every inten
 
 - **Spec work draws on everything the project already knows** — plans consult the map/rules/decisions first, generated tests enforce recorded conventions, problems land in the shared ledger.
 
+- **Nothing is built before it is agreed, and nothing broken is called done** — an idea becomes an agreed spec, then a plan a fresh agent could execute, then code; a defect that resists five rounds stops the work instead of shipping.
+
+- **Code the next person can work with, without review becoming a second gate** — tests decide correctness and block; craft review advises and does not, and feedback is verified before it is applied.
+
 - **A diagnosis names the cause, and a test proves the behaviour** — bugs are investigated before they are classified, and no test enters the suite that was never watched failing for the right reason.
 
 _Planned outcomes (not yet written):_
