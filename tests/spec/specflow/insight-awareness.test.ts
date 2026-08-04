@@ -28,7 +28,9 @@ const LOCAL_SKILLS = path.join(PKG_ROOT, '.claude', 'skills');
 /** The skills that carry an insight-query step (design §5.12 + the early
  *  new-project scaffolding note). */
 const BENEFITING = [
+  'specflow-brainstorm',
   'specflow-develop',
+  'specflow-plan',
   'specflow-change-router',
   'specflow-tests',
   'specflow-ingest',

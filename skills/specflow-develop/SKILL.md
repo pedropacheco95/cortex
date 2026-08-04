@@ -1,22 +1,28 @@
 ---
 name: specflow-develop
 description: >
-  Implement code from specs using a recursive orchestration model. Explores the codebase,
-  researches best practices, plans the minimum implementation, codes it, and verifies via
-  the test cascade: atomic tests at spec level, spec tests at domain level, journey tests
-  at slice level. Self-similar at every scope — the same skill runs at slice, domain, and
-  spec granularity. At each level: explore, plan, check size, either execute or delegate.
-  Parent agents verify children via tests, not code review. Codes ALL gaps (including edge
-  cases and missing validation) and documents them for human review — never stops for gaps.
-  Use this skill when the user says "implement this spec", "build this slice", "code this
-  domain", "develop from specs", or any request to generate code from an existing spec tree.
+  Execute a plan into code and verify it by test — the last stage of the spec-first spine
+  (brainstorm → plan → develop). Runs the test cascade: atomic tests at spec level, spec
+  tests at domain level, journey tests at slice level. Self-similar at every scope — the
+  same skill runs at slice, domain, and spec granularity, delegating per its depth
+  calibration. Parent agents verify children via tests, not by reading their code. Codes ALL
+  gaps (including edge cases and missing validation) and documents them — never stops for a
+  gap; but a load-bearing review finding that survives five fix rounds stops the work as
+  BLOCKED rather than shipping it broken. Use this skill when the user says "implement this
+  spec", "build this slice", "code this domain", "develop from specs", or hands over a plan
+  from specflow-plan. Planning itself lives in specflow-plan, not here.
 ---
 
 # Specflow: Develop
 
-Implement code from specs. The skill is recursive — it works at any scope (vertical slice,
-domain, individual spec) using the same explore → plan → size-check → execute-or-delegate
-pattern.
+Execute a plan into code. The skill is recursive — it works at any scope (vertical slice,
+domain, individual spec) using the same execute-or-delegate → verify → review pattern.
+
+**Planning lives in `specflow-plan`.** Explore, gap analysis, research, the implementation
+plan, and the size check moved there; this skill starts from the plan that produced. At
+**Minimal** depth — one spec, ≤ 3 criteria, ≤ 1 file — you may run from the spec and its test
+with no plan artefact. Above Minimal, a plan artefact is required; if there isn't one, run
+`specflow-plan` first rather than improvising one in your head where nobody can review it.
 
 ## Core Principles
 
@@ -34,10 +40,28 @@ pattern.
 4. **The skill is self-similar.** A slice agent, a domain agent, and a spec agent all run
    the same logic. The only difference is scope and which test layer verifies the result.
 
+## Two stop-rules, and why both hold
+
+These fire on different things, so they never conflict. State them together because each one
+sounds like an exception to the other:
+
+**(a) Code all gaps, never block.** Fires *while implementing*, on an **untested edge case you
+discover**. Write a sensible fix, log a one-line gap note, keep going. You are not blocked
+because nobody knows about this case yet — you are the first to see it, and stopping to ask
+would trade a documented decision for a stalled run.
+
+**(b) Stop after 5 rounds.** Fires *after* implementing, on a **known defect a reviewer found
+that resists fixing**. Five rounds, escalating; then BLOCKED. You are blocked because the
+defect is understood, the fix has failed repeatedly, and a sixth attempt from the same place is
+not new information.
+
+Undiscovered-and-untested → implement and record. Known-and-resisting-fix → stop and report.
+
 ## Prerequisites
 
 Before this skill runs:
 
+- **A plan exists** — from `specflow-plan`, at any depth above Minimal
 - **Specs exist** — developer specs with rules, acceptance criteria, entity references
 - **Tests exist and run** — specflow-tests has been run, including Phase 0 (infrastructure).
   Smoke tests pass. Atomic and spec tests exist (they may be failing — the code doesn't
@@ -48,7 +72,7 @@ Before this skill runs:
 ## Cortex Awareness
 
 When the project has a `.cortex/` directory, ground every run in the knowledge layer
-before planning or coding (skip this section cleanly when `.cortex/` is absent):
+before coding (skip this section cleanly when `.cortex/` is absent):
 
 1. **Index first.** Read `.cortex/_index.md` to learn which Cortex modules exist and
    what they hold. Never bulk-read module contents.
@@ -65,7 +89,7 @@ before planning or coding (skip this section cleanly when `.cortex/` is absent):
    touched domain — they record why the current approach was chosen; never undo a
    recorded decision silently.
 5. **Insight queries (when `.cortex/insight/` exists).** A first-class workflow step,
-   not a footnote — it recurs at Steps 1, 2a, and 4a below. Before writing code for ANY
+   not a footnote — it recurs at Step 1 and Step 4a below. Before writing code for ANY
    file the plan will modify, run `cortex insight file <path>` — the rich per-file
    entry (purpose, main players, connections) is the resume; still read the file
    itself when modifying it, because modification needs exact syntax, not a summary.
@@ -84,28 +108,27 @@ before planning or coding (skip this section cleanly when `.cortex/` is absent):
 
 ## Depth Calibration
 
-Before starting the recursive flow, assess the scope and set the depth level. The
-depth determines how thorough each step is — a one-spec fix doesn't need exploration
-agents and web research.
+Before starting the recursive flow, assess the scope and set the depth level. The depth
+determines how far the work delegates and which test layer verifies it — a one-spec fix
+doesn't need a delegation tree.
 
 **Assess automatically based on what was received:**
 
 | Signal | Depth | What it means |
 |---|---|---|
-| 1 spec, ≤ 3 criteria, ≤ 1 file to change | **Minimal** | Read the spec, the test, and the one file. Implement. Run atomic tests. No exploration agents, no research, no planning document, no delegation. |
-| 2-3 specs, 1 domain | **Light** | Read the domain's existing code directly (no exploration agents). Brief plan: implementation order + shared patterns. Execute all specs directly — no delegation. Run spec tests to verify. |
-| 4+ specs, 1 domain | **Standard** | Explore with agents. Domain-level plan with shared utilities. Delegate per-spec. Spec tests verify cross-spec. |
-| Multiple domains | **Full** | Explore with agents + component diagram. Web research for best practices and pitfalls. Slice plan constraining all domains. Delegate per-domain, which delegates per-spec. Journey tests verify cross-domain. |
+| 1 spec, ≤ 3 criteria, ≤ 1 file to change | **Minimal** | Read the spec, the test, and the one file. Implement. Run atomic tests. No delegation, and no plan artefact required. |
+| 2-3 specs, 1 domain | **Light** | Execute the plan's tasks directly — no delegation. Run spec tests to verify. |
+| 4+ specs, 1 domain | **Standard** | Delegate per-spec, per the plan's decomposition. Spec tests verify cross-spec. |
+| Multiple domains | **Full** | Delegate per-domain, which delegates per-spec. Journey tests verify cross-domain. |
 
 The depth level affects every subsequent step:
 
 | Step | Minimal | Light | Standard | Full |
 |---|---|---|---|---|
-| Explore | Read the one file | Read the domain's files | Spawn exploration agents | Agents + component diagram |
-| Plan | None — implement directly | Brief: order + patterns | Domain plan | Slice plan + research |
-| Size check | Skip — always execute | Skip — always execute | Check per-spec | Check per-domain |
+| Plan artefact | Optional | Required | Required | Required |
 | Execute | Implement + atomic tests | Implement + atomic + spec tests | Delegate per-spec | Delegate per-domain |
 | Verify | Atomic tests only | Spec tests | Spec tests | Journey tests |
+| Review ladder | Per task | Per task | Per task, per child | Per task, per child |
 | Gaps | Document inline | Document inline | Collect from children | Collect + cross-domain gaps |
 
 **The depth is set once at the start and flows to all children.** A Full-depth slice
@@ -114,116 +137,52 @@ Children never escalate above the depth their parent set for them.
 
 ## The Recursive Flow
 
-### Step 1: Explore
+### Step 1: Take the plan
 
-**Insight first (all depths, when `.cortex/insight/` exists):** query
-`cortex insight file <path>` for each candidate file before deciding to read it — the
-entry answers "what is this file, is it relevant, what are its main pieces" more
-cheaply than a whole-file read. Read the file itself when you need exactness or are
-about to modify it. Insight is inferred context, not authority — gated layers win on
-conflict; if insight is absent or empty, explore without it.
+Read the plan artefact from `specflow-plan`. It already holds the exploration summary, the gap
+analysis, the implementation plan, and the decomposition — do not redo that work here.
 
-**Depth Minimal:** Read the single file to change. No exploration agents.
+Check it before executing:
 
-**Depth Light:** Read the domain's existing code directly — `ls` the directory, read
-the relevant files. No agents needed.
+- Does every task name exact paths, the criterion it satisfies, and a verification command?
+  If not, send it back to `specflow-plan` rather than filling the gaps by guessing.
+- Do the tasks' verification commands exist and run?
 
-**Depth Standard/Full:** Spawn exploration agents in parallel:
+At **Minimal** depth you may skip the artefact and work from the spec and its test directly.
 
-- **Architecture and structure:** Directory layout, framework, language, build system.
-  Identify where new code should live based on existing conventions.
-- **Related existing code:** Modules, components, services, utilities that the specs
-  depend on or interact with. Read them — don't assume.
-- **Established patterns:** Naming conventions, error handling, validation approach,
-  dependency injection, state management, API response shapes already in the codebase.
-  The implementation MUST follow these.
-- **Tech stack and dependencies:** Key libraries, frameworks, tools in use. Available
-  utilities that the implementation can leverage.
+### Step 2: Execute or delegate
 
-Produce an exploration summary:
+The plan already decided where the work splits (its size check). Follow it.
 
-```markdown
-### Exploration Summary
-- **Relevant existing code:** [files/modules with brief purpose]
-- **Established patterns:** [conventions the implementation must follow]
-- **Tech stack:** [libraries/tools relevant to this scope]
-```
+**If executing directly** (Minimal/Light, or a leaf scope): proceed to Step 4.
 
-**Depth Full only:** Produce an ASCII component diagram showing where the feature fits
-within the existing architecture — which modules it touches, how data flows, where
-new components go.
-
-### Step 2: Plan
-
-**Depth Minimal:** Skip — implement directly from the spec and test.
-
-**Depth Light:** Brief plan only — implementation order and shared patterns within the
-domain. No gap analysis document, no research.
-
-**Depth Standard/Full:** Full planning. Read `references/planning-protocol.md` for the
-complete process at each scope level.
-
-Three sub-steps, adapted from the plan-feature pattern:
-
-#### 2a. Gap analysis
-
-When the planned change spans files or touches a named concept (auth, session,
-billing, …) and `.cortex/insight/` exists, run `cortex insight concept <name>` first —
-it says which files touch the concept and how it is implemented, so the gap analysis
-starts from how the code actually works rather than priors. Inferred context, not
-authority; skip cleanly when insight is absent or the query returns nothing.
-
-Compare what the specs require against what already exists:
-
-```markdown
-### Gap Analysis
-**Can reuse:** [existing code/patterns that directly support the implementation]
-**Must create:** [new files, modules, functions needed]
-**Must modify:** [existing files that need changes, and why]
-**Open questions:** [ambiguities — state assumptions explicitly, proceed]
-```
-
-#### 2b. Research (slice and domain scope only)
-
-Use web search to ground implementation decisions in the project's stack:
-
-- Best practices for this type of feature in [framework]
-- Known pitfalls with the libraries involved
-- Ecosystem patterns — how similar projects solve this problem
-
-Skip this at spec scope — the parent's plan already incorporates research findings.
-
-#### 2c. Implementation plan
-
-**At slice scope:** Strategic — shared patterns across domains, data access approach,
-implementation order, cross-domain utilities. Produces constraints that all child agents
-must follow.
-
-**At domain scope:** Tactical — shared patterns within the domain, spec implementation
-order, shared utilities. Constrained by the parent's slice plan.
-
-**At spec scope:** Concrete — specific files to create/modify, rule-to-code mapping,
-data flow through the handler.
-
-### Step 3: Size Check
-
-Can I hold all the specs, their tests, the relevant existing code, AND have room to
-write the implementation in my context?
-
-**Heuristic:** ≤ 3 specs and ≤ 2,000 lines of relevant existing code → execute directly.
-Otherwise → delegate.
-
-**If executing:** Proceed to Step 4.
-
-**If delegating:** Spawn one sub-agent per child scope:
+**If delegating** (Standard/Full): spawn one sub-agent per child scope the plan names —
 
 - Slice agent → one agent per domain
 - Domain agent → one agent per spec (or per small group of related specs)
 
-Each sub-agent receives: its specs and tests, the plan for its scope, the coding
-conventions, the exploration summary, and file paths to relevant existing code.
+Each sub-agent receives: its tasks from the plan, its specs and tests, the coding conventions,
+the plan's exploration summary, and file paths to relevant existing code.
 
-Sub-agents run the same skill recursively. When they complete, proceed to Step 5.
+Sub-agents run this same skill recursively. When they complete, proceed to Step 5.
+
+**The depth is set once at the start and flows to all children.** A Full-depth slice agent
+spawns Standard-depth domain agents, which spawn Minimal or Light spec agents. Children never
+escalate above the depth their parent set for them.
+
+### Step 3: Watch the test fail first
+
+Before implementing a task, run its test and **read the failure**. It must fail for the reason
+it exists to check — the assertion the test makes, failing on the value it checks.
+
+A test that fails on an import error, a missing fixture, a misspelled symbol, or a crash in
+setup is **broken, not red**: it will go green the moment the breakage is fixed, regardless of
+whether the behaviour is right. Fix it and observe the right failure before writing code
+against it. (`specflow-tests` owns this mechanism in full.)
+
+**Delete premature code.** If implementation code was written before its test, delete it and
+rewrite after the test is red. Do not adapt it — code that already exists pulls the test toward
+describing what the code does rather than what the spec requires.
 
 ### Step 4: Execute (leaf agents only)
 
@@ -295,7 +254,72 @@ Step 6.
 The fix might be a cross-spec consistency issue, a missing integration piece, or a test
 error (document as a gap). Re-run until tests pass.
 
-### Step 6: Collect Gaps and Report
+### Step 6: The review ladder
+
+After a task is implemented and its tests pass, it is reviewed. Findings get up to five rounds
+of fixing. Then the work stops.
+
+#### Two stages, in order
+
+**Stage 1 — spec compliance.** Does the code satisfy the criterion it claims? Does it implement
+every numbered rule it touches? Does it violate a compass rule?
+
+**Stage 2 — quality.** Craft: naming, structure, duplication, whether it matches the patterns
+around it.
+
+**Stage 1 gates stage 2.** There is no point reviewing the craft of code that does not do what
+it must — you would be polishing something that is about to be rewritten.
+
+#### What is load-bearing
+
+A finding is **load-bearing** when it makes the code:
+
+- fail a spec acceptance criterion, or
+- break an existing behaviour, or
+- violate a compass rule.
+
+Everything else — style, naming, a cleaner structure someone would prefer — is recorded and
+does **not** block. Craft feedback never gates correctness; tests do that.
+
+#### The rounds
+
+| Round | Who fixes it |
+|---|---|
+| 1–3 | The implementer that wrote the code, resumed with the finding |
+| 4–5 | A **fresh** implementer on a stronger model, given the finding, the code, and what rounds 1–3 tried |
+| after 5 | Nobody. Stop. |
+
+Escalation at round 4 is not a formality. Three failures from one context means that context
+has a wrong assumption in it, and the same reasoning re-run produces the same fix in new
+clothes. A fresh agent does not inherit the assumption; a stronger one is likelier to see past
+it. Hand it the history so it does not repeat rounds 1–3.
+
+#### The terminal state
+
+If a **load-bearing** finding is still unresolved after round 5:
+
+**STOP. Report BLOCKED.** Include: the finding, the criterion or rule it violates, what each
+round attempted, why each attempt failed, and the current state of the code.
+
+**BLOCKED is a successful outcome.** It is the run doing its job. The alternatives are a sixth
+round burning context on a defect that has already resisted five, or a completion claim over a
+defect you know about — and the second one is worse than the first, because it is discovered by
+someone else, later, who trusted you.
+
+Non-load-bearing findings that survive five rounds are recorded as gaps and the work continues.
+
+#### Rationalization table
+
+| Thought/Excuse | Reality |
+|---|---|
+| "One more round will do it — I can see the problem now." | You could see the problem on rounds 2, 3, and 4 as well. The ladder counts rounds precisely because "I've got it this time" is what the previous four felt like from the inside. |
+| "It's not *really* load-bearing." | Check it against the three-item definition rather than against how tired you are. If it fails a criterion, breaks a behaviour, or violates a rule, it is load-bearing, and reclassifying it to keep going is the failure this ladder exists to catch. |
+| "The reviewer is being pedantic about something that doesn't matter." | Then it is not load-bearing by the definition, so record it and move on — you do not need to win the argument or fix it. What you cannot do is dismiss a criterion failure as pedantry. |
+| "Reporting BLOCKED looks like I failed." | Reporting green over a known defect *is* failing, just later and to someone who acted on it. A blocked report with five documented attempts is the most useful artefact available at that point. |
+| "Starting a fresh agent at round 4 wastes everything I've learned." | Everything you learned is in the three failed attempts you hand over. What does not transfer is the assumption that caused them, which is the entire point. |
+| "The tests pass, so the review finding must be wrong." | Passing tests mean the code satisfies the tests. A spec-compliance finding usually means a criterion has no test yet — which is a missing-criterion signal (`specflow-bugs` Type 1), not a reason to dismiss the finding. |
+
+### Step 7: Collect Gaps and Report
 
 Collect gaps from all children and add any gaps discovered at this level:
 
@@ -329,7 +353,9 @@ Slice Agent
 
 ## What the Human Receives
 
-1. **Working code** — all atomic, spec, and journey tests pass
+1. **Working code** — all atomic, spec, and journey tests pass — or a **BLOCKED** report when
+   a load-bearing review finding survived five fix rounds (Step 6), naming the finding, the
+   rounds attempted, and why each failed
 2. **Gap report** — every gap coded by the agents, with:
    - The gap code (already in the codebase, isolated and removable)
    - Severity (CRITICAL / NORMAL / MINOR) — informational, not blocking
@@ -343,6 +369,8 @@ or **defer** (leave for now, review later).
 
 ## What This Skill Does NOT Do
 
+- **Does not plan.** Explore, gap analysis, research, the implementation plan, and the size
+  check belong to `specflow-plan`. This skill executes a plan.
 - **Does not write specs.** Specs exist before this skill runs.
 - **Does not write tests.** Tests exist before this skill runs.
 - **Does not set up test infrastructure.** That's specflow-tests Phase 0.
@@ -355,4 +383,5 @@ or **defer** (leave for now, review later).
 | File | Read when |
 |---|---|
 | `references/gap-documentation.md` | Step 4c — documenting gaps with code |
-| `references/planning-protocol.md` | Step 2 — planning at each scope level |
+
+Planning references moved to `specflow-plan` (`references/planning-protocol.md`).

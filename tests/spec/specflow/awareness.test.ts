@@ -1,7 +1,7 @@
 /**
  * Spec tests for specflow.cortex-awareness — the packaging ACs:
- *   - "All eleven ship and install": a fresh `cortex init` with a fake home
- *     installs all eleven specflow bundles (references/ and every other
+ *   - "Every bundle ships and installs": a fresh `cortex init` with a fake home
+ *     installs every specflow bundle (references/ and every other
  *     bundle file intact) alongside the cortex bundles, and the summary's
  *     installed count reflects the full packaged set;
  *   - "Package and local copies are identical": every file in the package
@@ -26,8 +26,13 @@ const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const PKG_SKILLS = path.join(PKG_ROOT, 'skills');
 const LOCAL_SKILLS = path.join(PKG_ROOT, '.claude', 'skills');
 
-/** The eleven specflow bundles this round ships (spec Rule 3). */
-const ELEVEN = [
+/**
+ * Every `specflow-*` bundle the package ships (spec Rule 3). Count-free name:
+ * the 2026-08 superpowers-absorption round added the spine skills, and the
+ * constant should not need renaming again next time it grows.
+ */
+const SPECFLOW_BUNDLES = [
+  'specflow-brainstorm',
   'specflow-bugs',
   'specflow-change-router',
   'specflow-deep-onboard',
@@ -36,6 +41,7 @@ const ELEVEN = [
   'specflow-lint',
   'specflow-new-project',
   'specflow-onboard-codebase',
+  'specflow-plan',
   'specflow-spec-editor',
   'specflow-tests',
   'specflow-viewer',
@@ -47,6 +53,7 @@ const WITH_REFERENCES = [
   'specflow-develop',
   'specflow-new-project',
   'specflow-onboard-codebase',
+  'specflow-plan',
   'specflow-tests',
   'specflow-viewer',
 ];
@@ -63,9 +70,9 @@ function walk(dir: string, prefix = ''): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// AC: All eleven ship and install
+// AC: Every specflow bundle ships and installs
 // ---------------------------------------------------------------------------
-describe('AC: all eleven specflow bundles ship and install on fresh init', () => {
+describe('AC: every specflow bundle ships and installs on fresh init', () => {
   let root: string;
   let home: string;
   let result: { exitCode: number; summary: string };
@@ -77,14 +84,14 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('the package ships all eleven specflow bundles', () => {
+  it('the package ships every specflow bundle', () => {
     const shipped = fs.readdirSync(PKG_SKILLS).filter((d) => d.startsWith('specflow-')).sort();
-    expect(shipped).toEqual(ELEVEN);
+    expect(shipped).toEqual(SPECFLOW_BUNDLES);
   });
 
-  it('.claude/skills/ contains all eleven specflow bundles alongside the cortex bundles', () => {
+  it('.claude/skills/ contains every specflow bundle alongside the cortex bundles', () => {
     const installedDirs = fs.readdirSync(path.join(root, '.claude', 'skills')).sort();
-    for (const name of ELEVEN) {
+    for (const name of SPECFLOW_BUNDLES) {
       expect(installedDirs, `missing bundle ${name}`).toContain(name);
       expect(fs.existsSync(path.join(root, '.claude', 'skills', name, 'SKILL.md')), `${name}/SKILL.md`).toBe(true);
     }
@@ -102,7 +109,7 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
   });
 
   it('every installed bundle is complete — references/ and all other bundle files intact, byte-identical to the package', () => {
-    for (const name of ELEVEN) {
+    for (const name of SPECFLOW_BUNDLES) {
       const pkgBundle = path.join(PKG_SKILLS, name);
       const installedBundle = path.join(root, '.claude', 'skills', name);
       const pkgFiles = walk(pkgBundle);
@@ -116,14 +123,14 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
     }
   });
 
-  it('the six references-carrying bundles install their references/ files', () => {
+  it('every references-carrying bundle installs its references/ files', () => {
     for (const name of WITH_REFERENCES) {
       const refs = fs.readdirSync(path.join(root, '.claude', 'skills', name, 'references'));
       expect(refs.length, `${name}/references/ empty`).toBeGreaterThan(0);
     }
   });
 
-  it('the summary installed count reflects the full packaged set (15 cortex + 11 specflow + 1 discipline + 1 reference dir = 28)', () => {
+  it('the summary installed count reflects the full packaged set (15 cortex + 13 specflow + 1 discipline + 1 reference dir = 30)', () => {
     expect(result.exitCode).toBe(0);
     const bundleCount = fs.readdirSync(PKG_SKILLS, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
     // The 2026-08 superpowers-absorption round added the Bucket-2 bundle
@@ -132,10 +139,10 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
     // directory `_conventions/` (no SKILL.md; installed so hardened bodies'
     // path references resolve in installed projects). Both are covered by
     // tests/spec/discipline/packaging.test.ts.
-    expect(bundleCount).toBe(28);
+    expect(bundleCount).toBe(30);
     const m = /Skills installed: (\d+)/.exec(result.summary);
     expect(m).not.toBeNull();
-    expect(Number(m?.[1])).toBe(28);
+    expect(Number(m?.[1])).toBe(30);
   });
 });
 
@@ -144,7 +151,7 @@ describe('AC: all eleven specflow bundles ship and install on fresh init', () =>
 // ---------------------------------------------------------------------------
 describe('AC: package and project-local specflow bundles are byte-identical', () => {
   it('every skills/specflow-*/ file matches its .claude/skills/ counterpart, with no strays on either side', () => {
-    for (const name of ELEVEN) {
+    for (const name of SPECFLOW_BUNDLES) {
       const pkgBundle = path.join(PKG_SKILLS, name);
       const localBundle = path.join(LOCAL_SKILLS, name);
       expect(fs.existsSync(localBundle), `local ${name} missing`).toBe(true);
