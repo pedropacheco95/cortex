@@ -26,7 +26,7 @@ import {
   checkInsightGraph,
   checkInsightObservations,
 } from './checks/insight.js';
-import { checkArchiveLayout, checkArchiveMetadata, checkArchiveType } from './checks/archive.js';
+import { checkArchiveLayout, checkArchiveMetadata, checkArchiveType, checkArchiveIntentRegister } from './checks/archive.js';
 
 export interface ValidateOptions {
   scope?: 'project' | 'tree' | 'file';
@@ -154,6 +154,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...checkArchiveLayout(root));
   allViolations.push(...checkArchiveMetadata(root));
   allViolations.push(...checkArchiveType(root));
+  allViolations.push(...checkArchiveIntentRegister(root, index));
 
   // When scoped to a single file, filter violations to only those relevant to that file
   let filteredViolations = allViolations;

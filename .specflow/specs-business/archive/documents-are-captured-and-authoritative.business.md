@@ -3,6 +3,7 @@ id: archive.documents-are-captured-and-authoritative
 status: implemented
 implemented_by:
   - ../../specs/archive/ingest-skill.spec.md
+  - ../../specs/archive/intent-register.spec.md
 ---
 
 # Every authoritative document is captured, once, on one pipeline

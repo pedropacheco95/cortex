@@ -44,6 +44,7 @@ const BENEFITING = [
 const EXCLUDED = [
   'specflow-bugs',
   'specflow-deep-onboard',
+  'specflow-intent-reconcile',
   'specflow-receive-review',
   'specflow-request-review',
   'specflow-lint',

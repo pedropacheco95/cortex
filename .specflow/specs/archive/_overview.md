@@ -18,3 +18,5 @@ Ingested documents are authoritative by definition — the user chose to ingest 
 - The provenance chain from derived artefacts back to these documents: `../provenance/`
 - The review gate the yes-path change plan proposes through: `../pulse/`
 - The knowledge base atlas-shaped extractions feed: `../atlas/`
+
+- `archive.intent-register` — the frozen-intent-anchor register (schema §4.4.3) and its validator check.

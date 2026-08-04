@@ -1,12 +1,14 @@
 # Cortex Schema — The Contract Between Core and Skills
 
-**Schema version:** `3.1`
+**Schema version:** `3.2`
 **Status:** v3.0 draft for review by Pedro. This file is the **living contract** and is revised in place at each version — the v2.0 text is preserved in git history. (Unlike the design documents, which are frozen records.)
 **Depends on:** `cortex-design.md` (the v1 design doc, frozen), `cortex-v2-design.md` (the v2 design doc, frozen), and `cortex-v3-design.md` (the v3 design doc). Where design and schema disagree, this document wins on file formats, frontmatter, cross-references, and versioning — that is its job. Where the design docs are silent or vague, this document **makes the decision** (see §0) rather than deferring.
 
 **3.0 is a MAJOR bump** (§10.2): `cerebrum/` renames to `compass/` (rule/bug ids and their content-keyed constellation node prefixes are unchanged — the rename is path-only); `anatomy/` is removed, its content absorbed into `insight/`; `archive/` is added as a new module for ingested source documents (mixed git policy per-artefact); `insight/` is rebuilt wholesale — a leveled (L1–L4), scoped, per-file understanding of the codebase itself replaces the v2.0 concept-map-over-curated-artefacts layout; `provenance:`/`derives_from:` frontmatter is added to compass rules, both spec trees, and atlas decisions; decisions gain a single home (`atlas/decisions/` only — the `cerebrum/decisions.md`/`compass/decisions.md` artefact no longer exists); and the loop/scheduled-task roster changes (anatomy-refresh and the v2.0 insight-refresh/gaps pair retire; three insight-refresh tiers plus `cortex-loop-session-observe` take their place). Folded in from `cortex-schema-v3-addendum.md` at build-order-v3 step 1 (design §10.2) — see git history for the addendum's drafting record and the fold-in commit.
 
 **3.1 is a MINOR bump** (§10.2 — additive, backward-compatible: a new artefact kind): one addition — `insight/observations/`, the session-learned **project-context observation** surface (a directory of themed entry files, each carrying an importance signal derived from frequency and emphasis — revised in place from an earlier single-file draft, no project having shipped on it), written ungated by `cortex-loop-session-observe` under the same machine-owned-ungated allowance as its per-file enrichments (§4.10.11; layout §1; Decision 13), plus its validator check `check.insight-observations` (Appendix A). Nothing existing is removed, renamed, or made required; a `3.0` project validates clean under a `3.1` validator per §10.2, and no migration ships.
+
+**3.2 is a MINOR bump** (§10.2 — additive, backward-compatible: a new artefact kind): one addition — `archive/intent-register.yaml`, the frozen-intent-anchor register (§4.4.3; Fork 2 of the 2026-08 superpowers-absorption round), plus its validator check `check.archive-intent-register` (Appendix A). The file is **optional**: a project without one validates clean. Nothing existing is removed, renamed, or made required; a `3.0` or `3.1` project validates clean under a `3.2` validator per §10.2, and no migration ships.
 
 This is the load-bearing artefact named in design §3.2. **Cortex Core implements it; Skills consume it; both reference it by version** (recorded in `.cortex/cortex.config.json`, §10). It is precise enough that the schema validator (`.specflow/specs/schema/validator.spec.md`) can be implemented mechanically from it.
 
@@ -411,6 +413,35 @@ extraction:                        # required — the extraction-output contract
 **How the skill routes on it (design §6.3, §6.4 steps 2–4):** the ingestion skill reads all `types/*.yaml`; if the user declared a type, it selects that type's file directly; otherwise it infers the type by matching source content/extension against each type's `classification.hints`/`extensions`. The selected type's `extraction.strategy` chooses the extraction routine; the type's `extraction.outputs` are the **contract** for what lands under `documents/<slug>/extracted/` and where. The atlas-only extraction re-homed from `cortex-ingest` (design §6.6) is one such strategy (`strategy: atlas`, outputs: stakeholders / decisions / domain-terms), routed on the atlas-shaped types.
 
 **Validated by** `check.archive-type`: valid YAML; `id` == filename stem; `label` present; `classification` present with at least one of `extensions`/`hints` (or `explicit: true`); `extraction.strategy` present; `extraction.outputs` non-empty; each output has `kind` and an `extracted/`-relative `path`.
+
+#### 4.4.3 `archive/intent-register.yaml` (new at v3.2)
+
+Plan `plans_and_handoffs/plans/2026-08-03.md` §0.5 / Phase 4.1 (Fork 2). Spec-derived tests remain the durable contract; a verbatim user statement ("the password needs one uppercase") is pinned by a **frozen intent-anchor test** that is *retired* once a spec-derived test demonstrably subsumes it. The register is where retired anchors go — a **thin changelog over the citation graph**: it records the words the user said, where that intent landed, and which spec test now covers it. It does **not** hold copies of tests, and it is never a second test suite.
+
+A standalone YAML file (like `metadata.yaml`, §4.4.1 — machine-readable data, not prose), committed, sibling of `register.md`. `register.md` indexes ingested *documents*; this file indexes stated *intents*. The two are deliberately separate artefacts with separate names.
+
+```yaml
+entries:
+  - id: IR-001                      # required — IR-NNN, unique within the file
+    stated_intent: "..."            # required — the user's words, verbatim, never paraphrased
+    date: 2026-08-04                # required — ISO date (YYYY-MM-DD) the intent was stated
+    stakeholder: <string>           # optional — who stated it
+    anchor_test: <string>           # required — the frozen anchor test, as `<path>::<test name>`
+    status: pending | reconciled | flagged   # required
+    landing: <string>               # required unless `pending` — where the intent landed:
+                                    #   a dev-spec id, optionally `#<criterion-heading>`, or a
+                                    #   compass rule id (`R-NNN`)
+    covering_spec_test: <string>    # required when `reconciled` — the spec-derived test that
+                                    #   subsumes the anchor, as `<path>` or `<path>::<test name>`
+    flagged_bug: <string>           # required when `flagged` — the bug id (`B-NNN`) filed because
+                                    #   the spec generalised the ask away
+```
+
+**The status machine.** `pending` → the anchor is written and RED, reconciliation has not run. `reconciled` → a spec-derived test subsumes the anchor; the anchor is retired (deleted from the suite, preserved here as words). `flagged` → no spec test covers the stated ask, so the spec generalised it away; a missing-criterion bug is filed and named here. `pending` is the only status that may lack a `landing`; the two terminal statuses each require their own evidence field, which is what makes the register auditable rather than decorative.
+
+**Reconciliation is a Skill, not Core** (plan §0.5): deciding whether a spec test *subsumes* an anchor is semantic judgment, and Core makes no LLM calls (RULES 3). Core validates the shape and that the links resolve; `specflow-intent-reconcile` (§4.4.3 consumer, `specflow.intent-reconcile` dev spec) decides what the entries say.
+
+**Validated by** `check.archive-intent-register` (§4.4.3, error): file absent → tolerated (the register is optional); valid YAML with an `entries` list; each `id` matches `IR-NNN` and is unique; `stated_intent`, `date` (ISO `YYYY-MM-DD`), `anchor_test`, and `status` present; `status` in enum; `landing` present unless `pending`, and resolving — a dev-spec id via the project index (with its `#<criterion-heading>` matching an `### ` heading in that spec when given), or a compass rule id resolving to `compass/rules/R-*.md`; `covering_spec_test` present when `reconciled` and its `<path>` existing on disk; `flagged_bug` present when `flagged` and resolving to `compass/bugs/B-*.md`.
 
 ### 4.5 `pulse/` artefacts
 

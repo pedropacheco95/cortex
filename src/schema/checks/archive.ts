@@ -10,6 +10,12 @@
  *                                             (`id`, `kind`→resolves,
  *                                             `ingested_at`, `version`,
  *                                             `status`, `supersedes` resolves).
+ *  - check.archive-intent-register
+ *                           (§4.4.3, error) — `intent-register.yaml` shape
+ *                                             (`IR-NNN` unique, required
+ *                                             fields, status enum) plus the
+ *                                             per-status evidence links
+ *                                             actually resolving.
  *  - check.archive-type     (§4.4.2, error) — `types/*.yaml` shape (`id`==stem,
  *                                             `label`, `classification`,
  *                                             `extraction.strategy`, non-empty
@@ -27,7 +33,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { Violation } from '../types.js';
-import { parseArchiveMetadata, parseArchiveTypeDef } from '../../archive/formats.js';
+import { parseArchiveMetadata, parseArchiveTypeDef, parseIntentRegister } from '../../archive/formats.js';
+import type { ProjectIndex } from '../index-build.js';
+import { resolveId } from '../index-build.js';
 
 function archiveDir(root: string): string {
   return path.join(root, '.cortex', 'archive');
@@ -187,4 +195,97 @@ export function checkArchiveType(root: string): Violation[] {
   }
 
   return violations;
+}
+
+
+// ---------------------------------------------------------------------------
+// check.archive-intent-register (§4.4.3, new at schema 3.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * The intent register is OPTIONAL: a project without one validates clean (the
+ * same spine tolerance the other archive checks follow). When present, its
+ * shape comes from `parseIntentRegister` (single source of truth in
+ * src/archive/formats.ts) and this check adds what the parser deliberately
+ * cannot do — resolve the links against the project index and the tree.
+ *
+ * Core never judges whether a spec test SUBSUMES an anchor (that is semantic,
+ * and belongs to the reconciliation Skill — RULES 3). It only checks that the
+ * claim is well-formed and its references exist.
+ */
+export function checkArchiveIntentRegister(root: string, index: ProjectIndex): Violation[] {
+  const violations: Violation[] = [];
+  const filePath = path.join(archiveDir(root), 'intent-register.yaml');
+  if (!fs.existsSync(filePath)) return violations; // optional artefact — tolerated
+
+  const err = (message: string): void => {
+    violations.push({
+      severity: 'error',
+      check: 'check.archive-intent-register',
+      clause: '§4.4.3',
+      location: { path: filePath },
+      message,
+    });
+  };
+
+  let raw = '';
+  try {
+    raw = fs.readFileSync(filePath, 'utf-8');
+  } catch {
+    err('intent-register.yaml is unreadable');
+    return violations;
+  }
+
+  const parsed = parseIntentRegister(raw);
+  for (const message of parsed.errors ?? []) err(message);
+
+  // Link resolution runs over whatever parsed cleanly, so a single malformed
+  // entry does not hide dangling links in its siblings.
+  for (const entry of parsed.value?.entries ?? []) {
+    const named = `${entry.id}`;
+
+    if (entry.landing !== undefined) {
+      const [target, criterion] = entry.landing.split('#');
+      if (/^R-\d{3,}$/.test(target ?? '')) {
+        const ruleDir = path.join(root, '.cortex', 'compass', 'rules');
+        const hit = fs.existsSync(ruleDir)
+          ? fs.readdirSync(ruleDir).find((f) => f.startsWith(`${target}-`) && f.endsWith('.md'))
+          : undefined;
+        if (!hit) err(`${named}: landing "${entry.landing}" names no rule under compass/rules/`);
+      } else {
+        const specPath = resolveId(index, target ?? '');
+        if (!specPath) {
+          err(`${named}: landing "${entry.landing}" does not resolve to a spec id or a compass rule id`);
+        } else if (criterion) {
+          const content = index.pathToContent.get(specPath) ?? '';
+          const headings = [...content.matchAll(/^###\s+(.+?)\s*$/gm)].map((m) => slugifyHeading(m[1] ?? ''));
+          if (!headings.includes(slugifyHeading(criterion))) {
+            err(`${named}: landing criterion "${criterion}" is not an acceptance-criterion heading in "${target}"`);
+          }
+        }
+      }
+    }
+
+    if (entry.covering_spec_test !== undefined) {
+      const testPath = entry.covering_spec_test.split('::')[0] ?? '';
+      if (!fs.existsSync(path.resolve(root, testPath))) {
+        err(`${named}: covering_spec_test path "${testPath}" does not exist`);
+      }
+    }
+
+    if (entry.flagged_bug !== undefined) {
+      const bugDir = path.join(root, '.cortex', 'compass', 'bugs');
+      const hit = fs.existsSync(bugDir)
+        ? fs.readdirSync(bugDir).find((f) => f.startsWith(`${entry.flagged_bug}-`) && f.endsWith('.md'))
+        : undefined;
+      if (!hit) err(`${named}: flagged_bug "${entry.flagged_bug}" names no bug under compass/bugs/`);
+    }
+  }
+
+  return violations;
+}
+
+/** Compare criterion references loosely: heading text or its hyphenated slug. */
+function slugifyHeading(s: string): string {
+  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }

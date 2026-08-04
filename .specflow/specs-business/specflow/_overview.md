@@ -16,6 +16,8 @@ Confidence that the product does what it should. The outcome is that every inten
 
 - **Code the next person can work with, without review becoming a second gate** — tests decide correctness and block; craft review advises and does not, and feedback is verified before it is applied.
 
+- **What someone specifically asked for is still pinned after the spec absorbs it** — a verbatim ask is anchored by a test, and the spec's own test is checked counterfactually before the anchor is retired.
+
 - **A diagnosis names the cause, and a test proves the behaviour** — bugs are investigated before they are classified, and no test enters the suite that was never watched failing for the right reason.
 
 _Planned outcomes (not yet written):_

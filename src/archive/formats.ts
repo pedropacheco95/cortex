@@ -42,7 +42,7 @@ export function isIsoDatetime(v: unknown): v is string | Date {
 
 /** Coerce a YAML scalar that should be a `string` (schema field type) but may
  *  have been parsed as a number (e.g. an unquoted `version: 2.0`). */
-function coerceString(v: unknown): string | undefined {
+export function coerceString(v: unknown): string | undefined {
   if (typeof v === 'string' && v.trim() !== '') return v;
   if (typeof v === 'number') return String(v);
   return undefined;
@@ -259,4 +259,142 @@ export function parseArchiveTypeDef(raw: string): ParseResult<ArchiveTypeDef> {
       extraction: extractionValue!,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// archive/intent-register.yaml (schema §4.4.3, new at 3.2)
+// ---------------------------------------------------------------------------
+
+/** The three statuses of an intent-register entry (schema §4.4.3). */
+export const INTENT_STATUSES = ['pending', 'reconciled', 'flagged'] as const;
+export type IntentStatus = (typeof INTENT_STATUSES)[number];
+
+export interface IntentRegisterEntry {
+  id: string;
+  stated_intent: string;
+  date: string;
+  status: IntentStatus;
+  stakeholder?: string;
+  anchor_test: string;
+  landing?: string;
+  covering_spec_test?: string;
+  flagged_bug?: string;
+}
+
+export interface IntentRegister {
+  entries: IntentRegisterEntry[];
+}
+
+/** `IR-NNN` — the entry id form (schema §4.4.3). */
+const IR_ID_RE = /^IR-\d{3,}$/;
+/** ISO calendar date, `YYYY-MM-DD`. Deliberately stricter than
+ *  `isIsoDatetime`: the register records the *day* an intent was stated. */
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A YAML date scalar may arrive as a `Date` when unquoted — render it back to
+ *  `YYYY-MM-DD` so the shape check sees what the author wrote. */
+function coerceIsoDate(v: unknown): string | undefined {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) return v.toISOString().slice(0, 10);
+  return coerceString(v);
+}
+
+/**
+ * Parse + shape-validate `archive/intent-register.yaml` (schema §4.4.3).
+ *
+ * Shape only: field presence, id form, status enum, and the per-status
+ * evidence requirement (`reconciled` needs `covering_spec_test`, `flagged`
+ * needs `flagged_bug`, both need `landing`). Whether the links actually
+ * RESOLVE is the validator check's job — it needs the project index and the
+ * working tree, which this pure parser deliberately does not touch.
+ */
+export function parseIntentRegister(raw: string): ParseResult<IntentRegister> {
+  const parsed = parseYamlDocument(raw);
+  if (!parsed.ok) return { ok: false, errors: [parsed.error] };
+  const data = parsed.value;
+  const errors: string[] = [];
+
+  const rawEntries = data['entries'];
+  if (rawEntries === undefined || rawEntries === null) {
+    return { ok: false, errors: ['missing required field "entries" (list)'] };
+  }
+  if (!Array.isArray(rawEntries)) {
+    return { ok: false, errors: ['"entries" must be a list'] };
+  }
+
+  const entries: IntentRegisterEntry[] = [];
+  const seen = new Set<string>();
+
+  rawEntries.forEach((rawEntry, i) => {
+    const label = `entries[${i}]`;
+    if (rawEntry === null || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
+      errors.push(`${label}: must be a mapping`);
+      return;
+    }
+    const e = rawEntry as Record<string, unknown>;
+
+    const id = coerceString(e['id']);
+    const named = id ? `${label} (${id})` : label;
+    if (!id) {
+      errors.push(`${label}: missing required field "id"`);
+    } else if (!IR_ID_RE.test(id)) {
+      errors.push(`${named}: id "${id}" is not of the form IR-NNN`);
+    } else if (seen.has(id)) {
+      errors.push(`${named}: duplicate entry id "${id}"`);
+    } else {
+      seen.add(id);
+    }
+
+    const statedIntent = coerceString(e['stated_intent']);
+    if (!statedIntent) errors.push(`${named}: missing required field "stated_intent"`);
+
+    const date = coerceIsoDate(e['date']);
+    if (!date) {
+      errors.push(`${named}: missing required field "date"`);
+    } else if (!ISO_DATE_RE.test(date)) {
+      errors.push(`${named}: date "${date}" is not an ISO calendar date (YYYY-MM-DD)`);
+    }
+
+    const anchorTest = coerceString(e['anchor_test']);
+    if (!anchorTest) errors.push(`${named}: missing required field "anchor_test"`);
+
+    const status = coerceString(e['status']);
+    if (!status) {
+      errors.push(`${named}: missing required field "status"`);
+    } else if (!(INTENT_STATUSES as readonly string[]).includes(status)) {
+      errors.push(`${named}: status "${status}" not in enum [${INTENT_STATUSES.join(', ')}]`);
+    }
+
+    const landing = coerceString(e['landing']);
+    const coveringSpecTest = coerceString(e['covering_spec_test']);
+    const flaggedBug = coerceString(e['flagged_bug']);
+
+    // Per-status evidence (schema §4.4.3 status machine). `pending` is the only
+    // status that may omit `landing`; each terminal status owes its own field.
+    if (status === 'reconciled' || status === 'flagged') {
+      if (!landing) errors.push(`${named}: status "${status}" requires "landing"`);
+    }
+    if (status === 'reconciled' && !coveringSpecTest) {
+      errors.push(`${named}: status "reconciled" requires "covering_spec_test"`);
+    }
+    if (status === 'flagged' && !flaggedBug) {
+      errors.push(`${named}: status "flagged" requires "flagged_bug"`);
+    }
+
+    if (id && statedIntent && date && anchorTest && status && (INTENT_STATUSES as readonly string[]).includes(status)) {
+      entries.push({
+        id,
+        stated_intent: statedIntent,
+        date,
+        status: status as IntentStatus,
+        anchor_test: anchorTest,
+        ...(coerceString(e['stakeholder']) ? { stakeholder: coerceString(e['stakeholder'])! } : {}),
+        ...(landing ? { landing } : {}),
+        ...(coveringSpecTest ? { covering_spec_test: coveringSpecTest } : {}),
+        ...(flaggedBug ? { flagged_bug: flaggedBug } : {}),
+      });
+    }
+  });
+
+  if (errors.length > 0) return { ok: false, errors, value: { entries } };
+  return { ok: true, value: { entries } };
 }

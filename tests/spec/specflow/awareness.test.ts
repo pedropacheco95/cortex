@@ -38,6 +38,7 @@ const SPECFLOW_BUNDLES = [
   'specflow-deep-onboard',
   'specflow-develop',
   'specflow-ingest',
+  'specflow-intent-reconcile',
   'specflow-lint',
   'specflow-new-project',
   'specflow-onboard-codebase',
@@ -132,7 +133,7 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
     }
   });
 
-  it('the summary installed count reflects the full packaged set (15 cortex + 15 specflow + 1 discipline + 1 reference dir = 32)', () => {
+  it('the summary installed count reflects the full packaged set (15 cortex + 16 specflow + 1 discipline + 1 reference dir = 33)', () => {
     expect(result.exitCode).toBe(0);
     const bundleCount = fs.readdirSync(PKG_SKILLS, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
     // The 2026-08 superpowers-absorption round added the Bucket-2 bundle
@@ -141,10 +142,10 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
     // directory `_conventions/` (no SKILL.md; installed so hardened bodies'
     // path references resolve in installed projects). Both are covered by
     // tests/spec/discipline/packaging.test.ts.
-    expect(bundleCount).toBe(32);
+    expect(bundleCount).toBe(33);
     const m = /Skills installed: (\d+)/.exec(result.summary);
     expect(m).not.toBeNull();
-    expect(Number(m?.[1])).toBe(32);
+    expect(Number(m?.[1])).toBe(33);
   });
 });
 
