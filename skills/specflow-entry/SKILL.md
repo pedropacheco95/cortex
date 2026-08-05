@@ -1,14 +1,57 @@
 ---
-name: specflow-change-router
+name: specflow-entry
 description: >
   Classify every incoming user request against the project's spec tree (developer specs in `.specflow/specs/`, business specs in `.specflow/specs-business/`, and `_overview.md` folder docs) and route it to the correct action before any work begins. This skill is the mandatory entry point for ALL user interactions in a Specflow-managed project (any project with a `.specflow/specs/` directory, with or without a parallel `.specflow/specs-business/`). PROACTIVELY use this skill whenever the user says anything in a project under spec management — bug reports, feature requests, behavior changes, stakeholder questions, "what does this group do?", outcome/journey/metric talk, or anything that might touch a developer spec, a business spec, or a folder overview. Also triggers on "add a feature", "fix this bug", "change this behavior", "what does X do", "what's the goal of X", "why do we have X", and on requests that may have drifted between business and developer layers (e.g., a dev change that invalidates the business description, or vice versa). If the project has specs, this skill runs first — no exceptions.
 ---
 
-# Specflow: Change Router
+# Specflow: Entry
+
+**This is the entry gate.** In a spec-managed project every request passes through here first —
+it decides *which skill should run*, then that skill does the work. Nothing else starts until
+this has.
+
+## The Iron Law
+
+FIND AND RUN THE RIGHT SKILL BEFORE DOING THE WORK YOURSELF
+
+Violating the letter of this law is violating the spirit. If you find yourself constructing a
+reading under which this request is too small, too obvious, or too urgent to classify, that
+construction is the violation.
+
+Hardening mechanisms per `skills/_conventions/hardening.md`.
 
 Every request in a spec-managed project must be classified before any work begins. This prevents ad-hoc code changes that bypass the spec tree and ensures all changes flow through specs first.
 
 The core principle: **specs are the source of truth**. Code is an artifact of specs. Humans review specs, not code. Every change starts at the spec level.
+
+## Priority: process skills before implementation skills
+
+When more than one skill could apply, the **process** skill runs first. Process skills decide
+what should happen; implementation skills carry it out. Running them in the other order means
+the implementation has already chosen the answer the process skill existed to determine.
+
+| Situation | Runs first | Then |
+|---|---|---|
+| An idea that is not yet a spec | `specflow-brainstorm` | spec-editor → plan → develop |
+| An agreed spec, no plan yet | `specflow-plan` | `specflow-develop` |
+| Something is broken | `specflow-bugs` | whatever its change plan names |
+| A specific verbatim ask worth pinning | `specflow-intent-reconcile` | the normal flow, then reconcile |
+| About to claim work is done | `verification-before-completion` | the claim, with its evidence |
+| Tests to generate | `specflow-tests` | `specflow-develop` |
+
+This gate does **not** do the downstream work itself. It classifies and routes. When the right
+answer is "no skill applies", say so explicitly — that is a routing decision, not a bypass.
+
+## Rationalization table
+
+| Thought/Excuse | Reality |
+|---|---|
+| "This request is too small to classify." | Classification is two sentences. The cost you are avoiding is smaller than the cost of discovering, three files later, that this was a spec change wearing a typo's clothes. |
+| "I already know which skill this is." | Then say which, in one line, and run it. Knowing and routing are the same act here; skipping the sentence is what lets the *unstated* choice go unexamined. |
+| "The user asked me to just do it, not to route." | Routing is not ceremony that delays the work — it is how the work reaches the skill that does it properly. The user asked for the outcome, not for a particular path to it. |
+| "I'll classify after I look at the code." | Reading the code first anchors you to a code-shaped answer, which is exactly how a missing acceptance criterion gets fixed as a one-line patch. |
+| "No skill fits this perfectly, so I'll handle it directly." | 'No skill applies' is a legitimate classification — state it and proceed. What is not legitimate is arriving there silently, which is indistinguishable from never having asked. |
+| "It's a question, not a change — the gate is for changes." | Questions route too (Category 6, Exploration). A question about *why* something exists is answered from the specs and the atlas, not from the code, and the gate is what sends you there. |
 
 ## The two-layer spec model (read this first)
 

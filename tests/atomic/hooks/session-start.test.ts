@@ -286,3 +286,79 @@ describe('token budget (schema §5, RULES.md rule 11)', () => {
     expect(ctx).toContain('Cortex is active');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 9 / schema §5 (3.3): the entry line re-arms the process gate, scoped to
+// the specflow profile AND to the bundle actually being installed.
+// ---------------------------------------------------------------------------
+
+const ENTRY_LINE = 'Entry: run `specflow-entry` first — classify the request, then run the skill it routes to.';
+
+/** Install (or don't) the entry bundle in the project's .claude/skills/. */
+function withEntrySkill(root: string): void {
+  const dir = path.join(root, '.claude', 'skills', 'specflow-entry');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\nname: specflow-entry\n---\n\n# Entry\n');
+}
+
+describe('Rule 9: the entry line (schema §5, 3.3)', () => {
+  it('is injected under the specflow profile with the skill installed', async () => {
+    const root = tmp('entry-on');
+    makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'specflow' } });
+    withEntrySkill(root);
+    const { stdout } = await run(stdinFor(root), { now: NOW });
+    const payload = parseEnvelope(stdout).additionalContext as string;
+    expect(payload).toContain(ENTRY_LINE);
+    // The lines it rides alongside are unaffected.
+    expect(payload).toContain('Cortex is active');
+    expect(payload).toContain('Modules:');
+  });
+
+  it('is injected when profile is absent — specflow is the default (§10.1)', async () => {
+    const root = tmp('entry-default');
+    makeCortexProject(root, { config: { schemaVersion: '3.0' } });
+    withEntrySkill(root);
+    const payload = parseEnvelope((await run(stdinFor(root), { now: NOW })).stdout).additionalContext as string;
+    expect(payload).toContain(ENTRY_LINE);
+  });
+
+  it('is omitted under the superpowers profile', async () => {
+    const root = tmp('entry-off-profile');
+    makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'superpowers' } });
+    withEntrySkill(root);
+    const payload = parseEnvelope((await run(stdinFor(root), { now: NOW })).stdout).additionalContext as string;
+    expect(payload).not.toContain('specflow-entry');
+    expect(payload).toContain('Cortex is active');
+    expect(payload).toContain('Modules:');
+  });
+
+  it('is omitted when the skill is not installed — never point at an absent skill', async () => {
+    const root = tmp('entry-off-missing');
+    makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'specflow' } });
+    const payload = parseEnvelope((await run(stdinFor(root), { now: NOW })).stdout).additionalContext as string;
+    expect(payload).not.toContain('specflow-entry');
+  });
+
+  it('stays inside the <100-token pointer budget (RULES 11)', async () => {
+    const root = tmp('entry-budget');
+    makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'specflow' } });
+    withEntrySkill(root);
+    writeHygieneReport(root, isoHoursAgo(1, NOW), 'No findings this cycle.');
+    const payload = parseEnvelope((await run(stdinFor(root), { now: NOW })).stdout).additionalContext as string;
+    // Pointer block = everything before the separately-budgeted observations digest.
+    const pointerBlock = payload.split('\nObservations: ')[0] ?? payload;
+    expect(pointerBlock.length).toBeLessThanOrEqual(396);
+  });
+
+  it('degrades to a pointer-only payload rather than throwing when the config is malformed', async () => {
+    const root = tmp('entry-malformed');
+    makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'specflow' } });
+    withEntrySkill(root);
+    fs.writeFileSync(path.join(root, '.cortex', 'cortex.config.json'), '{ not json', 'utf-8');
+    const { exitCode, stdout } = await run(stdinFor(root), { now: NOW });
+    expect(exitCode).toBe(0);
+    // readProfile degrades to the default, so the gate line still appears and
+    // the hook never throws (Rule 7, warn-never-block).
+    expect(parseEnvelope(stdout).additionalContext).toContain('Cortex is active');
+  });
+});

@@ -5,6 +5,7 @@ implemented_by:
   - ../../specs/specflow/brainstorm-skill.spec.md
   - ../../specs/specflow/plan-skill.spec.md
   - ../../specs/specflow/develop-split.spec.md
+  - ../../specs/specflow/entry-gate.spec.md
 ---
 
 # Nothing is built before it is agreed, and nothing broken is called done

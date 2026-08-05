@@ -9,6 +9,7 @@ The spec-and-test lineage absorbed into Cortex: the conventions of the two spec 
 **Specs written:**
 
 - `specflow.cortex-awareness` — the three-tier awareness pass over all eleven specflow-* skills (deep: develop/tests/change-router; moderate: onboarding/ingest/new-project/spec-editor; light: viewer/lint/bugs incl. the §4.3 ledger correctness fix), shipped in the package so init installs the aware versions.
+- `specflow.entry-gate` — `specflow-entry` (renamed from `specflow-change-router`): the process gate above the profile. Keeps the whole classification contract, adds the Iron Law, the priority rule (process skills before implementation skills), and a rationalization table; re-armed each session by the SessionStart entry line.
 - `specflow.brainstorm-skill` — `specflow-brainstorm`: the front of the spine. Scope-check, one question at a time, 2–3 approaches with a recommendation, HARD-GATE against implementing before agreement — terminating in a **spec**, not a design document.
 - `specflow.plan-skill` — `specflow-plan`: the planning half extracted from develop (explore, gap analysis, research, implementation plan, size check, `references/planning-protocol.md`), producing a durable plan artefact a fresh agent could execute blind.
 - `specflow.develop-split` — `specflow-develop` slimmed to execution + verification, plus the five-round two-stage review ladder that ends in BLOCKED rather than shipping a known load-bearing defect.

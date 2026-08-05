@@ -78,7 +78,7 @@ The v2 follow-up to `specflow.cortex-awareness` (v2 design §7.2): the SpecFlow 
 ## Notes
 
 - Verification is atomic + spec tier only (prompt-structure assertions), same as `specflow.cortex-awareness`: behavioural verification of insight-awareness in live sessions is journey-tier, deferred post-v2. The rule-19 enumeration of every skill's diff is the compensating control.
-- `specflow-change-router` is deliberately **not** in scope: it routes by which gated module a request touches; insight is a producer-fed ungated layer, and routing on unreviewed inference would weaken the gate. Orientation-via-insight for the router is a post-v2 candidate.
+- `specflow-entry` is deliberately **not** in scope: it routes by which gated module a request touches; insight is a producer-fed ungated layer, and routing on unreviewed inference would weaken the gate. Orientation-via-insight for the router is a post-v2 candidate.
 - Journey-layer tests deferred to v1.1 pending real-session verification infrastructure (project-wide convention).
 - **2026-08 extension.** This spec's ACs describe the bodies edited in *that* pass. The
   superpowers-absorption round added `specflow-plan` and `specflow-brainstorm` to the

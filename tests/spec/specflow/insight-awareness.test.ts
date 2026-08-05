@@ -31,7 +31,7 @@ const BENEFITING = [
   'specflow-brainstorm',
   'specflow-develop',
   'specflow-plan',
-  'specflow-change-router',
+  'specflow-entry',
   'specflow-tests',
   'specflow-ingest',
   'specflow-new-project',

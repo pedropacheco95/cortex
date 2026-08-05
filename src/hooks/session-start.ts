@@ -13,6 +13,7 @@ import * as path from 'path';
 import matter from 'gray-matter';
 import { appendHookError } from './errors.js';
 import { SCHEMA_VERSION } from '../cli/templates.js';
+import { readProfile } from '../cli/profile.js';
 
 export interface HookRunResult {
   exitCode: number;
@@ -40,6 +41,22 @@ const OBSERVATIONS_QUALIFY_SESSIONS = 3;
 const OBSERVATIONS_DIR_REL = '.cortex/insight/observations';
 const OBSERVATIONS_POINTER = ' (more: .cortex/insight/observations/).';
 const OBSERVATIONS_PREFIX = 'Observations: ';
+
+/**
+ * The entry line (schema §5, new at 3.3): re-arms the process gate each
+ * session. Emitted only under the `specflow` profile AND only when the
+ * bundle is actually installed — pointing at a skill the project does not
+ * have would be noise, and a `superpowers` project has no spec-first gate to
+ * re-arm. A pointer, never enforcement: hooks warn, never block (RULES 6).
+ */
+const ENTRY_LINE = 'Entry: run `specflow-entry` first — classify the request, then run the skill it routes to.';
+const ENTRY_SKILL_REL = path.join('.claude', 'skills', 'specflow-entry');
+
+function entryLineFor(root: string): string | null {
+  if (readProfile(root) !== 'specflow') return null;
+  if (!fs.existsSync(path.join(root, ENTRY_SKILL_REL))) return null;
+  return ENTRY_LINE;
+}
 
 function silent(): HookRunResult {
   return { exitCode: 0, stdout: '' };
@@ -215,6 +232,10 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
       `Cortex is active (schema ${schemaVersion}). See .cortex/_index.md.`,
       `Modules: ${modules.length > 0 ? modules.join(', ') : 'none'}.`,
     ];
+
+    // Entry line (schema §5, 3.3) — the process gate, profile-scoped.
+    const entryLine = entryLineFor(root);
+    if (entryLine) lines.push(entryLine);
 
     // Rule 3: hygiene line iff the report exists and `generated` is fresh.
     const reportRel = '.cortex/pulse/reports/hygiene.md';

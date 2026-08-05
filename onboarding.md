@@ -119,7 +119,7 @@ The CLAUDE.md block `cortex init` installed teaches the core discipline:
 >
 > Before substantive work on a file, query its insight entry. Before cross-file changes, query the concept. Where insight conflicts with a compass rule or a spec, **the gated layer wins** — insight is context, not authority.
 
-You don't have to do anything for this — it's in every session's context. The skills (`specflow-develop`, `specflow-change-router`, `specflow-tests`, etc.) also query insight at the right moments.
+You don't have to do anything for this — it's in every session's context. The skills (`specflow-develop`, `specflow-entry`, `specflow-tests`, etc.) also query insight at the right moments.
 
 ## 6. Activate the scheduled loops (one-time, needs a Desktop session)
 

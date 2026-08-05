@@ -58,7 +58,7 @@ catch, performed by the one party who was supposed to be guarding against it.
 
 ### (b) Run the normal flow — unchanged
 
-Classify the request through `specflow-change-router`, write or update the spec through
+Classify the request through `specflow-entry`, write or update the spec through
 `specflow-spec-editor`, generate tests through `specflow-tests`, implement through
 `specflow-plan` → `specflow-develop`.
 
@@ -165,7 +165,7 @@ green, and the export starts leaking deleted rows the next time someone touches 
 ## What this skill does NOT do
 
 - **Does not maintain a parallel suite.** One anchor per intent, alive only between (a) and (c).
-- **Does not decide where the intent lands.** That is `specflow-change-router`.
+- **Does not decide where the intent lands.** That is `specflow-entry`.
 - **Does not write or edit specs.** That is `specflow-spec-editor`.
 - **Does not fix the gap it finds.** That is the bug flow.
 - **Does not judge mechanically.** Core validates the register's shape and links

@@ -26,7 +26,7 @@ register as `reconciled`. No → the spec generalised the ask away; file a missi
 via `specflow-bugs` and mark the entry `flagged`.
 
 It is a **tap on the existing flow, not a parallel process**. Where the intent lands — a spec
-criterion or a compass rule — is itself a `specflow-change-router` classification; the register
+criterion or a compass rule — is itself a `specflow-entry` classification; the register
 is fed by the router's decision, not bolted on beside it.
 
 ## Entities
@@ -62,7 +62,7 @@ is fed by the router's decision, not bolted on beside it.
    substitute for the missing criterion: that hides the gap behind a green suite, which is the
    failure being caught.
 7. **A tap, not a process.** The skill runs inside the existing classify → spec → test flow.
-   Where the intent lands is a `specflow-change-router` classification (a spec criterion or a
+   Where the intent lands is a `specflow-entry` classification (a spec criterion or a
    compass rule), and the register's `landing` records that decision rather than making a
    second one.
 8. **Never a second suite.** At most one anchor per stated intent, alive only between (a) and
@@ -110,7 +110,7 @@ is fed by the router's decision, not bolted on beside it.
 ### The skill is a tap on the existing flow
 
 - **Given** the shipped body
-- **Then** it routes the landing decision through `specflow-change-router` and states that it
+- **Then** it routes the landing decision through `specflow-entry` and states that it
   is not a parallel process, and that the register is never a second test suite
 
 ### The Iron Law and rationalization table are present

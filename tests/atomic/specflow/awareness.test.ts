@@ -127,8 +127,8 @@ describe('specflow-tests (Deep): compass check: predicates into generated tests,
   });
 });
 
-describe('specflow-change-router (Deep): routes by Cortex module touched, bug reports to §4.3 ledger', () => {
-  const s = body('specflow-change-router');
+describe('specflow-entry (Deep): routes by Cortex module touched, bug reports to §4.3 ledger', () => {
+  const s = body('specflow-entry');
 
   it('carries a clearly-delimited Cortex awareness section', () => {
     expect(s).toMatch(/^## Cortex [Aa]wareness$/m);

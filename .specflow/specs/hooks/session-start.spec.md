@@ -31,6 +31,7 @@ The SessionStart hook primes Claude with the *existence and location* of Cortex 
 6. **Silent when Cortex is absent.** No `.cortex/cortex.config.json` in `cwd` → exit 0, empty stdout, no pulse write (the project simply isn't initialised).
 7. **Warn-never-block, self-applied.** Any internal error (malformed config, unreadable report, unparseable observation frontmatter) degrades: inject whatever part of the payload is still derivable (at minimum the pointer line), append a structured entry to `.cortex/pulse/reports/hook-errors.md`, and exit 0. The hook never exits 2, never exits non-zero, never throws to the runner.
 8. **Deterministic and offline.** Pure Node file I/O; no network, no LLM, no subprocess.
+9. **Entry line (schema §5, new at 3.3).** The pointer block carries one additional line that re-arms the process gate — `Entry: run \`specflow-entry\` first — classify the request, then run the skill it routes to.` — emitted **only** when `cortex.config.json` `profile` is `specflow` (§10.1, `core-cli.init-profile`) **and** `.claude/skills/specflow-entry/` exists. A `superpowers` project, or one that never installed the bundle, sees nothing: pointing at a skill the project does not have is noise, and a project on the other profile has no spec-first gate to re-arm. It rides inside the same <100-token pointer budget (Rule 3), never a second pool, and it is a **pointer, not enforcement** — Rule 7's warn-never-block is unchanged by it (`specflow.entry-gate`).
 
 ## Acceptance Criteria
 
@@ -77,6 +78,24 @@ The SessionStart hook primes Claude with the *existence and location* of Cortex 
 - **Given** `.cortex/insight/observations/` exists but every entry has `salient: false` and a `sessions:` count under 3
 - **When** the hook runs
 - **Then** `additionalContext` carries the pointer block (and hygiene line, if fresh) with no observations digest line at all
+
+### The entry line is injected under the specflow profile
+
+- **Given** a project whose config records `profile: specflow` and whose `.claude/skills/specflow-entry/` exists
+- **When** the hook runs
+- **Then** the payload contains the entry line naming `specflow-entry`, alongside the pointer and modules lines
+
+### The entry line is omitted under another profile
+
+- **Given** the same project recorded as `profile: superpowers`
+- **When** the hook runs
+- **Then** the payload contains no entry line, and the pointer and modules lines are unaffected
+
+### The entry line is omitted when the skill is not installed
+
+- **Given** a `specflow` project with no `.claude/skills/specflow-entry/`
+- **When** the hook runs
+- **Then** the payload contains no entry line — the hook never points at a skill that is absent
 
 ### Absent observations directory is silent, not an error
 

@@ -35,9 +35,9 @@ const LOCAL_SKILLS = path.join(PKG_ROOT, '.claude', 'skills');
 const SPECFLOW_BUNDLES = [
   'specflow-brainstorm',
   'specflow-bugs',
-  'specflow-change-router',
   'specflow-deep-onboard',
   'specflow-develop',
+  'specflow-entry',
   'specflow-ingest',
   'specflow-intent-reconcile',
   'specflow-lint',
@@ -53,7 +53,7 @@ const SPECFLOW_BUNDLES = [
 
 /** Bundles whose contract includes a references/ subdirectory. */
 const WITH_REFERENCES = [
-  'specflow-change-router',
+  'specflow-entry',
   'specflow-develop',
   'specflow-new-project',
   'specflow-onboard-codebase',
