@@ -46,3 +46,11 @@ Developers and freelancers accumulating project context from outside the code â€
 ## Notes
 
 - Raw sources may contain sensitive material; they live in the one part of project memory that stays off the shared record by default.
+
+## Notes
+
+- **Delivery moved (2026-08-05).** This outcome was first delivered by the standalone
+  `cortex-ingest` skill (`atlas.ingest-skill`, retained for lineage). It is now delivered by
+  `cortex-archive-ingest`'s `atlas` extraction strategy â€” one ingestion pipeline for every
+  document kind, with sources kept under `archive/` and the same provenance chain as everything
+  else. The promise to the developer is unchanged; only the skill that keeps it moved.

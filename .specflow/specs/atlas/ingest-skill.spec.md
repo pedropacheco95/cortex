@@ -6,11 +6,27 @@ depends_on:
   - schema.validator
 implements: ../../specs-business/atlas/developer-turns-raw-sources-into-project-memory.business.md
 governed_by: []
-governs:
-  - "skills/cortex-ingest/**"
 ---
 
 # cortex-ingest Skill
+
+> **SUPERSEDED at v3 (build-order-v3 step 9; design §6.6).** The standalone
+> `cortex-ingest` skill this spec describes is retired: the package no longer
+> ships `skills/cortex-ingest/`, and its atlas-only ingestion — raw sources
+> preserved verbatim, stakeholders/decisions/domain terms extracted — is now
+> the `atlas` extraction **strategy** inside `cortex-archive-ingest`
+> (`archive.ingest-skill` Rule 8), with sources landing under
+> `archive/documents/<slug>/source.*` rather than `atlas/sources/`.
+>
+> Step 9's "done when" required the standalone skill to be *gone*; a redirect
+> stub was left in its place instead, and kept registering as a live skill in
+> every session. The stub was removed on 2026-08-05 and the removal ships as a
+> `SKILL_MIGRATIONS` entry, so existing projects shed it on `cortex sync`
+> (`core-cli.sync` Rule 6).
+>
+> The spec is retained for lineage, as the superseded `anatomy/` specs are.
+> Its `governs` glob is dropped because the path no longer exists; the outcome
+> it implements is now delivered by `archive.ingest-skill`.
 
 ## Intent
 

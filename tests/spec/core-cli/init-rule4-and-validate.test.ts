@@ -1,8 +1,15 @@
 /**
- * Spec tests for atlas.ingest-skill — the integrated behaviours:
- *   - `cortex init` installs the shipped cortex-ingest bundle (Rule 1);
- *   - overwrite protection is now live (user copy preserved without --yes,
- *     replaced with --yes) — Rule 4 of core-cli.init made real;
+ * Spec tests for core-cli.init's Rule-4 machinery and the `cortex validate`
+ * CLI rider.
+ *
+ * These were written under atlas.ingest-skill, using the `cortex-ingest`
+ * bundle as their vehicle. That spec is SUPERSEDED (build-order-v3 step 9) and
+ * the bundle no longer ships, so its "bundle ships and init installs it" case
+ * is retired with it — but the other two behaviours are general and worth
+ * keeping, so they now ride on `cortex-archive-ingest`, the skill that
+ * absorbed the retired one:
+ *   - overwrite protection (user copy preserved without --yes, replaced with
+ *     --yes) — Rule 4 of core-cli.init made real;
  *   - `cortex validate` exists as a CLI command (Rule 4 rider): exit 0
  *     conformant / 1 not, naming the violation.
  *
@@ -13,6 +20,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
+import { fileURLToPath } from 'url';
 import { init } from '../../../src/cli/init.js';
 import { run } from '../../../src/cli/cli.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
@@ -20,50 +28,19 @@ import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 const TEST_TIMEOUT = 60_000;
 const DARWIN = { platform: 'darwin' as const };
 
-const REPO_ROOT = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const PKG_SKILLS = path.join(REPO_ROOT, 'skills');
 const VALID_FIXTURE = path.join(REPO_ROOT, 'tests', 'fixtures', 'valid');
 
-// ---------------------------------------------------------------------------
-// AC: Bundle ships and init installs it
-// ---------------------------------------------------------------------------
-describe('Bundle ships and init installs it', () => {
-  let root: string;
-  let home: string;
-  let result: { exitCode: number; summary: string };
-
-  beforeAll(async () => {
-    root = makeTmpDir('ingest-install-proj');
-    home = makeTmpDir('ingest-install-home');
-    result = await init(root, { home, noLlm: true, partial: true, yes: true, ...DARWIN });
-  }, TEST_TIMEOUT);
-  afterAll(() => { cleanTmp(root); cleanTmp(home); });
-
-  it('installs .claude/skills/cortex-ingest/SKILL.md with frontmatter name: cortex-ingest', () => {
-    const installed = path.join(root, '.claude', 'skills', 'cortex-ingest', 'SKILL.md');
-    expect(fs.existsSync(installed)).toBe(true);
-    const parsed = matter(fs.readFileSync(installed, 'utf-8'));
-    expect(parsed.data['name']).toBe('cortex-ingest');
-  });
-
-  it('the summary reports at least 1 skill installed', () => {
-    const m = /Skills installed: (\d+)/.exec(result.summary);
-    expect(m).not.toBeNull();
-    expect(Number(m?.[1])).toBeGreaterThanOrEqual(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// AC: Overwrite protection becomes live
-// ---------------------------------------------------------------------------
 describe('Overwrite protection becomes live', () => {
-  const USER_CONTENT = '---\nname: cortex-ingest\n---\n\nMY USER-MODIFIED SKILL — do not clobber.\n';
+  const USER_CONTENT = '---\nname: cortex-archive-ingest\n---\n\nMY USER-MODIFIED SKILL — do not clobber.\n';
 
   it('preserves a user-modified bundle byte-identical when run without --yes (no TTY)', async () => {
-    const root = makeTmpDir('ingest-preserve-proj');
-    const home = makeTmpDir('ingest-preserve-home');
+    const root = makeTmpDir('archive-ingest-preserve-proj');
+    const home = makeTmpDir('archive-ingest-preserve-home');
     try {
       // Pre-seed a user-modified bundle before any init runs.
-      const target = path.join(root, '.claude', 'skills', 'cortex-ingest', 'SKILL.md');
+      const target = path.join(root, '.claude', 'skills', 'cortex-archive-ingest', 'SKILL.md');
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, USER_CONTENT, 'utf-8');
 
@@ -78,10 +55,10 @@ describe('Overwrite protection becomes live', () => {
   }, TEST_TIMEOUT);
 
   it('replaces the user copy with the shipped bundle when run with --yes', async () => {
-    const root = makeTmpDir('ingest-replace-proj');
-    const home = makeTmpDir('ingest-replace-home');
+    const root = makeTmpDir('archive-ingest-replace-proj');
+    const home = makeTmpDir('archive-ingest-replace-home');
     try {
-      const target = path.join(root, '.claude', 'skills', 'cortex-ingest', 'SKILL.md');
+      const target = path.join(root, '.claude', 'skills', 'cortex-archive-ingest', 'SKILL.md');
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, USER_CONTENT, 'utf-8');
 
@@ -89,10 +66,14 @@ describe('Overwrite protection becomes live', () => {
 
       const after = fs.readFileSync(target, 'utf-8');
       expect(after).not.toBe(USER_CONTENT);
-      // build-order-v3 step 3b retired cortex-ingest to a redirect stub — the
-      // shipped bundle now carries the redirect, not the old workflow contract.
-      expect(after).toContain('cortex-archive-ingest');
-      expect(after).toMatch(/retired|moved/i);
+      // The point of --yes: the user's copy is replaced by the SHIPPED bundle,
+      // byte for byte. Asserting against the package source rather than any
+      // phrase in it keeps this test true as the skill's prose evolves.
+      const shipped = fs.readFileSync(
+        path.join(PKG_SKILLS, 'cortex-archive-ingest', 'SKILL.md'),
+        'utf-8',
+      );
+      expect(after).toBe(shipped);
     } finally {
       cleanTmp(root); cleanTmp(home);
     }

@@ -157,9 +157,9 @@ export interface SkillMigration {
 export const SKILL_MIGRATIONS: readonly SkillMigration[] = [
   {
     version: '3.3',
-    removed: ['specflow-change-router', '_conventions'],
+    removed: ['specflow-change-router', '_conventions', 'cortex-ingest'],
     reason:
-      'specflow-change-router was renamed to specflow-entry (specflow.entry-gate); _conventions became repo-side authoring material and is no longer installed (discipline.hardening-convention)',
+      'specflow-change-router was renamed to specflow-entry (specflow.entry-gate); _conventions became repo-side authoring material and is no longer installed (discipline.hardening-convention); cortex-ingest completed the retirement build-order-v3 step 9 called for — its atlas ingestion is the `atlas` extraction strategy inside cortex-archive-ingest, and the redirect stub left in its place was still registering as a live skill (archive.ingest-skill Rule 8)',
   },
 ];
 
