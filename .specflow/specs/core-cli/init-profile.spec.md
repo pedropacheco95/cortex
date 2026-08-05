@@ -61,7 +61,13 @@ selects which loops are scheduled; it does not police what the user does.
 6. **Scoping never rewrites a member's discipline.** A scoped bundle's surviving members run
    exactly as they do today: same order, same reports, same failure isolation. The only change
    is which members are present.
-7. **Profile does not gate skill installation.** `cortex init` installs every packaged bundle
+7. **Every payload writer scopes, not just init (B-016).** `cortex init` and `cortex sync`
+   are two implementations of one contract — materialise this project's task payloads — and
+   scoping belongs to the contract, not to one caller. Sync applies the same transform, and a
+   bundle the profile excludes also has any existing payload directory **removed** (scoped to
+   this project by the same ownership check the retired-canonical sweep uses), so switching
+   profiles cannot orphan one.
+8. **Profile does not gate skill installation.** `cortex init` installs every packaged bundle
    regardless of profile — a user who switches profiles later should not have to reinstall, and
    an unused skill costs nothing until it is invoked. Only *scheduling* is scoped.
 
@@ -112,6 +118,20 @@ selects which loops are scheduled; it does not police what the user does.
 - **Given** `cortex init` under the default profile
 - **Then** all five bundles are written with every member and every required skill exactly as
   before this spec
+
+### Sync applies the same scoping as init
+
+- **Given** a project initialised with `--profile superpowers`
+- **When** `cortex sync` runs
+- **Then** no `test-runner` payload is written back, and the `daily` payload still carries its
+  scoping instruction
+
+### A profile switch moves the payloads both ways
+
+- **Given** a `superpowers` project whose config is changed to `specflow`
+- **When** `cortex sync` runs
+- **Then** the `test-runner` payload is written; and given the reverse switch, the payload is
+  removed rather than left orphaned
 
 ### The validator accepts the enum and rejects anything else
 

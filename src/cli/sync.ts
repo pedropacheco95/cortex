@@ -25,12 +25,14 @@ import * as path from 'path';
 import * as os from 'os';
 import { validate } from '../schema/validate.js';
 import { SUPPORTED_MAJOR } from '../schema/version.js';
+import { readProfile } from './profile.js';
 import {
   SCHEMA_VERSION,
   CORTEX_INDEXES,
   ARCHIVE_INDEX_TEMPLATE,
   INSIGHT_INDEX_TEMPLATE,
   SCHEDULED_TASKS,
+  scopeTaskToProfile,
   scheduledTaskSkillMd,
 } from './templates.js';
 import {
@@ -334,7 +336,31 @@ async function syncScheduledTaskPayloads(
     }
   }
 
-  for (const task of SCHEDULED_TASKS) {
+  // Profile scoping (core-cli.init-profile Rule 4) — the same transform init
+  // applies. Without it, sync would resurrect the Bucket-3 payloads a
+  // superpowers project deliberately does not schedule.
+  const profile = readProfile(root);
+  const scoped = SCHEDULED_TASKS.map((t) => ({ task: t, scopedTask: scopeTaskToProfile(t, profile) }));
+
+  // A bundle the profile excludes entirely must also LOSE any payload a
+  // previous profile left behind, or switching profiles orphans it — the same
+  // failure B-015 fixed for skill bundles.
+  for (const { task, scopedTask } of scoped) {
+    if (scopedTask !== null) continue;
+    const canonical = CANONICAL_TASK_NAMES[task.name] ?? task.name;
+    for (const name of [scopedTaskName(root, canonical), hashScopedTaskName(root, canonical)]) {
+      const dir = path.join(baseDir, name);
+      if (!fs.existsSync(dir)) continue;
+      const owner = taskDirProjectRoot(dir);
+      if (owner !== undefined && owner !== path.resolve(root)) continue;
+      fs.rmSync(dir, { recursive: true, force: true });
+      if (!result.retired.includes(canonical)) result.retired.push(canonical);
+    }
+  }
+
+  for (const { scopedTask } of scoped) {
+    if (scopedTask === null) continue;
+    const task = scopedTask;
     const canonical = CANONICAL_TASK_NAMES[task.name] ?? task.name;
     const scoped = resolveScopedTaskName(baseDir, root, canonical);
     const dir = path.join(baseDir, scoped);

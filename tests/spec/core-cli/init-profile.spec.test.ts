@@ -9,6 +9,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { init } from '../../../src/cli/init.js';
+import { sync } from '../../../src/cli/sync.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -152,5 +153,70 @@ describe('AC: a project scaffolded with a profile validates clean', () => {
       expect(result.exitCode).toBe(0);
       expect(readConfig(root)['profile']).toBe(profile);
     }
+  }, TEST_TIMEOUT);
+});
+
+// ---------------------------------------------------------------------------
+// B-016: sync must apply the same profile scoping init does. Two code paths
+// share this contract — writeScheduledTasks (init) and syncScheduledTaskPayloads
+// (sync) — and only the first one originally got it.
+// ---------------------------------------------------------------------------
+
+describe('AC: sync applies the same profile scoping as init (B-016)', () => {
+  it('does not resurrect the Bucket-3 test-runner bundle a superpowers project omitted', async () => {
+    const root = tmp('sync-scope-root');
+    const home = tmp('sync-scope-home');
+    await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
+    expect(writtenTaskDirs(home).some((d) => d.includes('test-runner'))).toBe(false);
+
+    await sync(root, { yes: true, home, ...DARWIN });
+
+    expect(
+      writtenTaskDirs(home).some((d) => d.includes('test-runner')),
+      'sync wrote back a payload the profile excludes',
+    ).toBe(false);
+  }, TEST_TIMEOUT);
+
+  it('keeps the mixed bundles scoped after a sync', async () => {
+    const root = tmp('sync-mixed-root');
+    const home = tmp('sync-mixed-home');
+    await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
+    await sync(root, { yes: true, home, ...DARWIN });
+
+    const daily = payloadBody(home, 'daily') ?? '';
+    expect(daily).toContain('Profile scoping');
+    expect(daily).toContain('**bug-triage**');
+  }, TEST_TIMEOUT);
+
+  it('switching profile to specflow restores the excluded bundle on the next sync', async () => {
+    const root = tmp('sync-switch-root');
+    const home = tmp('sync-switch-home');
+    await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
+
+    const configPath = path.join(root, '.cortex', 'cortex.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+    config['profile'] = 'specflow';
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+
+    await sync(root, { yes: true, home, ...DARWIN });
+    expect(writtenTaskDirs(home).some((d) => d.includes('test-runner'))).toBe(true);
+  }, TEST_TIMEOUT);
+
+  it('switching profile to superpowers removes the payload rather than orphaning it', async () => {
+    const root = tmp('sync-switch-away-root');
+    const home = tmp('sync-switch-away-home');
+    await init(root, { home, noLlm: true, yes: true, ...DARWIN }); // specflow default
+    expect(writtenTaskDirs(home).some((d) => d.includes('test-runner'))).toBe(true);
+
+    const configPath = path.join(root, '.cortex', 'cortex.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+    config['profile'] = 'superpowers';
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+
+    await sync(root, { yes: true, home, ...DARWIN });
+    expect(
+      writtenTaskDirs(home).some((d) => d.includes('test-runner')),
+      'a profile switch left an orphaned payload behind',
+    ).toBe(false);
   }, TEST_TIMEOUT);
 });
