@@ -74,10 +74,10 @@ async function makePreRenameProject(label: string, opts: { marker: boolean; from
 
 describe('AC: a retired bundle is removed on sync (B-015)', () => {
   it('removes it silently when its marker matches, and reports it', async () => {
-    const { root } = await makePreRenameProject('clean', { marker: true });
+    const { root, home } = await makePreRenameProject('clean', { marker: true });
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(true);
 
-    const result = await sync(root, { yes: true });
+    const result = await sync(root, { yes: true, home, ...DARWIN });
 
     expect(result.exitCode).toBe(0);
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(false);
@@ -86,15 +86,15 @@ describe('AC: a retired bundle is removed on sync (B-015)', () => {
   }, TEST_TIMEOUT);
 
   it('leaves exactly one entry point installed afterwards', async () => {
-    const { root } = await makePreRenameProject('one-gate', { marker: true });
-    await sync(root, { yes: true });
+    const { root, home } = await makePreRenameProject('one-gate', { marker: true });
+    await sync(root, { yes: true, home, ...DARWIN });
 
     expect(fs.existsSync(path.join(skillDir(root, 'specflow-entry'), 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(false);
   }, TEST_TIMEOUT);
 
   it('also clears _conventions, which was never a bundle', async () => {
-    const { root } = await makePreRenameProject('conventions', { marker: false });
+    const { root, home } = await makePreRenameProject('conventions', { marker: false });
     makeBundle(root, '_conventions', '# stale copy\n', true);
     // `_conventions` has no SKILL.md in the package; the stale copy here is a
     // plain file, so re-hash after writing to make the marker match.
@@ -104,17 +104,17 @@ describe('AC: a retired bundle is removed on sync (B-015)', () => {
       hashDirectoryContent(dir, [INSTALLED_MARKER_FILENAME]),
     );
 
-    await sync(root, { yes: true });
+    await sync(root, { yes: true, home, ...DARWIN });
     expect(fs.existsSync(dir)).toBe(false);
   }, TEST_TIMEOUT);
 });
 
 describe('AC: a retired bundle the developer edited is preserved, not deleted', () => {
   it('non-interactively, an unmarked retired bundle survives and is reported as preserved', async () => {
-    const { root } = await makePreRenameProject('edited', { marker: false });
+    const { root, home } = await makePreRenameProject('edited', { marker: false });
 
     // No `yes`, no TTY: promptYesNo's default is No.
-    const result = await sync(root, {});
+    const result = await sync(root, { home, ...DARWIN });
 
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(true);
     expect(result.summary).toContain('Retired but preserved');
@@ -123,11 +123,11 @@ describe('AC: a retired bundle the developer edited is preserved, not deleted', 
   }, TEST_TIMEOUT);
 
   it('--yes then removes it, so the developer keeps a way through', async () => {
-    const { root } = await makePreRenameProject('edited-then-yes', { marker: false });
-    await sync(root, {});
+    const { root, home } = await makePreRenameProject('edited-then-yes', { marker: false });
+    await sync(root, { home, ...DARWIN });
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(true);
 
-    const result = await sync(root, { yes: true });
+    const result = await sync(root, { yes: true, home, ...DARWIN });
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(false);
     expect(result.summary).toContain('Removed (retired by Cortex)');
   }, TEST_TIMEOUT);
@@ -135,11 +135,11 @@ describe('AC: a retired bundle the developer edited is preserved, not deleted', 
 
 describe("AC: a developer's own skill is never touched", () => {
   it('survives byte-identical and appears in no removal report', async () => {
-    const { root } = await makePreRenameProject('own', { marker: true });
+    const { root, home } = await makePreRenameProject('own', { marker: true });
     const own = path.join(skillDir(root, 'my-own-skill'), 'SKILL.md');
     const before = fs.readFileSync(own);
 
-    const result = await sync(root, { yes: true });
+    const result = await sync(root, { yes: true, home, ...DARWIN });
 
     expect(fs.existsSync(own)).toBe(true);
     expect(fs.readFileSync(own).equals(before)).toBe(true);
@@ -149,8 +149,8 @@ describe("AC: a developer's own skill is never touched", () => {
 
 describe('AC: a currently-shipped bundle is never removed', () => {
   it('specflow-entry is present after a sync that removes its predecessor', async () => {
-    const { root } = await makePreRenameProject('shipped-safe', { marker: true });
-    await sync(root, { yes: true });
+    const { root, home } = await makePreRenameProject('shipped-safe', { marker: true });
+    await sync(root, { yes: true, home, ...DARWIN });
     expect(fs.existsSync(path.join(skillDir(root, 'specflow-entry'), 'SKILL.md'))).toBe(true);
   }, TEST_TIMEOUT);
 });
@@ -160,31 +160,31 @@ describe('AC: a declined removal is re-offered, never silently dropped', () => {
     // The cursor trap: sync writes schemaVersion 3.0 -> 3.3 on the FIRST run,
     // whether or not the removal happened. A window-based migration would
     // never revisit it, and a declined orphan would become permanent.
-    const { root } = await makePreRenameProject('declined-then-reoffered', { marker: false });
+    const { root, home } = await makePreRenameProject('declined-then-reoffered', { marker: false });
 
-    await sync(root, {}); // declined non-interactively
+    await sync(root, { home, ...DARWIN }); // declined non-interactively
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(true);
     const config = JSON.parse(
       fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'),
     ) as Record<string, unknown>;
     expect(config['schemaVersion']).toBe('3.3'); // cursor already moved
 
-    const second = await sync(root, {});
+    const second = await sync(root, { home, ...DARWIN });
     expect(second.summary).toContain('Retired but preserved');
   }, TEST_TIMEOUT);
 
   it('a project already at the current version still sheds an orphan it carries', async () => {
-    const { root } = await makePreRenameProject('already-current', { marker: true, fromVersion: '3.3' });
-    await sync(root, { yes: true });
+    const { root, home } = await makePreRenameProject('already-current', { marker: true, fromVersion: '3.3' });
+    await sync(root, { yes: true, home, ...DARWIN });
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(false);
   }, TEST_TIMEOUT);
 });
 
 describe('idempotence', () => {
   it('a second sync removes nothing and still reports success — the window has closed', async () => {
-    const { root } = await makePreRenameProject('idempotent', { marker: true });
-    await sync(root, { yes: true });
-    const second = await sync(root, { yes: true });
+    const { root, home } = await makePreRenameProject('idempotent', { marker: true });
+    await sync(root, { yes: true, home, ...DARWIN });
+    const second = await sync(root, { yes: true, home, ...DARWIN });
 
     expect(second.exitCode).toBe(0);
     expect(second.summary).not.toContain('Removed (retired by Cortex)');
