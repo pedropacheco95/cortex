@@ -75,6 +75,32 @@ describe('AC: subsumption is decided counterfactually', () => {
   });
 });
 
+describe('AC: an operational ask is not pinned at all (Phase-6 finding)', () => {
+  it('separates behavioural from operational asks before anything is pinned', () => {
+    expect(SKILL).toMatch(/### \(a0\) First: is the ask even spec-shaped\?/);
+    expect(SKILL).toMatch(/\*\*Behavioural\*\* — something that must \*stay\* true/);
+    expect(SKILL).toMatch(/\*\*Operational\*\* — something to \*do\*, once/);
+  });
+
+  it('states the discriminating question', () => {
+    expect(SKILL).toMatch(/\*\*would you want a test that fails if this stopped being true\?\*\*/);
+  });
+
+  it('gives an operational ask no anchor, no entry, and no bug', () => {
+    expect(SKILL).toMatch(/no anchor, no\s+register entry, no bug/);
+    expect(SKILL).toMatch(/ledger noise wearing the costume of rigour/);
+  });
+
+  it('names the reverse failure mode and tie-breaks toward behavioural', () => {
+    expect(SKILL).toMatch(/the commonest mistake is treating a behavioural ask as\s+operational/);
+    expect(SKILL).toMatch(/When genuinely unsure, treat it as\s+behavioural/);
+  });
+
+  it('declares the exclusion in the does-NOT-do list', () => {
+    expect(SKILL).toMatch(/\*\*Does not pin operational asks\.\*\*/);
+  });
+});
+
 describe('AC: the intent is recorded verbatim', () => {
   it('requires the user own words and rejects paraphrase', () => {
     expect(SKILL).toMatch(/\*\*Verbatim means verbatim\.\*\*/);

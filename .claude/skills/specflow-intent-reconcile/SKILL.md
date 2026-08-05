@@ -33,6 +33,27 @@ Nobody notices, because there was never a test that pinned the specific thing.
 
 ## The three moves
 
+### (a0) First: is the ask even spec-shaped?
+
+Before pinning anything, decide what kind of ask this is:
+
+- **Behavioural** — something that must *stay* true. "The password needs one uppercase." "The
+  export must never include soft-deleted rows." These get anchored.
+- **Operational** — something to *do*, once. "Remove the sentinel git hooks." "Bump the
+  dependency." "Delete that stale branch." These do not.
+
+The test: **would you want a test that fails if this stopped being true?** If there is no
+"stopped being true" — the action either happened or it did not — the ask is operational.
+
+An operational ask is completed and reported, and that is the whole of it: no anchor, no
+register entry, no bug. Forcing one through this skill files a missing-criterion bug against a
+spec that should never exist, which is ledger noise wearing the costume of rigour.
+
+Note the failure mode runs both ways: the commonest mistake is treating a behavioural ask as
+operational ("just make it do X") and skipping the anchor. When genuinely unsure, treat it as
+behavioural — an unnecessary anchor costs one test that you delete at reconciliation, while a
+missed one costs the whole mechanism.
+
 ### (a) Pin it — write the verbatim anchor, RED
 
 When someone states a specific requirement, before the spec absorbs it:
@@ -164,6 +185,7 @@ green, and the export starts leaking deleted rows the next time someone touches 
 
 ## What this skill does NOT do
 
+- **Does not pin operational asks.** One-off actions are done, not anchored (step a0).
 - **Does not maintain a parallel suite.** One anchor per intent, alive only between (a) and (c).
 - **Does not decide where the intent lands.** That is `specflow-entry`.
 - **Does not write or edit specs.** That is `specflow-spec-editor`.

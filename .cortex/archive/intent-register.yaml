@@ -1,0 +1,25 @@
+# The intent register (cortex-schema.md §4.4.3, archive.intent-register).
+#
+# A thin changelog over the citation graph: what was asked, verbatim; where it
+# landed; and which spec-derived test covers it now. It holds words and links,
+# never copies of tests. Entries are written by `specflow-intent-reconcile`
+# after the counterfactual subsumption probe, and validated by
+# `check.archive-intent-register`.
+entries:
+  - id: IR-001
+    stated_intent: "lets add the skill.md presence filter"
+    date: 2026-08-05
+    stakeholder: pedro
+    anchor_test: tests/spec/discipline/packaging.test.ts::"listSkillBundles is the shared enumeration, and it excludes SKILL.md-less dirs"
+    status: reconciled
+    landing: discipline.hardening-convention#A directory without a SKILL.md is never treated as a bundle
+    covering_spec_test: tests/spec/discipline/packaging.test.ts
+
+  - id: IR-002
+    stated_intent: "specflow-entry, that care of all dependencies"
+    date: 2026-08-05
+    stakeholder: pedro
+    anchor_test: tests/atomic/specflow/entry-gate.test.ts::"the live surfaces — skills, specs, tests, indexes — name specflow-entry"
+    status: reconciled
+    landing: specflow.entry-gate#No tracked file still points at the old name
+    covering_spec_test: tests/atomic/specflow/entry-gate.test.ts
