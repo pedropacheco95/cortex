@@ -16,7 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { init } from '../../../src/cli/init.js';
-import { listSkillBundles } from '../../../src/cli/scaffold.js';
+import { INSTALLED_MARKER_FILENAME, listSkillBundles } from '../../../src/cli/scaffold.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -62,13 +62,22 @@ const WITH_REFERENCES = [
   'specflow-viewer',
 ];
 
-/** All file paths under dir, relative to dir, sorted. */
+/**
+ * All file paths under dir, relative to dir, sorted.
+ *
+ * `.cortex-installed.json` is excluded: it is sync's provenance bookkeeping,
+ * written into an installed copy and never present in the package bundle, and
+ * `hashDirectoryContent` already excludes it from content comparison for the
+ * same reason. Counting it here would make `cortex sync` — the supported way
+ * to refresh this repo's own `.claude/skills/` mirror — break the very tests
+ * that police the mirror.
+ */
 function walk(dir: string, prefix = ''): string[] {
   const out: string[] = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const rel = path.join(prefix, entry.name);
     if (entry.isDirectory()) out.push(...walk(path.join(dir, entry.name), rel));
-    else out.push(rel);
+    else if (entry.name !== INSTALLED_MARKER_FILENAME) out.push(rel);
   }
   return out.sort();
 }
