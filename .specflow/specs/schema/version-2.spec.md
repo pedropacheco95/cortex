@@ -25,12 +25,14 @@ Schema 2.0 is a MAJOR bump (directories moved, a new committed `insight/` module
 ## Rules
 
 1. **Config version.** The project `.cortex/cortex.config.json` `schemaVersion` reads `"2.0"`, and `cortex init`'s config template emits `"2.0"` on fresh projects (schema §10.1). The config's new `insight` block (`clusterCarryOverJaccard`, `promotionMinAgeDays`, `promotionMinObservations`) is defined by `insight.module-contract`; this spec owns only the `schemaVersion` value.
-2. **Validator support declaration.** The validator declares `supportedMajor = 2`, `supportedMinor = 0` (schema §10.3). `src/schema/version.ts` is the single source of both, read by every version-gate branch.
+2. **Validator support declaration.** The validator declares its supported `MAJOR.MINOR` (schema §10.3) — `2.0` when this spec was written, `3.3` today. `src/schema/version.ts` is the single source of both, read by every version-gate branch. The literal values move with the contract; Rule 8 is what keeps them moving.
 3. **The bump lands with the move.** The `schemaVersion` bump and `specflow.reorg`'s path rewrite MUST be one commit (schema §2.3 sequencing spine): bumping to 2.0 is what activates the re-rooted `check.layout`/`check.id-matches-path`/`check.specs-index`/`check.overview-present`, so the re-rooted validator running green against the moved trees is the step's round-trip regression (build-order §1). `depends_on: [specflow.reorg]` encodes the ordering; the two are verified together.
 4. **MAJOR-mismatch short-circuit (schema §10.3, Decision 12).** When `cortex.config.json` declares a MAJOR **above** the validator's supported MAJOR, the validator emits the single `check.config` error (clause §10.3) and runs **no** further checks — it does not validate against a contract it doesn't implement. A MAJOR **below** supported emits a single `check.config` error recommending `cortex migrate`.
 5. **MINOR forward-tolerance (schema §10.2/§10.3).** MAJOR equal, MINOR above supported → one `warning`, then proceed with forward tolerance (unknown optional fields tolerated). MAJOR and MINOR equal → proceed normally.
 6. **Migration waived for 1.0→2.0 only (schema Decision 19 / §10.4).** No `cortex migrate` for this transition; the policy holds in full for every future MAJOR. `cortex init` on a pre-2.0 project without the migration treats the old trees as absent — acceptable because no such external project exists.
 7. **Deterministic Core** (R-001): version comparison and the config read are pure logic — no LLM, no network.
+
+8. **The three version declarations agree (B-014).** The schema version is declared in three places and they MUST be the same value: `cortex-schema.md`'s `**Schema version:**` header (the contract's own declaration), `src/schema/version.ts` (`SUPPORTED_MAJOR`/`SUPPORTED_MINOR` — what the validator says it implements and what `cortex validate` reports), and `src/cli/templates.ts` `SCHEMA_VERSION` (what `cortex init` scaffolds into `cortex.config.json` and stamps into the CLAUDE.md managed-block marker). A MINOR bump that edits the document without the constants leaves the binary enforcing one contract while announcing an older one — which is how 3.1, 3.2 and 3.3 all shipped under a `3.0` announcement. Enforced by `tests/atomic/schema/version-agreement.test.ts`, which derives the version from the document rather than pinning a literal, so a legitimate bump never edits the test.
 
 ## Acceptance Criteria
 
@@ -38,7 +40,7 @@ Schema 2.0 is a MAJOR bump (directories moved, a new committed `insight/` module
 
 - **Given** a fresh `cortex init` at schema 2.0
 - **When** the config template is emitted and the validator is inspected
-- **Then** `cortex.config.json` `schemaVersion` is `"2.0"` and `src/schema/version.ts` declares `supportedMajor = 2`, `supportedMinor = 0`
+- **Then** `cortex.config.json` `schemaVersion` and `src/schema/version.ts`'s declared `MAJOR.MINOR` both match the version `cortex-schema.md` declares (`2.0` at the time of this spec; `3.3` today — the values track the contract per Rule 8)
 
 ### The re-rooted validator passes green at 2.0 against the moved trees
 
@@ -76,3 +78,9 @@ Schema 2.0 is a MAJOR bump (directories moved, a new committed `insight/` module
 - This spec deliberately owns only the *version wiring*; the substance of the 2.0 contract (the `insight/` module, the typed pulse gate, the re-rooted checks) is owned by the specs that implement each piece. It is the switch that turns 2.0 on, which is why it is inseparable from `specflow.reorg`.
 - The four insight checks do not gate the 2.0 bump: `check.layout` tolerates an absent `insight/` module, so a repo passes at 2.0 before `insight/` is scaffolded (build-order §1).
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).
+
+### The three version declarations cannot silently diverge
+
+- **Given** the schema document declaring a version
+- **When** either `src/schema/version.ts` or `src/cli/templates.ts` declares a different one
+- **Then** `tests/atomic/schema/version-agreement.test.ts` fails, naming which of the three is out of step (B-014)

@@ -17,7 +17,7 @@ import {
   RETIRED_GIT_HOOK_INVOCATION,
 } from '../../../src/cli/init.js';
 import { validate } from '../../../src/schema/validate.js';
-import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
+import { SCHEDULED_TASKS, SCHEMA_VERSION } from '../../../src/cli/templates.js';
 import { CANONICAL_TASK_NAMES, scopedTaskName, hashScopedTaskName, isOwnScopedTask } from '../../../src/cli/task-scoping.js';
 import {
   makeTmpDir,
@@ -208,7 +208,7 @@ describe('Rule 3: skeleton', () => {
   it('cortex.config.json carries the exact §10.1 defaults (no anatomy or insight blocks, v3.0 A10.0)', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect(config).toEqual({
-      schemaVersion: '3.0',
+      schemaVersion: SCHEMA_VERSION,
       // §10.1 v3.3: the process profile is written explicitly on a fresh
       // project, defaulting to specflow (core-cli.init-profile Rule 2) — the
       // config self-documents which build process the project runs.
@@ -291,9 +291,9 @@ describe('Rule 3: skeleton', () => {
 
   it('CLAUDE.md was created with the v-versioned managed block', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
-    expect(content).toContain('<!-- cortex:start v3.0 -->');
+    expect(content).toContain(`<!-- cortex:start v${SCHEMA_VERSION} -->`);
     expect(content).toContain('<!-- cortex:end -->');
-    expect(content).toContain('Modules present: compass, atlas, archive, insight, pulse. Schema: 3.0.');
+    expect(content).toContain(`Modules present: compass, atlas, archive, insight, pulse. Schema: ${SCHEMA_VERSION}.`);
   });
 
   it('no module-level .cortex/anatomy/ is scaffolded (retired at step 7)', () => {

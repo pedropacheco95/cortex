@@ -21,7 +21,7 @@ import {
   writeUndocumentedFiles,
   seedProjectSkills,
 } from '../../fixtures/init-harness.js';
-import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
+import { SCHEDULED_TASKS, SCHEMA_VERSION } from '../../../src/cli/templates.js';
 import { CANONICAL_TASK_NAMES, scopedTaskName, isOwnScopedTask } from '../../../src/cli/task-scoping.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -97,7 +97,7 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
 
   it('cortex.config.json declares the current schemaVersion', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
-    expect(config.schemaVersion).toBe('3.0');
+    expect(config.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('self-validation reports conformant and exit code is 0', async () => {

@@ -6,7 +6,7 @@
 import * as path from 'path';
 import type { ProcessProfile } from './profile.js';
 
-export const SCHEMA_VERSION = '3.0';
+export const SCHEMA_VERSION = '3.3';
 
 export const PRESENT_MODULES = 'compass, atlas, archive, insight, pulse';
 

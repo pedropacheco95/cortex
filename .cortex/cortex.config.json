@@ -1,5 +1,6 @@
 {
-  "schemaVersion": "3.0",
+  "schemaVersion": "3.3",
+  "profile": "specflow",
   "hooks": {
     "preRead": true
   },

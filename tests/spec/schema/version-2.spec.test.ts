@@ -40,10 +40,10 @@ afterAll(() => {
 });
 
 describe('schema.version-2 — the config and validator both read 3.0', () => {
-  it('version.ts declares supportedMajor 3 / supportedMinor 0 (bumped from 2/0 by the compass-rename module migration, build-order-v3 step 2 / flag F1)', () => {
+  it('version.ts declares supportedMajor 3 / supportedMinor 3 (MAJOR bumped from 2/0 by the compass-rename module migration, build-order-v3 step 2 / flag F1; MINOR 0 -> 3 by B-014, catching up with the 3.1/3.2/3.3 additions the validator already implements)', () => {
     expect(SUPPORTED_MAJOR).toBe(3);
-    expect(SUPPORTED_MINOR).toBe(0);
-    expect(SUPPORTED_VERSION).toBe('3.0');
+    expect(SUPPORTED_MINOR).toBe(3);
+    expect(SUPPORTED_VERSION).toBe('3.3');
   });
 
   it('the migrated valid fixture config reads "3.0"', () => {
@@ -55,9 +55,9 @@ describe('schema.version-2 — the config and validator both read 3.0', () => {
 });
 
 describe('schema.version-2 — the re-rooted validator passes green at 3.0 against the moved trees', () => {
-  it('validate over the .specflow/-rooted fixture reports zero errors and declares 3.0', async () => {
+  it('validate over the .specflow/-rooted fixture (a 3.0 project) reports zero errors and declares the validator version — MINOR below supported is the §10.2 backward-compatibility guarantee', async () => {
     const report = await validate(VALID_FIXTURE);
-    expect(report.schemaVersion).toBe('3.0');
+    expect(report.schemaVersion).toBe(SUPPORTED_VERSION);
     expect(report.counts.error).toBe(0);
     expect(report.conformant).toBe(true);
   });
