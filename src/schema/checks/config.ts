@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { Violation } from '../types.js';
 import { SUPPORTED_MAJOR, SUPPORTED_MINOR, SUPPORTED_VERSION } from '../version.js';
+import { PROCESS_PROFILES, type ProcessProfile } from '../../cli/profile.js';
 
 export interface ConfigResult {
   violations: Violation[];
@@ -92,7 +93,23 @@ export function checkConfig(root: string): ConfigResult {
   // TOLERATED here (no warning) so an unmigrated config surfaces its real
   // problems, not churn; the exclude reader honours anatomy.exclude for
   // back-compat, src/insight/exclude.ts.)
-  const knownKeys = ['schemaVersion', 'anatomy', 'hooks', 'pulse', 'insight', 'harness', 'loop'];
+  // §10.1 v3.3: `profile` is optional with the default `specflow`. Absent is
+  // not a violation; present-but-unrecognised is an error, because a typo'd
+  // profile would silently schedule the wrong loop set.
+  if (config['profile'] !== undefined) {
+    const profile = config['profile'];
+    if (typeof profile !== 'string' || !PROCESS_PROFILES.includes(profile as ProcessProfile)) {
+      violations.push({
+        severity: 'error',
+        check: 'check.config',
+        clause: '§10.1',
+        location: { path: configPath, key: 'profile' },
+        message: `cortex.config.json "profile" must be one of [${PROCESS_PROFILES.join(', ')}], got ${JSON.stringify(profile)}`,
+      });
+    }
+  }
+
+  const knownKeys = ['schemaVersion', 'profile', 'anatomy', 'hooks', 'pulse', 'insight', 'harness', 'loop'];
   for (const key of Object.keys(config)) {
     if (!knownKeys.includes(key)) {
       violations.push({

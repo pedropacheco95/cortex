@@ -4,6 +4,7 @@
  * §7.2 specs index, §8 CLAUDE.md managed block, §10.1 config defaults.
  */
 import * as path from 'path';
+import type { ProcessProfile } from './profile.js';
 
 export const SCHEMA_VERSION = '3.0';
 
@@ -403,6 +404,54 @@ export interface ScheduledTask {
   model: string;
   /** Skill directory names the prompt body invokes (design §11 loop names). */
   requiredSkills: string[];
+  /**
+   * Profile scoping (schema §10.1, spec `core-cli.init-profile`).
+   *
+   * `specflowOnlyMembers` names this bundle's Bucket-3 members — the spec
+   * loops, which need a spec tree. Under a non-`specflow` profile they are
+   * skipped and `specflowOnlySkills` is dropped from `requiredSkills`, while
+   * the bundle's Bucket-1 members run unchanged.
+   *
+   * `profiles`, when present, restricts the WHOLE bundle: a bundle every one
+   * of whose members is Bucket-3 (test-runner) is not written at all under
+   * another profile. Absent means "every profile".
+   */
+  specflowOnlyMembers?: string[];
+  specflowOnlySkills?: string[];
+  profiles?: readonly ProcessProfile[];
+}
+
+/**
+ * Scope a bundle to a process profile (spec `core-cli.init-profile` Rule 4).
+ *
+ * Returns `null` when the bundle does not belong to this profile at all.
+ * Otherwise returns the bundle with its Bucket-3 skills dropped and — when it
+ * has Bucket-3 members to skip — an explicit scoping instruction prepended to
+ * the prompt body. The payloads are prompts run by an agent, so "skip these
+ * members" is expressed the same way every other bundle rule is: in words.
+ *
+ * Under `specflow` the bundle is returned untouched, so the default path is
+ * byte-identical to what shipped before this spec.
+ */
+export function scopeTaskToProfile(task: ScheduledTask, profile: ProcessProfile): ScheduledTask | null {
+  if (profile === 'specflow') return task;
+  if (task.profiles && !task.profiles.includes(profile)) return null;
+
+  const skipped = task.specflowOnlyMembers ?? [];
+  if (skipped.length === 0) return task;
+
+  const dropped = new Set(task.specflowOnlySkills ?? []);
+  const quoted = skipped.map((m) => `**${m}**`).join(' and ');
+  return {
+    ...task,
+    requiredSkills: task.requiredSkills.filter((s) => !dropped.has(s)),
+    body:
+      `**Profile scoping (\`profile: ${profile}\`).** This project does not run the spec-first ` +
+      `process, so this bundle's spec-tree members are out of scope: SKIP ${quoted}. ` +
+      `Skipping them is not a failure — do not record it as one, and do not report a missing ` +
+      `report for them. Every other member below runs exactly as written.\n\n` +
+      task.body,
+  };
 }
 
 export const SCHEDULED_TASKS: ScheduledTask[] = [
@@ -420,6 +469,9 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
       'cortex-extract-insight',
       'cortex-loop-session-observe',
     ],
+    // Bucket-3: bug-triage and spec-drift both read the spec trees.
+    specflowOnlyMembers: ['bug-triage', 'spec-drift'],
+    specflowOnlySkills: ['cortex-loop-bug-triage', 'specflow-bugs', 'cortex-loop-spec-drift'],
     body:
       'This is the Cortex **daily bundle** — one scheduled task covering five daily loops. Run the members in the listed order, each with its own established skill discipline. **Failure isolation:** if a member fails, record the failure and CONTINUE to the next member — never abort the bundle because one member failed. Each member still writes its own pulse report exactly as it does standalone; this bundle changes only the scheduling, not where the individual reports land.\n\n' +
       '1. **pulse-hygiene** (`cortex-pulse-hygiene`): read `.cortex/_index.md`, then run `cortex pulse-hygiene`; it audits every Cortex artefact for staleness, broken cross-references, and budget overruns and writes `.cortex/pulse/reports/hygiene.md` (and prunes `.cortex/pulse/state/reads/*` ledgers older than 14 days, reporting the count). Propose only — never edit compass, atlas, the spec trees, or insight directly.\n' +
@@ -447,6 +499,9 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
       'Cortex weekly-quality bundle — runs specflow-lint, specflow-verify, and insight-refresh-full in sequence; reports land in .cortex/pulse/reports/.',
     model: 'claude-sonnet-5',
     requiredSkills: ['specflow-lint', 'specflow-tests', 'cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
+    // Bucket-3: lint and verify operate on the two spec trees.
+    specflowOnlyMembers: ['specflow-lint', 'specflow-verify'],
+    specflowOnlySkills: ['specflow-lint', 'specflow-tests'],
     body:
       'This is the Cortex **weekly-quality bundle** — one scheduled task covering three weekly quality loops. Run the members in the listed order, each with its own established skill discipline. **Failure isolation:** if a member fails, record the failure and CONTINUE to the next member — never abort the bundle because one member failed. Each member still writes its own pulse report exactly as it does standalone.\n\n' +
       '1. **specflow-lint** (`specflow-lint`): run the `specflow-lint` skill over both spec trees — format, naming, frontmatter, bidirectional links, and overview presence. Write the lint report to `.cortex/pulse/reports/lint.md`; apply only unambiguous mechanical fixes.\n' +
@@ -460,6 +515,8 @@ export const SCHEDULED_TASKS: ScheduledTask[] = [
       'Cortex test-runner bundle — runs the tiered test-runner cascade (the only code-writing loop, kept isolated) and triages failures into the bug-ledger workflow.',
     model: 'claude-sonnet-5',
     requiredSkills: ['cortex-loop-test-runner'],
+    // Bucket-3 in its entirety — the whole bundle is spec-first work.
+    profiles: ['specflow'],
     body:
       'This is the Cortex **test-runner bundle** — one scheduled task covering a single loop, the tiered test-runner. It is the only code-writing loop and is kept isolated by design (never merged with other loops). **Failure isolation:** if the member fails, record the failure in the digest rather than raising.\n\n' +
       '1. **test-runner** (`cortex-loop-test-runner`): run `cortex loop-test-runner --collect`, classify each pending failure in-session against the seven-type taxonomy with the `specflow-bugs` diagnostic discipline, then run `cortex loop-test-runner --fix-stage <results.json>`. It writes code behind the writer/verifier split this loop is governed by, drafts bug entries for `.cortex/compass/bugs/`, and summarises `.cortex/pulse/reports/test-failures.md`.\n\n' +

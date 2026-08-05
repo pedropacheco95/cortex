@@ -3,6 +3,7 @@ id: core-cli.developer-sets-up-cortex-in-one-command
 status: implemented
 implemented_by:
   - ../../specs/core-cli/init.spec.md
+  - ../../specs/core-cli/init-profile.spec.md
 ---
 
 # A developer sets up Cortex on a project in one command

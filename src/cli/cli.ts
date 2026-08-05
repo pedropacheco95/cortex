@@ -35,6 +35,7 @@
  * (core-cli.tasks-register, B-009 option 1).
  */
 import { init } from './init.js';
+import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
 
 /** Shared flag parsing for the collect/judge/propose-or-report-or-apply loops. */
 function parseLoopFlags(
@@ -500,6 +501,23 @@ export async function run(argv: string[]): Promise<number> {
   const noLlm = argv.includes('--no-llm');
   const partial = argv.includes('--partial');
 
+  // `--profile <name>` (spec core-cli.init-profile Rule 2). Omitted → the
+  // default; an unrecognised value is a usage error, never a silent fallback,
+  // because a typo would quietly schedule the wrong loop set.
+  let profile: ProcessProfile | undefined;
+  const profileIdx = argv.indexOf('--profile');
+  if (profileIdx >= 0) {
+    const value = argv[profileIdx + 1];
+    if (!isProcessProfile(value)) {
+      process.stderr.write(
+        `cortex init: unknown --profile ${value === undefined ? '(missing value)' : `"${value}"`}. ` +
+          `Valid profiles: ${PROCESS_PROFILES.join(', ')}. Nothing was written.\n`,
+      );
+      return 2;
+    }
+    profile = value;
+  }
+
   let timeoutMs: number | undefined;
   const timeoutIdx = argv.indexOf('--timeout-ms');
   if (timeoutIdx >= 0) {
@@ -507,7 +525,9 @@ export async function run(argv: string[]): Promise<number> {
     if (Number.isFinite(parsed) && parsed > 0) timeoutMs = parsed;
   }
 
-  const positional = argv.filter((a, i) => !a.startsWith('-') && i !== timeoutIdx + 1);
+  const positional = argv.filter(
+    (a, i) => !a.startsWith('-') && i !== timeoutIdx + 1 && i !== profileIdx + 1,
+  );
   const target = positional[0] ?? '.';
 
   try {
@@ -516,6 +536,7 @@ export async function run(argv: string[]): Promise<number> {
       yes,
       noLlm,
       partial,
+      ...(profile !== undefined ? { profile } : {}),
       ...(timeoutMs !== undefined ? { timeoutMs } : {}),
     });
     if (exitCode === 1 || exitCode === 2) {

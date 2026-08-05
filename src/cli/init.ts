@@ -13,6 +13,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { scaffoldInsight } from '../insight/scaffold.js';
 import { scaffoldArchive } from '../archive/scaffold.js';
+import { DEFAULT_PROFILE, type ProcessProfile } from './profile.js';
 import { validate } from '../schema/validate.js';
 import {
   SCHEMA_VERSION,
@@ -73,6 +74,12 @@ export interface InitOptions {
   claudeBin?: string;
   /** Accepted for CLI compatibility; unused since the purpose pass retired (step 7). */
   timeoutMs?: number;
+  /**
+   * The project's process profile (schema §10.1, spec `core-cli.init-profile`).
+   * Omitted → `specflow`. Recorded in cortex.config.json; its only consumer is
+   * scheduled-task scoping — Core stays process-agnostic.
+   */
+  profile?: ProcessProfile;
 }
 
 export interface InitResult {
@@ -123,7 +130,13 @@ function updateGitignore(root: string): string[] {
 // Rule 3 — skeleton
 // ---------------------------------------------------------------------------
 
-function writeSkeleton(root: string, force: boolean, nowIso: string): void {
+/** A fresh config for a new project, carrying the chosen profile (§10.1).
+ *  No flag → the default; there is nothing recorded yet to preserve. */
+function freshConfig(profile: ProcessProfile | undefined): Record<string, unknown> {
+  return { ...CONFIG_DEFAULTS, profile: profile ?? DEFAULT_PROFILE };
+}
+
+function writeSkeleton(root: string, force: boolean, nowIso: string, profile: ProcessProfile | undefined): void {
   const cortexDir = path.join(root, '.cortex');
 
   // Every §1 directory with its §7.1 active-prompt _index.md.
@@ -138,14 +151,25 @@ function writeSkeleton(root: string, force: boolean, nowIso: string): void {
   if (fs.existsSync(configPath)) {
     try {
       const existing = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
-      const merged: Record<string, unknown> = { ...CONFIG_DEFAULTS, ...existing, schemaVersion: SCHEMA_VERSION };
+      // Rule 2 + Rule 16: an explicit --profile overrides what the existing
+      // config says; with NO flag, an already-recorded profile is preserved
+      // rather than being reset to the default. This path is only reachable
+      // under --force (a plain re-init refuses and defers to `cortex sync`),
+      // and a forced repair must not silently flip a superpowers project back
+      // to specflow just because the flag was omitted.
+      const merged: Record<string, unknown> = {
+        ...CONFIG_DEFAULTS,
+        ...existing,
+        schemaVersion: SCHEMA_VERSION,
+        ...(profile !== undefined ? { profile } : {}),
+      };
       fs.writeFileSync(configPath, JSON.stringify(merged, null, 2) + '\n', 'utf-8');
     } catch {
       // unparseable existing config: only --force may replace it
-      if (force) fs.writeFileSync(configPath, JSON.stringify(CONFIG_DEFAULTS, null, 2) + '\n', 'utf-8');
+      if (force) fs.writeFileSync(configPath, JSON.stringify(freshConfig(profile), null, 2) + '\n', 'utf-8');
     }
   } else {
-    fs.writeFileSync(configPath, JSON.stringify(CONFIG_DEFAULTS, null, 2) + '\n', 'utf-8');
+    fs.writeFileSync(configPath, JSON.stringify(freshConfig(profile), null, 2) + '\n', 'utf-8');
   }
 
   // Compass skeleton leaves (preserved if present — curated knowledge).
@@ -450,6 +474,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   const force = opts.force ?? false;
   const yes = opts.yes ?? false;
   const partial = opts.partial ?? false;
+  const profile = opts.profile;
   const nowIso = new Date().toISOString();
 
   // Rule 1 — preflight: refuse before anything is written.
@@ -493,7 +518,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   const gitignoreAdded = updateGitignore(absRoot);
 
   // Rule 3 — skeleton.
-  writeSkeleton(absRoot, force, nowIso);
+  writeSkeleton(absRoot, force, nowIso, profile);
   const config = readConfig(absRoot);
   // hooks.preRead defaults TRUE (§10.1) — only an explicit false opts out.
   const preRead = ((config['hooks'] as Record<string, unknown> | undefined)?.['preRead']) !== false;

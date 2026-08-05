@@ -209,6 +209,10 @@ describe('Rule 3: skeleton', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect(config).toEqual({
       schemaVersion: '3.0',
+      // §10.1 v3.3: the process profile is written explicitly on a fresh
+      // project, defaulting to specflow (core-cli.init-profile Rule 2) — the
+      // config self-documents which build process the project runs.
+      profile: 'specflow',
       // preRead defaults TRUE and is written explicitly (§10.1: the Read pair
       // is on by default; the config self-documents).
       hooks: { preRead: true },

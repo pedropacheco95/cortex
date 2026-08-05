@@ -38,3 +38,5 @@ The bootstrap (`cortex init`) belongs here because it is mechanical sequencing o
 - Invokes the scanner: `../anatomy/`
 - Invokes the self-maintenance loops: `../pulse/`, `../loops/`
 - Launches the renderer: `../constellation/`
+
+- `core-cli.init-profile` — `cortex init --profile specflow|superpowers`: the process-profile field in `cortex.config.json` (schema §10.1) and the one thing that reads it — scheduled-task writing, which scopes Bucket-3 spec-loop members out under a non-specflow profile while every Bucket-1 knowledge loop stays scheduled.

@@ -28,7 +28,8 @@ import * as path from 'path';
 import * as readline from 'readline/promises';
 import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
-import { claudeMdBlock, scheduledTaskSkillMd, type ScheduledTask, SCHEDULED_TASKS } from './templates.js';
+import { claudeMdBlock, scheduledTaskSkillMd, type ScheduledTask, SCHEDULED_TASKS, scopeTaskToProfile } from './templates.js';
+import { readProfile } from './profile.js';
 import {
   CANONICAL_TASK_NAMES,
   RETIRED_CANONICAL_TASK_NAMES,
@@ -390,7 +391,14 @@ export function writeScheduledTasks(home: string, force: boolean, root: string, 
       if (!retired.includes(canonical)) retired.push(canonical);
     }
   }
-  for (const task of SCHEDULED_TASKS) {
+  // Profile scoping (core-cli.init-profile Rule 4): Bucket-3 spec-loop
+  // members are dropped when the project does not run the spec-first process.
+  // Under `specflow` — the default — every task passes through untouched.
+  const profile = readProfile(root);
+  const scopedTasks = SCHEDULED_TASKS.map((t) => scopeTaskToProfile(t, profile)).filter(
+    (t): t is ScheduledTask => t !== null,
+  );
+  for (const task of scopedTasks) {
     const missingSkills = missingRequiredSkills(root, task.requiredSkills);
     if (missingSkills.length > 0) {
       if (partial) {
