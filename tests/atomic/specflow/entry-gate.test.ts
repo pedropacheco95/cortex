@@ -131,9 +131,10 @@ describe('AC: the classification machinery survived the rename', () => {
 describe('AC: no tracked file still points at the old name', () => {
   /**
    * Frozen design records and archives keep the old name by design. Beyond
-   * those, a mention is allowed only when the line ANNOTATES it as a rename
-   * ("renamed from …") — that is a historical record. A bare mention is a
-   * live pointer and fails.
+   * those, a mention is allowed only when the line ANNOTATES the name as
+   * historical — renamed, retired, or no-longer-shipped. Those are records and
+   * retirement machinery; a BARE mention is a live pointer routing a reader to
+   * a skill that no longer exists, and fails.
    */
   const HISTORICAL_FILES = [
     'cortex-v3-design.md',
@@ -141,6 +142,12 @@ describe('AC: no tracked file still points at the old name', () => {
     path.join('.cortex', 'atlas', 'sources', 'cortex-v3-reframe.md'),
     // This test file states the old name in its own assertions.
     path.join('tests', 'atomic', 'specflow', 'entry-gate.test.ts'),
+    // The retirement machinery (B-015) must NAME the retired bundle in order
+    // to delete it. Naming a skill so sync removes it is the opposite of
+    // routing a reader to it.
+    path.join('src', 'cli', 'scaffold.ts'),
+    path.join('tests', 'atomic', 'core-cli', 'retired-bundles.test.ts'),
+    path.join('tests', 'spec', 'core-cli', 'sync-retirement.spec.test.ts'),
     // The rename's own spec — it necessarily names what was renamed, including
     // in the AC that pins this very check.
     path.join('.specflow', 'specs', 'specflow', 'entry-gate.spec.md'),
@@ -149,7 +156,7 @@ describe('AC: no tracked file still points at the old name', () => {
   function livePointerLines(content: string): string[] {
     return content
       .split('\n')
-      .filter((l) => l.includes('specflow-change-router') && !/renamed/i.test(l));
+      .filter((l) => l.includes('specflow-change-router') && !/renamed|retired|no longer ships/i.test(l));
   }
 
   it('the live surfaces — skills, specs, tests, indexes — name specflow-entry', () => {

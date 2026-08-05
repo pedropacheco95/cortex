@@ -94,7 +94,11 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
   });
 
   it('.claude/skills/ contains every specflow bundle alongside the cortex bundles', () => {
-    const installedDirs = fs.readdirSync(path.join(root, '.claude', 'skills')).sort();
+    const installedDirs = fs
+      .readdirSync(path.join(root, '.claude', 'skills'), { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
     for (const name of SPECFLOW_BUNDLES) {
       expect(installedDirs, `missing bundle ${name}`).toContain(name);
       expect(fs.existsSync(path.join(root, '.claude', 'skills', name, 'SKILL.md')), `${name}/SKILL.md`).toBe(true);

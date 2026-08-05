@@ -56,6 +56,7 @@ import {
   sha256Hex,
   INSTALLED_MARKER_FILENAME,
   listSkillBundles,
+  retiredBundles,
 } from './scaffold.js';
 
 export interface SyncOptions {
@@ -183,10 +184,26 @@ export interface SkillSyncResult {
   upgraded: string[];
   alreadyCurrent: string[];
   skippedUserModified: string[];
+  /** Rule 6 — retired bundles deleted from .claude/skills/ this run. */
+  removed: string[];
+  /** Rule 6 — retired bundles left in place because they were edited. */
+  skippedRetiredModified: string[];
 }
 
-async function syncSkillBundles(root: string, yes: boolean, rl?: ReadlineInterface): Promise<SkillSyncResult> {
-  const result: SkillSyncResult = { installed: [], upgraded: [], alreadyCurrent: [], skippedUserModified: [] };
+async function syncSkillBundles(
+  root: string,
+  yes: boolean,
+  toVersion: string,
+  rl?: ReadlineInterface,
+): Promise<SkillSyncResult> {
+  const result: SkillSyncResult = {
+    installed: [],
+    upgraded: [],
+    alreadyCurrent: [],
+    skippedUserModified: [],
+    removed: [],
+    skippedRetiredModified: [],
+  };
   const targetDir = path.join(root, '.claude', 'skills');
   fs.mkdirSync(targetDir, { recursive: true });
 
@@ -241,6 +258,44 @@ async function syncSkillBundles(root: string, yes: boolean, rl?: ReadlineInterfa
       else result.skippedUserModified.push(bundle);
     }
   }
+
+  // ---------------------------------------------------------------------
+  // Rule 6 — migration-driven retirement. Runs AFTER the install/upgrade loop
+  // so `bundles` is the authoritative shipped set, and so a name that a
+  // migration retires but the package still ships has already been handled as
+  // a normal bundle (safety invariant (b)).
+  // ---------------------------------------------------------------------
+  for (const bundle of retiredBundles(root, bundles, toVersion)) {
+    const target = path.join(targetDir, bundle);
+    const onDiskHash = hashDirectoryContent(target, [INSTALLED_MARKER_FILENAME]);
+    const marker = readInstalledMarker(path.join(target, INSTALLED_MARKER_FILENAME));
+    const unmodifiedSinceInstall = marker !== undefined && marker.sha256 === onDiskHash;
+
+    const doRemove = (): void => {
+      fs.rmSync(target, { recursive: true, force: true });
+      result.removed.push(bundle);
+    };
+
+    if (unmodifiedSinceInstall) {
+      doRemove();
+      continue;
+    }
+
+    // Edited, or unknown provenance (no marker — covers every project
+    // installed before the marker mechanism). Rule 13: never delete someone's
+    // edits without asking.
+    if (yes) {
+      doRemove();
+    } else {
+      const remove = await promptYesNo(
+        `Skill bundle "${bundle}" has been retired by Cortex but was modified since install (or has unknown provenance). Remove it? [y/N] `,
+        rl,
+      );
+      if (remove) doRemove();
+      else result.skippedRetiredModified.push(bundle);
+    }
+  }
+
   return result;
 }
 
@@ -447,7 +502,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
     // must never land between a prompt being issued and it being answered
     // (see Rule 13/B-012 above).
     opts.onProgress?.(`Syncing skill bundles (${skillBundleCount} to check)…`);
-    skillResult = await syncSkillBundles(absRoot, yes, rl);
+    skillResult = await syncSkillBundles(absRoot, yes, SCHEMA_VERSION, rl);
 
     // Rule 6 — hooks merge (same mechanism as init Rule 11).
     opts.onProgress?.('Merging hooks into .claude/settings.json…');
@@ -492,6 +547,15 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   if (skillResult.upgraded.length > 0) lines.push(`  Upgraded: ${skillResult.upgraded.join(', ')}.`);
   if (skillResult.skippedUserModified.length > 0) {
     lines.push(`  Skipped (user-modified, preserved): ${skillResult.skippedUserModified.join(', ')}.`);
+  }
+  // Rule 6/12: a deletion nobody is told about is indistinguishable from a bug.
+  if (skillResult.removed.length > 0) {
+    lines.push(`  Removed (retired by Cortex): ${skillResult.removed.join(', ')}.`);
+  }
+  if (skillResult.skippedRetiredModified.length > 0) {
+    lines.push(
+      `  Retired but preserved (modified since install — remove by hand when ready): ${skillResult.skippedRetiredModified.join(', ')}.`,
+    );
   }
   lines.push(
     `Hooks registered in .claude/settings.json: ${registeredHooks.join(', ')}${preRead ? '' : ' (Read pair off per cortex.config.json hooks.preRead)'}`,

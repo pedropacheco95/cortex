@@ -119,6 +119,95 @@ export function listSkillBundles(srcDir: string): string[] {
     .sort();
 }
 
+
+/**
+ * Skill-bundle migrations (spec `core-cli.sync` Rule 6, B-015).
+ *
+ * Cortex installs and upgrades bundles by diffing against what the package
+ * ships, but a bundle it has STOPPED shipping is invisible to that diff — it
+ * just sits in `.claude/skills/` forever. After a rename that means two
+ * skills installed, both claiming the same job.
+ *
+ * The fix is shaped like a database migration chain: each release that retires
+ * a bundle appends one entry saying which version dropped what, and why.
+ *
+ * The entries are DECLARATIVE — "no project at or past version X should have
+ * these" — and sync enforces them on every run rather than only in the window
+ * it is upgrading across. That distinction is load-bearing: a cursor-based
+ * migration advances past an entry the moment the version is written, so a
+ * developer who declines the prompt once (because the bundle was edited) would
+ * never be offered it again, and the orphan becomes permanent. Enforcing by
+ * state instead means a declined removal is simply re-offered next sync, and
+ * re-running when everything is already gone is a silent no-op.
+ *
+ * Adding an entry is the checklist item for retiring a bundle, the same way a
+ * schema change gets a migration. `tests/atomic/core-cli/retired-bundles.test.ts`
+ * pins the invariant that keeps a mistake cheap: no migration may name a
+ * bundle the package still ships.
+ */
+export interface SkillMigration {
+  /** The package version that retired these bundles (`MAJOR.MINOR`, schema §10.1). */
+  version: string;
+  /** Bundle directory names removed from `.claude/skills/` at that version. */
+  removed: readonly string[];
+  /** Why they went — surfaced in the sync summary and read by whoever audits the chain. */
+  reason: string;
+}
+
+export const SKILL_MIGRATIONS: readonly SkillMigration[] = [
+  {
+    version: '3.3',
+    removed: ['specflow-change-router', '_conventions'],
+    reason:
+      'specflow-change-router was renamed to specflow-entry (specflow.entry-gate); _conventions became repo-side authoring material and is no longer installed (discipline.hardening-convention)',
+  },
+];
+
+/** Compare two `MAJOR.MINOR` versions. Returns <0, 0, or >0. */
+export function compareVersions(a: string, b: string): number {
+  const parse = (v: string): [number, number] => {
+    const [major, minor] = v.split('.');
+    return [parseInt(major ?? '0', 10) || 0, parseInt(minor ?? '0', 10) || 0];
+  };
+  const [aMajor, aMinor] = parse(a);
+  const [bMajor, bMinor] = parse(b);
+  return aMajor !== bMajor ? aMajor - bMajor : aMinor - bMinor;
+}
+
+/**
+ * The migrations in force at version `to` — every entry that version has
+ * reached. A migration dated ahead of the installed package never applies.
+ */
+export function applicableSkillMigrations(to: string): SkillMigration[] {
+  return SKILL_MIGRATIONS.filter((m) => compareVersions(m.version, to) <= 0);
+}
+
+/**
+ * Bundle directories this project should not have at version `to`
+ * (spec `core-cli.sync` Rule 6).
+ *
+ * Two safety invariants applied after the migration lookup: never a bundle the
+ * package currently ships (so a bad migration entry cannot delete a live
+ * skill), and never a directory no migration names (so a developer's own skill
+ * is not a candidate at all).
+ */
+export function retiredBundles(root: string, shipped: string[], to: string): string[] {
+  const skillsDir = path.join(root, '.claude', 'skills');
+  if (!fs.existsSync(skillsDir)) return [];
+
+  const shippedSet = new Set(shipped);
+  const named = new Set(applicableSkillMigrations(to).flatMap((m) => [...m.removed]));
+  const present = new Set(
+    fs.readdirSync(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name),
+  );
+
+  return [...named]
+    .filter((name) => !shippedSet.has(name))
+    .filter((name) => present.has(name))
+    .sort();
+}
+
+
 export async function installSkills(root: string, yes: boolean): Promise<{ installed: number; preserved: number }> {
   const targetDir = path.join(root, '.claude', 'skills');
   fs.mkdirSync(targetDir, { recursive: true });

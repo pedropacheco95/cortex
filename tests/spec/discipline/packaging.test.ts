@@ -87,7 +87,10 @@ describe('AC: the discipline bundles install from a fresh init', () => {
   }
 
   it('every installed directory is a real bundle — each carries a SKILL.md', () => {
-    for (const name of fs.readdirSync(path.join(root, '.claude', 'skills'))) {
+    for (const name of fs
+      .readdirSync(path.join(root, '.claude', 'skills'), { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)) {
       expect(
         fs.existsSync(path.join(root, '.claude', 'skills', name, 'SKILL.md')),
         `${name} was installed without a SKILL.md`,
@@ -99,7 +102,13 @@ describe('AC: the discipline bundles install from a fresh init', () => {
     const bundles = listSkillBundles(PKG_SKILLS);
     for (const name of REFERENCE_DIRS) expect(bundles).not.toContain(name);
     for (const name of DISCIPLINE_BUNDLES) expect(bundles).toContain(name);
-    expect(bundles).toEqual(fs.readdirSync(path.join(root, '.claude', 'skills')).sort());
+    expect(bundles).toEqual(
+      fs
+        .readdirSync(path.join(root, '.claude', 'skills'), { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort(),
+    );
   });
 });
 
