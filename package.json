@@ -42,6 +42,7 @@
     "test:atomic": "vitest run tests/atomic",
     "test:spec": "vitest run tests/spec",
     "dev": "node dist/cli/cli.js",
+    "check:skill-budget": "node scripts/measure-skill-descriptions.mjs",
     "prepublishOnly": "pnpm build && pnpm test"
   },
   "dependencies": {

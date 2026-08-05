@@ -1,15 +1,21 @@
 ---
 name: cortex-loop-bug-triage
-description: >-
-  Daily bug-ledger triage loop for a Cortex project. Use for the scheduled
-  bug-triage task, or when the user says "run the bug-triage loop", "triage
-  the open bugs", or "classify the bug ledger". Runs
-  `cortex loop-bug-triage --collect`, classifies each worklist bug in-session
-  with the specflow-bugs discipline, runs `cortex loop-bug-triage --report`,
-  and summarises .cortex/pulse/reports/bug-triage.md.
+description: 'Triage and classify the bug ledger. "run the bug-triage loop", "triage the open bugs".'
 ---
 
 # cortex-loop-bug-triage
+
+## When to use
+
+Daily bug-ledger triage. Use for the scheduled **daily** bundle's bug-triage
+member, or when the user says "run the bug-triage loop", "triage the open bugs",
+or "classify the bug ledger".
+
+Runs `cortex loop-bug-triage --collect`, classifies each worklist bug in-session
+with the `specflow-bugs` discipline, runs `cortex loop-bug-triage --report`, and
+summarises `.cortex/pulse/reports/bug-triage.md`.
+
+## Discipline
 
 You are the judgment middle between two deterministic Core halves (spec
 loops.bug-triage Rule 1). You already ARE a Claude session: **never spawn a

@@ -1,22 +1,27 @@
 ---
 name: cortex-extract-insight
-description: >-
-  Build or refresh the Cortex insight layer — the per-file, per-concept
-  understanding of a codebase stored under `.cortex/insight/`. Use this when
-  the user says "extract insight", "run the extraction", "build the insight
-  layer", "map this codebase", "run the initial extraction", "Cortex doesn't
-  understand this codebase yet", or "refresh insight for <file/scope/concept>";
-  when a scheduled task invokes the extraction directly; or when an insight
-  refresh loop (cortex-loop-insight-refresh-daily, a member of the daily
-  bundle, or cortex-loop-insight-refresh-full, a member of the weekly-quality
-  bundle) hands this skill a dirty-file worklist to re-extract. Runs four
-  phases: a deterministic L1 structural pass
-  (Core), extraction planning with a scope registry, parallel per-scope L2/L3
-  execution, and cross-scope L4 unification. There is no
-  `cortex extract-insight` CLI command — this skill IS the extraction.
+description: 'Build, extract or refresh the codebase insight layer. "extract insight", "map this codebase".'
 ---
 
 # cortex-extract-insight
+
+## When to use
+
+Use when the user says "extract insight", "run the extraction", "build the
+insight layer", "map this codebase", "run the initial extraction", "Cortex
+doesn't understand this codebase yet", or "refresh insight for
+<file/scope/concept>"; when a scheduled task invokes the extraction directly; or
+when an insight refresh loop hands this skill a dirty-file worklist to
+re-extract — `cortex-loop-insight-refresh-daily` (daily bundle) or
+`cortex-loop-insight-refresh-full` (weekly-quality bundle).
+
+Builds the per-file, per-concept understanding of a codebase stored under
+`.cortex/insight/`, in four phases: a deterministic L1 structural pass (Core),
+extraction planning with a scope registry, parallel per-scope L2/L3 execution,
+and cross-scope L4 unification. There is **no `cortex extract-insight` CLI
+command** — this skill IS the extraction.
+
+## What you do
 
 You produce the `.cortex/insight/` layer — an inferred, persistent, queryable
 understanding of the codebase (design §5.1) — as **a plan, not a pipeline**

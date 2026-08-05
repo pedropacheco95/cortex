@@ -1,16 +1,22 @@
 ---
 name: cortex-pulse-distil
-description: >-
-  Weekly session-distillation loop for a Cortex project. Use for the scheduled
-  weekly-curation bundle's distil member, or when the user says "run the distil
-  loop", "what do I keep repeating", "mine the sessions for rule candidates", or
-  "which workflows deserve a skill". Runs `cortex pulse-distil --collect`,
-  performs the pattern judgment in-session — including the workflow-mining lens
-  that proposes new skills — runs `cortex pulse-distil --propose`, and
-  summarises .cortex/pulse/suggestions.md.
+description: 'Distil sessions into rule and skill candidates. "run the distil loop", "what do I keep repeating".'
 ---
 
 # cortex-pulse-distil
+
+## When to use
+
+Weekly session-distillation loop. Use for the scheduled **weekly-curation**
+bundle's distil member, or when the user says "run the distil loop", "what do I
+keep repeating", "mine the sessions for rule candidates", or "which workflows
+deserve a skill".
+
+Runs `cortex pulse-distil --collect`, performs the pattern judgment in-session —
+including the workflow-mining lens that proposes new skills — runs `cortex
+pulse-distil --propose`, and summarises `.cortex/pulse/suggestions.md`.
+
+## Discipline
 
 You are the judgment middle between two deterministic Core halves (spec
 pulse.distil Rule 1). The CLI collects and proposes; you — this session — do

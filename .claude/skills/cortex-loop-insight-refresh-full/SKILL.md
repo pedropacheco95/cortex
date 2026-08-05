@@ -1,16 +1,22 @@
 ---
 name: cortex-loop-insight-refresh-full
-description: >-
-  Weekly ground-truth insight regeneration loop for a Cortex project. Use for
-  the scheduled insight-refresh-full task, or when the user says "run the full
-  insight refresh", "regenerate the insight graph", or "rebuild L4". Runs
-  `cortex loop-insight-refresh --full --collect`, re-runs cross-scope L4
-  unification via cortex-extract-insight over all scopes, runs
-  `cortex loop-insight-refresh --full --report`, and summarises
-  .cortex/pulse/reports/insight-refresh.md.
+description: 'Regenerate the whole insight graph. "run the full insight refresh", "rebuild L4".'
 ---
 
 # cortex-loop-insight-refresh-full
+
+## When to use
+
+Weekly ground-truth insight regeneration. Use for the scheduled
+**weekly-quality** bundle's insight-refresh-full member, or when the user says
+"run the full insight refresh", "regenerate the insight graph", or "rebuild L4".
+
+Runs `cortex loop-insight-refresh --full --collect`, re-runs cross-scope L4
+unification via `cortex-extract-insight` over all scopes, runs `cortex
+loop-insight-refresh --full --report`, and summarises
+`.cortex/pulse/reports/insight-refresh.md`.
+
+## Discipline
 
 You are the regeneration middle between two deterministic Core halves (spec
 insight.refresh-loops Rules 1, 8). The CLI collects the ground set and

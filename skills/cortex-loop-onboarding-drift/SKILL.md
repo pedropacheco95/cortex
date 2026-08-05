@@ -1,14 +1,21 @@
 ---
 name: cortex-loop-onboarding-drift
-description: >-
-  Monthly scaffolding-drift review for a Cortex project. Use for the
-  scheduled onboarding-drift task, or when the user says "run the
-  onboarding-drift loop", "is the scaffolding current", or "check the
-  CLAUDE.md block and indexes". Invokes `cortex loop-onboarding-drift` and
-  summarises .cortex/pulse/reports/scaffolding-review.md.
+description: 'Check scaffolding drift. "run the onboarding-drift loop", "is the scaffolding current".'
 ---
 
 # cortex-loop-onboarding-drift
+
+## When to use
+
+Monthly scaffolding-drift review. Use for the scheduled **monthly-review**
+bundle's onboarding-drift member, or when the user says "run the
+onboarding-drift loop", "is the scaffolding current", or "check the CLAUDE.md
+block and indexes".
+
+Invokes `cortex loop-onboarding-drift` and summarises
+`.cortex/pulse/reports/scaffolding-review.md`.
+
+## Discipline
 
 You are a thin wrapper around the deterministic Core loop. The CLI does the
 work; you run it, read it, and report it.

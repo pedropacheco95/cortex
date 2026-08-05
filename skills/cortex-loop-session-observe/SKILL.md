@@ -1,23 +1,30 @@
 ---
 name: cortex-loop-session-observe
-description: >-
-  Session-observation loop for a Cortex project — the v3 successor to v2's
-  insight-gaps, and the primary producer of automatic, ungated project
-  learning. Use for the scheduled session-observe task, or when the user says
-  "run the session-observe loop", "what did we learn this session", or
-  "capture session observations". Runs `cortex loop-session-observe
-  --collect`, reads the unobserved sessions from the shared corpus, infers
-  durable knowledge (project context stated in passing, user corrections,
-  gotchas hit, non-obvious behaviour, patterns established), classifies each
-  with a prefer-ungated tiebreaker, and enriches directly with no approval —
-  project-wide context into insight/observations/, per-file facts into
-  insight per-file entries — carrying claude-sessions provenance; only the
-  minority that should bind future work becomes a rule-candidate or
-  decision-candidate pulse proposal — then runs `cortex loop-session-observe
-  --apply --proposals <file>` and summarises .cortex/pulse/reports/session-observe.md.
+description: 'Mine past sessions for durable learning. "run the session-observe loop", "what did we learn".'
 ---
 
 # cortex-loop-session-observe
+
+## When to use
+
+Session-observation loop — the v3 successor to v2's insight-gaps, and the
+primary producer of automatic, ungated project learning. Use for the scheduled
+**daily** bundle's session-observe member, or when the user says "run the
+session-observe loop", "what did we learn this session", or "capture session
+observations".
+
+Runs `cortex loop-session-observe --collect`, reads the unobserved sessions from
+the shared corpus, infers durable knowledge (project context stated in passing,
+user corrections, gotchas hit, non-obvious behaviour, patterns established),
+classifies each with a prefer-ungated tiebreaker, and enriches directly with no
+approval — project-wide context into `insight/observations/`, per-file facts
+into insight per-file entries — carrying claude-sessions provenance. Only the
+minority that should bind future work becomes a rule-candidate or
+decision-candidate pulse proposal. Then runs `cortex loop-session-observe
+--apply --proposals <file>` and summarises
+`.cortex/pulse/reports/session-observe.md`.
+
+## Discipline
 
 You are the judgment middle between two deterministic Core bookends (spec
 insight.session-observe Rule 10). The CLI collects the worklist and audits

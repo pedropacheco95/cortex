@@ -1,14 +1,20 @@
 ---
 name: cortex-pulse-hygiene
-description: >-
-  Daily deterministic hygiene sweep for a Cortex project. Use for the
-  scheduled hygiene task, or when the user says "run the hygiene loop",
-  "hygiene sweep", "project health check", or asks what unfinished or broken
-  state the project has. Invokes `cortex pulse-hygiene` and summarises
-  .cortex/pulse/reports/hygiene.md.
+description: 'Sweep the project for broken or stale Cortex state. "run the hygiene loop", "project health check".'
 ---
 
 # cortex-pulse-hygiene
+
+## When to use
+
+Daily deterministic hygiene sweep. Use for the scheduled **daily** bundle's
+hygiene member, or when the user says "run the hygiene loop", "hygiene sweep",
+"project health check", or asks what unfinished or broken state the project has.
+
+Invokes `cortex pulse-hygiene` and summarises
+`.cortex/pulse/reports/hygiene.md`.
+
+## Discipline
 
 You are a thin wrapper around the deterministic Core sweep. The CLI does the
 work; you run it, read it, and report it.

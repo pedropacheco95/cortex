@@ -1,19 +1,25 @@
 ---
 name: cortex-register-tasks
-description: >-
-  Register a Cortex project's five scheduled-task bundles with the Claude
-  Desktop app, from inside a Claude Desktop session, using the app's own
-  scheduled-tasks tools. Use when the user says "register the cortex
-  scheduled tasks", "run cortex-register-tasks", "set up the cortex loops in
-  the app", "activate the cortex tasks", or after `cortex init` / `cortex
-  tasks verify` reports tasks not yet registered. Reads the authoritative
-  plan from `cortex tasks plan --json`, diffs it against
-  mcp__scheduled-tasks__list_scheduled_tasks, creates/updates only this
-  project's tasks (replacing its own superseded legacy tasks), and confirms
-  with `cortex tasks verify`.
+description: 'Register or activate this project''s cortex scheduled tasks in the Claude Desktop app.'
 ---
 
 # cortex-register-tasks
+
+## When to use
+
+Use when the user says "register the cortex scheduled tasks", "run
+cortex-register-tasks", "set up the cortex loops in the app", "activate the
+cortex tasks", or after `cortex init` / `cortex tasks verify` reports tasks not
+yet registered.
+
+Registers a Cortex project's five scheduled-task bundles with the Claude Desktop
+app, **from inside a Claude Desktop session**, using the app's own
+scheduled-tasks tools: reads the authoritative plan from `cortex tasks plan
+--json`, diffs it against `mcp__scheduled-tasks__list_scheduled_tasks`,
+creates/updates only this project's tasks (replacing its own superseded legacy
+tasks), and confirms with `cortex tasks verify`.
+
+## What you do
 
 You register this project's five Cortex scheduled-task bundles with the Claude
 Desktop app the sanctioned way: through the app's own internal MCP tools, from

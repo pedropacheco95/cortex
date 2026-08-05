@@ -1,22 +1,30 @@
 ---
 name: cortex-archive-ingest
-description: >-
-  Ingest any document into Cortex's archive — client specs, contracts,
-  regulatory/compliance documents, technical specs from stakeholders, meeting
-  transcripts, interview recordings, call notes, RFCs/architecture docs,
-  existing codebase documentation, user research and feedback. Use this when
-  the user says "ingest this transcript", "ingest this RFP", "ingest this
-  brief", "ingest this email", "ingest this design doc", "ingest this client
-  spec", "ingest this contract", "add this to project memory", "capture this
-  call", "remember this decision", "log these stakeholders", or drops any raw
-  document. One skill, internal type routing by `archive/types/*.yaml` — a new
-  document type never requires a new skill. Sibling of `specflow-ingest`,
-  which owns requirement-shaped sources destined for the spec trees. This
-  skill replaces the retired `cortex-ingest` (atlas-only ingestion is now the
-  `atlas` extraction strategy inside this skill).
+description: 'Ingest a transcript, RFP, brief or contract into project memory. "add this to project memory".'
 ---
 
 # cortex-archive-ingest
+
+## When to use
+
+Use when the user drops **any** raw document into the session, or says "ingest
+this transcript", "ingest this RFP", "ingest this brief", "ingest this email",
+"ingest this design doc", "ingest this client spec", "ingest this contract",
+"add this to project memory", "capture this call", "remember this decision", or
+"log these stakeholders".
+
+Document types in scope: client specs, contracts, regulatory/compliance
+documents, technical specs from stakeholders, meeting transcripts, interview
+recordings, call notes, RFCs/architecture docs, existing codebase documentation,
+user research and feedback. **One skill, internal type routing** by
+`archive/types/*.yaml` — a new document type never requires a new skill.
+
+**Boundaries.** Sibling of `specflow-ingest`, which owns requirement-shaped
+sources destined for the spec trees. This skill replaces the retired
+`cortex-ingest` (atlas-only ingestion is now the `atlas` extraction strategy
+inside this skill).
+
+## What you do
 
 You turn any ingested document into durable, authoritative Cortex memory under
 `.cortex/archive/` (schema §4.4), then — only if the user asks — draft a

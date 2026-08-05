@@ -1,13 +1,20 @@
 ---
 name: cortex-loop-rule-decay
-description: >-
-  Weekly rule-obsolescence review for a Cortex project. Use for the scheduled
-  rule-decay task, or when the user says "run the rule-decay loop", "which
-  rules are stale", or "audit the compass rules". Invokes
-  `cortex loop-rule-decay` and summarises .cortex/pulse/reports/rule-candidates.md.
+description: 'Find obsolete compass rules. "run the rule-decay loop", "which rules are stale".'
 ---
 
 # cortex-loop-rule-decay
+
+## When to use
+
+Weekly rule-obsolescence review. Use for the scheduled **weekly-curation**
+bundle's rule-decay member, or when the user says "run the rule-decay loop",
+"which rules are stale", or "audit the compass rules".
+
+Invokes `cortex loop-rule-decay` and summarises
+`.cortex/pulse/reports/rule-candidates.md`.
+
+## Discipline
 
 You are a thin wrapper around the deterministic Core loop. The CLI does the
 work; you run it, read it, and report it.

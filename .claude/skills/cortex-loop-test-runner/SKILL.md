@@ -1,16 +1,22 @@
 ---
 name: cortex-loop-test-runner
-description: >-
-  Tiered test-runner loop for a Cortex project — the only code-writing loop.
-  Use for the scheduled test-runner task, or when the user says "run the
-  test-runner loop", "run the test cascade", or "triage the failing tests".
-  Runs `cortex loop-test-runner --collect`, classifies each pending failure
-  in-session with the specflow-bugs discipline, runs
-  `cortex loop-test-runner --fix-stage <results.json>`, and summarises
-  .cortex/pulse/reports/test-failures.md.
+description: 'Run the test cascade and triage failures. "run the test-runner loop", "triage the failing tests".'
 ---
 
 # cortex-loop-test-runner
+
+## When to use
+
+Tiered test-runner loop — **the only code-writing loop**. Use for the scheduled
+**test-runner** bundle, or when the user says "run the test-runner loop", "run
+the test cascade", or "triage the failing tests".
+
+Runs `cortex loop-test-runner --collect`, classifies each pending failure
+in-session with the `specflow-bugs` discipline, runs `cortex loop-test-runner
+--fix-stage <results.json>`, and summarises
+`.cortex/pulse/reports/test-failures.md`.
+
+## Discipline
 
 You are the classification judgment between two deterministic Core halves
 (spec loops.test-runner Rules 1 & 4). You already ARE a Claude session:

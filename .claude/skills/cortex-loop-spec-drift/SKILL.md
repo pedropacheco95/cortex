@@ -1,13 +1,20 @@
 ---
 name: cortex-loop-spec-drift
-description: >-
-  Daily spec-content drift detector for a Cortex project. Use for the
-  scheduled spec-drift task, or when the user says "run the spec-drift
-  loop", "have the specs drifted", or "which specs lag their code". Invokes
-  `cortex loop-spec-drift` and summarises .cortex/pulse/reports/spec-drift.md.
+description: 'Detect specs that lag their code. "run the spec-drift loop", "have the specs drifted".'
 ---
 
 # cortex-loop-spec-drift
+
+## When to use
+
+Daily spec-content drift detection. Use for the scheduled **daily** bundle's
+spec-drift member, or when the user says "run the spec-drift loop", "have the
+specs drifted", or "which specs lag their code".
+
+Invokes `cortex loop-spec-drift` and summarises
+`.cortex/pulse/reports/spec-drift.md`.
+
+## Discipline
 
 You are a thin wrapper around the deterministic Core loop. The CLI does the
 work; you run it, read it, and report it.

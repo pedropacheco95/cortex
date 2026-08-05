@@ -1,17 +1,23 @@
 ---
 name: cortex-loop-insight-refresh-daily
-description: >-
-  Daily insight-refresh loop for a Cortex project. Use for the scheduled
-  insight-refresh-daily task, or when the user says "run the daily insight
-  refresh", "refresh the insight layer", or "re-extract what changed". Runs
-  `cortex loop-insight-refresh --daily --collect`, triages the uncertain files
-  in-session, re-extracts L2/L3 via cortex-extract-insight in dirty-only mode,
-  re-verifies stale references and aged edges, runs
-  `cortex loop-insight-refresh --daily --apply`, and summarises
-  .cortex/pulse/reports/insight-refresh.md.
+description: 'Re-extract changed files. "run the daily insight refresh", "refresh the insight layer".'
 ---
 
 # cortex-loop-insight-refresh-daily
+
+## When to use
+
+Daily insight-refresh loop. Use for the scheduled **daily** bundle's
+insight-refresh-daily member, or when the user says "run the daily insight
+refresh", "refresh the insight layer", or "re-extract what changed".
+
+Runs `cortex loop-insight-refresh --daily --collect`, triages the uncertain
+files in-session, re-extracts L2/L3 via `cortex-extract-insight` in dirty-only
+mode, re-verifies stale references and aged edges, runs `cortex
+loop-insight-refresh --daily --apply`, and summarises
+`.cortex/pulse/reports/insight-refresh.md`.
+
+## Discipline
 
 You are the judgment middle between two deterministic Core halves (spec
 insight.refresh-loops Rule 7). The CLI collects the worklist and reconciles
