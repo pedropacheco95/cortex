@@ -1,12 +1,12 @@
 ---
 path: src/schema/validate.ts
-extracted_at: 2026-07-23T12:00:00Z
+extracted_at: 2026-08-05T01:00:00Z
 extraction_level: 3
-size_lines: 177
+size_lines: 178
 size_tokens: 1613
 centrality: high
-built_at_commit: "bcbda52"
-source_sha256: "1aebe6c04a158535eb3514669d83ed56d75da208666a576931556b7a37c14a3b"
+built_at_commit: "c667a9a"
+source_sha256: "b10d674ff0d2e2e9682ca71ac523cf7fd116c9511625dc0871ed320ba29dd2e6"
 ---
 # src/schema/validate.ts
 
@@ -27,7 +27,7 @@ The top-level orchestrator of the entire schema validator: `validate(target, opt
 
 ## Connections
 Uses:
-- src/schema/checks/archive.ts: `checkArchiveLayout`, `checkArchiveMetadata`, `checkArchiveType`.
+- src/schema/checks/archive.ts: `checkArchiveLayout`, `checkArchiveMetadata`, `checkArchiveType`, `checkArchiveIntentRegister` (new at schema 3.2).
 - src/schema/checks/atlas.ts: `checkAtlas`.
 - src/schema/checks/bizspec.ts: `checkBizSpecs`, `checkBusinessStatus`.
 - src/schema/checks/claude-md.ts: `checkClaudeMd`.

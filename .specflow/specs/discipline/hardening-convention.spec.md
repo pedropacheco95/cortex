@@ -18,8 +18,11 @@ mechanism degrades into decoration: an Iron Law that hedges, a rationalization t
 excuses nobody actually makes, a gate with no anti-pattern paragraph.
 
 The convention is a reference document, not a skill: `skills/_conventions/hardening.md` carries
-no `SKILL.md`, so Claude Code does not register it as an invocable skill. It ships with the
-package so that hardened skill bodies referencing it resolve in installed projects too.
+no `SKILL.md`. It is **repo-side authoring material** — read when writing or hardening a skill in
+this repository — and is deliberately **not installed** into consuming projects, where nobody
+authors these bundles. Hardened skill bodies cite it as provenance ("hardening mechanisms per
+…"), the same way they cite a spec id: a reference to where the rule comes from, not a file the
+consuming agent is expected to open.
 
 ## Entities
 
@@ -46,9 +49,13 @@ package so that hardened skill bodies referencing it resolve in installed projec
 5. **The convention is referenced, not duplicated.** A hardened skill points at
    `skills/_conventions/hardening.md` rather than restating the recipe; the skill carries its
    own instantiated Iron Law and table, not the meta-explanation of them.
-6. **Not a skill directory.** `skills/_conventions/` contains no `SKILL.md` and declares no
-   frontmatter skill metadata; it is a shipped reference directory that sits alongside the
-   bundles.
+6. **Not a skill directory, and not installed.** `skills/_conventions/` contains no `SKILL.md`
+   and declares no frontmatter skill metadata. `installSkills`/`syncSkillBundles` define a
+   bundle as *a directory containing a `SKILL.md`* (`listSkillBundles`, the shared enumeration
+   in `src/cli/scaffold.ts`), so the directory is skipped by install and sync and never lands in
+   a project's `.claude/skills/`. Consequences that are intended, not incidental: no non-skill
+   directory appears in a skills directory, and the "Skills installed: N" summary counts skills
+   only.
 
 ## Acceptance Criteria
 
@@ -72,20 +79,29 @@ package so that hardened skill bodies referencing it resolve in installed projec
 - **Then** it requires the "too simple to need this gate" anti-pattern paragraph and explains
   why the gate fails without it
 
-### It is not registered as a skill
+### It is not a skill, and is not installed
 
 - **Given** the shipped package
 - **When** `skills/_conventions/` is inspected
-- **Then** it contains no `SKILL.md`, and a fresh `cortex init` still installs the directory so
-  references from hardened skill bodies resolve in the installed project
+- **Then** it contains no `SKILL.md`, and a fresh `cortex init` does **not** create
+  `.claude/skills/_conventions/` — the install count reflects skills only
+
+### A directory without a SKILL.md is never treated as a bundle
+
+- **Given** a directory under the package `skills/` dir with no `SKILL.md`
+- **When** `cortex init` or `cortex sync` enumerates bundles
+- **Then** it is skipped by both, through the one shared `listSkillBundles` enumeration rather
+  than a filter duplicated per call site
 
 ## Notes
 
-- Engineering call recorded per standing authorities: the convention ships inside `skills/`
-  rather than a repo-only docs path, because hardened skill bodies reference it by path and
-  those bodies are installed into user projects. `installSkills` copies every directory under
-  the package `skills/` dir, so no Core change was needed — the count pins in
-  `tests/spec/specflow/awareness.test.ts` absorb the extra directory instead.
+- The convention lives inside `skills/` because that is where the bundles it governs live —
+  an author hardening a skill finds the recipe next to the thing being hardened. It was
+  originally shipped-and-installed to keep the citation resolvable in consuming projects;
+  Pedro's call (2026-08-05) was to filter instead, on the grounds that a directory with no
+  `SKILL.md` has no business in a project's `.claude/skills/` and should not inflate the
+  installed count. The citation stays as provenance, which is how the hardened bodies already
+  read it.
 - The plan's §0 "Cut" removed a general `writing-skills` authoring discipline. This convention
   is deliberately narrower: it is the graft recipe for three named mechanisms, not a theory of
   skill authoring.

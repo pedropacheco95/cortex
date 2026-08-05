@@ -55,6 +55,7 @@ import {
   writeInstalledMarker,
   sha256Hex,
   INSTALLED_MARKER_FILENAME,
+  listSkillBundles,
 } from './scaffold.js';
 
 export interface SyncOptions {
@@ -192,23 +193,23 @@ async function syncSkillBundles(root: string, yes: boolean, rl?: ReadlineInterfa
   const srcDir = path.join(packageRoot(), 'skills');
   if (!fs.existsSync(srcDir)) return result;
 
-  const bundles = fs.readdirSync(srcDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+  const bundles = listSkillBundles(srcDir);
   for (const bundle of bundles) {
-    const source = path.join(srcDir, bundle.name);
-    const target = path.join(targetDir, bundle.name);
+    const source = path.join(srcDir, bundle);
+    const target = path.join(targetDir, bundle);
     const markerPath = path.join(target, INSTALLED_MARKER_FILENAME);
     const shippedHash = hashDirectoryContent(source);
 
     if (!fs.existsSync(target)) {
       fs.cpSync(source, target, { recursive: true });
       writeInstalledMarker(markerPath, shippedHash);
-      result.installed.push(bundle.name);
+      result.installed.push(bundle);
       continue;
     }
 
     const onDiskHash = hashDirectoryContent(target, [INSTALLED_MARKER_FILENAME]);
     if (onDiskHash === shippedHash) {
-      result.alreadyCurrent.push(bundle.name);
+      result.alreadyCurrent.push(bundle);
       continue;
     }
 
@@ -219,7 +220,7 @@ async function syncSkillBundles(root: string, yes: boolean, rl?: ReadlineInterfa
       fs.rmSync(target, { recursive: true, force: true });
       fs.cpSync(source, target, { recursive: true });
       writeInstalledMarker(markerPath, shippedHash);
-      result.upgraded.push(bundle.name);
+      result.upgraded.push(bundle);
     };
 
     if (unmodifiedSinceInstall) {
@@ -233,11 +234,11 @@ async function syncSkillBundles(root: string, yes: boolean, rl?: ReadlineInterfa
       doUpgrade();
     } else {
       const overwrite = await promptYesNo(
-        `Skill bundle "${bundle.name}" was modified since install (or has unknown provenance). Overwrite with the upgraded shipped version? [y/N] `,
+        `Skill bundle "${bundle}" was modified since install (or has unknown provenance). Overwrite with the upgraded shipped version? [y/N] `,
         rl,
       );
       if (overwrite) doUpgrade();
-      else result.skippedUserModified.push(bundle.name);
+      else result.skippedUserModified.push(bundle);
     }
   }
   return result;
@@ -429,9 +430,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   // Cheap bundle count for the Rule 5 progress message below — a directory
   // listing, not the hashing syncSkillBundles itself does.
   const skillsSrcDir = path.join(packageRoot(), 'skills');
-  const skillBundleCount = fs.existsSync(skillsSrcDir)
-    ? fs.readdirSync(skillsSrcDir, { withFileTypes: true }).filter((e) => e.isDirectory()).length
-    : 0;
+  const skillBundleCount = listSkillBundles(skillsSrcDir).length;
 
   // B-012: ONE shared readline interface for every "modified since install"
   // prompt this whole run may ask — Rule 5 (skill bundles) AND Rule 8 (task

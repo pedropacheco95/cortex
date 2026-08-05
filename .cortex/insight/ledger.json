@@ -3,9 +3,9 @@
   "built_at_commit": "0438f32",
   "entries": {
     "src/archive/formats.ts": {
-      "source_sha256": "03d8d1f1bcd89e507072668ddde57d8472afb8ee767f1675c3906c344b54a71c",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "c9b7445cd6840bfba025a938ca9f790d2a7534d65eb7eed9e166508ef04bbce8",
+      "built_at_commit": "c667a9a",
+      "extraction_level": 3
     },
     "src/archive/scaffold.ts": {
       "source_sha256": "d7c55d9b0d42f3819454cb42a5324e0aec58752ab9bbfe955cc29533f44fb8de",
@@ -288,9 +288,9 @@
       "extraction_level": 2
     },
     "src/schema/checks/archive.ts": {
-      "source_sha256": "64bd855bf6aa64af9c17bd3e77ebef08d28dc95504b0b275e9dff7523f14c097",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "a2370395e7a010f8486bd2aa01f787bdc703124fd80f3b2748cefe6486f29796",
+      "built_at_commit": "c667a9a",
+      "extraction_level": 3
     },
     "src/schema/checks/atlas.ts": {
       "source_sha256": "0cf4a823c3ebeb8739c6944a177491203eea359daf1175030481bbe1376816a1",
@@ -393,8 +393,8 @@
       "extraction_level": 3
     },
     "src/schema/validate.ts": {
-      "source_sha256": "1aebe6c04a158535eb3514669d83ed56d75da208666a576931556b7a37c14a3b",
-      "built_at_commit": "bcbda52",
+      "source_sha256": "b10d674ff0d2e2e9682ca71ac523cf7fd116c9511625dc0871ed320ba29dd2e6",
+      "built_at_commit": "c667a9a",
       "extraction_level": 3
     },
     "src/schema/version.ts": {
@@ -408,10 +408,42 @@
       "extraction_level": 2
     }
   },
-  "stale": [],
+  "stale": [
+    "concept:validation-checks",
+    "edge:calls:element:src/schema/validate.ts#validate->element:src/schema/index-build.ts#buildIndex",
+    "edge:implements-concept:file:src/schema/checks/archive.ts->concept:validation-checks",
+    "edge:implements-concept:file:src/schema/validate.ts->concept:validation-checks",
+    "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
+    "edge:imports:file:src/cli/sync.ts->file:src/schema/validate.ts",
+    "edge:imports:file:src/insight/storage.ts->file:src/archive/formats.ts",
+    "edge:imports:file:src/loops/lint-scheduled.ts->file:src/schema/validate.ts",
+    "edge:imports:file:src/schema/checks/archive.ts->file:src/archive/formats.ts",
+    "edge:imports:file:src/schema/checks/archive.ts->file:src/schema/types.ts",
+    "edge:imports:file:src/schema/cli.ts->file:src/schema/validate.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/archive.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/atlas.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/bizspec.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/claude-md.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/compass.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/config.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/constellation.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/devspec.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/hooks.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/insight.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/layout.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/loop-md.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/provenance.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/pulse.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/scenario.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/specs.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/xref.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/index-build.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/types.ts",
+    "edge:imports:file:src/schema/validate.ts->file:src/schema/version.ts"
+  ],
   "cycle_commits": [
+    "c667a9a",
     "b18781f",
-    "0438f32",
-    "bcbda52"
+    "0438f32"
   ]
 }

@@ -93,6 +93,31 @@ export async function promptYesNo(promptText: string, rl?: readline.Interface): 
  * Unchanged behaviour (moved verbatim from init.ts) aside from the B-012
  * shared-interface fix below; writes no marker.
  */
+
+/**
+ * The skill bundles the package ships, as directory names.
+ *
+ * A bundle is a directory **containing a `SKILL.md`** — that is what makes it
+ * a skill Claude Code can register. `skills/` also holds shipped reference
+ * directories with no `SKILL.md` (`_conventions/`, the authoring recipe
+ * hardened skills cite); those are repo-side authoring material, not skills,
+ * and installing them into a project's `.claude/skills/` would put a
+ * non-skill directory in a skills directory and inflate the "Skills
+ * installed: N" count.
+ *
+ * Single source of truth for all three enumerations (install, sync, and
+ * sync's progress count) so they cannot drift apart — the extraction the
+ * standing authorities prefer over parallel implementations.
+ */
+export function listSkillBundles(srcDir: string): string[] {
+  if (!fs.existsSync(srcDir)) return [];
+  return fs
+    .readdirSync(srcDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcDir, e.name, 'SKILL.md')))
+    .map((e) => e.name)
+    .sort();
+}
+
 export async function installSkills(root: string, yes: boolean): Promise<{ installed: number; preserved: number }> {
   const targetDir = path.join(root, '.claude', 'skills');
   fs.mkdirSync(targetDir, { recursive: true });
@@ -102,21 +127,21 @@ export async function installSkills(root: string, yes: boolean): Promise<{ insta
 
   let installed = 0;
   let preserved = 0;
-  const bundles = fs.readdirSync(srcDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+  const bundles = listSkillBundles(srcDir);
   // B-012: ONE shared interface for every "already exists" prompt this call
   // may ask, not one create/close cycle per bundle.
   const rl = yes ? undefined : createPromptInterface();
   try {
     for (const bundle of bundles) {
-      const target = path.join(targetDir, bundle.name);
+      const target = path.join(targetDir, bundle);
       if (fs.existsSync(target) && !yes) {
-        const overwrite = await promptYesNo(`Skill bundle "${bundle.name}" already exists in .claude/skills/. Overwrite? [y/N] `, rl);
+        const overwrite = await promptYesNo(`Skill bundle "${bundle}" already exists in .claude/skills/. Overwrite? [y/N] `, rl);
         if (!overwrite) {
           preserved++;
           continue;
         }
       }
-      fs.cpSync(path.join(srcDir, bundle.name), target, { recursive: true });
+      fs.cpSync(path.join(srcDir, bundle), target, { recursive: true });
       installed++;
     }
   } finally {

@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { init } from '../../../src/cli/init.js';
+import { listSkillBundles } from '../../../src/cli/scaffold.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -108,7 +109,9 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
     expect(installedDirs).toContain('cortex-archive-ingest');
     expect(installedDirs).toContain('cortex-pulse-hygiene');
     expect(installedDirs).not.toContain('cortex-loop-skill-suggest'); // retired at v3.0
-    expect(installedDirs).toEqual(fs.readdirSync(PKG_SKILLS).sort());
+    // `_conventions/` ships in the package but carries no SKILL.md, so it is
+    // not a bundle and is not installed (discipline.hardening-convention Rule 6).
+    expect(installedDirs).toEqual(listSkillBundles(PKG_SKILLS));
   });
 
   it('every installed bundle is complete — references/ and all other bundle files intact, byte-identical to the package', () => {
@@ -133,19 +136,18 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
     }
   });
 
-  it('the summary installed count reflects the full packaged set (15 cortex + 16 specflow + 1 discipline + 1 reference dir = 33)', () => {
+  it('the summary installed count reflects the full packaged set (15 cortex + 16 specflow + 1 discipline = 32)', () => {
     expect(result.exitCode).toBe(0);
-    const bundleCount = fs.readdirSync(PKG_SKILLS, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
+    const bundleCount = listSkillBundles(PKG_SKILLS).length;
     // The 2026-08 superpowers-absorption round added the Bucket-2 bundle
     // `verification-before-completion` (deliberately not `specflow-`prefixed —
-    // it belongs to neither process profile) and the shipped reference
-    // directory `_conventions/` (no SKILL.md; installed so hardened bodies'
-    // path references resolve in installed projects). Both are covered by
-    // tests/spec/discipline/packaging.test.ts.
-    expect(bundleCount).toBe(33);
+    // it belongs to neither process profile). `skills/_conventions/` ships in
+    // the package but is NOT a bundle (no SKILL.md) and so is not counted or
+    // installed — see tests/spec/discipline/packaging.test.ts.
+    expect(bundleCount).toBe(32);
     const m = /Skills installed: (\d+)/.exec(result.summary);
     expect(m).not.toBeNull();
-    expect(Number(m?.[1])).toBe(33);
+    expect(Number(m?.[1])).toBe(32);
   });
 });
 
