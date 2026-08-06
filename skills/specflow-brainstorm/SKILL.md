@@ -1,17 +1,19 @@
 ---
 name: specflow-brainstorm
-description: >
-  Turn a half-formed idea into an agreed design that lands as a spec. The front of the
-  spec-first spine (brainstorm → plan → develop). Assesses scope and decomposes an over-large
-  ask, asks ONE question at a time, surfaces the specs, decisions, and rules the idea already
-  touches, then proposes two or three real approaches with a recommendation — and writes no
-  implementation code until the developer agrees and the spec exists. Use when the user says
-  "let's build X", "I want to add", "what if we", "how should we approach", "I'm thinking
-  about", or brings any idea that is not yet a spec. In a Specflow project this runs before
-  specflow-plan and specflow-develop.
+description: 'Turn a half-formed idea into an agreed spec. "I want to add X", "how should we approach".'
 ---
 
 # Specflow: Brainstorm
+
+## When to use
+
+Turn a half-formed idea into an agreed design that lands as a spec. The front of the spec-first
+spine (brainstorm → plan → develop). Assesses scope and decomposes an over-large ask, asks ONE
+question at a time, surfaces the specs, decisions, and rules the idea already touches, then
+proposes two or three real approaches with a recommendation — and writes no implementation code
+until the developer agrees and the spec exists. Use when the user says "let's build X", "I want
+to add", "what if we", "how should we approach", "I'm thinking about", or brings any idea that
+is not yet a spec. In a Specflow project this runs before specflow-plan and specflow-develop.
 
 ## The Iron Law
 

@@ -1,18 +1,23 @@
 ---
 name: specflow-lint
-description: >
-  Verify and correct the structural integrity of both spec trees (.specflow/specs/ and .specflow/specs-business/).
-  Checks that every spec follows the correct format, naming conventions, frontmatter schema,
-  entity reference style, folder structure, and bidirectional linking rules. Fixes violations
-  automatically where possible, flags ambiguous issues for human review. Use this skill
-  whenever the user says "check specs", "lint specs", "verify spec structure", "are my specs
-  correct", "fix spec formatting", "validate the spec tree", or after any bulk spec operation
-  (onboarding, ingest, batch editing) to ensure consistency. Also trigger proactively after
-  specflow-spec-editor completes a batch of changes, or when the specflow-viewer reports
-  parsing warnings.
+description: 'Check and fix spec-tree structure. "lint specs", "validate the spec tree".'
 ---
 
 # Specflow: Spec Linter
+
+## When to use
+
+Verify and correct the structural integrity of both spec trees (.specflow/specs/ and
+.specflow/specs-business/). Checks that every spec follows the correct format, naming
+conventions, frontmatter schema, entity reference style, folder structure, and bidirectional
+linking rules. Fixes violations automatically where possible, flags ambiguous issues for human
+review. Use this skill whenever the user says "check specs", "lint specs", "verify spec
+structure", "are my specs correct", "fix spec formatting", "validate the spec tree", or after
+any bulk spec operation (onboarding, ingest, batch editing) to ensure consistency. Also trigger
+proactively after specflow-spec-editor completes a batch of changes, or when the
+specflow-viewer reports parsing warnings.
+
+## What this skill does
 
 Verify and correct the structural integrity of both spec trees. This skill ensures every
 spec file follows the conventions exactly — format, naming, frontmatter, entity references,

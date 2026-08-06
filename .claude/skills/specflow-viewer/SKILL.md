@@ -1,9 +1,40 @@
 ---
 name: specflow-viewer
-description: Generate a polished, self-contained HTML page (`specs.html`) for browsing a Specflow project's two-layer spec tree — both the developer specs under `.specflow/specs/` and the high-level business specs under `.specflow/specs-business/`, plus the per-folder `_overview.md` docs that explain each group, all parsed and rendered as a client-facing site with a Business⇄Developer toggle, sidebar tree (folders surface their first-sentence summary as a subtitle, click a folder to read its overview), search across spec content AND folder overviews, cross-link sections (Implements / Implemented by) between the two layers, an "Unmapped" badge on dev specs missing an `implements:` link to a business spec, acceptance-criteria cards, dependency chips, and an optional test-status overlay. Use this skill PROACTIVELY whenever the user wants to show, present, export, publish, share, or hand off Specflow specs in a browsable format — including phrasings like "generate the spec viewer", "build the spec page", "make the HTML specs", "render the spec tree", "export specs as HTML", "spec browser", "spec dashboard", "show the business specs", "show the stakeholder view", "client-facing specs", "show the folder overviews", "where are the unmapped specs", "show the business/dev split", or any request to surface the mapping between business outcomes and developer implementation. Also trigger whenever the user mentions showing specs to a client, stakeholder, partner, PM, designer, or other non-developer audience in a Specflow project, or when they want to render `_overview.md` group descriptions in a browsable form. If the user mentions specs AND any of {show, present, export, publish, share, render, browse, deliver, ship, hand off, business specs, stakeholder view, folder overview, mapping, unmapped, coverage}, reach for this skill rather than writing custom HTML by hand.
+description: 'Generate the browsable spec site.'
 ---
 
 # specflow-viewer
+
+## When to use
+
+**This skill is callable-only** — it carries no trigger surface in the skill listing and is not
+routed into automatically. Run it when the developer invokes `/specflow-viewer`, or when
+another skill's instructions name it. Regenerating a client-facing site is a deliberate act,
+not something a resembling sentence should trip. What follows is its scope, not its triggers.
+
+Generate a polished, self-contained HTML page (`specs.html`) for browsing a Specflow project's
+two-layer spec tree — both the developer specs under `.specflow/specs/` and the high-level
+business specs under `.specflow/specs-business/`, plus the per-folder `_overview.md` docs that
+explain each group, all parsed and rendered as a client-facing site with a Business⇄Developer
+toggle, sidebar tree (folders surface their first-sentence summary as a subtitle, click a
+folder to read its overview), search across spec content AND folder overviews, cross-link
+sections (Implements / Implemented by) between the two layers, an "Unmapped" badge on dev specs
+missing an `implements:` link to a business spec, acceptance-criteria cards, dependency chips,
+and an optional test-status overlay. Use this skill PROACTIVELY whenever the user wants to
+show, present, export, publish, share, or hand off Specflow specs in a browsable format —
+including phrasings like "generate the spec viewer", "build the spec page", "make the HTML
+specs", "render the spec tree", "export specs as HTML", "spec browser", "spec dashboard", "show
+the business specs", "show the stakeholder view", "client-facing specs", "show the folder
+overviews", "where are the unmapped specs", "show the business/dev split", or any request to
+surface the mapping between business outcomes and developer implementation. Also trigger
+whenever the user mentions showing specs to a client, stakeholder, partner, PM, designer, or
+other non-developer audience in a Specflow project, or when they want to render `_overview.md`
+group descriptions in a browsable form. If the user mentions specs AND any of {show, present,
+export, publish, share, render, browse, deliver, ship, hand off, business specs, stakeholder
+view, folder overview, mapping, unmapped, coverage}, reach for this skill rather than writing
+custom HTML by hand.
+
+## What this skill produces
 
 Generates **one self-contained HTML file** that presents a Specflow project's full two-layer spec tree (business + developer) as a polished, client-facing documentation site. CSS, JS, all spec data, all folder overviews, and the cross-tree mapping inline into a single file — no server, no build, no external assets. The user double-clicks it and it works.
 

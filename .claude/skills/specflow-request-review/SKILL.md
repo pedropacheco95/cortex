@@ -1,17 +1,20 @@
 ---
 name: specflow-request-review
-description: >
-  Review a completed task's diff for craft — naming, structure, duplication, whether it matches
-  the patterns around it — anchored to the plan task and the spec criterion that task cites,
-  never an open-ended sweep of the codebase. Correctness belongs to the test suite: a reviewer
-  who suspects the code is functionally wrong reports a missing-test signal instead of a
-  verdict. Findings are non-blocking on function, with one exception — a compass-rule violation
-  is load-bearing. Use after a task's tests pass, when the user says "review this", "review the
-  diff", "code review", or when specflow-develop reaches its review ladder. Pairs with
-  specflow-receive-review.
+description: 'Review a completed task diff for craft, anchored to its plan task and spec criterion. "review this", "review the diff", "code review". Correctness belongs to the tests, not to this review.'
 ---
 
 # Specflow: Request Review
+
+## When to use
+
+Review a completed task's diff for craft — naming, structure, duplication, whether it matches
+the patterns around it — anchored to the plan task and the spec criterion that task cites,
+never an open-ended sweep of the codebase. Correctness belongs to the test suite: a reviewer
+who suspects the code is functionally wrong reports a missing-test signal instead of a verdict.
+Findings are non-blocking on function, with one exception — a compass-rule violation is
+load-bearing. Use after a task's tests pass, when the user says "review this", "review the
+diff", "code review", or when specflow-develop reaches its review ladder. Pairs with
+specflow-receive-review.
 
 ## The Iron Law
 

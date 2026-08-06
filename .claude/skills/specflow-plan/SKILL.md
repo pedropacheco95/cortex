@@ -1,17 +1,19 @@
 ---
 name: specflow-plan
-description: >
-  Turn an agreed spec into a durable, executable plan — bite-sized tasks with exact paths,
-  the acceptance criterion each satisfies, and the command that verifies it, written to a
-  file a fresh agent could execute without ever seeing the conversation. The middle of the
-  spec-first spine (brainstorm → plan → develop); it holds the planning half that used to
-  live inside specflow-develop: explore, gap analysis, research, implementation plan, and
-  the size check. Use when the user says "plan this", "how would we build this spec",
-  "break this down", "what are the steps", or when a spec is agreed and implementation is
-  next. Writes no code.
+description: 'Turn an agreed spec into an executable plan. "plan this", "break this down", "what are the steps".'
 ---
 
 # Specflow: Plan
+
+## When to use
+
+Turn an agreed spec into a durable, executable plan — bite-sized tasks with exact paths, the
+acceptance criterion each satisfies, and the command that verifies it, written to a file a
+fresh agent could execute without ever seeing the conversation. The middle of the spec-first
+spine (brainstorm → plan → develop); it holds the planning half that used to live inside
+specflow-develop: explore, gap analysis, research, implementation plan, and the size check. Use
+when the user says "plan this", "how would we build this spec", "break this down", "what are
+the steps", or when a spec is agreed and implementation is next. Writes no code.
 
 ## The Iron Law
 

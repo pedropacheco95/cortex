@@ -1,21 +1,23 @@
 ---
 name: specflow-bugs
-description: >
-  Diagnose bugs in a Specflow-managed project by walking the spec-model diagnostic tree to find
-  the root cause layer, classify the bug type, file it in the bug ledger
-  (.cortex/compass/bugs/), and produce a concrete
-  change plan for the change-router to execute. Use this skill whenever the user reports a bug,
-  describes unexpected behavior, says something is broken or wrong, or when a test failure needs
-  triage. PROACTIVELY use this skill when you encounter: "X doesn't work", "X returns wrong
-  result", "X crashes", "this test is failing", "the behavior should be Y but it's Z", "why
-  does X happen", error messages, 500s, wrong data, missing responses, or any report where
-  implemented behavior diverges from expected behavior. Also trigger when test runs produce
-  failures that need classification — the skill handles both human-reported bugs and automated
-  test failure triage. If a .specflow/specs/ directory exists and the user reports something broken, this
-  skill runs first — it diagnoses before anyone touches code.
+description: 'Diagnose a bug to its root cause and file it. "X is broken", "why does X happen", test triage.'
 ---
 
 # Specflow: Bug Diagnosis
+
+## When to use
+
+Diagnose bugs in a Specflow-managed project by walking the spec-model diagnostic tree to find
+the root cause layer, classify the bug type, file it in the bug ledger (.cortex/compass/bugs/),
+and produce a concrete change plan for the change-router to execute. Use this skill whenever
+the user reports a bug, describes unexpected behavior, says something is broken or wrong, or
+when a test failure needs triage. PROACTIVELY use this skill when you encounter: "X doesn't
+work", "X returns wrong result", "X crashes", "this test is failing", "the behavior should be Y
+but it's Z", "why does X happen", error messages, 500s, wrong data, missing responses, or any
+report where implemented behavior diverges from expected behavior. Also trigger when test runs
+produce failures that need classification — the skill handles both human-reported bugs and
+automated test failure triage. If a .specflow/specs/ directory exists and the user reports
+something broken, this skill runs first — it diagnoses before anyone touches code.
 
 ## The Iron Law
 

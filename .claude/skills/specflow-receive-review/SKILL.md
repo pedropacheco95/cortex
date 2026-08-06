@@ -1,16 +1,19 @@
 ---
 name: specflow-receive-review
-description: >
-  Process review feedback with technical rigor instead of performative agreement — verify each
-  suggestion against the spec, the compass rules, and the code as it actually is before
-  applying it, and reject the ones that do not hold, with the reason. Use when a review has
-  come back, when the user says "here's the feedback", "the reviewer said", "address these
-  comments", or when specflow-develop's review ladder returns findings. Pairs with
-  specflow-request-review. Disagreements are settled by the spec, a rule, or a command someone
-  can run — never by who sounded more certain.
+description: 'Verify review feedback before applying it. "here is the feedback".'
 ---
 
 # Specflow: Receive Review
+
+## When to use
+
+Process review feedback with technical rigor instead of performative agreement — verify each
+suggestion against the spec, the compass rules, and the code as it actually is before applying
+it, and reject the ones that do not hold, with the reason. Use when a review has come back,
+when the user says "here's the feedback", "the reviewer said", "address these comments", or
+when specflow-develop's review ladder returns findings. Pairs with specflow-request-review.
+Disagreements are settled by the spec, a rule, or a command someone can run — never by who
+sounded more certain.
 
 ## The Iron Law
 

@@ -1,17 +1,22 @@
 ---
 name: specflow-onboard-codebase
-description: >
-  Reverse-engineer a two-layer spec tree (developer specs in .specflow/specs/ plus business specs in
-  .specflow/specs-business/, with _overview.md in every folder of both trees) from an existing codebase.
-  Uses bottom-up atom extraction with delegated agents for deep code investigation,
-  relationship graphing for deterministic domain discovery, adversarial investigation before
-  any bug classification, and a verification pass against the completed specs. Use this skill
-  when the user says "onboard this codebase", "reverse engineer specs", "generate specs from
-  code", "bring this under spec management", "analyze this codebase", or any request to
-  retroactively create specifications from working code.
+description: 'Reverse-engineer specs from existing code. "onboard this codebase".'
 ---
 
 # Specflow: Onboard Existing Codebase
+
+## When to use
+
+Reverse-engineer a two-layer spec tree (developer specs in .specflow/specs/ plus business specs
+in .specflow/specs-business/, with _overview.md in every folder of both trees) from an existing
+codebase. Uses bottom-up atom extraction with delegated agents for deep code investigation,
+relationship graphing for deterministic domain discovery, adversarial investigation before any
+bug classification, and a verification pass against the completed specs. Use this skill when
+the user says "onboard this codebase", "reverse engineer specs", "generate specs from code",
+"bring this under spec management", "analyze this codebase", or any request to retroactively
+create specifications from working code.
+
+## What this skill does
 
 Turn an existing codebase into a spec-managed project. Read code, extract what the specs
 *should have been*, challenge every judgment, verify every spec, then let the human correct.

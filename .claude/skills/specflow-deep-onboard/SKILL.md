@@ -1,17 +1,27 @@
 ---
 name: specflow-deep-onboard
-description: >
-  Deep onboarding for codebases where confidence matters. Orchestrates 3 parallel
-  specflow-onboard-codebase passes by spawning separate subagents via the Agent tool,
-  then reads their outputs from disk, compares structurally, investigates disagreements
-  with focused agents, and produces a final merged spec tree. This skill runs in the main
-  Claude Code session (which has access to the Agent tool) — it must NOT be invoked as a
-  subagent itself. For a quick single-pass onboarding, use specflow-onboard-codebase
-  directly instead. Trigger on: "deep onboard", "high-confidence onboarding", "run 3
-  passes", "multi-pass onboarding", "I need confident specs for this codebase".
+description: 'Multi-pass codebase onboarding.'
 ---
 
 # Specflow: Deep Onboarding
+
+## When to use
+
+**This skill is callable-only** — it carries no trigger surface in the skill listing and is not
+routed into automatically. Run it when the developer invokes `/specflow-deep-onboard`. Three
+parallel onboarding passes over a whole codebase is an expensive, deliberate choice, not
+something a resembling sentence should trip. What follows is its scope, not its triggers.
+
+Deep onboarding for codebases where confidence matters. Orchestrates 3 parallel
+specflow-onboard-codebase passes by spawning separate subagents via the Agent tool, then reads
+their outputs from disk, compares structurally, investigates disagreements with focused agents,
+and produces a final merged spec tree. This skill runs in the main Claude Code session (which
+has access to the Agent tool) — it must NOT be invoked as a subagent itself. For a quick
+single-pass onboarding, use specflow-onboard-codebase directly instead. Trigger on: "deep
+onboard", "high-confidence onboarding", "run 3 passes", "multi-pass onboarding", "I need
+confident specs for this codebase".
+
+## What this skill does
 
 Orchestrate 3 parallel specflow-onboard-codebase passes, compare their outputs, investigate
 disagreements, and produce a final merged spec tree with high confidence.

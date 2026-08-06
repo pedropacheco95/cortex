@@ -1,10 +1,26 @@
 ---
 name: specflow-new-project
-description: >
-  Generate a complete two-layer spec tree (business specs for stakeholders + developer specs for implementation), folder overview docs in every directory, tooling manifest, agents, skills, rules, and build order from a project description. Use this skill whenever the user wants to start a new project from scratch, describes a product idea, says things like "new project", "build me an app", "I want to create", "start a new", "specflow new", "start from scratch", "help me spec this out", "write specs for this", or presents any product concept that needs structured planning before implementation. Even if the user just describes what they want to build without explicitly asking for specs, this skill should trigger — the goal is to plan before coding. The output contains both `.specflow/specs-business/` (stakeholder-facing outcomes and journeys) and `.specflow/specs/` (developer-facing entity references, rules, acceptance criteria), bidirectionally linked, with an `_overview.md` in every folder of both trees.
+description: 'Spec out a new project from scratch — two linked spec trees, overviews, build order. "new project", "start a new", "I want to build", or any product idea described before any code exists.'
 ---
 
 # Specflow: New Project
+
+## When to use
+
+Generate a complete two-layer spec tree (business specs for stakeholders + developer specs for
+implementation), folder overview docs in every directory, tooling manifest, agents, skills,
+rules, and build order from a project description. Use this skill whenever the user wants to
+start a new project from scratch, describes a product idea, says things like "new project",
+"build me an app", "I want to create", "start a new", "specflow new", "start from scratch",
+"help me spec this out", "write specs for this", or presents any product concept that needs
+structured planning before implementation. Even if the user just describes what they want to
+build without explicitly asking for specs, this skill should trigger — the goal is to plan
+before coding. The output contains both `.specflow/specs-business/` (stakeholder-facing
+outcomes and journeys) and `.specflow/specs/` (developer-facing entity references, rules,
+acceptance criteria), bidirectionally linked, with an `_overview.md` in every folder of both
+trees.
+
+## What this skill produces
 
 Turn a product idea into a complete, buildable spec tree that Claude Code can implement autonomously. The output is a directory of markdown files — specs (business + developer), folder overviews, skills, agents, rules, and a build order — that serve as the single source of truth for the project.
 

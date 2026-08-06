@@ -1,16 +1,19 @@
 ---
 name: verification-before-completion
-description: >
-  Run this before claiming any work is done, fixed, passing, building, or complete. It is the
-  evidence gate: name the claim, look up what evidence that kind of claim requires, and check
-  that you hold that evidence from the current turn — not from before your last edit. Use it
-  when you are about to say "tests pass", "the bug is fixed", "it builds", "the schema
-  validates", "I didn't touch that file", or any status report a human would act on. Works in
-  any project, under any build process — it requires no spec tree and no Cortex module. If you
-  are about to write a completion summary, you are in scope.
+description: 'Evidence gate before claiming work done, fixed, or passing.'
 ---
 
 # Verification Before Completion
+
+## When to use
+
+Run this before claiming any work is done, fixed, passing, building, or complete. It is the
+evidence gate: name the claim, look up what evidence that kind of claim requires, and check
+that you hold that evidence from the current turn — not from before your last edit. Use it when
+you are about to say "tests pass", "the bug is fixed", "it builds", "the schema validates", "I
+didn't touch that file", or any status report a human would act on. Works in any project, under
+any build process — it requires no spec tree and no Cortex module. If you are about to write a
+completion summary, you are in scope.
 
 ## The Iron Law
 

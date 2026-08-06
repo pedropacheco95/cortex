@@ -1,18 +1,23 @@
 ---
 name: specflow-ingest
-description: >
-  Read external documents (client briefs, meeting notes, requirements updates, stakeholder
-  emails, technical specs, product docs, or any free-form input) and reconcile them against
-  the existing spec trees to produce a structured change manifest. Uses parallel agent plans,
-  section-based processing with delegation for large documents, internal conflict detection,
-  and temporal/version awareness. This skill proposes changes — it does not execute them.
-  Approved changes are routed through the change-router for execution. Trigger on: "here
-  are the new requirements", "update specs from this", "the client sent this", "ingest this",
-  "reconcile this with specs", "what changed from this brief", or any document drop in a
-  Specflow-managed project.
+description: 'Reconcile an external document against the specs. "the client sent this", "ingest this".'
 ---
 
 # Specflow: Document Ingest
+
+## When to use
+
+Read external documents (client briefs, meeting notes, requirements updates, stakeholder
+emails, technical specs, product docs, or any free-form input) and reconcile them against the
+existing spec trees to produce a structured change manifest. Uses parallel agent plans,
+section-based processing with delegation for large documents, internal conflict detection, and
+temporal/version awareness. This skill proposes changes — it does not execute them. Approved
+changes are routed through the change-router for execution. Trigger on: "here are the new
+requirements", "update specs from this", "the client sent this", "ingest this", "reconcile this
+with specs", "what changed from this brief", or any document drop in a Specflow-managed
+project.
+
+## What this skill does
 
 Turn external documents into structured spec change proposals. This skill is the intake
 layer — it reads what humans and clients produce and translates them into the language of

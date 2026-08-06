@@ -1,19 +1,24 @@
 ---
 name: specflow-develop
-description: >
-  Execute a plan into code and verify it by test — the last stage of the spec-first spine
-  (brainstorm → plan → develop). Runs the test cascade: atomic tests at spec level, spec
-  tests at domain level, journey tests at slice level. Self-similar at every scope — the
-  same skill runs at slice, domain, and spec granularity, delegating per its depth
-  calibration. Parent agents verify children via tests, not by reading their code. Codes ALL
-  gaps (including edge cases and missing validation) and documents them — never stops for a
-  gap; but a load-bearing review finding that survives five fix rounds stops the work as
-  BLOCKED rather than shipping it broken. Use this skill when the user says "implement this
-  spec", "build this slice", "code this domain", "develop from specs", or hands over a plan
-  from specflow-plan. Planning itself lives in specflow-plan, not here.
+description: 'Execute a plan into code, verified by tests. "implement this spec", "build this slice".'
 ---
 
 # Specflow: Develop
+
+## When to use
+
+Execute a plan into code and verify it by test — the last stage of the spec-first spine
+(brainstorm → plan → develop). Runs the test cascade: atomic tests at spec level, spec tests at
+domain level, journey tests at slice level. Self-similar at every scope — the same skill runs
+at slice, domain, and spec granularity, delegating per its depth calibration. Parent agents
+verify children via tests, not by reading their code. Codes ALL gaps (including edge cases and
+missing validation) and documents them — never stops for a gap; but a load-bearing review
+finding that survives five fix rounds stops the work as BLOCKED rather than shipping it broken.
+Use this skill when the user says "implement this spec", "build this slice", "code this
+domain", "develop from specs", or hands over a plan from specflow-plan. Planning itself lives
+in specflow-plan, not here.
+
+## What this skill does
 
 Execute a plan into code. The skill is recursive — it works at any scope (vertical slice,
 domain, individual spec) using the same execute-or-delegate → verify → review pattern.

@@ -1,17 +1,19 @@
 ---
 name: specflow-intent-reconcile
-description: >
-  Pin a specific stakeholder ask with a verbatim RED anchor test, let the normal spec-first
-  flow absorb it, then check whether the spec's own test would still fail if the specific
-  behaviour changed. Subsumed → retire the anchor and record it in the intent register;
-  not subsumed → the spec generalised the ask away, so file a missing-criterion bug and flag
-  the entry. Use when a user states a specific requirement in passing ("it needs one
-  uppercase", "never log the token", "must respond under 200ms"), and again after that ask has
-  landed in a spec. A tap on the existing classify → spec → test flow, never a second test
-  suite.
+description: 'Pin a verbatim ask with an anchor test. "pin this ask", "did the spec keep it".'
 ---
 
 # Specflow: Intent Reconcile
+
+## When to use
+
+Pin a specific stakeholder ask with a verbatim RED anchor test, let the normal spec-first flow
+absorb it, then check whether the spec's own test would still fail if the specific behaviour
+changed. Subsumed → retire the anchor and record it in the intent register; not subsumed → the
+spec generalised the ask away, so file a missing-criterion bug and flag the entry. Use when a
+user states a specific requirement in passing ("it needs one uppercase", "never log the token",
+"must respond under 200ms"), and again after that ask has landed in a spec. A tap on the
+existing classify → spec → test flow, never a second test suite.
 
 ## The Iron Law
 

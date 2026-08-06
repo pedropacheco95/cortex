@@ -1,21 +1,24 @@
 ---
 name: specflow-spec-editor
-description: >
-  Execute spec changes against the spec tree — create new specs, edit existing specs, manage
-  bidirectional links, update folder overviews, and run coherence checks. This is the skill
-  that actually modifies spec files. Use this skill whenever a change plan needs to be executed
-  against specs — whether that plan comes from the change-router, from specflow-bugs, from
-  specflow-ingest, or from a direct human instruction. PROACTIVELY trigger when: the change-router
-  has classified a request and the next step is editing specs; a bug diagnosis produces a change
-  plan that requires spec modification; an ingest manifest has approved changes to apply; the user
-  says "update the spec", "add this criterion", "create a new spec", "change the rule", "add a
-  business spec", "link these specs", "update the overview", "wire implements", "deprecate this
-  spec", "move this spec", or any instruction that means modifying files in .specflow/specs/ or .specflow/specs-business/.
-  If someone says "edit" or "change" and the target is a spec file, this skill applies. Always
-  run the coherence check after modifications.
+description: 'Write spec files — create, edit, link. "update the spec", "add this criterion".'
 ---
 
 # Specflow: Spec Editor
+
+## When to use
+
+Execute spec changes against the spec tree — create new specs, edit existing specs, manage
+bidirectional links, update folder overviews, and run coherence checks. This is the skill that
+actually modifies spec files. Use this skill whenever a change plan needs to be executed
+against specs — whether that plan comes from the change-router, from specflow-bugs, from
+specflow-ingest, or from a direct human instruction. PROACTIVELY trigger when: the
+change-router has classified a request and the next step is editing specs; a bug diagnosis
+produces a change plan that requires spec modification; an ingest manifest has approved changes
+to apply; the user says "update the spec", "add this criterion", "create a new spec", "change
+the rule", "add a business spec", "link these specs", "update the overview", "wire implements",
+"deprecate this spec", "move this spec", or any instruction that means modifying files in
+.specflow/specs/ or .specflow/specs-business/. If someone says "edit" or "change" and the
+target is a spec file, this skill applies. Always run the coherence check after modifications.
 
 ## Purpose
 

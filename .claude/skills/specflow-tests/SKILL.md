@@ -1,16 +1,18 @@
 ---
 name: specflow-tests
-description: >
-  Complete testing framework for Specflow projects. Builds the test infrastructure first,
-  then generates tests across four layers (Atomic, Spec, Journey, Scenario) via delegated
-  agents per domain, then hands off to a separate verification agent that runs all tests,
-  performs adversarial quality checks, and loops until everything passes. A test that does
-  not execute is not a test. Use this skill for: generating tests from specs, setting up
-  test infrastructure, creating test fixtures, designing scenario tests, running test
-  suites, or auditing coverage.
+description: 'Generate and run the four-layer test suite. "write tests", "generate tests from specs".'
 ---
 
 # Specflow Testing
+
+## When to use
+
+Complete testing framework for Specflow projects. Builds the test infrastructure first, then
+generates tests across four layers (Atomic, Spec, Journey, Scenario) via delegated agents per
+domain, then hands off to a separate verification agent that runs all tests, performs
+adversarial quality checks, and loops until everything passes. A test that does not execute is
+not a test. Use this skill for: generating tests from specs, setting up test infrastructure,
+creating test fixtures, designing scenario tests, running test suites, or auditing coverage.
 
 ## The Iron Law
 
