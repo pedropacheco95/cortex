@@ -59,6 +59,7 @@ import {
   INSTALLED_MARKER_FILENAME,
   listSkillBundles,
   retiredBundles,
+  shouldInstallAbsent,
 } from './scaffold.js';
 
 export interface SyncOptions {
@@ -190,12 +191,20 @@ export interface SkillSyncResult {
   removed: string[];
   /** Rule 6 — retired bundles left in place because they were edited. */
   skippedRetiredModified: string[];
+  /**
+   * Rule 5's additions chain — shipped bundles absent from a project that has
+   * already been offered them, i.e. the developer deleted them. Not installed,
+   * and named in the Rule 12 summary: a bundle deliberately withheld is as
+   * invisible as a deletion nobody is told about.
+   */
+  skippedDeleted: string[];
 }
 
 async function syncSkillBundles(
   root: string,
   yes: boolean,
   toVersion: string,
+  priorVersion: string,
   rl?: ReadlineInterface,
 ): Promise<SkillSyncResult> {
   const result: SkillSyncResult = {
@@ -205,8 +214,15 @@ async function syncSkillBundles(
     skippedUserModified: [],
     removed: [],
     skippedRetiredModified: [],
+    skippedDeleted: [],
   };
   const targetDir = path.join(root, '.claude', 'skills');
+  // Rule 5(c): captured BEFORE mkdirSync, which would otherwise make this
+  // always true and kill the guard. A project with no `.claude/skills/` at all
+  // has never had bundles rather than having lost them — a clone of a repo that
+  // gitignores the directory must still be repairable — so the additions chain
+  // is bypassed and the full roster installs.
+  const skillsDirExisted = fs.existsSync(targetDir);
   fs.mkdirSync(targetDir, { recursive: true });
 
   const srcDir = path.join(packageRoot(), 'skills');
@@ -220,6 +236,14 @@ async function syncSkillBundles(
     const shippedHash = hashDirectoryContent(source);
 
     if (!fs.existsSync(target)) {
+      // Rule 5's additions chain: install only what is genuinely new to this
+      // project. A bundle whose entry is at or below the project's PRE-RUN
+      // schemaVersion has already been offered, so its absence is the
+      // developer's decision, not a gap to repair.
+      if (skillsDirExisted && !shouldInstallAbsent(bundle, priorVersion)) {
+        result.skippedDeleted.push(bundle);
+        continue;
+      }
       fs.cpSync(source, target, { recursive: true });
       writeInstalledMarker(markerPath, shippedHash);
       result.installed.push(bundle);
@@ -528,7 +552,12 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
     // must never land between a prompt being issued and it being answered
     // (see Rule 13/B-012 above).
     opts.onProgress?.(`Syncing skill bundles (${skillBundleCount} to check)…`);
-    skillResult = await syncSkillBundles(absRoot, yes, SCHEMA_VERSION, rl);
+    // `declaredVersion` — NOT SCHEMA_VERSION, and never a re-read of the config,
+    // which by this point holds the value Rule 2 rewrote above. The additions
+    // chain compares against what the project recorded BEFORE this run; reading
+    // the post-rewrite value would make every bundle look already-offered and
+    // silently stop installing anything.
+    skillResult = await syncSkillBundles(absRoot, yes, SCHEMA_VERSION, declaredVersion, rl);
 
     // Rule 6 — hooks merge (same mechanism as init Rule 11).
     opts.onProgress?.('Merging hooks into .claude/settings.json…');
@@ -567,12 +596,18 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   if (indexResult.localised.length > 0) lines.push(`  Localised (left alone): ${indexResult.localised.join(', ')}.`);
   lines.push(
     `Skill bundles: ${skillResult.installed.length} installed, ${skillResult.upgraded.length} upgraded, ` +
-      `${skillResult.alreadyCurrent.length} already current, ${skillResult.skippedUserModified.length} skipped (user-modified).`,
+      `${skillResult.alreadyCurrent.length} already current, ${skillResult.skippedUserModified.length} skipped (user-modified), ` +
+      `${skillResult.skippedDeleted.length} skipped (deliberately removed).`,
   );
   if (skillResult.installed.length > 0) lines.push(`  Installed: ${skillResult.installed.join(', ')}.`);
   if (skillResult.upgraded.length > 0) lines.push(`  Upgraded: ${skillResult.upgraded.join(', ')}.`);
   if (skillResult.skippedUserModified.length > 0) {
     lines.push(`  Skipped (user-modified, preserved): ${skillResult.skippedUserModified.join(', ')}.`);
+  }
+  // Rule 5/12, the same principle in reverse: a bundle deliberately NOT
+  // installed is as invisible as a deletion nobody is told about.
+  if (skillResult.skippedDeleted.length > 0) {
+    lines.push(`  Skipped (deleted by you, not reinstalled): ${skillResult.skippedDeleted.join(', ')}.`);
   }
   // Rule 6/12: a deletion nobody is told about is indistinguishable from a bug.
   if (skillResult.removed.length > 0) {

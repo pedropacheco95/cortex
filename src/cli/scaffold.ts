@@ -231,6 +231,113 @@ export function retiredBundles(root: string, shipped: string[], to: string): str
 }
 
 
+/**
+ * Skill-bundle additions (spec `core-cli.sync` Rule 5's additions chain).
+ *
+ * `SKILL_MIGRATIONS` above records what the package has STOPPED shipping; this
+ * records when it STARTED. Without it, sync cannot tell a bundle it has never
+ * offered this project from one the developer deliberately deleted — both are
+ * simply absent — so every sync put the deleted one back.
+ *
+ * An absent bundle is installed IFF its entry's version is strictly above the
+ * `schemaVersion` the project recorded BEFORE this run. At or below that
+ * version means the project has already been offered it, so its absence is a
+ * decision rather than a gap.
+ *
+ * Unlike the retirement chain this comparison IS a version window, and safely
+ * so: retirement rejects a cursor because a removal is declinable and a
+ * declined decision would be lost once `schemaVersion` advanced past its entry.
+ * An installation is unconditional — there is no decision to lose.
+ *
+ * The chain seeds at 3.3, the version it landed in, naming every bundle shipped
+ * at that point. A project at 3.2 or below therefore takes one full-roster
+ * install; a project already at 3.3 is not below the seed, so its deletions
+ * hold from the first run. Appending an entry is the checklist item for ADDING
+ * a bundle, and — per Rule 5(a) — shipping one requires the MINOR bump that
+ * makes its entry exceed a current project's recorded version.
+ *
+ * `tests/atomic/core-cli/skill-additions.test.ts` pins the invariants: every
+ * shipped bundle named by exactly one entry, and no entry dated ahead of the
+ * package's own version.
+ */
+export interface SkillAddition {
+  /** The `MAJOR.MINOR` schema version at which these bundles first shipped. */
+  version: string;
+  /** Bundle directory names introduced at that version. */
+  added: readonly string[];
+  /** Why they arrived — surfaced to whoever audits the chain. */
+  reason: string;
+}
+
+export const SKILL_ADDITIONS: readonly SkillAddition[] = [
+  {
+    version: '3.3',
+    added: [
+      'cortex-archive-ingest',
+      'cortex-extract-insight',
+      'cortex-loop-atlas-staleness',
+      'cortex-loop-bug-triage',
+      'cortex-loop-insight-refresh-daily',
+      'cortex-loop-insight-refresh-full',
+      'cortex-loop-onboarding-drift',
+      'cortex-loop-rule-decay',
+      'cortex-loop-session-observe',
+      'cortex-loop-spec-drift',
+      'cortex-loop-test-runner',
+      'cortex-pulse-distil',
+      'cortex-pulse-hygiene',
+      'cortex-register-tasks',
+      'specflow-brainstorm',
+      'specflow-bugs',
+      'specflow-deep-onboard',
+      'specflow-develop',
+      'specflow-entry',
+      'specflow-ingest',
+      'specflow-intent-reconcile',
+      'specflow-lint',
+      'specflow-new-project',
+      'specflow-onboard-codebase',
+      'specflow-plan',
+      'specflow-receive-review',
+      'specflow-request-review',
+      'specflow-spec-editor',
+      'specflow-tests',
+      'specflow-viewer',
+      'verification-before-completion',
+    ],
+    reason:
+      'Seed entry — every bundle the package shipped when the additions chain was introduced at 3.3. ' +
+      'Projects at 3.2 or below have never been offered these, so they take one full-roster install; ' +
+      'a project already AT 3.3 is deliberately not below the seed, so a bundle it is missing was ' +
+      'deleted on purpose and stays deleted. 3.3 was unreleased when the chain landed, so no version ' +
+      'constant moved to make this true.',
+  },
+];
+
+/** The version at which `bundle` first shipped, or undefined if no entry names it. */
+export function bundleAddedAt(bundle: string): string | undefined {
+  for (const entry of SKILL_ADDITIONS) {
+    if (entry.added.includes(bundle)) return entry.version;
+  }
+  return undefined;
+}
+
+/**
+ * Whether an ABSENT `bundle` should be installed into a project whose pre-run
+ * `schemaVersion` is `priorVersion` (spec `core-cli.sync` Rule 5).
+ *
+ * A bundle no entry names fails OPEN — it is installed. The failure modes are
+ * asymmetric: failing open costs one unwanted reinstall, failing closed makes a
+ * bundle permanently unreachable for every existing project. The invariant test
+ * is what keeps this branch hypothetical.
+ */
+export function shouldInstallAbsent(bundle: string, priorVersion: string): boolean {
+  const addedAt = bundleAddedAt(bundle);
+  if (addedAt === undefined) return true;
+  return compareVersions(addedAt, priorVersion) > 0;
+}
+
+
 export async function installSkills(root: string, yes: boolean): Promise<{ installed: number; preserved: number }> {
   const targetDir = path.join(root, '.claude', 'skills');
   fs.mkdirSync(targetDir, { recursive: true });
