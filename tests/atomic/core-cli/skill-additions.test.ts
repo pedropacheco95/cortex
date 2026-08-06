@@ -72,16 +72,16 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
 
   describe('shouldInstallAbsent', () => {
     it('installs into a project below the bundle addition version', () => {
-      expect(shouldInstallAbsent('cortex-pulse-hygiene', '3.2')).toBe(true);
-      expect(shouldInstallAbsent('cortex-pulse-hygiene', '3.0')).toBe(true);
+      expect(shouldInstallAbsent('cortex-archive-ingest', '3.2')).toBe(true);
+      expect(shouldInstallAbsent('cortex-archive-ingest', '3.0')).toBe(true);
     });
 
     it('withholds from a project already at the addition version', () => {
-      expect(shouldInstallAbsent('cortex-pulse-hygiene', '3.3')).toBe(false);
+      expect(shouldInstallAbsent('cortex-archive-ingest', '3.3')).toBe(false);
     });
 
     it('withholds from a project past the addition version', () => {
-      expect(shouldInstallAbsent('cortex-pulse-hygiene', '3.4')).toBe(false);
+      expect(shouldInstallAbsent('cortex-archive-ingest', '3.4')).toBe(false);
     });
 
     it('fails open for a bundle no entry names', () => {
@@ -96,7 +96,7 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
       // hypothetical 3.4 entry against a project at 3.3 must install, while a
       // 3.3-seeded bundle at the same project must not.
       expect(compareVersions('3.4', '3.3')).toBeGreaterThan(0);
-      expect(shouldInstallAbsent('cortex-loop-rule-decay', '3.3')).toBe(false);
+      expect(shouldInstallAbsent('cortex-loop', '3.3')).toBe(false);
     });
   });
 

@@ -68,12 +68,12 @@ describe('AC: a bundle the developer deleted is not reinstalled', () => {
   it(
     'leaves it absent and names it in the summary',
     async () => {
-      const { root, home } = await makeProject('deleted', '3.3', ['cortex-loop-rule-decay']);
+      const { root, home } = await makeProject('deleted', '3.3', ['cortex-loop']);
 
       const result = await sync(root, { home, yes: true, ...DARWIN });
 
-      expect(fs.existsSync(skillDir(root, 'cortex-loop-rule-decay'))).toBe(false);
-      expect(result.summary).toMatch(/Skipped \(deleted by you, not reinstalled\):.*cortex-loop-rule-decay/);
+      expect(fs.existsSync(skillDir(root, 'cortex-loop'))).toBe(false);
+      expect(result.summary).toMatch(/Skipped \(deleted by you, not reinstalled\):.*cortex-loop/);
       expect(result.exitCode).toBe(0);
     },
     TEST_TIMEOUT,
@@ -82,12 +82,12 @@ describe('AC: a bundle the developer deleted is not reinstalled', () => {
   it(
     'stays absent across a second sync — the skip is idempotent',
     async () => {
-      const { root, home } = await makeProject('deleted-twice', '3.3', ['cortex-loop-rule-decay']);
+      const { root, home } = await makeProject('deleted-twice', '3.3', ['cortex-loop']);
 
       await sync(root, { home, yes: true, ...DARWIN });
       const second = await sync(root, { home, yes: true, ...DARWIN });
 
-      expect(fs.existsSync(skillDir(root, 'cortex-loop-rule-decay'))).toBe(false);
+      expect(fs.existsSync(skillDir(root, 'cortex-loop'))).toBe(false);
       expect(second.exitCode).toBe(0);
     },
     TEST_TIMEOUT,
@@ -96,7 +96,7 @@ describe('AC: a bundle the developer deleted is not reinstalled', () => {
   it(
     "never touches a developer's own skill",
     async () => {
-      const { root, home } = await makeProject('own-skill', '3.3', ['cortex-loop-rule-decay']);
+      const { root, home } = await makeProject('own-skill', '3.3', ['cortex-loop']);
       const mine = skillDir(root, 'my-own-skill');
       fs.mkdirSync(mine, { recursive: true });
       fs.writeFileSync(path.join(mine, 'SKILL.md'), '---\nname: my-own-skill\n---\n\n# Mine\n');
@@ -114,7 +114,7 @@ describe('AC: a project predating the chain gets the full roster once', () => {
   it(
     'installs every absent bundle when the project is below the seed version',
     async () => {
-      const gone = ['cortex-loop-rule-decay', 'cortex-pulse-distil', 'specflow-viewer'];
+      const gone = ['cortex-loop', 'specflow-lint', 'specflow-viewer'];
       const { root, home } = await makeProject('predates', '3.2', gone);
 
       const result = await sync(root, { home, yes: true, ...DARWIN });
@@ -133,7 +133,7 @@ describe('AC: the additions comparison reads the version from before Rule 2\'s r
   it(
     'installs using the pre-run version even though sync rewrites schemaVersion first',
     async () => {
-      const gone = ['cortex-loop-rule-decay', 'specflow-viewer'];
+      const gone = ['cortex-loop', 'specflow-viewer'];
       const { root, home } = await makeProject('ordering', '3.2', gone);
       expect(readSchemaVersion(root)).toBe('3.2');
 

@@ -275,17 +275,7 @@ export const SKILL_ADDITIONS: readonly SkillAddition[] = [
     added: [
       'cortex-archive-ingest',
       'cortex-extract-insight',
-      'cortex-loop-atlas-staleness',
-      'cortex-loop-bug-triage',
-      'cortex-loop-insight-refresh-daily',
-      'cortex-loop-insight-refresh-full',
-      'cortex-loop-onboarding-drift',
-      'cortex-loop-rule-decay',
-      'cortex-loop-session-observe',
-      'cortex-loop-spec-drift',
-      'cortex-loop-test-runner',
-      'cortex-pulse-distil',
-      'cortex-pulse-hygiene',
+      'cortex-loop',
       'cortex-register-tasks',
       'specflow-brainstorm',
       'specflow-bugs',
@@ -306,7 +296,10 @@ export const SKILL_ADDITIONS: readonly SkillAddition[] = [
       'verification-before-completion',
     ],
     reason:
-      'Seed entry — every bundle the package shipped when the additions chain was introduced at 3.3. ' +
+      'Seed entry — every bundle the package shipped when the additions chain was introduced at 3.3, ' +
+      'including `cortex-loop`, the callable-only bundle the eleven per-loop skills merged into at the ' +
+      'same version (loops.cortex-loop-bundle). The eleven names it replaced are the RETIREMENT chain\'s ' +
+      'business and deliberately do not appear here. ' +
       'Projects at 3.2 or below have never been offered these, so they take one full-roster install; ' +
       'a project already AT 3.3 is deliberately not below the seed, so a bundle it is missing was ' +
       'deleted on purpose and stays deleted. 3.3 was unreleased when the chain landed, so no version ' +
