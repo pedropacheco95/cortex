@@ -640,8 +640,8 @@ describe('session-observe scheduled-task registration (daily bundle member)', ()
     expect(SCHEDULED_TASKS).toHaveLength(5);
     const task = SCHEDULED_TASKS.find((t) => t.name === 'daily');
     expect(task).toBeDefined();
-    expect(task?.requiredSkills).toContain('cortex-loop-session-observe');
-    expect(task?.body).toContain('cortex-loop-session-observe');
+    expect(task?.requiredSkills).toContain('cortex-loop');
+    expect(task?.body).toContain('cortex-loop');
     expect(task?.body).toContain('cortex loop-session-observe --collect');
     expect(task?.body).toContain('--apply');
     // No standalone session-observe canonical remains.
@@ -655,8 +655,8 @@ describe('session-observe scheduled-task registration (daily bundle member)', ()
 // ---------------------------------------------------------------------------
 describe('the cortex-loop-session-observe skill bundle', () => {
   const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-  const pkg = path.join(PKG_ROOT, 'skills', 'cortex-loop-session-observe', 'SKILL.md');
-  const mirror = path.join(PKG_ROOT, '.claude', 'skills', 'cortex-loop-session-observe', 'SKILL.md');
+  const pkg = path.join(PKG_ROOT, 'skills', 'cortex-loop', 'references', 'session-observe.md');
+  const mirror = path.join(PKG_ROOT, '.claude', 'skills', 'cortex-loop', 'references', 'session-observe.md');
 
   it('ships in skills/ with a byte-identical .claude/skills mirror', () => {
     expect(fs.existsSync(pkg)).toBe(true);
@@ -666,7 +666,7 @@ describe('the cortex-loop-session-observe skill bundle', () => {
 
   it('teaches the type routing, the write boundaries, and the distil boundary', () => {
     const skill = fs.readFileSync(pkg, 'utf-8');
-    expect(skill).toContain('name: cortex-loop-session-observe');
+    expect(skill).toContain('Reference for `cortex-loop`');
     expect(skill).toContain('cortex loop-session-observe --collect');
     expect(skill).toContain('--apply --proposals');
     expect(skill).toContain('rule-candidate');

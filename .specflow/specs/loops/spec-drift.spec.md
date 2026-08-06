@@ -10,7 +10,7 @@ governed_by:
   - R-001
 governs:
   - "src/loops/spec-drift.ts"
-  - "skills/cortex-loop-spec-drift/**"
+  - "skills/cortex-loop/references/spec-drift.md"
 ---
 
 # Spec-Drift Loop
@@ -27,7 +27,7 @@ governs:
 
 ## Rules
 
-1. **Command + bundle.** `cortex loop-spec-drift` + shipped `skills/cortex-loop-spec-drift/SKILL.md` (registers the `spec-drift` task under `--partial`).
+1. **Command + bundle.** `cortex loop-spec-drift` + shipped `skills/cortex-loop/references/spec-drift.md` (registers the `spec-drift` task under `--partial`).
 2. **Drift signal (v1):** a dev spec is **suspect** when any file its `governs:` matches (or whose anatomy `spec_links` names it) has a git last-commit date **more than 14 days after** the spec's own last-commit date. The report lists: spec id, the newer files with both dates, and the three possible readings (spec wrong / implementation regressed / new ACs needed — design §11.4).
 3. **Ungoverned specs are skipped** (nothing to drift against); specs outside git history (untracked) are noted, not judged.
 4. **Always-write (schema §4.5):** explicit "No drift suspects this cycle." when quiet.

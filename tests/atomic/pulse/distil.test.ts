@@ -452,17 +452,19 @@ describe('Always-write: a quiet week still writes the report', () => {
 // The shipped SKILL.md bundle — prompt content pinned by string assertions
 // (spec Notes; same convention as atlas.ingest-skill).
 // ===========================================================================
-describe('Shipped skills/cortex-pulse-distil/SKILL.md is pinned', () => {
+describe('Shipped skills/cortex-loop/references/distil.md is pinned', () => {
   const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-  const SKILL_PATH = path.join(PKG_ROOT, 'skills', 'cortex-pulse-distil', 'SKILL.md');
+  const SKILL_PATH = path.join(PKG_ROOT, 'skills', 'cortex-loop', 'references', 'distil.md');
   const raw = fs.readFileSync(SKILL_PATH, 'utf-8');
   const parsed = matter(raw);
   const body = parsed.content;
 
-  it('ships at the package root with name: cortex-pulse-distil', () => {
+  it('ships as a cortex-loop reference the dispatch table names', () => {
     expect(fs.existsSync(SKILL_PATH)).toBe(true);
-    expect(parsed.data['name']).toBe('cortex-pulse-distil');
-    expect(String(parsed.data['description'] ?? '')).toMatch(/distil/i);
+    // Merged into `cortex-loop` (spec loops.cortex-loop-bundle) — a reference
+    // file carries no frontmatter; the parent's dispatch table is what names it.
+    const parent = fs.readFileSync(path.join(PKG_ROOT, 'skills', 'cortex-loop', 'SKILL.md'), 'utf-8');
+    expect(parent).toContain('references/distil.md');
   });
 
   it('instructs: run --collect, judge IN-SESSION (never a nested claude, never bare), scratchpad JSON, run --propose', () => {

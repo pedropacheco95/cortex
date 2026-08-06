@@ -18,24 +18,29 @@
       "extraction_level": 2
     },
     "src/cli/cli.ts": {
-      "source_sha256": "a521d37c5858c7fc839a53127bd6ad0f6a6871862537a9a49f79349f5e27f3c3",
-      "built_at_commit": "0438f32",
+      "source_sha256": "593277f54481f057d3016f9dcec1d7aa32bc13763d3991f73f073af157a7f366",
+      "built_at_commit": "0998c19",
       "extraction_level": 3
     },
     "src/cli/init.ts": {
-      "source_sha256": "a324fde0033e1b5c8b675cbabc93a27300603158fc3a7cfbdf843c4309a8f0df",
-      "built_at_commit": "b18781f",
+      "source_sha256": "059e6482c586d28a5c483d0139832114dec6e5bcfc4c99f3446e69bf81183e92",
+      "built_at_commit": "0998c19",
       "extraction_level": 3
     },
+    "src/cli/profile.ts": {
+      "source_sha256": "8de6a5c0cb4804c4a5ca1516160072842a90af44ef755b57665292bddcae8315",
+      "built_at_commit": "0998c19",
+      "extraction_level": 2
+    },
     "src/cli/scaffold.ts": {
-      "source_sha256": "d69356272c06f050a8ea49ca4887486b179004b33f3a3564182d4c7bc4d5d30d",
-      "built_at_commit": "0438f32",
+      "source_sha256": "6620981485e4e0e6700aba86fe5ba0802d6279fd6f66094de2a9a4537ba0b1a2",
+      "built_at_commit": "0998c19",
       "extraction_level": 3
     },
     "src/cli/sync.ts": {
-      "source_sha256": "53f49ab66ac18f766594f62cfccb164804581d01ff6d5230d45fd511ca949fef",
-      "built_at_commit": "0438f32",
-      "extraction_level": 2
+      "source_sha256": "c5bebb407948d392423778d62ec202d1e6227e800d5ac5ceea4591edf7284a1f",
+      "built_at_commit": "0998c19",
+      "extraction_level": 3
     },
     "src/cli/task-scoping.ts": {
       "source_sha256": "acc60130cc686ce95a26f673ec30aa3d0d2bf33d492196743797d1c338c3f191",
@@ -48,9 +53,9 @@
       "extraction_level": 2
     },
     "src/cli/templates.ts": {
-      "source_sha256": "2a046cbb448929642717e46792f86d88c046df34a5ca356ececbff39235fab64",
-      "built_at_commit": "bcbda52",
-      "extraction_level": 2
+      "source_sha256": "718e9569f1f4a294be653de6d037167a07593fdffc5e0747c81c432934d303d9",
+      "built_at_commit": "0998c19",
+      "extraction_level": 3
     },
     "src/constellation/compile.ts": {
       "source_sha256": "9786e844cf7edc7440c8bab9a7983c1751e6fa8610f5cca496001f798daf3dba",
@@ -113,8 +118,8 @@
       "extraction_level": 2
     },
     "src/hooks/session-start.ts": {
-      "source_sha256": "ced4b08bd36fef2649f95812fdc90e4b130e103c3ab057b38a91227f20585fd9",
-      "built_at_commit": "bcbda52",
+      "source_sha256": "162e7ee72878f0983e88a9ae65ee0aec5cc3da5ff6e943716b3c146e3cb01e1e",
+      "built_at_commit": "0998c19",
       "extraction_level": 3
     },
     "src/insight/cli.ts": {
@@ -313,8 +318,8 @@
       "extraction_level": 2
     },
     "src/schema/checks/config.ts": {
-      "source_sha256": "b8a22181fc9152ed7d9254ba244cd8dab59946e180d8c3a6fc5f07017fe353bd",
-      "built_at_commit": "8248c76",
+      "source_sha256": "a2115adada743b5cdd34172f1dc9d8bd5a286726a467ef2c6b43d43cb5de9e28",
+      "built_at_commit": "0998c19",
       "extraction_level": 2
     },
     "src/schema/checks/constellation.ts": {
@@ -398,9 +403,9 @@
       "extraction_level": 3
     },
     "src/schema/version.ts": {
-      "source_sha256": "661389d294b27569bb8c14851d5a6ea19c77d2d41d8ccb5cd93cee5dd93749a4",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "74fb930503d7325b4b6e647c7404fc3430d375025026ad18a46e914957a1e942",
+      "built_at_commit": "0998c19",
+      "extraction_level": 3
     },
     "src/sessions/read.ts": {
       "source_sha256": "9fd1448a56ad7dd33a2813d36d36bc45ca365e84cdebbc913b0a76296aa43ea7",
@@ -409,41 +414,63 @@
     }
   },
   "stale": [
+    "concept:dynamic-verb-dispatch",
+    "concept:hook-safety",
+    "concept:scaffolding",
     "concept:validation-checks",
-    "edge:calls:element:src/schema/validate.ts#validate->element:src/schema/index-build.ts#buildIndex",
-    "edge:implements-concept:file:src/schema/checks/archive.ts->concept:validation-checks",
-    "edge:implements-concept:file:src/schema/validate.ts->concept:validation-checks",
+    "edge:calls:element:src/cli/cli.ts#run->element:src/cli/init.ts#init",
+    "edge:calls:element:src/hooks/cli.ts#runHook->element:src/hooks/session-start.ts#run",
+    "edge:implements-concept:file:src/cli/cli.ts->concept:dynamic-verb-dispatch",
+    "edge:implements-concept:file:src/cli/init.ts->concept:dynamic-verb-dispatch",
+    "edge:implements-concept:file:src/cli/init.ts->concept:scaffolding",
+    "edge:implements-concept:file:src/cli/scaffold.ts->concept:scaffolding",
+    "edge:implements-concept:file:src/cli/templates.ts->concept:scaffolding",
+    "edge:implements-concept:file:src/hooks/session-start.ts->concept:hook-safety",
+    "edge:implements-concept:file:src/schema/checks/config.ts->concept:validation-checks",
+    "edge:imports:file:src/archive/scaffold.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/cli/cli.ts->file:src/cli/init.ts",
+    "edge:imports:file:src/cli/cli.ts->file:src/cli/sync.ts",
+    "edge:imports:file:src/cli/cli.ts->file:src/cli/task-scoping.ts",
+    "edge:imports:file:src/cli/cli.ts->file:src/cli/tasks-register.ts",
+    "edge:imports:file:src/cli/cli.ts->file:src/constellation/server.ts",
+    "edge:imports:file:src/cli/cli.ts->file:src/pulse/distil.ts",
+    "edge:imports:file:src/cli/cli.ts->file:src/pulse/migrate.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/cli/scaffold.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/cli/tasks-register.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/insight/scaffold.ts",
+    "edge:imports:file:src/cli/init.ts->file:src/paths.ts",
     "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
+    "edge:imports:file:src/cli/scaffold.ts->file:src/cli/task-scoping.ts",
+    "edge:imports:file:src/cli/scaffold.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/cli/sync.ts->file:src/cli/scaffold.ts",
+    "edge:imports:file:src/cli/sync.ts->file:src/cli/task-scoping.ts",
+    "edge:imports:file:src/cli/sync.ts->file:src/cli/tasks-register.ts",
+    "edge:imports:file:src/cli/sync.ts->file:src/cli/templates.ts",
     "edge:imports:file:src/cli/sync.ts->file:src/schema/validate.ts",
-    "edge:imports:file:src/insight/storage.ts->file:src/archive/formats.ts",
-    "edge:imports:file:src/loops/lint-scheduled.ts->file:src/schema/validate.ts",
-    "edge:imports:file:src/schema/checks/archive.ts->file:src/archive/formats.ts",
-    "edge:imports:file:src/schema/checks/archive.ts->file:src/schema/types.ts",
-    "edge:imports:file:src/schema/cli.ts->file:src/schema/validate.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/archive.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/atlas.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/bizspec.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/claude-md.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/compass.ts",
+    "edge:imports:file:src/cli/sync.ts->file:src/schema/version.ts",
+    "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
+    "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/hooks/cli.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/post-read.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/post-write.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/pre-write.ts->file:src/hooks/session-start.ts",
+    "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/hooks/session-start.ts->file:src/hooks/errors.ts",
+    "edge:imports:file:src/insight/scaffold.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/loops/onboarding-drift.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/loops/report.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/pulse/review.ts->file:src/cli/templates.ts",
+    "edge:imports:file:src/schema/checks/config.ts->file:src/schema/types.ts",
+    "edge:imports:file:src/schema/checks/config.ts->file:src/schema/version.ts",
     "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/config.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/constellation.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/devspec.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/hooks.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/insight.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/layout.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/loop-md.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/provenance.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/pulse.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/scenario.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/specs.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/xref.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/index-build.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/types.ts",
     "edge:imports:file:src/schema/validate.ts->file:src/schema/version.ts"
   ],
   "cycle_commits": [
+    "0998c19",
     "c667a9a",
-    "b18781f",
-    "0438f32"
+    "b18781f"
   ]
 }

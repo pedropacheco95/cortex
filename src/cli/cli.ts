@@ -8,7 +8,9 @@
  * query surface (spec insight.cli, Rule 1; §4.10.8),
  * `cortex validate [path] [--json]` (atlas.ingest-skill Rule 4 rider),
  * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1),
- * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), the deterministic
+ * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), `cortex usage` — the
+ * read-side adoption report over session transcripts (spec pulse.usage,
+ * Rule 1), the deterministic
  * loops `cortex loop-rule-decay|loop-atlas-staleness|loop-onboarding-drift|`
  * `loop-spec-drift|loop-specflow-lint|loop-specflow-verify` (specs loops.*,
  * Rule 1 each), the two collect/judge/propose loops
@@ -95,6 +97,7 @@ const PULSE_LOOP_COMMANDS = new Set([
   'insight-refresh-fast',
   'loop-insight-refresh',
   'loop-session-observe',
+  'usage',
 ]);
 
 export async function run(argv: string[]): Promise<number> {
@@ -138,6 +141,18 @@ export async function run(argv: string[]): Promise<number> {
       return await runHygiene('.');
     } catch (err) {
       console.error(`cortex pulse-hygiene: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+  // `cortex usage` — the read-side adoption report (spec pulse.usage, Rule 1):
+  // counts how often Cortex was actually consulted, from session transcripts
+  // that already exist. No instrumentation, no runtime cost.
+  if (argv[0] === 'usage') {
+    try {
+      const { runUsage } = await import('../pulse/usage.js');
+      return await runUsage('.');
+    } catch (err) {
+      console.error(`cortex usage: ${(err as Error).message}`);
       return 1;
     }
   }

@@ -518,11 +518,11 @@ describe('classification gate', () => {
 // ---------------------------------------------------------------------------
 
 describe('shipped bundle (Rule 10)', () => {
-  const skillPath = path.join(REPO_ROOT, 'skills', 'cortex-loop-test-runner', 'SKILL.md');
+  const skillPath = path.join(REPO_ROOT, 'skills', 'cortex-loop', 'references', 'test-runner.md');
 
-  it('skills/cortex-loop-test-runner/SKILL.md exists and drives the collect → classify-in-session → fix-stage flow', () => {
+  it('skills/cortex-loop/references/test-runner.md exists and drives the collect → classify-in-session → fix-stage flow', () => {
     const raw = fs.readFileSync(skillPath, 'utf-8');
-    expect(raw).toContain('name: cortex-loop-test-runner');
+    expect(raw).toContain('Reference for `cortex-loop`');
     expect(raw).toContain('cortex loop-test-runner --collect');
     expect(raw).toContain('cortex loop-test-runner --fix-stage');
     expect(raw).toContain('specflow-bugs');
@@ -534,7 +534,9 @@ describe('shipped bundle (Rule 10)', () => {
   it('the scheduled test-runner task requires exactly this skill and names it verbatim in its body', () => {
     const task = SCHEDULED_TASKS.find((t) => t.name === 'test-runner');
     expect(task).toBeDefined();
-    expect(task!.requiredSkills).toEqual(['cortex-loop-test-runner']);
-    expect(task!.body).toContain('cortex-loop-test-runner');
+    // Merged into `cortex-loop` (loops.cortex-loop-bundle Rules 4-5): the bundle
+    // declares the owning skill, and the body names it plus the reference file.
+    expect(task!.requiredSkills).toEqual(['cortex-loop']);
+    expect(task!.body).toContain('`cortex-loop` → `references/test-runner.md`');
   });
 });

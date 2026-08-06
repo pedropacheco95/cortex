@@ -39,17 +39,8 @@ const DARWIN = { platform: 'darwin' as const };
  */
 const PACKAGED_LOOP_SKILLS = [
   'cortex-extract-insight',
-  'cortex-loop-atlas-staleness',
-  'cortex-loop-bug-triage',
-  'cortex-loop-insight-refresh-daily',
-  'cortex-loop-insight-refresh-full',
-  'cortex-loop-onboarding-drift',
-  'cortex-loop-rule-decay',
-  'cortex-loop-session-observe',
-  'cortex-loop-spec-drift',
-  'cortex-loop-test-runner',
-  'cortex-pulse-distil',
-  'cortex-pulse-hygiene',
+  // The eleven per-loop bundles merged into `cortex-loop` (loops.cortex-loop-bundle).
+  'cortex-loop',
   'specflow-bugs',
   'specflow-lint',
   'specflow-tests',

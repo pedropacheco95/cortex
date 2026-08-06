@@ -6,12 +6,15 @@ Cortex that actually gets used, not just installed. The outcome is that from the
 
 ## What it covers
 
-_No business specs written yet — this tree is scaffolded structure only. Planned outcomes:_
+**Outcomes written:**
 
-- **Awareness from session one** — the assistant knows Cortex is present without being told each time.
-- **A clear path to the knowledge** — it knows where the project's understanding lives.
-- **A sense of when to look** — it consults that knowledge at the right moments instead of guessing.
+- **The assistant reaches for Cortex instead of guessing** — it knows what subjects the project holds knowledge about, so consulting stops being a gamble against an unknown hit rate; it stops asking the developer questions already answered, and stops re-deriving from code what the project already recorded. Measured, not assumed.
+
+_Planned (not yet written):_
+
 - **Grounded answers** — responses draw on the project's real context rather than assumptions.
+
+Note on what the evidence changed: "awareness from session one" was already delivered — the block named the modules every session — and it changed nothing. Knowing Cortex exists turned out not to be the gap; knowing what it *covers* was.
 
 ## Why it's grouped this way
 

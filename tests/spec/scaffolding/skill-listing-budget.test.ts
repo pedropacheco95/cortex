@@ -110,15 +110,21 @@ describe('AC: a callable-only bundle carries no trigger surface', () => {
     .filter(([, t]) => t === 'D')
     .map(([b]) => b);
 
-  it('has the two expected members', () => {
-    expect(tierD.sort()).toEqual(['specflow-deep-onboard', 'specflow-viewer']);
+  it('every Tier D member is on disk and none is silently mis-tiered', () => {
+    // Derived from TIERS rather than pinned to a literal: adding a Tier D bundle
+    // is a deliberate act that updates TIERS, and it should not break a test
+    // about an unrelated bundle.
+    expect(tierD.length).toBeGreaterThan(0);
+    for (const bundle of tierD) {
+      expect(fs.existsSync(path.join(SKILLS, bundle, 'SKILL.md')), bundle).toBe(true);
+    }
   });
 
-  it.each(['specflow-viewer', 'specflow-deep-onboard'])('%s is at most 60 chars', (bundle) => {
+  it.each(tierD)('%s is at most 60 chars', (bundle) => {
     expect((byName.get(bundle) as { after: number }).after).toBeLessThanOrEqual(60);
   });
 
-  it.each(['specflow-viewer', 'specflow-deep-onboard'])('%s advertises no triggers', (bundle) => {
+  it.each(tierD)('%s advertises no triggers', (bundle) => {
     const d = (byName.get(bundle) as { description: string }).description;
     expect(d).not.toMatch(/PROACTIVELY/i);
     expect(d).not.toMatch(/trigger/i);
@@ -126,7 +132,7 @@ describe('AC: a callable-only bundle carries no trigger surface', () => {
     expect(d).not.toMatch(/\buse this skill\b/i);
   });
 
-  it.each(['specflow-viewer', 'specflow-deep-onboard'])('%s says in its body that it is callable-only', (bundle) => {
+  it.each(tierD)('%s says in its body that it is callable-only', (bundle) => {
     const body = fs.readFileSync(path.join(SKILLS, bundle, 'SKILL.md'), 'utf-8');
     expect(body).toContain('callable-only');
     expect(body).toContain(`/${bundle}`);

@@ -2,7 +2,7 @@
 
 ## What this is
 
-The Cortex loops plus the shared loop infrastructure built once and reused. A Cortex loop maintains `.cortex/` integrity, writes only to `.cortex/pulse/` (except the test-runner), uses the standard skill/CLI surface, and composes with the other loops. Each loop skill stays **individually invocable** (from a session or by name); scheduling is a thinner wrapper on top — the individual loops are grouped into **five scheduled-task bundles** (schema §9.1: `daily`, `weekly-curation`, `weekly-quality`, `test-runner`, `monthly-review`), each bundle running its member loops sequentially and failure-isolated. The bundle grouping is a registration/cadence concern owned by `core-cli.task-scoping` / `core-cli.tasks-register`; the loop specs below each own one loop's behaviour regardless of which bundle schedules it.
+The Cortex loops plus the shared loop infrastructure built once and reused. A Cortex loop maintains `.cortex/` integrity, writes only to `.cortex/pulse/` (except the test-runner), uses the standard skill/CLI surface, and composes with the other loops. Each loop stays **individually invocable** — by its CLI verb (`cortex loop-spec-drift`, `cortex pulse-hygiene`, …) or via `/cortex-loop` naming the loop, since `loops.cortex-loop-bundle` merged the eleven per-loop skill bundles into one callable-only `cortex-loop` skill dispatching to a reference file per loop; scheduling is a thinner wrapper on top — the individual loops are grouped into **five scheduled-task bundles** (schema §9.1: `daily`, `weekly-curation`, `weekly-quality`, `test-runner`, `monthly-review`), each bundle running its member loops sequentially and failure-isolated. The bundle grouping is a registration/cadence concern owned by `core-cli.task-scoping` / `core-cli.tasks-register`; the loop specs below each own one loop's behaviour regardless of which bundle schedules it.
 
 ## What it covers
 
@@ -18,6 +18,8 @@ The Cortex loops plus the shared loop infrastructure built once and reused. A Co
 
 - `loops.bug-triage` — daily ledger triage: fill-only classification of unclassified open bugs, compare-and-report on classified ones (never overwrites a human's judgment).
 - `loops.lint-scheduled` / `loops.verify-scheduled` — the daily paper trail: validator-backed structural report and owed-tests coverage report (incl. the §8.2 covers-completeness check; deferrals distinguished).
+
+- `loops.cortex-loop-bundle` — the eleven loop/pulse skill bundles become one callable-only `cortex-loop` skill with a reference file per loop: ~297 tokens off the resident skill listing, with cadences, models, CLI verbs, report paths, and failure isolation unchanged. Profile scoping moves from dropping a skill directory to the worded SKIP instruction the payload already carried.
 
 - `loops.test-runner` — the only code-writing loop: tiered runs, seven-type classification gate (unclassifiable → report-only), harness-verified fixes as branch + five-field PR, budget exhaustion → ledger case file that suppresses retries until resolved.
 

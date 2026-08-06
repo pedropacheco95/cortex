@@ -337,7 +337,7 @@ describe('tasksRename: mechanics', () => {
       const base = path.join(home, '.claude', 'scheduled-tasks');
       const src = path.join(base, 'test-runner');
       fs.mkdirSync(src, { recursive: true });
-      const tail = '\ndescription: "Run the cascade."\n---\n\n# test-runner\n\nInvoke the `cortex-loop-test-runner` skill.\n';
+      const tail = '\ndescription: "Run the cascade."\n---\n\n# test-runner\n\nInvoke the `cortex-loop` → `references/test-runner.md` skill.\n';
       fs.writeFileSync(path.join(src, 'SKILL.md'), `---\nname: test-runner${tail}`, 'utf-8');
 
       const r = tasksRename(home, root);
@@ -363,7 +363,7 @@ describe('tasksRename: mechanics', () => {
       const base = path.join(home, '.claude', 'scheduled-tasks');
       const legacy = hashScopedTaskName(root, 'daily');
       fs.mkdirSync(path.join(base, legacy), { recursive: true });
-      const tail = '\ndescription: "Nightly."\n---\n\n# hygiene\n\nInvoke the `cortex-pulse-hygiene` skill.\n';
+      const tail = '\ndescription: "Nightly."\n---\n\n# hygiene\n\nInvoke the `cortex-loop` → `references/hygiene.md` skill.\n';
       fs.writeFileSync(path.join(base, legacy, 'SKILL.md'), `---\nname: ${legacy}${tail}`, 'utf-8');
       // A foreign project's hash-scoped dir must never move.
       const foreign = hashScopedTaskName('/some/other/project', 'daily');

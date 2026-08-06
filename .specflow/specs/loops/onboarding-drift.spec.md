@@ -9,7 +9,7 @@ governed_by:
   - R-001
 governs:
   - "src/loops/onboarding-drift.ts"
-  - "skills/cortex-loop-onboarding-drift/**"
+  - "skills/cortex-loop/references/onboarding-drift.md"
 ---
 
 # Onboarding-Drift Loop
@@ -26,7 +26,7 @@ governs:
 
 ## Rules
 
-1. **Command + bundle.** `cortex loop-onboarding-drift` + shipped `skills/cortex-loop-onboarding-drift/SKILL.md` (registers the `onboarding-drift` task under `--partial`).
+1. **Command + bundle.** `cortex loop-onboarding-drift` + shipped `skills/cortex-loop/references/onboarding-drift.md` (registers the `onboarding-drift` task under `--partial`).
 2. **Drift signals (v1):** (a) the CLAUDE.md block's marker version differs from `schemaVersion`, or the block is missing; (b) an `_index.md` missing a §7.1 required heading (reuse the validator's `check.index-shape` logic, don't reimplement); (c) an `_index.md` over the 300-token budget (chars/4); (d) a `.cortex/` directory whose `_index.md` is byte-identical to the shipped template while its directory content has since gained artefacts — a hint the prompt was never localised. Each finding proposes a concrete refresh action.
 3. **Always-write (schema §4.5):** explicit "Scaffolding is current." when quiet.
 4. **Read-only Core** (R-001): proposes `cortex sync` refreshes; performs none.

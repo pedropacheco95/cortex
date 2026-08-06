@@ -53,6 +53,11 @@ Current edges (`A → depends on B`):
 - `specflow.cortex-awareness` → `core-cli.init`, `schema.validator`
 - `discipline.verification-skill` → `core-cli.init`
 - `discipline.hardening-convention` → (no dependencies — a standalone authoring recipe)
+- `scaffolding.coverage-map` → `hooks.session-start`, `insight.storage-format`
+- `scaffolding.rationalization-table` → `scaffolding.coverage-map`
+- `pulse.usage` → `loops.session-reading`, `core-cli.init`
+- `scaffolding.skill-listing-budget` → (no dependencies — a standalone authoring contract)
+- `loops.cortex-loop-bundle` → `core-cli.task-scoping`, `core-cli.init-profile`, `core-cli.sync`, `scaffolding.skill-listing-budget`
 
 v3 edges (`build-order-v3.md`):
 

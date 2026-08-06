@@ -44,9 +44,12 @@ const CHARS_PER_TOKEN = 4;
  *       routing signal, so it keeps real trigger surface.
  *   C — specflow-entry. The mandatory gate on arbitrary phrasing; every Tier A
  *       assignment depends on it firing, so it is not shrunk to fund them.
- *   D — callable-only. Never routed into: the developer types `/<name>`. It
- *       declares NO trigger phrases — removing the trigger surface is the point,
- *       and the token saving is a consequence.
+ *   D — callable-only. Never routed into by a description matching a sentence.
+ *       Reached by one of two explicit namings: the developer types `/<name>`, or
+ *       a prompt Cortex itself authors names it (the scheduled-task payloads in
+ *       templates.ts name `cortex-loop`). It declares NO trigger phrases —
+ *       removing the trigger surface is the point, and the tokens are a
+ *       consequence.
  */
 export const TIER_CEILING = { A: 120, B: 250, C: null, D: 60 };
 
@@ -54,17 +57,7 @@ export const TIER_CEILING = { A: 120, B: 250, C: null, D: 60 };
 export const TIERS = {
   'cortex-archive-ingest': 'A',
   'cortex-extract-insight': 'A',
-  'cortex-loop-atlas-staleness': 'A',
-  'cortex-loop-bug-triage': 'A',
-  'cortex-loop-insight-refresh-daily': 'A',
-  'cortex-loop-insight-refresh-full': 'A',
-  'cortex-loop-onboarding-drift': 'A',
-  'cortex-loop-rule-decay': 'A',
-  'cortex-loop-session-observe': 'A',
-  'cortex-loop-spec-drift': 'A',
-  'cortex-loop-test-runner': 'A',
-  'cortex-pulse-distil': 'A',
-  'cortex-pulse-hygiene': 'A',
+  'cortex-loop': 'D',
   'cortex-register-tasks': 'A',
   'specflow-brainstorm': 'A',
   'specflow-bugs': 'A',
@@ -96,17 +89,6 @@ export const REQUIRED_TRIGGERS = {
   // routing signal.
   'cortex-archive-ingest': ['transcript', 'rfp', 'brief', 'contract', 'add this to project memory'],
   'cortex-extract-insight': ['extract insight', 'refresh', 'map this codebase'],
-  'cortex-loop-atlas-staleness': ['run the atlas loop', 'is the atlas stale'],
-  'cortex-loop-bug-triage': ['run the bug-triage loop', 'triage the open bugs'],
-  'cortex-loop-insight-refresh-daily': ['run the daily insight refresh', 'refresh the insight layer'],
-  'cortex-loop-insight-refresh-full': ['run the full insight refresh', 'rebuild l4'],
-  'cortex-loop-onboarding-drift': ['run the onboarding-drift loop', 'is the scaffolding current'],
-  'cortex-loop-rule-decay': ['run the rule-decay loop', 'which rules are stale'],
-  'cortex-loop-session-observe': ['run the session-observe loop', 'what did we learn'],
-  'cortex-loop-spec-drift': ['run the spec-drift loop', 'have the specs drifted'],
-  'cortex-loop-test-runner': ['run the test-runner loop', 'triage the failing tests'],
-  'cortex-pulse-distil': ['run the distil loop', 'what do i keep repeating'],
-  'cortex-pulse-hygiene': ['run the hygiene loop', 'project health check'],
   'cortex-register-tasks': ['register', 'activate', 'cortex scheduled tasks', 'claude desktop'],
 
   // Tier A — reachable because specflow-entry's routing table or a sibling body
@@ -133,6 +115,7 @@ export const REQUIRED_TRIGGERS = {
   'specflow-entry': ['add a feature', 'fix this bug', 'change this behavior', 'what does X do'],
 
   // Tier D declares none, and is asserted to have none — see the Tier D check below.
+  'cortex-loop': [],
   'specflow-deep-onboard': [],
   'specflow-viewer': [],
 };

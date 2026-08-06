@@ -173,7 +173,7 @@ describe('AC: the spec loops are not scheduled under superpowers', () => {
     const scoped = scopeTaskToProfile(task('weekly-quality'), 'superpowers');
     expect(scoped?.requiredSkills).not.toContain('specflow-lint');
     expect(scoped?.requiredSkills).not.toContain('specflow-tests');
-    expect(scoped?.requiredSkills).toContain('cortex-loop-insight-refresh-full');
+    expect(scoped?.requiredSkills).toContain('cortex-loop');
     expect(scoped?.requiredSkills).toContain('cortex-extract-insight');
   });
 });
@@ -196,15 +196,11 @@ describe('AC: the knowledge loops are scheduled under every profile', () => {
   });
 
   const BUCKET_1_SKILLS = [
-    'cortex-pulse-hygiene',
-    'cortex-loop-insight-refresh-daily',
-    'cortex-loop-session-observe',
+    // Post-merge the Bucket-1 loops all live in `cortex-loop`
+    // (loops.cortex-loop-bundle Rule 6): the skill can never be dropped, so
+    // profile scoping is carried by the payload's worded SKIP instruction.
+    'cortex-loop',
     'cortex-extract-insight',
-    'cortex-pulse-distil',
-    'cortex-loop-rule-decay',
-    'cortex-loop-insight-refresh-full',
-    'cortex-loop-atlas-staleness',
-    'cortex-loop-onboarding-drift',
   ];
 
   it('every Bucket-1 skill is still required by some surviving bundle', () => {

@@ -14,6 +14,8 @@ The self-maintenance process: two loops, Hygiene (fast, mostly deterministic, da
 
 - `pulse.distil` — weekly said-things miner: deterministic collect/propose bookends around an agentic pattern judgment; threshold + covered + dismissed filters; single-S-namespace proposals with session provenance.
 
+- `pulse.usage` — read-side adoption report: counts `cortex insight` invocations by verb (from Bash command fields only), `.cortex/` reads bucketed by module with loop machinery separated from orientation, and questions asked without a prior consult → `pulse/reports/usage.md`. No instrumentation, no runtime cost. Implements a scaffolding outcome, not a pulse one — it measures whether Cortex is reached for.
+
 _Planned (not yet written):_
 
 - Hygiene: orphan branches, stale PRs, drop-offs, anatomy drift, compass dead refs, spec orphans, and aged TODOs → `pulse/reports/hygiene.md`

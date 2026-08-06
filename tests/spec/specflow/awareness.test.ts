@@ -121,8 +121,15 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
     // final mechanism added cortex-register-tasks, and the v3.0 consolidation
     // deleted cortex-loop-skill-suggest — its lens folded into pulse-distil).
     expect(installedDirs).toContain('cortex-archive-ingest');
-    expect(installedDirs).toContain('cortex-pulse-hygiene');
+    expect(installedDirs).toContain('cortex-loop');
     expect(installedDirs).not.toContain('cortex-loop-skill-suggest'); // retired at v3.0
+    // The eleven per-loop bundles merged into `cortex-loop` and ship as a
+    // SKILL_MIGRATIONS entry, so synced projects shed them (loops.cortex-loop-bundle).
+    expect(installedDirs).not.toContain('cortex-pulse-hygiene');
+    // The merge must not have cost the loops their instructions: the parent
+    // bundle installs with all eleven reference files intact.
+    const refs = fs.readdirSync(path.join(root, '.claude', 'skills', 'cortex-loop', 'references')).sort();
+    expect(refs).toHaveLength(11);
     // `_conventions/` ships in the package but carries no SKILL.md, so it is
     // not a bundle and is not installed (discipline.hardening-convention Rule 6).
     expect(installedDirs).toEqual(listSkillBundles(PKG_SKILLS));
@@ -150,7 +157,7 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
     }
   });
 
-  it('the summary installed count reflects the full packaged set (14 cortex + 16 specflow + 1 discipline = 31)', () => {
+  it('the summary installed count reflects the full packaged set (4 cortex + 16 specflow + 1 discipline = 21)', () => {
     expect(result.exitCode).toBe(0);
     const bundleCount = listSkillBundles(PKG_SKILLS).length;
     // The 2026-08 superpowers-absorption round added the Bucket-2 bundle
@@ -158,10 +165,10 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
     // it belongs to neither process profile). `skills/_conventions/` ships in
     // the package but is NOT a bundle (no SKILL.md) and so is not counted or
     // installed — see tests/spec/discipline/packaging.test.ts.
-    expect(bundleCount).toBe(31);
+    expect(bundleCount).toBe(21);
     const m = /Skills installed: (\d+)/.exec(result.summary);
     expect(m).not.toBeNull();
-    expect(Number(m?.[1])).toBe(31);
+    expect(Number(m?.[1])).toBe(21);
   });
 });
 

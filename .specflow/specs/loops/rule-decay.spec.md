@@ -9,7 +9,7 @@ governed_by:
   - R-001
 governs:
   - "src/loops/rule-decay.ts"
-  - "skills/cortex-loop-rule-decay/**"
+  - "skills/cortex-loop/references/rule-decay.md"
 ---
 
 # Rule-Decay Loop
@@ -26,7 +26,7 @@ governs:
 
 ## Rules
 
-1. **Command + bundle.** `cortex loop-rule-decay` + shipped `skills/cortex-loop-rule-decay/SKILL.md` (registers the `rule-decay` task under `--partial`).
+1. **Command + bundle.** `cortex loop-rule-decay` + shipped `skills/cortex-loop/references/rule-decay.md` (registers the `rule-decay` task under `--partial`).
 2. **Decay signals (v1):** per active rule — (a) every `governs:` glob matches zero on-disk files; (b) any `source:` no longer resolves; (c) the rule file is older than 180 days *and* signal (a) holds. Each candidate lists which signals fired and the evidence (the globs, the dead paths, the age).
 3. **Already-retired rules are skipped** — the loop reviews the living.
 4. **Always-write (schema §4.5):** no candidates → explicit "No retirement candidates this cycle."

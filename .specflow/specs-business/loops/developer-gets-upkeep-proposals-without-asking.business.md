@@ -6,6 +6,7 @@ implemented_by:
   - ../../specs/loops/atlas-staleness.spec.md
   - ../../specs/loops/onboarding-drift.spec.md
   - ../../specs/loops/spec-drift.spec.md
+  - ../../specs/loops/cortex-loop-bundle.spec.md
 ---
 
 # The knowledge layer proposes its own upkeep — the developer just decides

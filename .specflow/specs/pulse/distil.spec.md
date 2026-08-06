@@ -7,7 +7,7 @@ depends_on:
   - core-cli.init
 governs:
   - "src/pulse/distil.ts"
-  - "skills/cortex-pulse-distil/**"
+  - "skills/cortex-loop/references/distil.md"
 implements: ../../specs-business/loops/developer-benefits-from-what-past-sessions-taught.business.md
 governed_by:
   - R-001
@@ -31,7 +31,7 @@ Distil's judgment carries **two lenses** over the same corpus. The primary **rul
 
 ## Rules
 
-1. **Two deterministic halves, three entry modes.** `--collect` extracts messages since last run into `pulse/state/session-corpus.json` (the single session corpus — formerly shared with the retired `skill-suggest`, now distil's alone; design §11.5). `--propose <candidates.json>` deterministically filters and writes proposals. Bare `cortex pulse-distil` = collect → spawn the Claude CLI headless for pattern judgment (the `core-cli.init` Rule 6 subprocess boundary; same failure semantics: `--no-llm`/absent/timeout → degrade with notice, auth → named) → propose. The scheduled task's skill (`skills/cortex-pulse-distil/SKILL.md`, shipped) runs collect, performs the judgment **itself** (it already is a Claude session — no nested subprocess), then runs propose.
+1. **Two deterministic halves, three entry modes.** `--collect` extracts messages since last run into `pulse/state/session-corpus.json` (the single session corpus — formerly shared with the retired `skill-suggest`, now distil's alone; design §11.5). `--propose <candidates.json>` deterministically filters and writes proposals. Bare `cortex pulse-distil` = collect → spawn the Claude CLI headless for pattern judgment (the `core-cli.init` Rule 6 subprocess boundary; same failure semantics: `--no-llm`/absent/timeout → degrade with notice, auth → named) → propose. The scheduled task's skill (`skills/cortex-loop/references/distil.md`, shipped) runs collect, performs the judgment **itself** (it already is a Claude session — no nested subprocess), then runs propose.
 2. **Candidate shape (the judgment output contract):** JSON list of `{pattern, occurrences, sessionIds, proposedTarget, proposedText, confidence}`. Propose validates the shape; malformed candidates are skipped and counted in the report.
 3. **Deterministic filters in propose, in order:** (a) `occurrences >= distilThresholdN`; (b) not covered — `proposedText` (normalised) already present in cerebrum → dropped as covered; (c) not suppressed — a pattern whose normalised text matches an unexpired `dismissed.md` entry's recorded text is not re-proposed (design §10.3 rejection memory). Dropped counts appear in the report by reason.
 4. **S-id allocation** via `pulse/state/suggestion-counter` (schema §4.5): monotonic, never reused, shared with every proposing loop.

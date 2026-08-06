@@ -780,19 +780,13 @@ describe('Rule 17: task→skill mapping owned by the task definitions', () => {
   /** The shipped mapping — one row per bundle: the union of every member
    *  loop's skills (plus cortex-extract-insight where a member extracts). */
   const EXPECTED_MAPPING: Record<string, string[]> = {
-    'daily': [
-      'cortex-pulse-hygiene',
-      'cortex-loop-bug-triage',
-      'specflow-bugs',
-      'cortex-loop-spec-drift',
-      'cortex-loop-insight-refresh-daily',
-      'cortex-extract-insight',
-      'cortex-loop-session-observe',
-    ],
-    'weekly-curation': ['cortex-pulse-distil', 'cortex-loop-rule-decay'],
-    'weekly-quality': ['specflow-lint', 'specflow-tests', 'cortex-loop-insight-refresh-full', 'cortex-extract-insight'],
-    'test-runner': ['cortex-loop-test-runner'],
-    'monthly-review': ['cortex-loop-atlas-staleness', 'cortex-loop-onboarding-drift'],
+    // Post-merge the loop members all resolve to `cortex-loop`
+    // (loops.cortex-loop-bundle Rule 5); only non-merged skills keep their own name.
+    'daily': ['cortex-loop', 'specflow-bugs', 'cortex-extract-insight'],
+    'weekly-curation': ['cortex-loop'],
+    'weekly-quality': ['specflow-lint', 'specflow-tests', 'cortex-loop', 'cortex-extract-insight'],
+    'test-runner': ['cortex-loop'],
+    'monthly-review': ['cortex-loop'],
   };
 
   /** Member loops per bundle, in the order the payload must run them. */

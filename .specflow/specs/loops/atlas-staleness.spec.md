@@ -9,7 +9,7 @@ governed_by:
   - R-001
 governs:
   - "src/loops/atlas-staleness.ts"
-  - "skills/cortex-loop-atlas-staleness/**"
+  - "skills/cortex-loop/references/atlas-staleness.md"
 ---
 
 # Atlas-Staleness Loop
@@ -26,7 +26,7 @@ governs:
 
 ## Rules
 
-1. **Command + bundle.** `cortex loop-atlas-staleness` + shipped `skills/cortex-loop-atlas-staleness/SKILL.md` (registers the `atlas-staleness` task under `--partial`).
+1. **Command + bundle.** `cortex loop-atlas-staleness` + shipped `skills/cortex-loop/references/atlas-staleness.md` (registers the `atlas-staleness` task under `--partial`).
 2. **Staleness signals (v1):** (a) decisions older than 180 days that are still cited (by a rule's `source:` or another atlas entry) → **re-verify** candidates ("the project still leans on this — is it still true?"); (b) sources older than 180 days referenced by nothing → **archive** candidates; (c) atlas entries whose own cross-refs (`sources:`, `cerebrum_rules:`, `supersedes:`) no longer resolve → **dead-link** findings.
 3. **An empty atlas is a clean run**, not an error: the report states it plainly.
 4. **Always-write (schema §4.5):** explicit "No candidates this cycle." when quiet.

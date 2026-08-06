@@ -8,7 +8,7 @@ depends_on:
   - core-cli.init
 governs:
   - "src/loops/test-runner.ts"
-  - "skills/cortex-loop-test-runner/**"
+  - "skills/cortex-loop/references/test-runner.md"
 implements: ../../specs-business/loops/developer-gets-test-failures-fixed-or-explained.business.md
 governed_by:
   - R-001
@@ -37,7 +37,7 @@ governed_by:
 7. **Budget exhaustion → case file, no PR (Pedro pin 1a-b).** `outcome: fail` → nothing is pushed or proposed; a ledger entry is filed carrying the classification `type:`, the **writer's last diff**, the **verifier's rejection reasoning** (full verdict history), and the trigger context, with `affects:` naming the test path (arming Rule 3's suppression) and the traced spec.
 8. **Working tree inviolate.** Runner + harness writes are confined to: worktrees/branches, `pulse/reports/test-failures.md`, new ledger entries. A run leaves the checked-out tree byte-identical.
 9. **Always-write report** (§4.5): per-tier sections — passed counts, fixed (branch/PR refs), case-filed, suppressed, unclassifiable-reported — with explicit empty states; footer names tier commands and budget used.
-10. **Bundle.** Shipped `skills/cortex-loop-test-runner/SKILL.md` (satisfies the scoped task's `requiredSkills`): run intake `--collect`-style, classify in-session, then invoke the CLI's fix/report stages. Deterministic Core orchestration throughout (R-001); the agentic touches are the classifier and the harness's two roles.
+10. **Bundle.** Shipped `skills/cortex-loop/references/test-runner.md` (satisfies the scoped task's `requiredSkills`): run intake `--collect`-style, classify in-session, then invoke the CLI's fix/report stages. Deterministic Core orchestration throughout (R-001); the agentic touches are the classifier and the harness's two roles.
 
 ## Acceptance Criteria
 

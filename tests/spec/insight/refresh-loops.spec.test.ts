@@ -240,14 +240,18 @@ describe('AC: scheduled-task registration matches the fast/daily/full split (spe
   });
 
   it('the daily and weekly-quality bundle prompts invoke the refresh skills and cortex-extract-insight by name', () => {
+    // Both refresh tiers now live in `cortex-loop` as reference files
+    // (loops.cortex-loop-bundle) — the bundle declares the skill and the body
+    // names the reference, so both halves are still pinned.
     const expectations: Array<[string, string]> = [
-      ['daily', 'cortex-loop-insight-refresh-daily'],
-      ['weekly-quality', 'cortex-loop-insight-refresh-full'],
+      ['daily', 'references/insight-refresh-daily.md'],
+      ['weekly-quality', 'references/insight-refresh-full.md'],
     ];
-    for (const [bundle, refreshSkill] of expectations) {
+    for (const [bundle, refreshReference] of expectations) {
       const task = SCHEDULED_TASKS.find((t) => t.name === bundle);
       expect(task).toBeDefined();
-      expect(task?.requiredSkills).toContain(refreshSkill);
+      expect(task?.requiredSkills).toContain('cortex-loop');
+      expect(task?.body).toContain(refreshReference);
       expect(task?.requiredSkills).toContain('cortex-extract-insight');
       for (const skill of task?.requiredSkills ?? []) {
         expect(task?.body, `${bundle} body names ${skill}`).toContain(skill);

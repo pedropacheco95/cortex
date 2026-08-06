@@ -12,8 +12,8 @@ governs:
   - "src/insight/refresh-daily.ts"
   - "src/insight/refresh-full.ts"
   - "src/insight/significance.ts"
-  - "skills/cortex-loop-insight-refresh-daily/**"
-  - "skills/cortex-loop-insight-refresh-full/**"
+  - "skills/cortex-loop/references/insight-refresh-daily.md"
+  - "skills/cortex-loop/references/insight-refresh-full.md"
 ---
 
 # Insight Refresh Loops — fast, daily, and full maintenance of the codebase-understanding layer

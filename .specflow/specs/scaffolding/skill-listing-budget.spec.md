@@ -67,13 +67,18 @@ determines whether a description can be short: **whether it is the bundle's only
      every spec-managed project, and every Tier A assignment depends on it firing and routing
      by name. Cutting the router to fund the routed is not a saving.
    - **Tier D — callable-only: ≤ 60 chars, no trigger phrases.** A skill nobody should be
-     routed *into* — the developer decides to run it and types `/<name>`. Its description
-     exists only so the listing can name it, and it makes no attempt to be matched: no trigger
-     phrases, no PROACTIVELY, no phrasings. The name is the entire routing signal.
+     routed *into* by a description matching a sentence. It is reached by one of two explicit
+     namings: the developer decides to run it and types `/<name>`, or **a prompt Cortex itself
+     authors names it** — the scheduled-task payloads in `src/cli/templates.ts` name
+     `cortex-loop` and the reference file for the member they are running
+     (`loops.cortex-loop-bundle` Rule 3). Its description exists only so the listing can name
+     it, and it makes no attempt to be matched: no trigger phrases, no PROACTIVELY, no
+     phrasings. The name is the entire routing signal.
 
    **Why Tier D is not just a smaller Tier B.** Automatic routing is a *cost* for these
-   bundles, not a benefit: a skill that regenerates a client-facing site, or that spawns three
-   parallel onboarding passes, should never fire because a sentence happened to match. Removing
+   bundles, not a benefit: a skill that regenerates a client-facing site, that spawns three
+   parallel onboarding passes, or that runs a scheduled maintenance loop, should never fire
+   because a sentence happened to match. Removing
    the trigger surface is the point, and the token saving is a consequence. A Tier D bundle is
    therefore never promoted to Tier B to "make it easier to find" — being hard to trip is the
    behaviour being bought.

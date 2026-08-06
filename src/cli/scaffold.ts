@@ -157,9 +157,32 @@ export interface SkillMigration {
 export const SKILL_MIGRATIONS: readonly SkillMigration[] = [
   {
     version: '3.3',
-    removed: ['specflow-change-router', '_conventions', 'cortex-ingest'],
+    removed: [
+      'specflow-change-router',
+      '_conventions',
+      'cortex-ingest',
+      // The eleven per-loop bundles merged into `cortex-loop`
+      // (spec `loops.cortex-loop-bundle`). Folded into this same 3.3 entry
+      // rather than a second one: the chain carries at most one entry per
+      // version, and entries are DECLARATIVE, not cursor-based (`core-cli.sync`
+      // Rule 6) — `retiredBundles` runs with `toVersion = SCHEMA_VERSION`, so
+      // this is in force for every project at or past 3.3 on the next sync,
+      // including projects already on 3.3. No schema bump is needed and none
+      // ships: nothing about the on-disk `.cortex/` contract changes.
+      'cortex-loop-atlas-staleness',
+      'cortex-loop-bug-triage',
+      'cortex-loop-insight-refresh-daily',
+      'cortex-loop-insight-refresh-full',
+      'cortex-loop-onboarding-drift',
+      'cortex-loop-rule-decay',
+      'cortex-loop-session-observe',
+      'cortex-loop-spec-drift',
+      'cortex-loop-test-runner',
+      'cortex-pulse-distil',
+      'cortex-pulse-hygiene',
+    ],
     reason:
-      'specflow-change-router was renamed to specflow-entry (specflow.entry-gate); _conventions became repo-side authoring material and is no longer installed (discipline.hardening-convention); cortex-ingest completed the retirement build-order-v3 step 9 called for — its atlas ingestion is the `atlas` extraction strategy inside cortex-archive-ingest, and the redirect stub left in its place was still registering as a live skill (archive.ingest-skill Rule 8)',
+      'specflow-change-router was renamed to specflow-entry (specflow.entry-gate); _conventions became repo-side authoring material and is no longer installed (discipline.hardening-convention); cortex-ingest completed the retirement build-order-v3 step 9 called for — its atlas ingestion is the `atlas` extraction strategy inside cortex-archive-ingest, and the redirect stub left in its place was still registering as a live skill (archive.ingest-skill Rule 8); and the eleven per-loop skill bundles merged into the single callable-only `cortex-loop` skill, one reference file per loop (spec `loops.cortex-loop-bundle`) — their descriptions cost ~312 tokens of the permanently-resident skill listing in every session while the loops are reached by the scheduled-task payloads Cortex writes itself, never by a description matching a sentence. Every loop keeps its CLI verb, report path, cadence, model, and failure isolation; only the directory housing its instructions changes',
   },
 ];
 

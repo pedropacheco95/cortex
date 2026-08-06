@@ -7,7 +7,7 @@ depends_on:
   - pulse.review-cli
 governs:
   - "src/loops/bug-triage.ts"
-  - "skills/cortex-loop-bug-triage/**"
+  - "skills/cortex-loop/references/bug-triage.md"
 implements: ../../specs-business/compass/developer-gets-bugs-triaged-without-asking.business.md
 governed_by:
   - R-001
@@ -27,7 +27,7 @@ governed_by:
 
 ## Rules
 
-1. **Bookends + bundle.** `--collect` partitions open bugs into *unclassified* (any of `type`/`severity`/`proposed_fix` absent) and *classified*, writing the worklist. `--report <results.json>` applies results deterministically. Bare CLI = collect → headless-claude judgment (init Rule 6 semantics) → report. Shipped `skills/cortex-loop-bug-triage/SKILL.md` does judgment in-session using the installed `specflow-bugs` skill's taxonomy discipline; the scheduled task's `requiredSkills` covers both.
+1. **Bookends + bundle.** `--collect` partitions open bugs into *unclassified* (any of `type`/`severity`/`proposed_fix` absent) and *classified*, writing the worklist. `--report <results.json>` applies results deterministically. Bare CLI = collect → headless-claude judgment (init Rule 6 semantics) → report. Shipped `skills/cortex-loop/references/bug-triage.md` does judgment in-session using the installed `specflow-bugs` skill's taxonomy discipline; the scheduled task's `requiredSkills` covers both.
 2. **Result shape:** `{bugId, type, severity, proposedFix, reasoning}` per bug; `type` must be one of the seven (§4.3) — invalid results are skipped and counted.
 3. **Fill-only mutation (resolves the §11.3-vs-§11.4 design tension, reported this round).** For *unclassified* bugs: absent fields are filled from the result; **present fields are never overwritten**. For *classified* bugs: results are compared field-by-field; divergences go to the report with both readings and the loop's reasoning — the entry is untouched.
 4. **Re-triage safety over idempotence (Pedro's note (a)).** `specflow-bugs` judgment is LLM work and not inherently idempotent; the partition makes repeated runs converge instead: a bug is filled at most once, then compare-only forever. No re-triage flag needed.
