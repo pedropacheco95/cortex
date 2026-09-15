@@ -1,6 +1,6 @@
 ---
 id: recall.why
-status: draft
+status: implemented
 depends_on:
   - recall.recall-index
   - schema.bears-on

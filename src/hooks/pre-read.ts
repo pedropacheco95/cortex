@@ -16,6 +16,16 @@
  * the one `hooks.preRead` flag (default true, §10.1); the hook also
  * self-gates on the flag so a stale registration stays silent.
  *
+ * Rule 6 (3.4 second revision; recall work, step 3): a read of a spec file, a
+ * compass rule, an atlas decision or evidence file, or `cortex-schema.md` is
+ * looked up in `.cortex/recall-index.json` — and nothing else — and, when the
+ * index holds a subject for it, ONE marker line (`Decided: … · Evidence: … ·
+ * Open: …`, schema §5 row (c)) rides after the payload above, or stands alone
+ * when the target has no insight entry (the usual case for those kinds).
+ * Source files are deliberately not marked (spec Notes). No index, a
+ * malformed index or no subject → the payload is byte-identical to before,
+ * and nothing is logged.
+ *
  * Warn-never-block: always exit 0; silence is the common case (no entry, no
  * `.cortex/`, flag off); internal errors degrade to silence + hook-errors.md.
  */
@@ -27,6 +37,9 @@ import { fileQuery } from '../insight/query.js';
 import { READ_TIME_MARKER } from './post-read.js';
 import { appendHookError } from './errors.js';
 import { renameIfLegacy } from '../pulse/migrate.js';
+import { candidateKeys, loadRecallIndex, markerLine, moreTail } from '../recall/query.js';
+import type { RecallSubject } from '../recall/index.js';
+import { SCHEMA_DOC_FILENAME } from '../schema/clauses.js';
 import type { HookRunResult, HookRunOptions } from './session-start.js';
 
 const HOOK_NAME = 'pre-read';
@@ -37,9 +50,16 @@ const HOOK_NAME = 'pre-read';
  * injection <50"); with the writeback invitation the payload ceiling is 75
  * tokens (the v2 two-budget precedent, schema §5). Enforced by trimming the
  * purpose — never the instruction line, whose tag must stay intact.
+ *
+ * The recall marker (Rule 6) adds at most 50 tokens on top of whichever of
+ * the two applies — RULES 11's combined ceiling of 100 / 125 is one extended
+ * figure, not a second pool. The marker is fitted on its own (ids are never
+ * truncated; the tail, then the `Open:` and `Decided:` lists are cut) and the
+ * purpose is trimmed as before against the extended ceiling.
  */
 const MAX_CHARS_WITH_INVITE = 75 * 4;
 const MAX_CHARS_WITHOUT_INVITE = 50 * 4;
+const MARKER_MAX_CHARS = 50 * 4;
 
 /**
  * Per-session read-memory for duplicate-read detection (spec Rule 4) —
@@ -113,6 +133,81 @@ function applicableRuleIds(root: string, relPath: string): string[] {
   return ids;
 }
 
+// ---------------------------------------------------------------------------
+// Rule 6 — the recall marker
+// ---------------------------------------------------------------------------
+
+/** The target kinds Rule 6 marks: spec files, compass rules, atlas decision / evidence files (not their `_index.md`), the schema document. */
+const MARKED_TARGET_RES: readonly RegExp[] = [
+  /^\.specflow\/specs\/.+\.spec\.md$/,
+  /^\.specflow\/specs-business\/.+\.business\.md$/,
+  /^\.cortex\/compass\/rules\/R-\d{3,}[^/]*\.md$/,
+  /^\.cortex\/atlas\/(?:decisions|evidence)\/[^/_][^/]*\.md$/,
+];
+
+/** Rule 6: whether a project-relative POSIX path is a kind the marker applies to. Source files never are. */
+export function isMarkedTarget(relPath: string): boolean {
+  return relPath === SCHEMA_DOC_FILENAME || MARKED_TARGET_RES.some((re) => re.test(relPath));
+}
+
+/** Every list of `subjects` merged into one — the schema document's aggregate over its clause subjects. */
+function mergeSubjects(subjects: RecallSubject[]): RecallSubject {
+  const merged: RecallSubject = { decided: [], evidence: [], threads: [], observations: [] };
+  for (const s of subjects) {
+    merged.decided.push(...s.decided);
+    merged.evidence.push(...s.evidence);
+    merged.threads.push(...s.threads);
+    merged.observations.push(...s.observations);
+  }
+  return merged;
+}
+
+/**
+ * Rule 6's ≤50-token fit for the marker: drop the ` · more:` tail, then cut
+ * `Open:` to one id, then `Decided:` to one. Ids are never truncated — the
+ * line is rebuilt from its parts (`<Label>: <id>, <id>` joined by ` · `).
+ */
+function fitMarker(line: string, key: string): string {
+  if (line.length <= MARKER_MAX_CHARS) return line;
+  const tail = moreTail(key);
+  let fitted = line.endsWith(tail) ? line.slice(0, -tail.length) : line;
+  for (const label of ['Open', 'Decided']) {
+    if (fitted.length <= MARKER_MAX_CHARS) break;
+    fitted = fitted
+      .split(' · ')
+      .map((part) => (part.startsWith(`${label}: `) ? `${label}: ${part.slice(label.length + 2).split(', ')[0]}` : part))
+      .join(' · ');
+  }
+  return fitted;
+}
+
+/**
+ * The marker line for a marked target, or `null` when there is no index, no
+ * subject, or the subject has nothing to show. Reads the index through the
+ * cached loader only; a missing or malformed index is an expected state.
+ * Candidate keys are the target's own (`hooks.search-annotate` Rule 5 a, c, d,
+ * e) — a parent directory's subject does not mark a file read (schema §5 row
+ * (c) names the path, the spec id, `R-NNN` and the clause subjects only).
+ */
+function recallMarker(root: string, relPath: string): string | null {
+  const index = loadRecallIndex(root);
+  if (index === null) return null;
+  const keys = candidateKeys(root, relPath, index).filter((key) => !relPath.startsWith(`${key}/`));
+  if (keys.length === 0) return null;
+  if (relPath === SCHEMA_DOC_FILENAME) {
+    const merged = mergeSubjects(keys.map((key) => index.subjects[key]).filter((s): s is RecallSubject => s !== undefined));
+    const line = markerLine(merged, SCHEMA_DOC_FILENAME, index);
+    return line === null ? null : fitMarker(line, SCHEMA_DOC_FILENAME);
+  }
+  for (const key of keys) {
+    const subject = index.subjects[key];
+    if (subject === undefined) continue;
+    const line = markerLine(subject, key, index);
+    if (line !== null) return fitMarker(line, key);
+  }
+  return null;
+}
+
 /** First non-empty line of an entry's `## Purpose` section, whitespace-collapsed. */
 export function purposeFirstLine(purposeSection: string): string {
   for (const line of purposeSection.split('\n')) {
@@ -152,8 +247,23 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     const relPath = path.relative(root, path.resolve(root, filePath)).replace(/\\/g, '/');
     if (relPath.startsWith('..') || path.isAbsolute(relPath) || relPath.length === 0) return SILENT;
 
+    // Rule 6: the recall marker for a spec / rule / decision / evidence /
+    // schema-document read. Absent index or subject → null, unlogged; only an
+    // unexpected throw reaches hook-errors.md (and the read still proceeds).
+    let marker: string | null = null;
+    if (isMarkedTarget(relPath)) {
+      try {
+        marker = recallMarker(root, relPath);
+      } catch (err) {
+        appendHookError(root, { hook: HOOK_NAME, file: relPath, failure: `recall marker: ${(err as Error).message}` }, now);
+      }
+    }
+    // With no insight entry the marker stands alone; with neither, silence.
+    const markerAlone = (): HookRunResult => (marker === null ? SILENT : envelope(marker));
+
     // Data source (schema §5, v3): the insight per-file entry. No insight
-    // module or no entry → silent (graceful absence, never fabricated).
+    // module or no entry → the marker alone or silence (graceful absence,
+    // never fabricated).
     let entryResult: ReturnType<typeof fileQuery>;
     try {
       entryResult = fileQuery(root, relPath);
@@ -164,13 +274,13 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
         { hook: HOOK_NAME, file: relPath, failure: `insight entry unreadable: ${(err as Error).message}` },
         now,
       );
-      return SILENT;
+      return markerAlone();
     }
-    if (!entryResult.found || !entryResult.entry || !entryResult.sections) return SILENT;
+    if (!entryResult.found || !entryResult.entry || !entryResult.sections) return markerAlone();
 
     const purposeSection = entryResult.sections['Purpose'] ?? '';
     const purpose = purposeFirstLine(purposeSection);
-    if (purpose === '') return SILENT; // an entry with no purpose has nothing worth injecting
+    if (purpose === '') return markerAlone(); // an entry with no purpose has nothing worth injecting
     const tokens = entryResult.entry.frontmatter.size_tokens;
 
     // The writeback instruction rides along ONLY while the entry's Purpose
@@ -201,17 +311,23 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
 
     const ruleIds = applicableRuleIds(root, relPath);
 
-    // Payload per schema §5 (v3), pinned line by line.
+    // Payload per schema §5 (v3), pinned line by line; the Rule 6 marker last.
     const inviteLine = `If this purpose is wrong or stale after reading, emit: <cortex:purpose file="${relPath}">corrected one-line purpose</cortex:purpose>`;
     const noteLine = '(already read this session)';
     const composeSummary = (p: string): string =>
       `${relPath}: ${p} (~${tokens} tok). Rules: ${ruleIds.length > 0 ? ruleIds.join(' ') : '-'}.`;
     const compose = (p: string): string =>
-      [composeSummary(p), ...(invite ? [inviteLine] : []), ...(alreadyRead ? [noteLine] : [])].join('\n');
+      [
+        composeSummary(p),
+        ...(invite ? [inviteLine] : []),
+        ...(alreadyRead ? [noteLine] : []),
+        ...(marker !== null ? [marker] : []),
+      ].join('\n');
 
     // Budget enforcement: trim the purpose until the payload fits — the
-    // instruction line's tag is never cut.
-    const budget = invite ? MAX_CHARS_WITH_INVITE : MAX_CHARS_WITHOUT_INVITE;
+    // instruction line's tag and the marker are never cut. The marker extends
+    // the ceiling by its own budget (RULES 11's combined figure).
+    const budget = (invite ? MAX_CHARS_WITH_INVITE : MAX_CHARS_WITHOUT_INVITE) + (marker !== null ? MARKER_MAX_CHARS : 0);
     let payload = compose(purpose);
     if (payload.length > budget) {
       const excess = payload.length - budget;

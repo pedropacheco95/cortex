@@ -3,7 +3,7 @@ id: B-018
 title: Any unmatched first argument — `--help`, `--version`, a mistyped verb — falls through the dispatcher into `cortex init` and scaffolds a project
 type: incomplete-rule
 severity: high
-status: open
+status: resolved
 affects:
   - core-cli.init
   - src/cli/cli.ts

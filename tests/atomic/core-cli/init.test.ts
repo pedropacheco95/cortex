@@ -533,6 +533,32 @@ describe('Rule 11: settings.json deep-merge', () => {
       expect(raw.split('cortex hook post-write').length - 1).toBe(1);
       expect(raw.split('cortex hook session-end').length - 1).toBe(1);
       expect(raw.split('cortex hook stop').length - 1).toBe(1);
+      expect(raw.split('cortex hook search-annotate').length - 1).toBe(1);
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+
+  it('registers the PreToolUse Grep|Bash search-annotate row once, without a timeout, regardless of hooks.preRead (hooks.search-annotate Rule 1)', async () => {
+    const root = makeTmpDir('merge5-proj');
+    const home = makeTmpDir('merge5-home');
+    try {
+      // preRead: false — the Read pair stays out, the search row still goes in.
+      fs.mkdirSync(path.join(root, '.cortex'), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, '.cortex', 'cortex.config.json'),
+        JSON.stringify({ schemaVersion: '1.0', hooks: { preRead: false } }),
+      );
+      const result = await init(root, { noLlm: true, force: true, home, ...DARWIN });
+      expect(result.exitCode).toBe(0);
+      const merged = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8'));
+      expect(merged.hooks.PreToolUse).toContainEqual({
+        matcher: 'Grep|Bash',
+        hooks: [{ type: 'command', command: 'cortex hook search-annotate' }],
+      });
+      expect(JSON.stringify(merged.hooks.PreToolUse)).not.toContain('cortex hook pre-read');
+      const report = await validate(root, { root });
+      expect(report.violations.filter((v) => v.check === 'check.hook-config')).toEqual([]);
     } finally {
       cleanTmp(root); cleanTmp(home);
     }

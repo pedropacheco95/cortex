@@ -9,7 +9,10 @@ import type { Violation } from '../types.js';
  * `hooks.preRead` is true — which is the default (§10.1); and (3.3 third
  * revision) the `SessionEnd` (`cortex hook session-end`) and `Stop`
  * (`cortex hook stop`) entries are both present whenever the file carries
- * **any** Cortex-owned entry — the remedy is `cortex sync`. Detection keys on
+ * **any** Cortex-owned entry — the remedy is `cortex sync`; and (3.4 second
+ * revision) the `PreToolUse` `Grep|Bash` entry (`cortex hook search-annotate`)
+ * is required under that same whole-set condition, independent of
+ * `hooks.preRead`. Detection keys on
  * the `cortex hook ` command ownership marker and the command string alone
  * (a `timeout` field is neither required nor rejected), so user-owned hooks
  * are never implicated.
@@ -63,12 +66,15 @@ export function checkHookConfig(root: string, config: Record<string, unknown>): 
   }
 
   // 3.3 third revision: a project whose hooks Cortex manages carries the whole
-  // set — SessionEnd + Stop are required whenever ANY Cortex-owned entry is.
+  // set — SessionEnd + Stop are required whenever ANY Cortex-owned entry is;
+  // 3.4 second revision: so is the PreToolUse Grep|Bash row (`cortex hook
+  // search-annotate`), which is NOT behind hooks.preRead (the Read pair's flag).
   const anyCortex = hooksJson.includes('cortex hook ');
   if (anyCortex) {
     const required: ReadonlyArray<readonly [command: string, key: string, event: string]> = [
       ['cortex hook session-end', 'hooks.SessionEnd', 'SessionEnd'],
       ['cortex hook stop', 'hooks.Stop', 'Stop'],
+      ['cortex hook search-annotate', 'hooks.PreToolUse', 'PreToolUse (Grep|Bash)'],
     ];
     for (const [command, key, event] of required) {
       if (hooksJson.includes(command)) continue;
@@ -77,7 +83,7 @@ export function checkHookConfig(root: string, config: Record<string, unknown>): 
         check: 'check.hook-config',
         clause: '§5',
         location: { path: settingsPath, key },
-        message: `.claude/settings.json carries Cortex-owned hook entries but is missing the ${event} entry \`${command}\` (the SessionEnd and Stop rows register with the rest of the set); run \`cortex sync\``,
+        message: `.claude/settings.json carries Cortex-owned hook entries but is missing the ${event} entry \`${command}\` (the SessionEnd, Stop and search-annotate rows register with the rest of the set); run \`cortex sync\``,
       });
     }
   }

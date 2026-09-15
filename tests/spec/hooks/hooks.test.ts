@@ -9,7 +9,9 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { runHook } from '../../../src/hooks/cli.js';
 import { readHookErrorEntries } from '../../../src/hooks/errors.js';
+import { clearRecallIndexCache } from '../../../src/recall/query.js';
 import { makeTmpDir, cleanTmp, makeCortexProject } from '../../fixtures/hooks-harness.js';
+import { sampleRecallIndex, writeRecallIndexFixture } from '../../fixtures/recall-query.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -26,7 +28,7 @@ function stdinJson(fields: Record<string, unknown>): string {
 }
 
 describe('cortex hook dispatch matches the init-registered command names', () => {
-  it('all seven registered names are handled with exit 0; unknown names stay silent', async () => {
+  it('all eight registered names are handled with exit 0; unknown names stay silent', async () => {
     const root = tmp('dispatch');
     makeCortexProject(root);
     // Registered command suffixes per core-cli.init Rule 11 / hooks.* Rule 1:
@@ -46,6 +48,21 @@ describe('cortex hook dispatch matches the init-registered command names', () =>
     expect(await runHook('stop', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
     expect(await runHook('session-end', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
     expect(readHookErrorEntries(root).some((e) => e.startsWith('- hook: session-end |'))).toBe(true);
+    // search-annotate (hooks.search-annotate Rule 1): dispatches; the fixture
+    // has no recall-index.json, so it is silent AND unlogged (Rule 10).
+    expect(
+      await runHook('search-annotate', stdinJson({ cwd: root, tool_name: 'Grep', tool_input: { pattern: 'x', path: '.cortex/compass' } })),
+    ).toEqual({ exitCode: 0, stdout: '' });
+    expect(readHookErrorEntries(root).some((e) => e.startsWith('- hook: search-annotate |'))).toBe(false);
+    // …and with an index present the name really dispatches (not the silent default case).
+    writeRecallIndexFixture(root, sampleRecallIndex());
+    clearRecallIndexCache();
+    const pointed = await runHook(
+      'search-annotate',
+      stdinJson({ cwd: root, tool_name: 'Grep', tool_input: { pattern: 'retention', path: '.specflow/specs/pulse/hygiene.spec.md' } }),
+    );
+    expect(pointed.exitCode).toBe(0);
+    expect(pointed.stdout).toContain('Decided: decision.2026-07-10-x');
     expect(await runHook('nonsense', 'not even json')).toEqual({ exitCode: 0, stdout: '' });
   });
 });

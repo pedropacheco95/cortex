@@ -234,3 +234,89 @@ describe('Rule 5: warn-never-block degradation', () => {
     expect(log).toContain('insight entry unreadable');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 6: the recall marker over a COMPILED index (3.4 second revision) —
+// the integrated slice: real carriers → writeRecallIndex → the hook CLI.
+// ---------------------------------------------------------------------------
+import { fileURLToPath } from 'url';
+import { writeRecallIndex } from '../../../src/recall/index.js';
+import { clearRecallIndexCache } from '../../../src/recall/query.js';
+import { serialiseThread } from '../../../src/pulse/threads.js';
+import { copyDir, writeFile } from '../../fixtures/evidence.js';
+import { makeThread } from '../../fixtures/threads.js';
+import { hookErrorsPath } from '../../fixtures/hooks-harness.js';
+
+const VALID_FIXTURE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../fixtures/valid');
+
+describe('Rule 6: the recall marker rides on reads of specs, rules and the schema document — never on source files', () => {
+  afterEach(() => clearRecallIndexCache());
+
+  it('a compiled index marks the spec, the rule and the schema document through `cortex hook pre-read`; the source read is unchanged; nothing is logged', async () => {
+    const root = tmp('rule6-compiled');
+    copyDir(VALID_FIXTURE, root);
+    fs.writeFileSync(
+      path.join(root, '.cortex', 'cortex.config.json'),
+      JSON.stringify({ schemaVersion: '3.0', hooks: { preRead: true }, loop: { enabled: false } }),
+    );
+    writeFile(root, 'cortex-schema.md', '## 5. Hook payload contracts\n\n## 6. Cross-reference conventions\n');
+    writeFile(root, '.cortex/atlas/evidence/2026-09-15-usage.md', [
+      '---',
+      'id: evidence.2026-09-15-usage',
+      'title: Cortex usage over 41 sessions',
+      'date: 2026-09-15T15:58:00Z',
+      'kind: measurement',
+      'instrument: pulse.usage',
+      'bears_on: [schema.validator, "schema:§5"]',
+      '---',
+      '',
+      '# usage',
+      '',
+    ].join('\n'));
+    writeFile(root, '.cortex/atlas/decisions/2026-09-15-b.md', [
+      '---',
+      'id: decision.2026-09-15-b',
+      'title: b',
+      'date: 2026-09-15T00:00:00Z',
+      'bears_on: [R-001, schema.validator, "schema:§6"]',
+      '---',
+      '',
+      '# b',
+      '',
+    ].join('\n'));
+    const t = makeThread({ id: 'T-001', status: 'open', bears_on: ['R-001'] });
+    writeFile(root, '.cortex/pulse/threads/T-001-fixture.md', serialiseThread(t));
+    await writeRecallIndex(root);
+
+    const read = async (rel: string) => runHook('pre-read', JSON.stringify(stdinFor(root, path.join(root, rel), 'sess-r6')));
+
+    // A spec read: no insight entry → the marker alone, through the CLI dispatch.
+    const spec = await read('.specflow/specs/schema/validator.spec.md');
+    expect(spec.exitCode).toBe(0);
+    const specEnv = parseEnvelope(spec.stdout);
+    expect(specEnv.hookEventName).toBe('PreToolUse');
+    expect(specEnv.permissionDecision).toBe('allow');
+    expect(specEnv.additionalContext).toBe('Decided: decision.2026-09-15-b · Evidence: evidence.2026-09-15-usage');
+
+    // A compass rule read: the R-NNN key — the decision and the open thread (the evidence cites no decision, so nothing is inherited).
+    const rule = await read('.cortex/compass/rules/R-001-sample-rule.md');
+    expect(parseEnvelope(rule.stdout).additionalContext).toBe(
+      'Decided: decision.2026-09-15-b · Open: T-001',
+    );
+
+    // The schema document: every clause subject aggregated (§5 evidence, §6 decision).
+    const schema = await read('cortex-schema.md');
+    expect(parseEnvelope(schema.stdout).additionalContext).toBe(
+      'Decided: decision.2026-09-15-b · Evidence: evidence.2026-09-15-usage',
+    );
+
+    // A source file with an insight entry: today's payload, no marker (Rule 6 Notes).
+    const source = await read('src/auth/session.ts');
+    const sourceCtx = parseEnvelope(source.stdout).additionalContext;
+    expect(sourceCtx.startsWith('src/auth/session.ts: ')).toBe(true);
+    expect(sourceCtx).not.toMatch(/^(Decided|Evidence|Open):/m);
+
+    // Marker-only reads write no ledger and nothing degrades.
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  }, TEST_TIMEOUT);
+});

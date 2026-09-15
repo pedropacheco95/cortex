@@ -28,6 +28,15 @@
             "command": "cortex hook pre-read"
           }
         ]
+      },
+      {
+        "matcher": "Grep|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cortex hook search-annotate"
+          }
+        ]
       }
     ],
     "PostToolUse": [

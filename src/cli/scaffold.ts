@@ -425,6 +425,10 @@ function cortexHookEntries(preRead: boolean): HookEntry[] {
     // lifts SessionEnd's shared 1.5 s default budget for this one hook.
     { event: 'SessionEnd', command: 'cortex hook session-end', timeout: 10 },
     { event: 'Stop', command: 'cortex hook stop' },
+    // 3.4 second revision (hooks.search-annotate Rule 1): the search-time
+    // pointer on Grep and Bash. Always registered — it is not behind
+    // hooks.preRead, which is the Read pair's flag alone.
+    { event: 'PreToolUse', matcher: 'Grep|Bash', command: 'cortex hook search-annotate' },
   ];
   // The Read pair registers and unregisters together under the one
   // hooks.preRead flag (schema §5, §10.1 — default true).

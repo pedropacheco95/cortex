@@ -35,10 +35,80 @@
  * migration (core-cli.task-scoping Rule 4) — and `cortex tasks
  * register|verify` — writing/verifying this project's five scheduled-task
  * bundle entries in the Desktop app's scheduled-tasks.json registry
- * (core-cli.tasks-register, B-009 option 1).
+ * (core-cli.tasks-register, B-009 option 1), and the pull side of recall
+ * `cortex why <ref> [--json]` / `cortex recall <word…> [--kind k]` (spec
+ * recall.why, Rule 1).
+ *
+ * Invocation gate (core-cli.init Rule 18, B-018): `init` runs only on the
+ * literal verb `init`; every other unmatched first argument, `--help`, `-h`
+ * and a bare `cortex` print the usage text to stdout and exit 2 having
+ * written nothing. The usage text is rendered from USAGE_TABLE below; the
+ * line after this paragraph is its mirror, asserted equal by
+ * tests/atomic/core-cli/dispatch.test.ts so the two cannot drift.
+ *
+ * Verbs: init, sync, validate, scan, insight, why, recall, usage, thread, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
  */
 import { init } from './init.js';
 import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
+
+/**
+ * Every live verb the dispatcher matches, with a one-line synopsis — the
+ * single source of the usage text (core-cli.init Rule 18). Retired verbs
+ * (`loop-skill-suggest`, `anatomy-refresh-fast`, `loop-anatomy-refresh`,
+ * `loop-insight-gaps`) still match below with a pointed message but are not
+ * usage. Order: the everyday verbs first, then loops.
+ */
+const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
+  ['init', 'init [target] [--force] [--yes] [--no-llm] [--partial] [--profile <name>] [--timeout-ms <n>]'],
+  ['sync', 'sync [target] [--yes]'],
+  ['validate', 'validate [path] [--json]'],
+  ['scan', 'scan'],
+  ['insight', 'insight file|concept|element <query> [--json]'],
+  ['why', 'why <ref> [--json]'],
+  ['recall', 'recall <word…> [--kind decision|evidence|thread|observation]'],
+  ['usage', 'usage [--record]'],
+  ['thread', 'thread list|drop|close|promote …'],
+  ['hook', 'hook <name>'],
+  ['constellation', 'constellation [--port <n>]'],
+  ['tasks', 'tasks rename|plan|register|verify'],
+  ['pulse-list', 'pulse-list'],
+  ['pulse-accept', 'pulse-accept <id>'],
+  ['pulse-reject', 'pulse-reject <id>'],
+  ['pulse-hygiene', 'pulse-hygiene'],
+  ['pulse-distil', 'pulse-distil [--collect|--propose <f>|--no-llm]'],
+  ['loop-rule-decay', 'loop-rule-decay'],
+  ['loop-atlas-staleness', 'loop-atlas-staleness'],
+  ['loop-onboarding-drift', 'loop-onboarding-drift'],
+  ['loop-bug-triage', 'loop-bug-triage [--collect|--report <f>|--no-llm]'],
+  ['loop-specflow-lint', 'loop-specflow-lint'],
+  ['loop-specflow-verify', 'loop-specflow-verify'],
+  ['loop-spec-drift', 'loop-spec-drift'],
+  ['loop-test-runner', 'loop-test-runner [--tier …|--trigger …|--collect|--fix-stage <f>|--no-llm]'],
+  ['test-run', 'test-run [same flags as loop-test-runner]'],
+  ['insight-refresh-fast', 'insight-refresh-fast'],
+  ['loop-insight-refresh', 'loop-insight-refresh --fast|--daily|--full [--collect|--apply|--report]'],
+  ['loop-session-observe', 'loop-session-observe [--collect|--apply [--proposals <f>]]'],
+];
+
+/** The verb names, in usage order — what the header docblock's `Verbs:` line mirrors. */
+export const USAGE_VERBS: readonly string[] = USAGE_TABLE.map(([verb]) => verb);
+
+/** Exit code for every path that ran nothing: usage, help, an unrecognised verb (Rule 18). */
+const USAGE_EXIT = 2;
+
+/**
+ * The usage text (core-cli.init Rule 18). With `unrecognised`, the first line
+ * names it; the rest is the same for every path. Deterministic — no
+ * environment, no package version.
+ */
+export function usageText(unrecognised?: string): string {
+  const lines: string[] = [];
+  if (unrecognised !== undefined) lines.push(`cortex: unrecognised argument "${unrecognised}" — nothing ran.`);
+  lines.push('Usage: cortex <verb> [options]', '', 'Verbs:');
+  for (const [, synopsis] of USAGE_TABLE) lines.push(`  cortex ${synopsis}`);
+  lines.push('', 'Run `cortex init` to set up a project; `cortex --help` prints this text.');
+  return lines.join('\n');
+}
 
 /** Shared flag parsing for the collect/judge/propose-or-report-or-apply loops. */
 function parseLoopFlags(
@@ -404,9 +474,14 @@ export async function run(argv: string[]): Promise<number> {
       // §4.11; recall.recall-index Rule 11) — the second regenerable file.
       const { writeRecallIndex } = await import('../recall/index.js');
       const recall = await writeRecallIndex('.');
+      // recall.index-blocks Rule 6: the generated blocks in the two atlas
+      // indexes are rewritten from the in-process index, after it is written.
+      const { writeRecallIndexBlocks } = await import('../recall/index-blocks.js');
+      const blocks = writeRecallIndexBlocks('.', recall);
       console.log(
         `cortex scan: wrote .cortex/constellation.json (${constellation.nodes.length} node(s), ${constellation.edges.length} edge(s), ${constellation.counters.droppedRefs} dropped ref(s)); ` +
-          `recall index: ${recall.counters.subjects} subject(s), ${recall.counters.entries} ${recall.counters.entries === 1 ? 'entry' : 'entries'}.`,
+          `recall index: ${recall.counters.subjects} subject(s), ${recall.counters.entries} ${recall.counters.entries === 1 ? 'entry' : 'entries'}; ` +
+          `index blocks: ${blocks.written.length} written.`,
       );
       return 0;
     } catch (err) {
@@ -447,6 +522,15 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'thread') {
     const { threadCli } = await import('../pulse/thread-cli.js');
     return threadCli(argv.slice(1));
+  }
+
+  // `cortex why <ref> [--json]` / `cortex recall <word…> [--kind k]` — the
+  // pull side of recall over `.cortex/recall-index.json` (recall.why Rules
+  // 1–7). Index-only, read-only; the verb is passed through so the module
+  // owns both grammars. Never reaches the Rule 18 gate below.
+  if (argv[0] === 'why' || argv[0] === 'recall') {
+    const { recallCli } = await import('../recall/cli.js');
+    return recallCli(argv, '.');
   }
 
   // `cortex insight file|concept|element [--json]` — the deterministic,
@@ -528,60 +612,79 @@ export async function run(argv: string[]): Promise<number> {
     }
   }
 
-  // Otherwise argv is everything after `cortex init`.
-  const force = argv.includes('--force');
-  const yes = argv.includes('--yes') || argv.includes('-y');
-  const noLlm = argv.includes('--no-llm');
-  const partial = argv.includes('--partial');
+  // `cortex init [target] […]` — ONLY on the literal verb (core-cli.init Rule
+  // 18, B-018). The verb is stripped before init's own flags and target are
+  // parsed, so index 0 of `rest` is a real positional — the old fall-through
+  // parsed the whole argv and kept the verb out of the target only because an
+  // absent `--timeout-ms`/`--profile` made `indexOf(-1) + 1 === 0` exclude it.
+  if (argv[0] === 'init') {
+    const rest = argv.slice(1);
+    const force = rest.includes('--force');
+    const yes = rest.includes('--yes') || rest.includes('-y');
+    const noLlm = rest.includes('--no-llm');
+    const partial = rest.includes('--partial');
 
-  // `--profile <name>` (spec core-cli.init-profile Rule 2). Omitted → the
-  // default; an unrecognised value is a usage error, never a silent fallback,
-  // because a typo would quietly schedule the wrong loop set.
-  let profile: ProcessProfile | undefined;
-  const profileIdx = argv.indexOf('--profile');
-  if (profileIdx >= 0) {
-    const value = argv[profileIdx + 1];
-    if (!isProcessProfile(value)) {
-      process.stderr.write(
-        `cortex init: unknown --profile ${value === undefined ? '(missing value)' : `"${value}"`}. ` +
-          `Valid profiles: ${PROCESS_PROFILES.join(', ')}. Nothing was written.\n`,
-      );
-      return 2;
+    // `--profile <name>` (spec core-cli.init-profile Rule 2). Omitted → the
+    // default; an unrecognised value is a usage error, never a silent fallback,
+    // because a typo would quietly schedule the wrong loop set.
+    let profile: ProcessProfile | undefined;
+    const profileIdx = rest.indexOf('--profile');
+    if (profileIdx >= 0) {
+      const value = rest[profileIdx + 1];
+      if (!isProcessProfile(value)) {
+        process.stderr.write(
+          `cortex init: unknown --profile ${value === undefined ? '(missing value)' : `"${value}"`}. ` +
+            `Valid profiles: ${PROCESS_PROFILES.join(', ')}. Nothing was written.\n`,
+        );
+        return 2;
+      }
+      profile = value;
     }
-    profile = value;
-  }
 
-  let timeoutMs: number | undefined;
-  const timeoutIdx = argv.indexOf('--timeout-ms');
-  if (timeoutIdx >= 0) {
-    const parsed = Number(argv[timeoutIdx + 1]);
-    if (Number.isFinite(parsed) && parsed > 0) timeoutMs = parsed;
-  }
-
-  const positional = argv.filter(
-    (a, i) => !a.startsWith('-') && i !== timeoutIdx + 1 && i !== profileIdx + 1,
-  );
-  const target = positional[0] ?? '.';
-
-  try {
-    const { exitCode, summary } = await init(target, {
-      force,
-      yes,
-      noLlm,
-      partial,
-      ...(profile !== undefined ? { profile } : {}),
-      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-    });
-    if (exitCode === 1 || exitCode === 2) {
-      console.error(summary);
-    } else {
-      console.log(summary);
+    let timeoutMs: number | undefined;
+    const timeoutIdx = rest.indexOf('--timeout-ms');
+    if (timeoutIdx >= 0) {
+      const parsed = Number(rest[timeoutIdx + 1]);
+      if (Number.isFinite(parsed) && parsed > 0) timeoutMs = parsed;
     }
-    return exitCode;
-  } catch (err) {
-    console.error(`cortex init: ${(err as Error).message}`);
-    return 1;
+
+    const positional = rest.filter(
+      (a, i) =>
+        !a.startsWith('-') && (timeoutIdx < 0 || i !== timeoutIdx + 1) && (profileIdx < 0 || i !== profileIdx + 1),
+    );
+    const target = positional[0] ?? '.';
+
+    try {
+      const { exitCode, summary } = await init(target, {
+        force,
+        yes,
+        noLlm,
+        partial,
+        ...(profile !== undefined ? { profile } : {}),
+        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      });
+      if (exitCode === 1 || exitCode === 2) {
+        console.error(summary);
+      } else {
+        console.log(summary);
+      }
+      return exitCode;
+    } catch (err) {
+      console.error(`cortex init: ${(err as Error).message}`);
+      return 1;
+    }
   }
+
+  // Rule 18's terminal branches: nothing ran, nothing is written, exit 2.
+  // `--help`, `-h` and a bare `cortex` print the plain usage; any other
+  // unmatched first argument (a mistyped verb, `--version`, …) is named on
+  // the first line. Bare `cortex` is NOT an init alias (owner decision).
+  if (argv.length === 0 || argv[0] === '--help' || argv[0] === '-h') {
+    console.log(usageText());
+    return USAGE_EXIT;
+  }
+  console.log(usageText(argv[0]));
+  return USAGE_EXIT;
 }
 
 // Guard: only run CLI when invoked directly.

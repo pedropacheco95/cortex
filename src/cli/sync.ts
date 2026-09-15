@@ -26,6 +26,7 @@ import * as os from 'os';
 import { validate } from '../schema/validate.js';
 import { SUPPORTED_MAJOR } from '../schema/version.js';
 import { readProfile } from './profile.js';
+import { stripRecallBlock } from '../recall/index-blocks.js';
 import {
   SCHEMA_VERSION,
   CORTEX_INDEXES,
@@ -168,7 +169,13 @@ function refreshIndexes(root: string): IndexRefreshResult {
     const relDirRaw = path.relative(cortexDir, path.dirname(indexPath)).split(path.sep).join('/');
     const key = relDirRaw; // '' for the .cortex/ root itself
     const template = knownIndexTemplate(key);
-    const bytes = fs.readFileSync(indexPath, 'utf-8');
+    // recall.index-blocks Rule 7 (3.4 second revision): the generated recall
+    // block in the two atlas indexes is opaque to this comparison — a file
+    // whose only difference from its template is the block is current, not
+    // localised. Nothing is rewritten here today (see the judgment-call note
+    // above: one template generation, so "current" is a no-op), so the block
+    // survives untouched; a future real refresh must re-append it.
+    const bytes = stripRecallBlock(fs.readFileSync(indexPath, 'utf-8'));
     if (template !== undefined && bytes === template) {
       current.push(key === '' ? '.' : key);
     } else {

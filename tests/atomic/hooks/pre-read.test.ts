@@ -211,3 +211,261 @@ describe('silence and degradation', () => {
     expect(await run(42, { cwd: tmp('badstdin') })).toEqual({ exitCode: 0, stdout: '' });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 6: the recall marker (3.4 second revision; recall work, step 3)
+// ---------------------------------------------------------------------------
+import { isMarkedTarget } from '../../../src/hooks/pre-read.js';
+import { clearRecallIndexCache } from '../../../src/recall/query.js';
+import { recallEntry, recallIndexFixture, recallSubject, writeRecallIndexFixture } from '../../fixtures/recall-query.js';
+
+describe('Rule 6: recall marker', () => {
+  afterEach(() => clearRecallIndexCache());
+
+  const USAGE_SPEC = '.specflow/specs/pulse/usage.spec.md';
+  const EVIDENCE_USAGE = recallEntry('evidence', 'Cortex usage over 41 sessions', '.cortex/atlas/evidence/2026-09-15-usage.md', '2026-09-15');
+  const T004 = recallEntry('thread', 'Counter location', '.cortex/pulse/threads/T-004-counter-location.md', '2026-09-14');
+
+  it('isMarkedTarget: specs, business specs, compass rules, atlas decisions and evidence, and the schema document — nothing else', () => {
+    for (const p of [
+      '.specflow/specs/pulse/usage.spec.md',
+      '.specflow/specs-business/pulse/team-sees-usage.business.md',
+      '.cortex/compass/rules/R-003-x.md',
+      '.cortex/atlas/decisions/2026-08-05-x.md',
+      '.cortex/atlas/evidence/2026-09-15-usage.md',
+      'cortex-schema.md',
+    ]) expect(isMarkedTarget(p), p).toBe(true);
+    for (const p of [
+      'src/pulse/usage.ts',
+      '.specflow/specs/pulse/_overview.md',
+      '.cortex/atlas/decisions/_index.md',
+      '.cortex/atlas/evidence/_index.md',
+      '.cortex/compass/bugs/B-018-x.md',
+      '.cortex/compass/rules/_index.md',
+      'docs/cortex-schema.md',
+      'CLAUDE.md',
+    ]) expect(isMarkedTarget(p), p).toBe(false);
+  });
+
+  it('AC: a spec read with a recall subject gets the marker alone (no insight entry)', async () => {
+    const root = makeProject('marker-spec');
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'pulse.usage': recallSubject({ decided: [], evidence: ['evidence.2026-09-15-usage'], threads: ['T-004'] }) },
+      { 'evidence.2026-09-15-usage': EVIDENCE_USAGE, 'T-004': T004 },
+    ));
+    const result = await run(stdinFor(root, path.join(root, USAGE_SPEC)));
+    expect(result.exitCode).toBe(0);
+    const env = parseEnvelope(result.stdout);
+    expect(env.additionalContext).toBe('Evidence: evidence.2026-09-15-usage · Open: T-004');
+    expect(env.permissionDecision).toBe('allow');
+    expect(Math.ceil(env.additionalContext.length / 4)).toBeLessThanOrEqual(50);
+  });
+
+  it('AC: a rule read with three of everything is cut to 3/2/2, newest first, and pointed onward', async () => {
+    const root = makeProject('marker-rule');
+    const entries: Record<string, ReturnType<typeof recallEntry>> = {};
+    for (let i = 1; i <= 4; i++) entries[`decision.2026-09-0${i}-d${i}`] = recallEntry('decision', `d${i}`, `.cortex/atlas/decisions/2026-09-0${i}-d${i}.md`, `2026-09-0${i}`);
+    for (let i = 1; i <= 3; i++) entries[`evidence.2026-08-0${i}-e${i}`] = recallEntry('evidence', `e${i}`, `.cortex/atlas/evidence/2026-08-0${i}-e${i}.md`, `2026-08-0${i}`);
+    for (let i = 1; i <= 3; i++) entries[`T-00${i}`] = recallEntry('thread', `t${i}`, `.cortex/pulse/threads/T-00${i}-t${i}.md`, `2026-07-0${i}`);
+    writeRecallIndexFixture(root, recallIndexFixture(
+      {
+        'R-003': recallSubject({
+          decided: ['decision.2026-09-01-d1', 'decision.2026-09-02-d2', 'decision.2026-09-03-d3', 'decision.2026-09-04-d4'],
+          evidence: ['evidence.2026-08-01-e1', 'evidence.2026-08-02-e2', 'evidence.2026-08-03-e3'],
+          threads: ['T-001', 'T-002', 'T-003'],
+        }),
+      },
+      entries,
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, '.cortex/compass/rules/R-003-x.md')))).stdout).additionalContext;
+    expect(ctx).toBe(
+      'Decided: decision.2026-09-04-d4, decision.2026-09-03-d3, decision.2026-09-02-d2 · Evidence: evidence.2026-08-03-e3, evidence.2026-08-02-e2 · Open: T-003, T-002 · more: cortex why R-003',
+    );
+  });
+
+  it('AC: the schema document aggregates its clause subjects', async () => {
+    const root = makeProject('marker-schema');
+    fs.writeFileSync(path.join(root, 'cortex-schema.md'), '## 4. Files\n\n### 4.11 recall-index.json\n\n## 5. Hook payload contracts\n');
+    writeRecallIndexFixture(root, recallIndexFixture(
+      {
+        'schema:§5': recallSubject({ decided: ['decision.2026-08-05-x'] }),
+        'schema:§4.11': recallSubject({ threads: ['T-010'] }),
+      },
+      {
+        'decision.2026-08-05-x': recallEntry('decision', 'x', '.cortex/atlas/decisions/2026-08-05-x.md', '2026-08-05'),
+        'T-010': recallEntry('thread', 'ten', '.cortex/pulse/threads/T-010-ten.md', '2026-09-10'),
+      },
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, 'cortex-schema.md')))).stdout).additionalContext;
+    expect(ctx).toBe('Decided: decision.2026-08-05-x · Open: T-010');
+  });
+
+  it('AC: a source file with an insight entry AND a path subject gets summary + invitation, no marker, under 75 tokens', async () => {
+    const root = makeProject('marker-source');
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120 });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'src/a.ts': recallSubject({ decided: ['decision.2026-08-05-x'] }) },
+      { 'decision.2026-08-05-x': recallEntry('decision', 'x', '.cortex/atlas/decisions/2026-08-05-x.md', '2026-08-05') },
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, 'src/a.ts')))).stdout).additionalContext;
+    expect(ctx).toBe(
+      'src/a.ts: Does A. (~120 tok). Rules: -.\nIf this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/a.ts">corrected one-line purpose</cortex:purpose>',
+    );
+    expect(ctx).not.toContain('Decided:');
+    expect(Math.ceil(ctx.length / 4)).toBeLessThanOrEqual(75);
+  });
+
+  it('AC: a spec file with both a (fixture) insight entry and a subject gets the summary then the Decided: line, under 100 tokens', async () => {
+    const root = makeProject('marker-both');
+    writeInsightEntry(root, USAGE_SPEC, {
+      purpose: `Specifies usage.\n\n${READ_TIME_MARKER}alice/sess-1)*`,
+      tokens: 900,
+    });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'pulse.usage': recallSubject({ decided: ['decision.2026-08-05-x'] }) },
+      { 'decision.2026-08-05-x': recallEntry('decision', 'x', '.cortex/atlas/decisions/2026-08-05-x.md', '2026-08-05') },
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, USAGE_SPEC)))).stdout).additionalContext;
+    expect(ctx).toBe(`${USAGE_SPEC}: Specifies usage. (~900 tok). Rules: -.\nDecided: decision.2026-08-05-x`);
+    expect(Math.ceil(ctx.length / 4)).toBeLessThanOrEqual(100);
+  });
+
+  it('the marker rides after the summary, the invitation and the duplicate-read note, within the 125-token ceiling', async () => {
+    const root = makeProject('marker-order');
+    writeInsightEntry(root, USAGE_SPEC, { purpose: 'Specifies usage.' });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'pulse.usage': recallSubject({ threads: ['T-004'] }) },
+      { 'T-004': T004 },
+    ));
+    await run(stdinFor(root, path.join(root, USAGE_SPEC), 'sess-dup'));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, USAGE_SPEC), 'sess-dup'))).stdout).additionalContext;
+    expect(ctx.split('\n')).toEqual([
+      `${USAGE_SPEC}: Specifies usage. (~120 tok). Rules: -.`,
+      `If this purpose is wrong or stale after reading, emit: <cortex:purpose file="${USAGE_SPEC}">corrected one-line purpose</cortex:purpose>`,
+      '(already read this session)',
+      'Open: T-004',
+    ]);
+    expect(Math.ceil(ctx.length / 4)).toBeLessThanOrEqual(125);
+  });
+
+  it('with both, an over-long purpose is trimmed to the extended ceiling — the marker is never cut', async () => {
+    const root = makeProject('marker-trim');
+    writeInsightEntry(root, USAGE_SPEC, { purpose: 'Painstakingly thorough spec purpose. '.repeat(12).trim() });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'pulse.usage': recallSubject({ decided: ['decision.2026-08-05-x'], evidence: ['evidence.2026-09-15-usage'] }) },
+      {
+        'decision.2026-08-05-x': recallEntry('decision', 'x', '.cortex/atlas/decisions/2026-08-05-x.md', '2026-08-05'),
+        'evidence.2026-09-15-usage': EVIDENCE_USAGE,
+      },
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, USAGE_SPEC)))).stdout).additionalContext;
+    expect(ctx.length).toBeLessThanOrEqual(125 * 4);
+    expect(ctx).toContain('…');
+    expect(ctx).toContain('</cortex:purpose>');
+    expect(ctx.endsWith('\nDecided: decision.2026-08-05-x · Evidence: evidence.2026-09-15-usage')).toBe(true);
+  });
+
+  it('AC: no index → no marker, empty stdout (no insight entry either), and hook-errors.md is not created', async () => {
+    const root = makeProject('marker-noindex');
+    expect(await run(stdinFor(root, path.join(root, USAGE_SPEC)))).toEqual({ exitCode: 0, stdout: '' });
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('a malformed index → no marker, nothing logged', async () => {
+    const root = makeProject('marker-badindex');
+    writeRecallIndexFixture(root, '{not json');
+    expect(await run(stdinFor(root, path.join(root, USAGE_SPEC)))).toEqual({ exitCode: 0, stdout: '' });
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('an index without a subject for the target → today\'s payload exactly (summary + invitation, no marker)', async () => {
+    const root = makeProject('marker-nosubject');
+    writeInsightEntry(root, USAGE_SPEC, { purpose: 'Specifies usage.' });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'pulse.hygiene': recallSubject({ threads: ['T-004'] }) },
+      { 'T-004': T004 },
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, USAGE_SPEC)))).stdout).additionalContext;
+    expect(ctx).toBe(
+      `${USAGE_SPEC}: Specifies usage. (~120 tok). Rules: -.\nIf this purpose is wrong or stale after reading, emit: <cortex:purpose file="${USAGE_SPEC}">corrected one-line purpose</cortex:purpose>`,
+    );
+  });
+
+  it('a subject on the parent directory alone does not mark a spec read (the search hook owns directory subjects)', async () => {
+    const root = makeProject('marker-parent');
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { '.specflow/specs/pulse': recallSubject({ threads: ['T-004'] }) },
+      { 'T-004': T004 },
+    ));
+    expect(await run(stdinFor(root, path.join(root, USAGE_SPEC)))).toEqual({ exitCode: 0, stdout: '' });
+  });
+
+  it('a subject whose lists are all empty → no marker', async () => {
+    const root = makeProject('marker-emptysubject');
+    writeRecallIndexFixture(root, recallIndexFixture({ 'pulse.usage': recallSubject({ observations: ['working-style'] }) }, {}));
+    expect(await run(stdinFor(root, path.join(root, USAGE_SPEC)))).toEqual({ exitCode: 0, stdout: '' });
+  });
+
+  it('a business spec is keyed by its spec id; an atlas decision by its path', async () => {
+    const root = makeProject('marker-kinds');
+    const dec = recallEntry('decision', 'x', '.cortex/atlas/decisions/2026-08-05-x.md', '2026-08-05');
+    writeRecallIndexFixture(root, recallIndexFixture(
+      {
+        'pulse.team-sees-usage': recallSubject({ decided: ['decision.2026-08-05-x'] }),
+        '.cortex/atlas/decisions/2026-08-05-x.md': recallSubject({ threads: ['T-004'] }),
+      },
+      { 'decision.2026-08-05-x': dec, 'T-004': T004 },
+    ));
+    const biz = await run(stdinFor(root, path.join(root, '.specflow/specs-business/pulse/team-sees-usage.business.md')));
+    expect(parseEnvelope(biz.stdout).additionalContext).toBe('Decided: decision.2026-08-05-x');
+    const decRead = await run(stdinFor(root, path.join(root, '.cortex/atlas/decisions/2026-08-05-x.md')));
+    expect(parseEnvelope(decRead.stdout).additionalContext).toBe('Open: T-004');
+  });
+
+  it('marker budget: an over-long line first drops the more: tail', async () => {
+    const root = makeProject('marker-budget-tail');
+    const long = (n: number): string => `decision.2026-09-0${n}-` + 'x'.repeat(35);
+    const entries: Record<string, ReturnType<typeof recallEntry>> = {};
+    const decided: string[] = [];
+    for (let n = 1; n <= 4; n++) {
+      decided.push(long(n));
+      entries[long(n)] = recallEntry('decision', `d${n}`, `.cortex/atlas/decisions/2026-09-0${n}-x.md`, `2026-09-0${n}`);
+    }
+    entries['T-004'] = T004;
+    writeRecallIndexFixture(root, recallIndexFixture({ 'R-003': recallSubject({ decided, threads: ['T-004'] }) }, entries));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, '.cortex/compass/rules/R-003-x.md')))).stdout).additionalContext;
+    // 3 × 55-char ids + separators = 192 chars: fits only once the 24-char tail is dropped.
+    expect(ctx).toBe(`Decided: ${long(4)}, ${long(3)}, ${long(2)} · Open: T-004`);
+    expect(ctx.length).toBeLessThanOrEqual(200);
+  });
+
+  it('marker budget: then Open: is cut to one id, then Decided: to one — ids are never truncated', async () => {
+    const root = makeProject('marker-budget-ids');
+    const long = (kind: string, n: number): string => `${kind}.2026-09-0${n}-` + 'y'.repeat(30);
+    const entries: Record<string, ReturnType<typeof recallEntry>> = {};
+    const decided = [1, 2, 3].map((n) => long('decision', n));
+    const evidence = [1, 2].map((n) => long('evidence', n));
+    for (const id of decided) entries[id] = recallEntry('decision', id, `.cortex/atlas/decisions/${id}.md`, id.slice(9, 19));
+    for (const id of evidence) entries[id] = recallEntry('evidence', id, `.cortex/atlas/evidence/${id}.md`, id.slice(9, 19));
+    entries['T-004'] = T004;
+    entries['T-005'] = recallEntry('thread', 'five', '.cortex/pulse/threads/T-005-five.md', '2026-09-15');
+    writeRecallIndexFixture(root, recallIndexFixture({ 'R-003': recallSubject({ decided, evidence, threads: ['T-004', 'T-005'] }) }, entries));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, '.cortex/compass/rules/R-003-x.md')))).stdout).additionalContext;
+    expect(ctx).toBe(`Decided: ${long('decision', 3)} · Evidence: ${long('evidence', 2)}, ${long('evidence', 1)} · Open: T-005`);
+    expect(ctx.length).toBeLessThanOrEqual(200);
+  });
+
+  it('a malformed insight entry with a marker → the marker alone, plus the one hook-errors entry', async () => {
+    const root = makeProject('marker-malformed-entry');
+    const p = insightEntryPath(root, USAGE_SPEC);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, '---\npath: ' + USAGE_SPEC + '\n---\n\n## Purpose\n\nNo other frontmatter.\n');
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'pulse.usage': recallSubject({ threads: ['T-004'] }) },
+      { 'T-004': T004 },
+    ));
+    const result = await run(stdinFor(root, path.join(root, USAGE_SPEC)));
+    expect(parseEnvelope(result.stdout).additionalContext).toBe('Open: T-004');
+    expect(fs.readFileSync(hookErrorsPath(root), 'utf-8')).toContain('insight entry unreadable');
+  });
+});

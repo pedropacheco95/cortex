@@ -1,6 +1,6 @@
 ---
 id: recall.index-blocks
-status: draft
+status: implemented
 depends_on:
   - recall.recall-index
   - core-cli.init

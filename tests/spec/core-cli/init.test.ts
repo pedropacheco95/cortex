@@ -245,6 +245,11 @@ describe('AC6: settings.json merge preserves unrelated keys', () => {
     expect(JSON.stringify(settings.hooks.SessionStart)).toContain('cortex hook session-start');
     expect(JSON.stringify(settings.hooks.PreToolUse)).toContain('cortex hook pre-write');
     expect(JSON.stringify(settings.hooks.PostToolUse)).toContain('cortex hook post-write');
+    // hooks.search-annotate Rule 1: the Grep|Bash row registers with the set.
+    expect(settings.hooks.PreToolUse).toContainEqual({
+      matcher: 'Grep|Bash',
+      hooks: [{ type: 'command', command: 'cortex hook search-annotate' }],
+    });
   });
 
   it('check.hook-config passes', async () => {

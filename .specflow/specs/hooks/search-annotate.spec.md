@@ -1,6 +1,6 @@
 ---
 id: hooks.search-annotate
-status: draft
+status: implemented
 depends_on:
   - core-cli.init
   - recall.recall-index

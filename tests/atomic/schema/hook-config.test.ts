@@ -26,9 +26,15 @@ function writeSettings(root: string, hooks: Record<string, unknown>): void {
   fs.writeFileSync(p, JSON.stringify({ hooks }, null, 2));
 }
 
+const READ_PRE = { matcher: 'Read', hooks: [{ type: 'command', command: 'cortex hook pre-read' }] };
+const READ_POST = { matcher: 'Read', hooks: [{ type: 'command', command: 'cortex hook post-read' }] };
+/** The Grep|Bash row (3.4 second revision, hooks.search-annotate Rule 1) —
+ *  required under the same whole-set condition as SessionEnd + Stop, and NOT
+ *  behind hooks.preRead; fixtures that carry the Read pair carry it too. */
+const SEARCH_ROW = { matcher: 'Grep|Bash', hooks: [{ type: 'command', command: 'cortex hook search-annotate' }] };
 const PAIR = {
-  PreToolUse: [{ matcher: 'Read', hooks: [{ type: 'command', command: 'cortex hook pre-read' }] }],
-  PostToolUse: [{ matcher: 'Read', hooks: [{ type: 'command', command: 'cortex hook post-read' }] }],
+  PreToolUse: [READ_PRE, SEARCH_ROW],
+  PostToolUse: [READ_POST],
 };
 
 /** The SessionEnd + Stop rows (3.3 third revision) — required whenever any
@@ -147,5 +153,55 @@ describe('check.hook-config: SessionEnd and Stop rows (3.3 third revision, hooks
       SessionEnd: [{ hooks: [{ type: 'command', command: 'my-own-teardown' }] }],
     });
     expect(checkHookConfig(root, { hooks: { preRead: false } })).toEqual([]);
+  });
+});
+
+describe('check.hook-config: the PreToolUse Grep|Bash row (3.4 second revision, hooks.search-annotate Rule 1)', () => {
+  it('other Cortex entries present but the row missing → exactly one error keyed hooks.PreToolUse naming `cortex hook search-annotate`, `Grep|Bash` and `cortex sync`', () => {
+    const root = tmp('hc-sa-missing');
+    writeSettings(root, { PreToolUse: [READ_PRE], PostToolUse: [READ_POST], ...SESSION_ROWS });
+    const violations = checkHookConfig(root, {});
+    expect(violations).toHaveLength(1);
+    const v = violations[0]!;
+    expect(v.severity).toBe('error');
+    expect(v.check).toBe('check.hook-config');
+    expect(v.clause).toBe('§5');
+    expect(v.location.key).toBe('hooks.PreToolUse');
+    expect(v.message).toContain('cortex hook search-annotate');
+    expect(v.message).toContain('Grep|Bash');
+    expect(v.message).toMatch(/run `cortex sync`$/);
+  });
+
+  it('is not behind hooks.preRead: with the flag false and no Read pair, the row is still required — and its presence passes', () => {
+    const missing = tmp('hc-sa-flag-off-missing');
+    writeSettings(missing, {
+      SessionStart: [{ hooks: [{ type: 'command', command: 'cortex hook session-start' }] }],
+      ...SESSION_ROWS,
+    });
+    const violations = checkHookConfig(missing, { hooks: { preRead: false } });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]!.message).toContain('cortex hook search-annotate');
+
+    const present = tmp('hc-sa-flag-off-present');
+    writeSettings(present, {
+      SessionStart: [{ hooks: [{ type: 'command', command: 'cortex hook session-start' }] }],
+      PreToolUse: [SEARCH_ROW],
+      ...SESSION_ROWS,
+    });
+    expect(checkHookConfig(present, { hooks: { preRead: false } })).toEqual([]);
+  });
+
+  it('a user-owned Grep|Bash hook without the ownership marker neither satisfies nor triggers the check', () => {
+    const none = tmp('hc-sa-user-only');
+    writeSettings(none, { PreToolUse: [{ matcher: 'Grep|Bash', hooks: [{ type: 'command', command: 'my-own-search-guard' }] }] });
+    expect(checkHookConfig(none, { hooks: { preRead: false } })).toEqual([]);
+
+    const stale = tmp('hc-sa-user-plus-cortex');
+    writeSettings(stale, {
+      PreToolUse: [{ matcher: 'Grep|Bash', hooks: [{ type: 'command', command: 'my-own-search-guard' }] }],
+      ...SESSION_ROWS,
+    });
+    const violations = checkHookConfig(stale, { hooks: { preRead: false } });
+    expect(violations.map((v) => v.location.key)).toEqual(['hooks.PreToolUse']);
   });
 });

@@ -549,7 +549,13 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   // Recall index (schema §4.11, 3.4): compiled after the constellation so a
   // fresh project has both regenerable files on day one (core-cli.init Rule 2).
   const { writeRecallIndex } = await import('../recall/index.js');
-  await writeRecallIndex(absRoot);
+  const recall = await writeRecallIndex(absRoot);
+  // 3.4 second revision: the generated blocks in atlas/decisions and
+  // atlas/evidence `_index.md`, immediately after the recall index
+  // (recall.index-blocks Rule 6). On a fresh project both are empty, so no
+  // block is written and the files stay byte-identical to their templates.
+  const { writeRecallIndexBlocks } = await import('../recall/index-blocks.js');
+  writeRecallIndexBlocks(absRoot, recall);
 
   // Rule 10 — CLAUDE.md managed block.
   const claudeMdState = upsertClaudeMd(absRoot);
