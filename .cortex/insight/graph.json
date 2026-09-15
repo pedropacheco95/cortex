@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-25T01:15:12Z",
-  "built_at_commit": "76d4b04",
+  "generated": "2026-08-20T17:08:21Z",
+  "built_at_commit": "c2de5f6",
   "nodes": [
     {
       "id": "concept:always-write-pulse-report",
@@ -1034,6 +1034,11 @@
       "label": "init.ts"
     },
     {
+      "id": "file:src/cli/profile.ts",
+      "kind": "file",
+      "label": "profile.ts"
+    },
+    {
       "id": "file:src/cli/scaffold.ts",
       "kind": "file",
       "label": "scaffold.ts"
@@ -1294,6 +1299,11 @@
       "label": "types.ts"
     },
     {
+      "id": "file:src/pulse/usage.ts",
+      "kind": "file",
+      "label": "usage.ts"
+    },
+    {
       "id": "file:src/schema/checks/archive.ts",
       "kind": "file",
       "label": "archive.ts"
@@ -1422,7 +1432,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "The fallback branch of run() calls `await init(target, { force, yes, noLlm, partial, ...timeoutMs })` (cli.ts:491).",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:calls:element:src/constellation/server.ts#handleApi->element:src/constellation/server.ts#applyPreset",
@@ -1458,7 +1468,7 @@
       "edge_type": "calls",
       "confidence": "structural",
       "evidence": "`case 'session-start': return sessionStart(stdinJson);` where sessionStart is session-start.ts's exported run, imported as `run as sessionStart` (cli.ts:13,31).",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:calls:element:src/hooks/post-read.ts#run->element:src/hooks/errors.ts#appendHookError",
@@ -1863,7 +1873,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:scheduled-loops: every LLM-judgment loop still writes its pulse report on every outcome",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:insight-query-engine->concept:l1-structural-pass",
@@ -1872,7 +1882,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:insight-pipeline: the L1 pass produces the entries and graph the query engine reads",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:insight-refresh-loops->concept:staleness-ledger",
@@ -1881,7 +1891,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "implementing files co-inhabit cluster:insight-pipeline; the ledger decides what the refresh loops re-extract",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:l1-structural-pass->concept:insight-query-engine",
@@ -1890,7 +1900,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:insight-pipeline: the L1 pass produces the entries and graph the query engine reads",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:llm-judgment-subprocess->concept:always-write-pulse-report",
@@ -1899,7 +1909,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:scheduled-loops: every LLM-judgment loop still writes its pulse report on every outcome",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:project-index->concept:validation-checks",
@@ -1908,7 +1918,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:schema-validator: buildIndex is threaded through every id-resolving check",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:promotion-graduation-path->concept:pulse-proposal-gate",
@@ -1917,7 +1927,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:pulse-proposals: graduation routes through the same review/promote gate",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:pulse-proposal-gate->concept:promotion-graduation-path",
@@ -1926,7 +1936,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:pulse-proposals: graduation routes through the same review/promote gate",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:schema-contract->concept:validation-checks",
@@ -1935,7 +1945,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:schema-validator: every check returns the Violation shape types.ts defines",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:staleness-ledger->concept:insight-refresh-loops",
@@ -1944,7 +1954,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "implementing files co-inhabit cluster:insight-pipeline; the ledger decides what the refresh loops re-extract",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:validation-checks->concept:project-index",
@@ -1953,7 +1963,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:schema-validator: buildIndex is threaded through every id-resolving check",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:co-clustered:concept:validation-checks->concept:schema-contract",
@@ -1962,7 +1972,7 @@
       "edge_type": "co-clustered",
       "confidence": "inferred",
       "evidence": "co-members of cluster:schema-validator: every check returns the Violation shape types.ts defines",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:element:src/insight/refresh-daily.ts#runRefreshDaily->concept:insight-refresh-loops",
@@ -2007,7 +2017,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "File doc comment states it was extracted from init.ts specifically so 'the writer/verifier harness' uses the one auth-failure detection contract; AUTH_FAILURE_PATTERN is imported by src/loops/test-runner.ts, a writer-verifier-harness consumer.",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/cli/cli.ts->concept:dynamic-verb-dispatch",
@@ -2016,7 +2026,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "run() dispatches nearly every verb via `await import(...)` rather than static imports (20 dynamic-import call sites); only src/cli/init.ts is statically imported.",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:dynamic-verb-dispatch",
@@ -2025,7 +2035,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "init() dynamically imports src/constellation/compile.ts to build the citation graph rather than statically importing it, mirroring cli.ts's convention (init.ts:765).",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/cli/init.ts->concept:scaffolding",
@@ -2034,7 +2044,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "writeSkeleton/upsertClaudeMd/mergeSettings/writeScheduledTasks create and repair the per-project runtime surface.",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/cli/scaffold.ts->concept:scaffolding",
@@ -2043,7 +2053,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "concept entry scaffolding.md lists src/cli/scaffold.ts among the files that implement it; the file's own header doc comment describes itself as the shared scaffolding mechanism behind both cortex init and cortex sync",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/cli/task-scoping.ts->concept:task-scoping",
@@ -2061,7 +2071,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "owns the _index.md prompt template text that init writes into each module directory (CORTEX_INDEXES, INSIGHT_INDEX_TEMPLATE, ARCHIVE_INDEX_TEMPLATE).",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/constellation/compile.ts->concept:citation-graph",
@@ -2160,7 +2170,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "The top-level catch block returns a fallback payload rather than throwing or exiting non-zero, per its own doc comment on self-applied degradation.",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/insight/cli.ts->concept:insight-query-engine",
@@ -2196,7 +2206,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "supplies the per-language tree-sitter extraction the L1 pass depends on; doc comment cites 'spec insight.l1-structural' directly and states its export surface (extract, resolveImport) is what l1.ts's import contract depends on.",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/insight/l1-triage.ts->concept:l1-structural-pass",
@@ -2205,7 +2215,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "supplies the deterministic skip/sensitive/hub triage tables the L1 pass depends on; doc comment: 'L1 pre-triage for insight.l1-structural (build-order-v3 step 5a)'.",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/insight/l1.ts->concept:l1-structural-pass",
@@ -2457,7 +2467,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "compile.ts imports SPECS_GLOB/BUSINESS_GLOB from this file to enumerate the spec-tree nodes that feed citation-graph assembly (compile.ts:26,247,261).",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/pulse/distil.ts->concept:always-write-pulse-report",
@@ -2493,7 +2503,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "insightFileCovering detects prior insight coverage and redirects the candidate to a promotion proposal (distil.ts:411,584).",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/pulse/hygiene.ts->concept:always-write-pulse-report",
@@ -2520,7 +2530,7 @@
       "edge_type": "implements-concept",
       "confidence": "inferred",
       "evidence": "planPromotion consumes the promotion provenance text format (the §4.5 'Source:' line naming the insight file being promoted) that distil.ts's promotion-redirect path produces (promote.ts:33,86,100,107).",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/pulse/promote.ts->concept:pulse-proposal-gate",
@@ -2601,7 +2611,7 @@
       "edge_type": "implements-concept",
       "confidence": "stated",
       "evidence": "concept entry validation-checks.md lists src/schema/checks/config.ts among the files that implement it",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:implements-concept:file:src/schema/checks/constellation.ts->concept:validation-checks",
@@ -2754,7 +2764,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/archive/scaffold.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/init.ts",
@@ -2763,7 +2773,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/cli.ts imports src/cli/init.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/profile.ts",
+      "source": "file:src/cli/cli.ts",
+      "target": "file:src/cli/profile.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "imports the process-profile module (PROCESS_PROFILES / isProcessProfile / DEFAULT_PROFILE / readProfile) — verified present in the file's import list.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/sync.ts",
@@ -2772,7 +2791,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/cli/sync.ts: the `sync` verb dynamically imports `sync` and forwards `--yes`/target plus the new onProgress stderr sink",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/task-scoping.ts",
@@ -2781,7 +2800,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/cli/task-scoping.ts: the `tasks rename` verb dynamically imports and calls `tasksRename` directly",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/cli/tasks-register.ts",
@@ -2790,7 +2809,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/cli/tasks-register.ts: `cortex tasks plan|register|verify` dynamically imports `tasksPlan`, `registerTasks`, `verifyTasks`, `desktopAppRunning` and supplies the real home/app-support-dir/process-check",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/constellation/server.ts",
@@ -2799,7 +2818,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/constellation/server.ts: dynamically imports `serveConstellation`, `DEFAULT_PORT` for the `cortex constellation [--port N]` verb.",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/pulse/distil.ts",
@@ -2808,7 +2827,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/pulse/distil.ts: the `pulse-distil` verb dynamically imports `runDistil`, which now also carries the workflow-mining lens formerly served by the retired `loop-skill-suggest` verb.",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/cli.ts->file:src/pulse/migrate.ts",
@@ -2817,7 +2836,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/cli.ts declares a source-level dependency on src/pulse/migrate.ts: dynamically imports `migratePulseLayout` to run the full one-shot pulse-tree migration as a CLI command.",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/cli/cli.ts->file:src/pulse/usage.ts",
+      "source": "file:src/cli/cli.ts",
+      "target": "file:src/pulse/usage.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "cortex usage dispatches via `await import('../pulse/usage.js')` at cli.ts:152 — a dynamic import, represented as `imports` consistently with cli.ts's other dynamic dispatches.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
@@ -2826,7 +2854,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/archive/scaffold.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/cli/init.ts->file:src/cli/profile.ts",
+      "source": "file:src/cli/init.ts",
+      "target": "file:src/cli/profile.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "imports the process-profile module (PROCESS_PROFILES / isProcessProfile / DEFAULT_PROFILE / readProfile) — verified present in the file's import list.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/scaffold.ts",
@@ -2835,7 +2872,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/cli/scaffold.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/tasks-register.ts",
@@ -2844,7 +2881,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/init.ts declares a source-level dependency on src/cli/tasks-register.ts: dynamically imports `registrationStatus` for the Rule 15 read-only registration summary printed at the end of `cortex init`",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
@@ -2853,7 +2890,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/insight/scaffold.ts",
@@ -2862,7 +2899,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/insight/scaffold.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/paths.ts",
@@ -2871,7 +2908,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/paths.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
@@ -2880,7 +2917,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/init.ts imports src/schema/validate.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/cli/scaffold.ts->file:src/cli/profile.ts",
+      "source": "file:src/cli/scaffold.ts",
+      "target": "file:src/cli/profile.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "imports the process-profile module (PROCESS_PROFILES / isProcessProfile / DEFAULT_PROFILE / readProfile) — verified present in the file's import list.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/scaffold.ts->file:src/cli/task-scoping.ts",
@@ -2889,7 +2935,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/scaffold.ts imports src/cli/task-scoping.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/scaffold.ts->file:src/cli/templates.ts",
@@ -2898,7 +2944,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/scaffold.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/profile.ts",
+      "source": "file:src/cli/sync.ts",
+      "target": "file:src/cli/profile.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "imports the process-profile module (PROCESS_PROFILES / isProcessProfile / DEFAULT_PROFILE / readProfile) — verified present in the file's import list.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/scaffold.ts",
@@ -2907,7 +2962,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/cli/scaffold.ts (packageRoot, promptYesNo, createPromptInterface, upsertClaudeMd, mergeSettings, installGitHook, registrationSummaryLines, marker helpers)",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/task-scoping.ts",
@@ -2916,7 +2971,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/cli/task-scoping.ts (project-scoped task naming, same as init)",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/tasks-register.ts",
@@ -2925,7 +2980,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/cli/sync.ts declares a source-level dependency on src/cli/tasks-register.ts: dynamically imports `registrationStatus` at the end of sync() for the same read-only Desktop-registration check init also runs",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/sync.ts->file:src/cli/templates.ts",
@@ -2934,7 +2989,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/cli/templates.ts (SCHEMA_VERSION, CORTEX_INDEXES, index templates, SCHEDULED_TASKS)",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/sync.ts->file:src/schema/validate.ts",
@@ -2943,7 +2998,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/schema/validate.ts (validate, Rule 10 self-validation)",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/sync.ts->file:src/schema/version.ts",
@@ -2952,7 +3007,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/sync.ts imports src/schema/version.ts (SUPPORTED_MAJOR, Rule 2 major-version gate)",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
@@ -2961,7 +3016,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/tasks-register.ts imports src/cli/init.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/task-scoping.ts",
@@ -2979,7 +3034,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/cli/tasks-register.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/cli/templates.ts->file:src/cli/profile.ts",
+      "source": "file:src/cli/templates.ts",
+      "target": "file:src/cli/profile.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "imports the process-profile module (PROCESS_PROFILES / isProcessProfile / DEFAULT_PROFILE / readProfile) — verified present in the file's import list.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/constellation/compile.ts->file:src/paths.ts",
@@ -3096,7 +3160,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/cli.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/hooks/errors.ts->file:src/pulse/migrate.ts",
@@ -3123,7 +3187,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "insight entry for src/hooks/post-read.ts declares a source-level dependency on src/hooks/session-start.ts: `HookRunResult`, `HookRunOptions` types only",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/hooks/post-read.ts->file:src/insight/measure.ts",
@@ -3168,7 +3232,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/post-write.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/errors.ts",
@@ -3195,7 +3259,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/pre-read.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/hooks/pre-read.ts->file:src/insight/query.ts",
@@ -3231,7 +3295,16 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/pre-write.ts imports src/hooks/session-start.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/hooks/session-start.ts->file:src/cli/profile.ts",
+      "source": "file:src/hooks/session-start.ts",
+      "target": "file:src/cli/profile.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "imports the process-profile module (PROCESS_PROFILES / isProcessProfile / DEFAULT_PROFILE / readProfile) — verified present in the file's import list.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
@@ -3240,7 +3313,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/session-start.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/hooks/session-start.ts->file:src/hooks/errors.ts",
@@ -3249,7 +3322,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/hooks/session-start.ts imports src/hooks/errors.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/insight/cli.ts->file:src/insight/query.ts",
@@ -3465,7 +3538,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/insight/scaffold.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/insight/session-observe.ts->file:src/insight/entry.ts",
@@ -3609,7 +3682,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/onboarding-drift.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/loops/onboarding-drift.ts->file:src/insight/measure.ts",
@@ -3654,7 +3727,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/loops/report.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/loops/rule-decay.ts->file:src/loops/git-info.ts",
@@ -3915,7 +3988,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/review.ts imports src/cli/templates.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/pulse/review.ts->file:src/pulse/fences.ts",
@@ -3943,6 +4016,24 @@
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/pulse/review.ts imports src/pulse/types.ts",
       "confirmed_at_commit": "76d4b04"
+    },
+    {
+      "id": "edge:imports:file:src/pulse/usage.ts->file:src/loops/report.ts",
+      "source": "file:src/pulse/usage.ts",
+      "target": "file:src/loops/report.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "usage.ts:23 imports writePulseReport so usage.md's header shape matches every other loop's report.",
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
+      "id": "edge:imports:file:src/pulse/usage.ts->file:src/sessions/read.ts",
+      "source": "file:src/pulse/usage.ts",
+      "target": "file:src/sessions/read.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "usage.ts:22 imports listSessions, readSessionFile and the SessionEntry type — the read-only transcript layer it counts over.",
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/schema/checks/archive.ts->file:src/archive/formats.ts",
@@ -4035,13 +4126,22 @@
       "confirmed_at_commit": "76d4b04"
     },
     {
+      "id": "edge:imports:file:src/schema/checks/config.ts->file:src/cli/profile.ts",
+      "source": "file:src/schema/checks/config.ts",
+      "target": "file:src/cli/profile.ts",
+      "edge_type": "imports",
+      "confidence": "structural",
+      "evidence": "imports the process-profile module (PROCESS_PROFILES / isProcessProfile / DEFAULT_PROFILE / readProfile) — verified present in the file's import list.",
+      "confirmed_at_commit": "c2de5f6"
+    },
+    {
       "id": "edge:imports:file:src/schema/checks/config.ts->file:src/schema/types.ts",
       "source": "file:src/schema/checks/config.ts",
       "target": "file:src/schema/types.ts",
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/schema/checks/config.ts imports src/schema/types.ts",
-      "confirmed_at_commit": "76d4b04"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/schema/checks/config.ts->file:src/schema/version.ts",
@@ -4050,7 +4150,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/schema/checks/config.ts imports src/schema/version.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/schema/checks/constellation.ts->file:src/schema/types.ts",
@@ -4338,7 +4438,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/schema/validate.ts imports src/schema/checks/config.ts",
-      "confirmed_at_commit": "0998c197ccdbe798071a90562e3c7140f709c2e2"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/constellation.ts",
@@ -4464,7 +4564,7 @@
       "edge_type": "imports",
       "confidence": "structural",
       "evidence": "L1 tree-sitter parse: src/schema/validate.ts imports src/schema/version.ts",
-      "confirmed_at_commit": "0998c19"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:semantically-similar-to:element:src/pulse/distil.ts#insightFileCovering->element:src/pulse/promote.ts#planPromotion",
@@ -4473,7 +4573,7 @@
       "edge_type": "semantically-similar-to",
       "confidence": "inferred",
       "evidence": "distil.ts redirects a candidate already covered by insight prose into a promotion proposal consumed by promote.ts's planPromotion, without a direct import between the two files (confirmed: neither file imports the other).",
-      "confirmed_at_commit": "b18781f"
+      "confirmed_at_commit": "c2de5f6"
     },
     {
       "id": "edge:semantically-similar-to:file:src/schema/checks/insight.ts->file:src/schema/checks/constellation.ts",
@@ -4482,7 +4582,7 @@
       "edge_type": "semantically-similar-to",
       "confidence": "inferred",
       "evidence": "Both independently implement node-id-uniqueness and edge-endpoint-resolution validation over a nodes/edges JSON graph shape (checkInsightGraph vs checkConstellation) without sharing a common graph-validation utility beyond the shared Violation type.",
-      "confirmed_at_commit": "0998c197ccdbe798071a90562e3c7140f709c2e2"
+      "confirmed_at_commit": "c2de5f6"
     }
   ]
 }

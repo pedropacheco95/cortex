@@ -28,6 +28,8 @@ The thin argv dispatcher for the `cortex` binary — routes every CLI verb (`ini
 - Two retired verbs (`anatomy-refresh-fast`, `loop-anatomy-refresh`) are kept as pointed stderr messages rather than deleted outright. `anatomy-refresh-fast` deliberately returns exit code 0 (not 1, "hook-safe") — a stale git post-commit hook might still invoke it, and a hook must never fail a commit.
 - The bottom-of-file guard (`scriptUrl.endsWith(scriptPath)`) lets this module be imported as a library (e.g. by tests calling `run()` directly) without auto-executing `process.argv`.
 - The `loop-insight-refresh` verb enforces "exactly one of --fast/--daily/--full" via `Number(fast) + Number(daily) + Number(full) !== 1` — a compact but non-obvious idiom for "exactly one boolean flag set."
+- An unrecognized or typo'd `argv[0]` (no matching `if` branch above the fallback) falls straight through to the unguarded default `cortex init [target]` path — it silently scaffolds a full project (`.cortex/`, `.claude/`, `.specflow/`, `CLAUDE.md`, a modified `.gitignore`) in the current directory with no confirmation and no "unknown verb" error. The only guard is init's own existing-`.cortex/`-refusal, so this is safe inside an existing Cortex project but not from an arbitrary directory with a mistyped verb. (claude-sessions/pedropacheco1/f2a2b32d-7342-4527-99e4-a7716db566b6)
+- There is no `--help`/`-h` handling anywhere in this dispatcher (nor elsewhere under `src/cli/`) — grepping the file for "help" returns nothing. A `--help` token passed after any verb is just an unrecognized extra argument that branch ignores; the verb still runs for real (e.g. `cortex sync --help` performs an actual sync rather than printing usage). Verified live 2026-08-09; the observed run happened to report zero changes, so no mutation occurred that time, but the flag provides no actual safety. (claude-sessions/pedropacheco1/15ba58ed-d9ef-49ef-800d-27df25cfe94d)
 
 ## File map
 - Lines 1–38: file-level doc comment enumerating every verb this dispatcher owns and the spec each maps to.
@@ -68,6 +70,9 @@ Semantically related (not imports):
 - src/cli/tasks-register.ts: the `tasks plan|register|verify` verbs dynamically import `tasksPlan`, `registerTasks`, `verifyTasks`, `desktopAppRunning` and supply the real home/app-support-dir
 - src/pulse/distil.ts: `pulse-distil` dynamically imports `runDistil`, which also carries the retired skill-suggest loop's workflow-mining lens
 - src/hooks/cli.ts, src/schema/cli.ts, src/pulse/review.ts, src/pulse/hygiene.ts, src/constellation/compile.ts, src/constellation/server.ts: each dynamically imported by name inside `run` for its corresponding verb
+
+## Insights
+- Any unrecognised `argv[0]` (a typo'd verb, `--version`, `--help`, or any other flag-shaped first argument) falls through every `argv[0] === '<verb>'` check straight into the `cortex init` fallback at the bottom of `run` — there is no usage-error branch for an unmatched verb. Observed recurring live: `cortex --version` printed an `init: refused` message instead of a version string, and `cortex loop-bug-triage --help` silently ran bug-triage's bare autonomous mode (collect → headless judgment subprocess → report) instead of showing help. (claude-sessions/pedropacheco1/48235c09-94b4-4161-80b4-b9bf15253041)
 
 ## Query pointers
 - If you need to trace a specific `cortex <verb>` to its implementation, grep this file for the `argv[0]` literal, then read the dynamically-imported target module directly.

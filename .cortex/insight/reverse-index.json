@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "0998c19",
+  "built_at_commit": "c2de5f6",
   "referenced_by": {
     "element:src/cli/cli.ts#run": [
       "edge:calls:element:src/cli/cli.ts#run->element:src/cli/init.ts#init"
@@ -250,12 +250,14 @@
       "concept:dynamic-verb-dispatch",
       "edge:implements-concept:file:src/cli/cli.ts->concept:dynamic-verb-dispatch",
       "edge:imports:file:src/cli/cli.ts->file:src/cli/init.ts",
+      "edge:imports:file:src/cli/cli.ts->file:src/cli/profile.ts",
       "edge:imports:file:src/cli/cli.ts->file:src/cli/sync.ts",
       "edge:imports:file:src/cli/cli.ts->file:src/cli/task-scoping.ts",
       "edge:imports:file:src/cli/cli.ts->file:src/cli/tasks-register.ts",
       "edge:imports:file:src/cli/cli.ts->file:src/constellation/server.ts",
       "edge:imports:file:src/cli/cli.ts->file:src/pulse/distil.ts",
-      "edge:imports:file:src/cli/cli.ts->file:src/pulse/migrate.ts"
+      "edge:imports:file:src/cli/cli.ts->file:src/pulse/migrate.ts",
+      "edge:imports:file:src/cli/cli.ts->file:src/pulse/usage.ts"
     ],
     "file:src/cli/init.ts": [
       "concept:dynamic-verb-dispatch",
@@ -264,6 +266,7 @@
       "edge:implements-concept:file:src/cli/init.ts->concept:scaffolding",
       "edge:imports:file:src/cli/cli.ts->file:src/cli/init.ts",
       "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
+      "edge:imports:file:src/cli/init.ts->file:src/cli/profile.ts",
       "edge:imports:file:src/cli/init.ts->file:src/cli/scaffold.ts",
       "edge:imports:file:src/cli/init.ts->file:src/cli/tasks-register.ts",
       "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
@@ -272,16 +275,27 @@
       "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
       "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts"
     ],
+    "file:src/cli/profile.ts": [
+      "edge:imports:file:src/cli/cli.ts->file:src/cli/profile.ts",
+      "edge:imports:file:src/cli/init.ts->file:src/cli/profile.ts",
+      "edge:imports:file:src/cli/scaffold.ts->file:src/cli/profile.ts",
+      "edge:imports:file:src/cli/sync.ts->file:src/cli/profile.ts",
+      "edge:imports:file:src/cli/templates.ts->file:src/cli/profile.ts",
+      "edge:imports:file:src/hooks/session-start.ts->file:src/cli/profile.ts",
+      "edge:imports:file:src/schema/checks/config.ts->file:src/cli/profile.ts"
+    ],
     "file:src/cli/scaffold.ts": [
       "concept:scaffolding",
       "edge:implements-concept:file:src/cli/scaffold.ts->concept:scaffolding",
       "edge:imports:file:src/cli/init.ts->file:src/cli/scaffold.ts",
+      "edge:imports:file:src/cli/scaffold.ts->file:src/cli/profile.ts",
       "edge:imports:file:src/cli/scaffold.ts->file:src/cli/task-scoping.ts",
       "edge:imports:file:src/cli/scaffold.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/cli/sync.ts->file:src/cli/scaffold.ts"
     ],
     "file:src/cli/sync.ts": [
       "edge:imports:file:src/cli/cli.ts->file:src/cli/sync.ts",
+      "edge:imports:file:src/cli/sync.ts->file:src/cli/profile.ts",
       "edge:imports:file:src/cli/sync.ts->file:src/cli/scaffold.ts",
       "edge:imports:file:src/cli/sync.ts->file:src/cli/task-scoping.ts",
       "edge:imports:file:src/cli/sync.ts->file:src/cli/tasks-register.ts",
@@ -313,6 +327,7 @@
       "edge:imports:file:src/cli/scaffold.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/cli/sync.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/templates.ts",
+      "edge:imports:file:src/cli/templates.ts->file:src/cli/profile.ts",
       "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/insight/scaffold.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/loops/onboarding-drift.ts->file:src/cli/templates.ts",
@@ -415,6 +430,7 @@
       "edge:imports:file:src/hooks/post-write.ts->file:src/hooks/session-start.ts",
       "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/session-start.ts",
       "edge:imports:file:src/hooks/pre-write.ts->file:src/hooks/session-start.ts",
+      "edge:imports:file:src/hooks/session-start.ts->file:src/cli/profile.ts",
       "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
       "edge:imports:file:src/hooks/session-start.ts->file:src/hooks/errors.ts"
     ],
@@ -599,7 +615,8 @@
       "edge:imports:file:src/loops/test-runner.ts->file:src/loops/report.ts",
       "edge:imports:file:src/loops/verify-scheduled.ts->file:src/loops/report.ts",
       "edge:imports:file:src/pulse/distil.ts->file:src/loops/report.ts",
-      "edge:imports:file:src/pulse/hygiene.ts->file:src/loops/report.ts"
+      "edge:imports:file:src/pulse/hygiene.ts->file:src/loops/report.ts",
+      "edge:imports:file:src/pulse/usage.ts->file:src/loops/report.ts"
     ],
     "file:src/loops/rule-decay.ts": [
       "concept:always-write-pulse-report",
@@ -733,6 +750,11 @@
       "edge:imports:file:src/pulse/review.ts->file:src/pulse/types.ts",
       "edge:imports:file:src/schema/checks/pulse.ts->file:src/pulse/types.ts"
     ],
+    "file:src/pulse/usage.ts": [
+      "edge:imports:file:src/cli/cli.ts->file:src/pulse/usage.ts",
+      "edge:imports:file:src/pulse/usage.ts->file:src/loops/report.ts",
+      "edge:imports:file:src/pulse/usage.ts->file:src/sessions/read.ts"
+    ],
     "file:src/schema/checks/archive.ts": [
       "concept:validation-checks",
       "edge:implements-concept:file:src/schema/checks/archive.ts->concept:validation-checks",
@@ -775,6 +797,7 @@
     "file:src/schema/checks/config.ts": [
       "concept:validation-checks",
       "edge:implements-concept:file:src/schema/checks/config.ts->concept:validation-checks",
+      "edge:imports:file:src/schema/checks/config.ts->file:src/cli/profile.ts",
       "edge:imports:file:src/schema/checks/config.ts->file:src/schema/types.ts",
       "edge:imports:file:src/schema/checks/config.ts->file:src/schema/version.ts",
       "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/config.ts"
@@ -946,7 +969,8 @@
     ],
     "file:src/sessions/read.ts": [
       "edge:imports:file:src/hooks/post-read.ts->file:src/sessions/read.ts",
-      "edge:imports:file:src/pulse/distil.ts->file:src/sessions/read.ts"
+      "edge:imports:file:src/pulse/distil.ts->file:src/sessions/read.ts",
+      "edge:imports:file:src/pulse/usage.ts->file:src/sessions/read.ts"
     ]
   }
 }

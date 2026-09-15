@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-07-19T03:15:09Z",
-  "built_at_commit": "76d4b04",
+  "generated": "2026-08-20T17:08:21Z",
+  "built_at_commit": "c2de5f6",
   "clusters": [
     {
       "id": "cluster:archive",
@@ -35,6 +35,9 @@
         "file:src/cli/claude-auth.ts",
         "file:src/cli/cli.ts",
         "file:src/cli/init.ts",
+        "file:src/cli/profile.ts",
+        "file:src/cli/scaffold.ts",
+        "file:src/cli/sync.ts",
         "file:src/cli/task-scoping.ts",
         "file:src/cli/tasks-register.ts",
         "file:src/cli/templates.ts"
@@ -150,6 +153,7 @@
       "members": [
         "file:src/insight/session-observe.ts",
         "file:src/pulse/distil.ts",
+        "file:src/pulse/usage.ts",
         "file:src/sessions/read.ts"
       ],
       "rationale": "cross-module consumers of the shared Claude-session corpus reader (distillation, session observation)",

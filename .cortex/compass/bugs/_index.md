@@ -2,15 +2,16 @@
 
 **Read this when:** triaging a reported problem, or checking whether a failure mode has been seen before.
 
-**What's here:** sixteen bugs, `B-001`–`B-016`, one file each, seven-type classified. Filenames carry the slug — scan the directory before opening anything.
+**What's here:** seventeen bugs, `B-001`–`B-017`, one file each, seven-type classified. Filenames carry the slug — scan the directory before opening anything.
 
-**Open (3)** — found by reconciliation and dogfooding; none blocking:
+**Open (4)** — found by reconciliation and dogfooding; none blocking:
 
 | Bug | Type | Sev | |
 |---|---|---|---|
 | B-004 | incomplete-rule | low | onboarding scratch homes unredirected |
 | B-005 | missing-criterion | low | `--force` clobbers localised indexes |
 | B-007 | incomplete-rule | medium | L1's NUL heuristic reads `.ts` sources as binary |
+| B-017 | incomplete-rule | medium | a tier that failed to run reads as a clean tier |
 
 **Resolved (13):** B-001–B-003, B-006, B-008–B-016. Each carries a Resolution section and is kept deliberately as design-refinement history, not cleared. Every one was caught by the system's own mechanisms.
 

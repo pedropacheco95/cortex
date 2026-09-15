@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "0438f32",
+  "built_at_commit": "c2de5f6",
   "entries": {
     "src/archive/formats.ts": {
       "source_sha256": "c9b7445cd6840bfba025a938ca9f790d2a7534d65eb7eed9e166508ef04bbce8",
@@ -33,8 +33,8 @@
       "extraction_level": 2
     },
     "src/cli/scaffold.ts": {
-      "source_sha256": "6620981485e4e0e6700aba86fe5ba0802d6279fd6f66094de2a9a4537ba0b1a2",
-      "built_at_commit": "0998c19",
+      "source_sha256": "bbe34fb1f5a977f7caee11b2d6ea901c474361f46c3310ca5dc719768133413f",
+      "built_at_commit": "c2de5f6",
       "extraction_level": 3
     },
     "src/cli/sync.ts": {
@@ -53,8 +53,8 @@
       "extraction_level": 2
     },
     "src/cli/templates.ts": {
-      "source_sha256": "718e9569f1f4a294be653de6d037167a07593fdffc5e0747c81c432934d303d9",
-      "built_at_commit": "0998c19",
+      "source_sha256": "e695cd1f9900ad33b7cb68aa5e7bab292d15f1cfae2ff1da33c366d0477bf72a",
+      "built_at_commit": "c2de5f6",
       "extraction_level": 3
     },
     "src/constellation/compile.ts": {
@@ -292,6 +292,11 @@
       "built_at_commit": "8248c76",
       "extraction_level": 2
     },
+    "src/pulse/usage.ts": {
+      "source_sha256": "1bfc73f50164a8f7bd17c5422b9fa772aad9d83633f37de21fb8d530389a9ddc",
+      "built_at_commit": "c2de5f6",
+      "extraction_level": 2
+    },
     "src/schema/checks/archive.ts": {
       "source_sha256": "a2370395e7a010f8486bd2aa01f787bdc703124fd80f3b2748cefe6486f29796",
       "built_at_commit": "c667a9a",
@@ -413,64 +418,10 @@
       "extraction_level": 2
     }
   },
-  "stale": [
-    "concept:dynamic-verb-dispatch",
-    "concept:hook-safety",
-    "concept:scaffolding",
-    "concept:validation-checks",
-    "edge:calls:element:src/cli/cli.ts#run->element:src/cli/init.ts#init",
-    "edge:calls:element:src/hooks/cli.ts#runHook->element:src/hooks/session-start.ts#run",
-    "edge:implements-concept:file:src/cli/cli.ts->concept:dynamic-verb-dispatch",
-    "edge:implements-concept:file:src/cli/init.ts->concept:dynamic-verb-dispatch",
-    "edge:implements-concept:file:src/cli/init.ts->concept:scaffolding",
-    "edge:implements-concept:file:src/cli/scaffold.ts->concept:scaffolding",
-    "edge:implements-concept:file:src/cli/templates.ts->concept:scaffolding",
-    "edge:implements-concept:file:src/hooks/session-start.ts->concept:hook-safety",
-    "edge:implements-concept:file:src/schema/checks/config.ts->concept:validation-checks",
-    "edge:imports:file:src/archive/scaffold.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/cli/cli.ts->file:src/cli/init.ts",
-    "edge:imports:file:src/cli/cli.ts->file:src/cli/sync.ts",
-    "edge:imports:file:src/cli/cli.ts->file:src/cli/task-scoping.ts",
-    "edge:imports:file:src/cli/cli.ts->file:src/cli/tasks-register.ts",
-    "edge:imports:file:src/cli/cli.ts->file:src/constellation/server.ts",
-    "edge:imports:file:src/cli/cli.ts->file:src/pulse/distil.ts",
-    "edge:imports:file:src/cli/cli.ts->file:src/pulse/migrate.ts",
-    "edge:imports:file:src/cli/init.ts->file:src/archive/scaffold.ts",
-    "edge:imports:file:src/cli/init.ts->file:src/cli/scaffold.ts",
-    "edge:imports:file:src/cli/init.ts->file:src/cli/tasks-register.ts",
-    "edge:imports:file:src/cli/init.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/cli/init.ts->file:src/insight/scaffold.ts",
-    "edge:imports:file:src/cli/init.ts->file:src/paths.ts",
-    "edge:imports:file:src/cli/init.ts->file:src/schema/validate.ts",
-    "edge:imports:file:src/cli/scaffold.ts->file:src/cli/task-scoping.ts",
-    "edge:imports:file:src/cli/scaffold.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/cli/sync.ts->file:src/cli/scaffold.ts",
-    "edge:imports:file:src/cli/sync.ts->file:src/cli/task-scoping.ts",
-    "edge:imports:file:src/cli/sync.ts->file:src/cli/tasks-register.ts",
-    "edge:imports:file:src/cli/sync.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/cli/sync.ts->file:src/schema/validate.ts",
-    "edge:imports:file:src/cli/sync.ts->file:src/schema/version.ts",
-    "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/init.ts",
-    "edge:imports:file:src/cli/tasks-register.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/hooks/cli.ts->file:src/hooks/session-start.ts",
-    "edge:imports:file:src/hooks/post-read.ts->file:src/hooks/session-start.ts",
-    "edge:imports:file:src/hooks/post-write.ts->file:src/hooks/session-start.ts",
-    "edge:imports:file:src/hooks/pre-read.ts->file:src/hooks/session-start.ts",
-    "edge:imports:file:src/hooks/pre-write.ts->file:src/hooks/session-start.ts",
-    "edge:imports:file:src/hooks/session-start.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/hooks/session-start.ts->file:src/hooks/errors.ts",
-    "edge:imports:file:src/insight/scaffold.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/loops/onboarding-drift.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/loops/report.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/pulse/review.ts->file:src/cli/templates.ts",
-    "edge:imports:file:src/schema/checks/config.ts->file:src/schema/types.ts",
-    "edge:imports:file:src/schema/checks/config.ts->file:src/schema/version.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/checks/config.ts",
-    "edge:imports:file:src/schema/validate.ts->file:src/schema/version.ts"
-  ],
+  "stale": [],
   "cycle_commits": [
+    "c2de5f6",
     "0998c19",
-    "c667a9a",
-    "b18781f"
+    "c667a9a"
   ]
 }
