@@ -3,7 +3,11 @@ id: decision.2026-08-05-insight-pull-only-stance-reversed
 title: Insight's pull-only stance is widened to permit concept names at SessionStart
 date: 2026-08-05T18:00:00Z
 sources:
-  - ../../pulse/reports/usage.md
+  - ../evidence/2026-09-15-usage.md
+bears_on:
+  - schema:§5
+  - insight.cli
+  - scaffolding.coverage-map
 ---
 
 # The pull-only insight stance was falsified by measurement
@@ -18,6 +22,13 @@ On 2026-08-05 we reversed that stance, narrowly. Schema 3.4 permits insight **co
 the SessionStart coverage map.
 
 ## What changed our mind
+
+*(Evidence note, 2026-09-15: the figures below were read from the `pulse/reports/usage.md` of
+2026-08-05, a transient report since overwritten. The `sources:` entry now points at
+`atlas/evidence/2026-09-15-usage.md`, a re-measurement over 54 sessions with the segment-level
+search rule of `pulse.usage` Rule 8, which is why its search counts differ from the 76 quoted
+here. The finding it re-confirms is the one this decision rests on: the pull surface is not
+reached for — `atlas/decisions/` was read zero times in that window.)*
 
 Nothing about the reasoning — it is sound, and we kept it for everything it was actually
 protecting. What changed is that its **premise was measured and did not hold**.
