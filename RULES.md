@@ -62,7 +62,7 @@ A many-to-one mapping signals a spec-decomposition problem to fix, not a frontma
 
 ## 11. Respect token budgets for all scaffolding.
 
-CLAUDE.md Cortex section <400 tokens, each `_index.md` <300, SessionStart injection <100, PreRead injection <50.
+CLAUDE.md Cortex section <400 tokens, each `_index.md` <300, SessionStart injection <100, PreRead injection <50, SessionEnd and Stop inject nothing.
 
 **Why:** scaffolding is read every session; tokens must buy grounding.
 

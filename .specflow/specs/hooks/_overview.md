@@ -16,6 +16,8 @@ All three share: `cortex hook <name>` command signature as the ownership marker 
 
 - `hooks.pre-read-writeback` / `hooks.post-read` — the refine-during-use pair (opt-out via `hooks.preRead`): anatomy summary + conditional writeback invitation before a read; silent transcript sweep and `purpose_source: read-time` capture after.
 
+- `hooks.session-end` — the session record (recall work, step 1): at `SessionEnd`, one bounded deterministic read of the transcript writes `pulse/sessions/<id>.json` (open question or offer, approvals, findings, scratchpad artefact copies) and opens or answers `pulse/threads/` entries via `pulse.threads`. Injects nothing, ever; capture only.
+
 _Planned coverage (not yet written):_
 
 - The git post-commit hook — anatomy-refresh-fast (belongs to the loops build phase)

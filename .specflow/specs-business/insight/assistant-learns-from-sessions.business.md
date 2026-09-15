@@ -3,6 +3,7 @@ id: insight.assistant-learns-from-sessions
 status: implemented
 implemented_by:
   - ../../specs/insight/session-observe.spec.md
+  - ../../specs/hooks/session-end.spec.md
 ---
 
 # The assistant gets better at working here, because it learns from every session
@@ -50,4 +51,5 @@ The developer who talks to the assistant every day and is tired of re-explaining
 
 - This outcome is the separate re-specification the codebase-understanding outcome's notes anticipated: the sessions-teach-us half, now stated on its own terms with automatic, ungated learning as the headline and the review gate demoted to the binding minority.
 - The daily session pass still enriches per-file understanding in service of the sibling codebase-understanding outcome (`assistant-understands-codebase.business.md`) — a deliberate cross-reference, not a link: its dev spec's `implements:` points at exactly this outcome, because automatic learning is its primary promise.
+- Capture at the moment a session ends (`hooks/session-end.spec.md`, added 2026-09-15) is the second implementer: it records, deterministically and without judgment, what the session left hanging — an unanswered question, an offer, an approval, a measurement, a scratchpad file — so the daily pass and later recall work have evidence that survives transcript pruning. It is capture only; it learns nothing, injects nothing, and never touches the reviewed layers, so business rules 1–5 hold unchanged.
 - The next-session payoff (journey step 5) rides on the existing SessionStart hook — a compact digest of what qualifies as worth surfacing (stated forcefully, or repeated enough) appears alongside the hook's other one-liners. That hook's own dev spec (`hooks/session-start.spec.md`) still `implements:` the guardrails outcome it was built for, single-valued as the schema requires — this is a cross-reference, not a second `implemented_by:` entry, the same convention used above for the codebase-understanding outcome.

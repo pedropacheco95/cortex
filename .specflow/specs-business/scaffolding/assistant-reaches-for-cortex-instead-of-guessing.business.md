@@ -6,6 +6,7 @@ implemented_by:
   - ../../specs/scaffolding/rationalization-table.spec.md
   - ../../specs/pulse/usage.spec.md
   - ../../specs/scaffolding/skill-listing-budget.spec.md
+  - ../../specs/pulse/threads.spec.md
 ---
 
 # The assistant reaches for Cortex instead of guessing
@@ -81,6 +82,12 @@ the assistant itself, which has no way today to tell whether asking is worth the
   overview names "awareness from session one", "a clear path to the knowledge", and "a sense of
   when to look". It is written now because there is finally evidence about which of those was
   actually missing — awareness was present and useless; coverage was the gap.
+- The threads ledger (`pulse/threads.spec.md`, added 2026-09-15) is the first piece of the recall
+  work: it makes the questions, offers, approvals, and findings that sessions leave behind into
+  project knowledge with an id and a lifecycle, so a later session has something to reach for
+  instead of re-asking or re-deriving. In this step it is a ledger only — nothing is pushed into a
+  session (business rules 1, 2 and 6 unchanged); the consumers that make it "reached for" arrive
+  in a later step, and `pulse/usage.spec.md` already records the before-figure for them.
 - Adjacent but distinct: `../insight/assistant-has-project-knowledge-when-working.business.md`
   covers the *insight* layer answering when asked. This outcome covers the whole knowledge
   layer being reached for at all. That spec's business rule 3 ("never injected as ambient noise

@@ -58,6 +58,8 @@ Current edges (`A → depends on B`):
 - `pulse.usage` → `loops.session-reading`, `core-cli.init`
 - `scaffolding.skill-listing-budget` → (no dependencies — a standalone authoring contract)
 - `loops.cortex-loop-bundle` → `core-cli.task-scoping`, `core-cli.init-profile`, `core-cli.sync`, `scaffolding.skill-listing-budget`
+- `pulse.threads` → `core-cli.init`, `pulse.hygiene` (expiry rides in the implemented sweep; the edge points from the draft to the implemented spec, never the reverse)
+- `hooks.session-end` → `core-cli.init`, `loops.session-reading`, `pulse.threads`
 
 v3 edges (`build-order-v3.md`):
 
@@ -106,3 +108,10 @@ Following the design doc's §16.2 implementation order:
 9. Ingestion re-home — shipped (`cortex-ingest` folded into `cortex-archive-ingest` as the atlas extraction strategy)
 10. `constellation.insight-preset-v3` — implemented (design §11 Q2 resolved: a fourth `?preset=insight` constellation preset over the code-understanding graph, commissioned and shipped)
 11. `core-cli.tasks-register` — implemented (B-009 resolution: real Desktop-app registry registration + verify)
+
+### Recall work (2026-09; `plans/2026-09-15-recall-step1.md`)
+
+1. Step 0 — `loops.session-reading` Rule 7 (`extractToolUses`, `sessionTitle`) and `pulse.usage` Rules 8–11 — implemented (commit 6d89522)
+2. Step 1 — `pulse.threads` (ledger, counter, verbs, promote) and `hooks.session-end` (the session record), plus `pulse.hygiene` Rule 8 (expiry and retention) — specified, draft
+3. Step 2 — schema MINOR 3.4: `bears_on` in §6, `atlas/evidence` — awaits approval
+4. Step 3 — consumers (the recall surface) — not yet specified
