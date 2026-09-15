@@ -2,9 +2,9 @@
 
 **Read this when:** triaging a reported problem, or checking whether a failure mode has been seen before.
 
-**What's here:** seventeen bugs, `B-001`–`B-017`, one file each, seven-type classified. Filenames carry the slug — scan the directory before opening anything.
+**What's here:** eighteen bugs, `B-001`–`B-018`, one file each, seven-type classified. Filenames carry the slug — scan the directory before opening anything.
 
-**Open (4)** — found by reconciliation and dogfooding; none blocking:
+**Open (5)** — none blocking work:
 
 | Bug | Type | Sev | |
 |---|---|---|---|
@@ -12,9 +12,10 @@
 | B-005 | missing-criterion | low | `--force` clobbers localised indexes |
 | B-007 | incomplete-rule | medium | L1's NUL heuristic reads `.ts` sources as binary |
 | B-017 | incomplete-rule | medium | a tier that failed to run reads as a clean tier |
+| B-018 | incomplete-rule | high | unmatched verb falls through to `init` |
 
-**Resolved (13):** B-001–B-003, B-006, B-008–B-016. Each carries a Resolution section and is kept deliberately as design-refinement history, not cleared. Every one was caught by the system's own mechanisms.
+**Resolved (13):** B-001–B-003, B-006, B-008–B-016. Each keeps its Resolution as design-refinement history; all were caught by the system's own mechanisms.
 
 **How to navigate:** `type:` routes the fix — types 1–6 are a spec change, type 7 a test or skill fix. `affects:` names the spec IDs and files involved. Resolved entries record what was tried, so a recurrence is recognisable. The daily bug-triage loop fills absent classifications and reports divergences; it never overwrites a field already set.
 
-**Keep this a pointer.** Per-bug narrative belongs in the bug file. This index is read every session and has a <300-token budget (RULES 11) — it hit 1131 on 2026-08-05 by absorbing summaries that already existed one file away.
+**Keep this a pointer.** Per-bug narrative belongs in the bug file. This index is read every session under a <300-token budget (RULES 11); it hit 1131 on 2026-08-05 by absorbing summaries that already lived one file away.
