@@ -23,6 +23,8 @@ Cortex is a holistic, owned-end-to-end system for understanding a codebase — a
 13. `archive/` — ingested source documents (client specs, transcripts, contracts) and the one type-routed ingestion skill, `cortex-archive-ingest`.
 14. `provenance/` — the `provenance:`/`derives_from:` frontmatter contract, `check.provenance`, and the backward-traversal index from any source to its derivations.
 15. `migration/` — the v3 module migration: the `cerebrum`→`compass` rename and the decisions single-home consolidation.
+16. `discipline/` — process-agnostic discipline primitives both process profiles invoke (verification gate, hardening convention).
+17. `recall/` — the recall surface (2026-09): the compiled `recall-index.json` that inverts every `bears_on` edge into per-subject lists of decisions, evidence, open threads and observations, and — in step 3 — the hooks and verbs that read it.
 
 ## Why it's grouped this way
 

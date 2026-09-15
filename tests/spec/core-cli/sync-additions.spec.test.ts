@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url';
 import { init } from '../../../src/cli/init.js';
 import { sync } from '../../../src/cli/sync.js';
 import { listSkillBundles } from '../../../src/cli/scaffold.js';
+import { SCHEMA_VERSION } from '../../../src/cli/templates.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -143,7 +144,7 @@ describe('AC: the additions comparison reads the version from before Rule 2\'s r
       // ran. Reading the post-rewrite value would make every bundle look
       // already-offered, so these two assertions only hold together if the
       // comparison used the 3.2 captured at the top of the run.
-      expect(readSchemaVersion(root)).toBe('3.3');
+      expect(readSchemaVersion(root)).toBe(SCHEMA_VERSION);
       for (const name of gone) {
         expect(fs.existsSync(skillDir(root, name)), `${name} should have been installed`).toBe(true);
       }

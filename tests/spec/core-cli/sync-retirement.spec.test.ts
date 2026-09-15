@@ -18,6 +18,7 @@ import {
   hashDirectoryContent,
   writeInstalledMarker,
 } from '../../../src/cli/scaffold.js';
+import { SCHEMA_VERSION } from '../../../src/cli/templates.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -157,7 +158,7 @@ describe('AC: a currently-shipped bundle is never removed', () => {
 
 describe('AC: a declined removal is re-offered, never silently dropped', () => {
   it('the orphan is still a candidate on the next sync, even though the version already advanced', async () => {
-    // The cursor trap: sync writes schemaVersion 3.0 -> 3.3 on the FIRST run,
+    // The cursor trap: sync writes schemaVersion 3.0 -> the package version on the FIRST run,
     // whether or not the removal happened. A window-based migration would
     // never revisit it, and a declined orphan would become permanent.
     const { root, home } = await makePreRenameProject('declined-then-reoffered', { marker: false });
@@ -167,14 +168,14 @@ describe('AC: a declined removal is re-offered, never silently dropped', () => {
     const config = JSON.parse(
       fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'),
     ) as Record<string, unknown>;
-    expect(config['schemaVersion']).toBe('3.3'); // cursor already moved
+    expect(config['schemaVersion']).toBe(SCHEMA_VERSION); // cursor already moved
 
     const second = await sync(root, { home, ...DARWIN });
     expect(second.summary).toContain('Retired but preserved');
   }, TEST_TIMEOUT);
 
   it('a project already at the current version still sheds an orphan it carries', async () => {
-    const { root, home } = await makePreRenameProject('already-current', { marker: true, fromVersion: '3.3' });
+    const { root, home } = await makePreRenameProject('already-current', { marker: true, fromVersion: SCHEMA_VERSION });
     await sync(root, { yes: true, home, ...DARWIN });
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(false);
   }, TEST_TIMEOUT);

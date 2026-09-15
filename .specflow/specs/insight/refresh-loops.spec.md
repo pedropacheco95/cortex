@@ -38,6 +38,7 @@ Three loops keep `.cortex/insight/` current after `insight.extract-skill` has pr
 6. **Loop-write invariant (RULES 7, schema Decision 13).** All three loops maintain machine-owned ungated insight state directly. None of the three ever writes to `compass/`, `atlas/`, or `RULES.md`, and none emits a `pulse/` proposal — there is nothing to gate here, unlike `insight.session-observe`.
 7. **Deterministic Core bookends (R-001).** The fast tier is entirely Core: hashing and flagging are pure file I/O, no LLM SDK import anywhere in its code path. The daily and full loops follow the two-deterministic-halves idiom: `--collect` (or equivalent) assembles the worklist in Core; the significance-triage/L2/L3/L4 judgment is the LLM half, run by the shipped skill; `--apply` (or equivalent) validates and writes in Core. The judgment step never runs inside Core.
 8. **Weekly full regeneration is deterministic modulo `generated`.** Re-running the full loop over an unchanged project reproduces byte-identical `graph.json`/`tags.json`/`clusters.json` except the `generated` timestamp — the same determinism-plus-carry-over discipline as v2's insight-refresh loop, now over the v3 node grammar (`file:`/`element:`/`concept:`).
+9. **The post-commit tier also rebuilds the recall index (3.4).** `cortex insight-refresh-fast` calls `writeRecallIndex(root)` (`recall.recall-index` Rule 11) **before** its ledger gate — so a project that has never run an insight extraction still gets a fresh `.cortex/recall-index.json` on every commit — and only when `.cortex/` exists. The rebuild is pure file I/O (no LLM, no subprocess beyond the tier's own `git diff-tree`), typically under 50 ms, and hook-safe: a failure appends one entry to `pulse/reports/hook-errors.md` and the tier continues to its own work and exits 0. The tier writes nothing else new; the single git-hook invocation string (`GIT_HOOK_INVOCATION`) is unchanged, so `cortex init`/`cortex sync` need no second hook line.
 
 ## Acceptance Criteria
 
@@ -94,6 +95,13 @@ Three loops keep `.cortex/insight/` current after `insight.extract-skill` has pr
 - **Given** any of the three loops completing a run that includes re-extraction and invalidation
 - **When** the run's write set is inspected
 - **Then** every write lands under `.cortex/insight/`, no write touches `compass/`, `atlas/`, or `RULES.md`, and no `pulse/*.md` proposal section is emitted by these loops
+
+### The fast tier rebuilds the recall index before its ledger gate (3.4)
+
+- **Given** a project with a `.cortex/` directory holding one decision with `bears_on: [R-001]` and no `insight/ledger.json`
+- **When** `cortex insight-refresh-fast` runs after a commit
+- **Then** `.cortex/recall-index.json` exists with `subjects["R-001"].decided` naming the decision, the tier exits 0, and no worklist is written (the ledger gate still applies to the tier's own work)
+- **And given** the recall compiler throws, **then** the tier still exits 0 and `pulse/reports/hook-errors.md` gains one entry naming `insight-refresh-fast` and the recall index
 
 ### Scheduled-task registration matches the fast/daily/full split
 

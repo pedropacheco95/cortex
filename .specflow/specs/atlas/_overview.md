@@ -8,12 +8,13 @@ The project knowledge base, following the Karpathy LLM Wiki pattern. It is the n
 
 **Specs written:**
 
-- `atlas.ingest-skill` — the shipped `cortex-ingest` skill bundle: verbatim source preservation + §4.4-conformant extraction (stakeholders, decisions, domain terms) with mandatory provenance, atlas-only write boundary, post-write validation. Includes the `cortex validate` CLI rider.
+- `atlas.ingest-skill` — the shipped `cortex-ingest` skill bundle: verbatim source preservation + §4.4-conformant extraction (stakeholders, decisions, domain terms) with mandatory provenance, atlas-only write boundary, post-write validation. Includes the `cortex validate` CLI rider. (SUPERSEDED at v3 — folded into `archive.ingest-skill`; retained for lineage.)
+- `atlas.evidence` — (schema 3.4, recall step 2) the `atlas/evidence/` artefact kind: a measurement, experiment or audit as gated, committed knowledge with typed findings, a window, an instrument and a required `bears_on`; `check.evidence`; the three producers — `cortex usage --record` and `cortex thread promote --to atlas/evidence` (human verbs, direct write) and the `evidence-candidate` pulse type (loops, gated); and the `check.atlas` warning for a decision that cites a transient pulse report instead.
 
 _Planned (not yet written):_
 
 - `stakeholders/` — who the project serves
-- `decisions/` — human-readable narrative decisions, cross-linked to compass
+- `decisions/` — human-readable narrative decisions, cross-linked to compass (and, since 3.4, pointing forward via `bears_on` — `schema.bears-on`)
 - `domain/` — problem-domain terms and glossary
 - `sources/` — raw transcripts, RFPs, PDFs, and design docs
 

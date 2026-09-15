@@ -7,6 +7,8 @@ implemented_by:
   - ../../specs/pulse/usage.spec.md
   - ../../specs/scaffolding/skill-listing-budget.spec.md
   - ../../specs/pulse/threads.spec.md
+  - ../../specs/atlas/evidence.spec.md
+  - ../../specs/recall/recall-index.spec.md
 ---
 
 # The assistant reaches for Cortex instead of guessing
@@ -88,6 +90,15 @@ the assistant itself, which has no way today to tell whether asking is worth the
   instead of re-asking or re-deriving. In this step it is a ledger only — nothing is pushed into a
   session (business rules 1, 2 and 6 unchanged); the consumers that make it "reached for" arrive
   in a later step, and `pulse/usage.spec.md` already records the before-figure for them.
+- Step 2 of the recall work (added 2026-09-15; schema 3.4) makes the recording durable and the
+  knowledge reachable from the other end. `atlas/evidence.spec.md` gives a measurement a gated,
+  committed home with its window and instrument, so "the before-figure is recorded" means a file a
+  later session can compare against, not a line in a report that the next run overwrites; and
+  `recall/recall-index.spec.md` compiles, per subject a session might be reading or searching, what
+  was decided about it, what was measured, and what is still open — the table of contents business
+  rule 2 asks for, extended from "what Cortex holds" to "what bears on the thing in front of you".
+  Still nothing is pushed into a session in this step (rules 1, 2 and 6 unchanged): the index is
+  built, not read; the consumers that read it are step 3.
 - Adjacent but distinct: `../insight/assistant-has-project-knowledge-when-working.business.md`
   covers the *insight* layer answering when asked. This outcome covers the whole knowledge
   layer being reached for at all. That spec's business rule 3 ("never injected as ambient noise

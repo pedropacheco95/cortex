@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { ValidationReport, Violation } from './types.js';
 import { buildIndex } from './index-build.js';
+import { loadClauseIndex } from './clauses.js';
 import { SUPPORTED_VERSION } from './version.js';
 import { checkConfig } from './checks/config.js';
 import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout.js';
@@ -15,6 +16,7 @@ import { checkBizSpecs, checkBusinessStatus } from './checks/bizspec.js';
 import { checkScenarios } from './checks/scenario.js';
 import { checkXrefSymmetry, checkXrefUnique, checkXrefAcyclic } from './checks/xref.js';
 import { checkProvenance } from './checks/provenance.js';
+import { checkBearsOn } from './checks/bears-on.js';
 import { checkHookConfig } from './checks/hooks.js';
 import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
@@ -81,6 +83,9 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
 
   // 2. Build global index
   const index = await buildIndex(root);
+  // 2b. The clause index (§6.2, 3.4) — cortex-schema.md read ONCE per run and
+  // shared by every check that resolves `schema:§N` refs.
+  const clauses = loadClauseIndex(root);
 
   // 3. Run all checks
   const allViolations: Violation[] = [...configResult.violations];
@@ -129,6 +134,10 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   // Provenance check (§6, addendum A6, new at v3.0) — tolerant of the field
   // being absent everywhere (absence means "authored directly")
   allViolations.push(...await checkProvenance(root));
+
+  // bears_on — the forward edge on the two gated carriers (§6, 3.4)
+  allViolations.push(...await checkBearsOn(root, index, clauses));
+  // 3.4 — batch 1 adds checkEvidence below this line; batch 2 adds checkRecallIndex after checkConstellation
 
   // Hook config check
   allViolations.push(...checkHookConfig(root, config));

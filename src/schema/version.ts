@@ -17,6 +17,13 @@
  * declaring 3.0/3.1/3.2 still validates clean (MINOR below supported is the
  * §10.2 backward-compatibility guarantee, and no branch fires on it).
  *
+ * MINOR 3 → 4: recall step 2 — `bears_on` (schema §6, the first forward
+ * edge), addressable clauses `schema:§N[.M[.K]]` (§6.2), `atlas/evidence/`
+ * (§4.3), the `evidence-candidate` suggestion type (§4.5.1) and the compiled
+ * `recall-index.json` (§4.11); schema §0's 3.4 note. Additive: a 3.3 project
+ * validates clean untouched, and `cortex sync` is the whole upgrade path
+ * (§10.4 — no migration, no skill-bundle chain entry).
+ *
  * These three values MUST stay in step and are pinned together by
  * tests/atomic/schema/version-agreement.test.ts: this file, the
  * `SCHEMA_VERSION` new projects are scaffolded with (src/cli/templates.ts),
@@ -29,7 +36,7 @@
 export const SUPPORTED_MAJOR = 3;
 
 /** The MINOR version this validator supports (schema §10.3). */
-export const SUPPORTED_MINOR = 3;
+export const SUPPORTED_MINOR = 4;
 
 /** `MAJOR.MINOR` string form of the supported version, e.g. `"2.0"`. */
 export const SUPPORTED_VERSION = `${SUPPORTED_MAJOR}.${SUPPORTED_MINOR}`;

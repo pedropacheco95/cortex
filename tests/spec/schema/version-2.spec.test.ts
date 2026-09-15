@@ -40,10 +40,10 @@ afterAll(() => {
 });
 
 describe('schema.version-2 — the config and validator both read 3.0', () => {
-  it('version.ts declares supportedMajor 3 / supportedMinor 3 (MAJOR bumped from 2/0 by the compass-rename module migration, build-order-v3 step 2 / flag F1; MINOR 0 -> 3 by B-014, catching up with the 3.1/3.2/3.3 additions the validator already implements)', () => {
+  it('version.ts declares supportedMajor 3 / supportedMinor 4 (MAJOR bumped from 2/0 by the compass-rename module migration, build-order-v3 step 2 / flag F1; MINOR 0 -> 3 by B-014, catching up with the 3.1/3.2/3.3 additions the validator already implements; 3 -> 4 by recall step 2)', () => {
     expect(SUPPORTED_MAJOR).toBe(3);
-    expect(SUPPORTED_MINOR).toBe(3);
-    expect(SUPPORTED_VERSION).toBe('3.3');
+    expect(SUPPORTED_MINOR).toBe(4);
+    expect(SUPPORTED_VERSION).toBe('3.4');
   });
 
   it('the migrated valid fixture config reads "3.0"', () => {

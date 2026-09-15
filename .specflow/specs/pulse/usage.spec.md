@@ -35,8 +35,11 @@ falsifiable rather than asserted.
   parse (`src/sessions/read.ts` — strictly read-only, per that spec); `.cortex/cortex.config.json`
   (module roster, for which module buckets to report).
 - **WRITES:** `.cortex/pulse/reports/usage.md` (`kind: pulse-usage`, with a `generated`
-  iso-datetime, overwrite-per-run like the other pulse reports).
-- **CREATES:** `.cortex/pulse/reports/usage.md` on first run.
+  iso-datetime, overwrite-per-run like the other pulse reports); with `--record` (Rule 12),
+  additionally `.cortex/atlas/evidence/<today>-usage.md` (create only) — the payload, refusals and
+  acceptance criteria are `atlas.evidence` Rule 5's.
+- **CREATES:** `.cortex/pulse/reports/usage.md` on first run; `atlas/evidence/` and its
+  `_index.md` on the first `--record` in a project without them.
 
 ## Rules
 
@@ -127,6 +130,18 @@ falsifiable rather than asserted.
     The 10-call window is fixed and the matching is exact on normalised paths — no fuzziness, so
     two runs over the same transcripts agree. No hook emits these lines yet; the figure reports
     0 fired, 0 followed today, and exists so the number to beat is recorded before the hooks land.
+
+12. **`--record` writes the figures as evidence (3.4).** `cortex usage --record` does everything
+    `cortex usage` does, then writes one gated evidence file `atlas/evidence/<today>-usage.md`
+    (schema §4.3) from the same `UsageCounts`: `instrument: pulse.usage`, the Rule 7 window as
+    `window` with the session count as its denominator, the Rule 4/8/9/10/11 figures as typed
+    `findings`, `bears_on: [schema:§5, pulse.usage]`, `supersedes` the previous `*-usage.md`
+    when one exists, and the report body as narrative. It refuses (exit 1, nothing under
+    `atlas/`) when nothing was measurable (Rule 6's honest empty is a report, not evidence) or
+    when today's file exists. This is a human-invoked verb writing a gated file directly — the
+    same standing as `pulse-accept` and `thread promote` — and it adds no instrumentation: Rule 1
+    is intact. The payload, the exact `findings` order, and the acceptance criteria are owned by
+    `atlas.evidence` Rule 5; this rule records only that the verb has the flag.
 
 ## Acceptance Criteria
 
@@ -261,5 +276,7 @@ falsifiable rather than asserted.
   not whether the project is healthy. The link is deliberate, not a mis-wire.
 - **Deliberately not done:** no dashboard, no trend storage, no per-session detail. One report,
   overwritten per run, in the same shape as every other pulse report. Trends can be recovered from
-  git history of the report file if anyone ever wants them.
+  git history of the report file if anyone ever wants them — and, since 3.4, from the
+  `supersedes` chain of `atlas/evidence/*-usage.md` files `--record` writes (Rule 12), which is
+  the durable form the 2026-08-05 decision should have cited.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention).

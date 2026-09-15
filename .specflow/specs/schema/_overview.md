@@ -9,6 +9,10 @@ The `cortex-schema.md` contract plus the schema validator — the load-bearing a
 **Specs written:**
 
 - `schema.validator` — Verifies any artefact tree (`.cortex/`, `specs/`, `specs-business/`, `tests/`) against the contract: directory layout, frontmatter, traceability symmetry, cross-reference resolution, test-layer conventions, and schema version.
+- `schema.version-2` — the version-gate wiring and the B-014 three-way agreement (contract header, validator constants, init template); amended in place at each MINOR, 3.4 included.
+- `schema.validator-insight-checks` — the insight-module checks and the typed pulse-gate extension of `check.pulse`.
+- `schema.schema-clauses` — (3.4) `schema:§N[.M[.K]]` as a reference form: the heading-scan resolver, cached per validate run, unresolved → warning.
+- `schema.bears-on` — (3.4) the citation graph's first forward edge: the mixed-ref grammar and resolver by shape shared by every carrier, `check.bears-on` on decisions and evidence, and the rule that the inverse is computed (the recall index), never stored.
 
 _Planned coverage (not yet written):_
 

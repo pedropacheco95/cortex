@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { SCHEDULED_TASKS, scopeTaskToProfile, SCHEMA_VERSION } from '../../../src/cli/templates.js';
-import { SKILL_MIGRATIONS, listSkillBundles } from '../../../src/cli/scaffold.js';
+import { SKILL_MIGRATIONS, applicableSkillMigrations, listSkillBundles } from '../../../src/cli/scaffold.js';
 
 const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const SKILLS = path.join(PKG_ROOT, 'skills');
@@ -164,7 +164,10 @@ describe('AC: the migration entry names all eleven at the current version', () =
     const naming = SKILL_MIGRATIONS.filter((m) => MERGED.some((b) => m.removed.includes(b)));
     expect(naming).toHaveLength(1);
     for (const bundle of MERGED) expect(naming[0]!.removed).toContain(bundle);
-    expect(naming[0]!.version).toBe(SCHEMA_VERSION);
+    // In force at the shipped version: the entry is declarative (core-cli.sync
+    // Rule 6), so it applies to every project at or past its date — including
+    // the package's own SCHEMA_VERSION once later MINORs move it.
+    expect(applicableSkillMigrations(SCHEMA_VERSION)).toContain(naming[0]!);
     expect(naming[0]!.reason).toMatch(/cortex-loop/);
   });
 
@@ -175,8 +178,11 @@ describe('AC: the migration entry names all eleven at the current version', () =
     }
   });
 
-  it('no schema bump shipped with the merge', () => {
-    expect(SCHEMA_VERSION).toBe('3.3');
+  it('the merge migration is dated 3.3, not the current package version', () => {
+    // The invariant: the merge needed no bump of its own. It shipped inside
+    // the 3.3 entry; later MINORs (3.4, recall step 2) move SCHEMA_VERSION
+    // without touching this entry's date.
+    expect(SKILL_MIGRATIONS.find((m) => m.removed.includes('cortex-loop-atlas-staleness'))?.version).toBe('3.3');
   });
 });
 

@@ -20,6 +20,7 @@
 - `provenance/` — `derives_from:` frontmatter, `check.provenance`, and the backward-traversal index
 - `migration/` — the v3 module migration (compass rename, decisions single-home)
 - `discipline/` — process-agnostic discipline primitives both process profiles invoke (verification gate, hardening convention)
+- `recall/` — the recall surface: the compiled `recall-index.json` (step 2) and, in step 3, the hooks and verbs that consume it
 
 ## Dependency Graph
 
@@ -60,6 +61,10 @@ Current edges (`A → depends on B`):
 - `loops.cortex-loop-bundle` → `core-cli.task-scoping`, `core-cli.init-profile`, `core-cli.sync`, `scaffolding.skill-listing-budget`
 - `pulse.threads` → `core-cli.init`, `pulse.hygiene` (expiry rides in the implemented sweep; the edge points from the draft to the implemented spec, never the reverse)
 - `hooks.session-end` → `core-cli.init`, `loops.session-reading`, `pulse.threads`
+- `schema.schema-clauses` → `schema.validator`
+- `schema.bears-on` → `schema.validator`, `schema.schema-clauses`, `provenance.frontmatter-check`
+- `atlas.evidence` → `core-cli.init`, `schema.bears-on`, `pulse.threads`, `pulse.usage`, `pulse.review-cli` (the producers it amends are implemented; the edge points from the draft to them, never the reverse)
+- `recall.recall-index` → `schema.bears-on`, `schema.schema-clauses`, `atlas.evidence`, `pulse.threads`, `constellation.compiler`, `insight.refresh-loops`, `core-cli.init`
 
 v3 edges (`build-order-v3.md`):
 
@@ -112,6 +117,6 @@ Following the design doc's §16.2 implementation order:
 ### Recall work (2026-09; `plans/2026-09-15-recall-step1.md`)
 
 1. Step 0 — `loops.session-reading` Rule 7 (`extractToolUses`, `sessionTitle`) and `pulse.usage` Rules 8–11 — implemented (commit 6d89522)
-2. Step 1 — `pulse.threads` (ledger, counter, verbs, promote) and `hooks.session-end` (the session record), plus `pulse.hygiene` Rule 8 (expiry and retention) — specified, draft
-3. Step 2 — schema MINOR 3.4: `bears_on` in §6, `atlas/evidence` — awaits approval
-4. Step 3 — consumers (the recall surface) — not yet specified
+2. Step 1 — `pulse.threads` (ledger, counter, verbs, promote) and `hooks.session-end` (the session record), plus `pulse.hygiene` Rule 8 (expiry and retention) — implemented
+3. Step 2 — schema MINOR 3.4 (approved 2026-09-15; `plans/2026-09-15-recall-step2.md`): `schema.schema-clauses`, `schema.bears-on`, `atlas.evidence`, `recall.recall-index` — specified, draft; amended in place: `pulse.threads` Rules 4/12, `pulse.usage` Rule 12, `insight.session-observe` Rule 6, `constellation.compiler` Rule 10, `core-cli.init` Rule 2, `insight.refresh-loops` Rule 9, `schema.version-2` Rules 2/8
+4. Step 3 — consumers (the recall surface: search-time annotation, PreRead marker, `cortex why`, generated index blocks) — not yet specified

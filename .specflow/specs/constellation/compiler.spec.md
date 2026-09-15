@@ -34,6 +34,7 @@ The constellation compiler turns everything Cortex knows about a project into on
 7. **Determinism.** Groups, nodes, and edges are emitted in stable sorted order; two compilations of identical input are byte-identical except `generated`.
 8. **Honest coverage.** Orphan nodes (no edges) are emitted like any other node — gaps are information (design §12.6). `counters` carries per-module node counts plus `edges` and `droppedRefs`.
 9. **Invocation.** Exposed as a library function `compile(root)`; `cortex scan` invokes it after anatomy emission (design §12.8 step 1), so the constellation refreshes whenever anatomy does. Missing surfaces are tolerated: a project with no atlas entries or no spec trees compiles to a graph with empty groups, not an error.
+10. **`bears_on` edges (schema §4.9, §6; new at 3.4).** For every atlas decision and atlas evidence node, each `bears_on` ref is classified by `schema.bears-on` Rule 1 and emits one edge of `kind: bears_on` when its shape names a node: `rule` → `rule:R-NNN`, `bug` → `bug:B-NNN`, `domain` → `atlas:domain.<term>`, `id` → `spec:<id>` or `business:<id>` (the `related_specs` resolution) or `atlas:<id>` for any other indexed atlas id. An id-shaped ref whose node was not emitted is dropped and counted (Rule 6). The `path`, `concept` and `clause` shapes name things that are not nodes and, like `governs` globs, emit no edge and count as no dropped ref. Evidence files are atlas nodes by the existing subfolder rule (`atlas:<id>`, group `atlas:evidence`) with no special casing. Threads and observations are ungated and never enter the constellation; their `bears_on` lives in the recall index only (`recall.recall-index`).
 
 ## Acceptance Criteria
 
@@ -92,6 +93,13 @@ The constellation compiler turns everything Cortex knows about a project into on
 - **Given** any project
 - **When** the compiler runs twice without input changes
 - **Then** the two outputs are byte-identical after removing the `generated` line
+
+### bears_on emits edges for node-shaped refs only (3.4)
+
+- **Given** decision `decision.2026-09-15-d` with `bears_on: [R-001, pulse.usage, domain.insight, B-999, src/pulse/usage.ts, concept:hook-safety, schema:§5]`, where `R-001`, `pulse.usage` and `domain.insight` exist and `B-999` does not, plus evidence `evidence.2026-09-15-usage` with `bears_on: [pulse.usage]`
+- **When** the compiler runs
+- **Then** edges `{from: "atlas:decision.2026-09-15-d", kind: "bears_on"}` exist to `rule:R-001`, `spec:pulse.usage` and `atlas:domain.insight`, one edge from `atlas:evidence.2026-09-15-usage` to `spec:pulse.usage`, `counters.droppedRefs` increased by exactly 1 (for `B-999`), and no edge or dropped ref for the path, concept or clause refs
+- **And** the `atlas` group has an `atlas:evidence` child
 
 ### Empty surfaces compile, orphans survive
 

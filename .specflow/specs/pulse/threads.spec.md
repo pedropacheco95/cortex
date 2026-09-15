@@ -76,8 +76,10 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
    read ledger `pulse/state/reads/<session-id>` (one project-relative path per line) that starts
    with `.cortex/` or `.specflow/`, in ledger order; deduplicated, **capped at 12** entries total.
    Absent ledger → only (a). Entries are recorded as written, never resolved or validated here —
-   `bears_on` is named now so the field is stable; step 2 of the recall work formalises it in
-   schema §6 (until then it is a §4.5.3 field, shape-checked only).
+   `bears_on` is the schema §6 forward edge (formalised at 3.4, `schema.bears-on`); on threads it
+   stays shape-checked only (`check.threads`), because the ledger is ungated and its seeds are
+   ledger paths that may since have moved. The recall index (`recall.recall-index`) resolves
+   them and drops what no longer resolves.
 
 5. **Slug.** `<slug>` is derived from the thread's key text (Rule 7) exactly as `decisionSlug` in
    `src/insight/session-observe.ts` derives a decision filename slug — lowercased, non-alphanumerics
@@ -153,7 +155,11 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
       `> DRAFT — promoted from T-NNN by \`cortex thread promote\`; review before relying on it.`,
       a blank line, then the thread body verbatim. The drafting reuses the
       `decisionFilePayload` shape in `src/insight/session-observe.ts` (same fields, same
-      target grammar) rather than re-deriving it.
+      target grammar) rather than re-deriving it. **(3.4)** The draft carries the thread's
+      `bears_on` verbatim as the decision's `bears_on` (schema §4.3, §6 rule 6 — Core seeds the
+      forward edge wherever it drafts), passed through `decisionFilePayload`'s optional `bearsOn`
+      argument; an empty list emits no key (the drafted decision then carries `check.atlas`'s
+      "bears on nothing" warning until a human adds one).
     - `--to compass/bugs`: target `.cortex/compass/bugs/B-NNN-<slug>.md` where `B-NNN` is the
       next id after the highest existing `B-\d+` filename in that directory (no clobber, id never
       reused). Frontmatter per schema §4.2: `id`, `title` (as above), `type` from `--type`
@@ -163,10 +169,12 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
       project-relative paths (ids are kept only when `--affects` names them explicitly); when the
       resulting list is empty the verb refuses and asks for `--affects`, because `check.bug`
       requires resolvable entries. Body: the same DRAFT line, then the thread body.
-    - `--to atlas/evidence` is **reserved** for step 2 of the recall work and refused with that
-      message today. Any other `--to` is a usage error (exit 2, nothing written).
-    - A promoted file must pass `cortex validate` (`check.atlas` / `check.bug`,
-      `check.provenance`) as written — that is the test that pins this rule.
+    - `--to atlas/evidence` (3.4): a `finding` thread of kind measurement drafts an evidence
+      file — `atlas.evidence` Rule 6 owns the grammar (`--finding <metric>=<value>` required,
+      `--bears-on` optional), the payload, and its acceptance criteria; any other kind is a usage
+      error. Any other `--to` is a usage error (exit 2, nothing written).
+    - A promoted file must pass `cortex validate` (`check.atlas` / `check.bug` / `check.evidence`,
+      `check.provenance`, `check.bears-on`) as written — that is the test that pins this rule.
 
 13. **Deterministic Core, pulse-confined.** No LLM, no network, no subprocess (R-001). Everything
     except `promote` writes only under `.cortex/pulse/`; `promote` writes exactly one gated file and
@@ -301,13 +309,14 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
 ### Promote to a decision drafts a schema-valid file
 
 - **Given** `T-007` open, kind `finding`, key text `2 insight invocations over 55 sessions`,
-  `sessions:` of two citations, on 2026-09-15
+  `sessions:` of two citations, `bears_on: [pulse.usage, src/pulse/usage.ts]`, on 2026-09-15
 - **When** `cortex thread promote T-007 --to atlas/decisions` runs
 - **Then** `.cortex/atlas/decisions/2026-09-15-2-insight-invocations-over-55-sessions.md` exists
   with `id: decision.2026-09-15-2-insight-invocations-over-55-sessions`, a `title`, `date`,
-  `confidence: INFERRED`, two `provenance` entries, a body starting with the DRAFT line followed by
-  the thread body; `T-007` is `answered` with `resolved_by` equal to that path; and
-  `cortex validate` reports no `check.atlas` or `check.provenance` error
+  `confidence: INFERRED`, two `provenance` entries, `bears_on: [pulse.usage, src/pulse/usage.ts]`
+  (3.4), a body starting with the DRAFT line followed by the thread body; `T-007` is `answered`
+  with `resolved_by` equal to that path; and `cortex validate` reports no `check.atlas`,
+  `check.provenance` or `check.bears-on` error
 
 ### Promote to a bug requires a type and resolvable `affects`
 
@@ -320,14 +329,14 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
   `severity: medium`, `status: open`, `affects: ["src/pulse/hygiene.ts"]` (the one entry that
   resolves as a path), and `cortex validate` reports no `check.bug` error
 
-### Promote refuses the reserved and unknown targets, and never clobbers
+### Promote refuses unknown targets, and never clobbers
 
-- **Given** `T-009` open
-- **When** `cortex thread promote T-009 --to atlas/evidence` runs, then `--to compass/rules`, then
-  `--to atlas/decisions` twice
-- **Then** the first two exit 2 (the first naming step 2 as the owner of `atlas/evidence`), the
-  third succeeds, and the fourth exits 1 because the target exists — after every refusal the
-  thread and the filesystem are unchanged
+- **Given** `T-009` open, kind `question`
+- **When** `cortex thread promote T-009 --to compass/rules` runs, then `--to atlas/evidence` (a
+  `question` thread — `atlas.evidence` Rule 6), then `--to atlas/decisions` twice
+- **Then** the first two exit 2 (the second naming the thread's kind), the third succeeds, and the
+  fourth exits 1 because the target exists — after every refusal the thread and the filesystem
+  are unchanged
 
 ### Malformed thread files are warned, never fatal
 
@@ -351,10 +360,11 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
   `T-NNN` threads ask to be *remembered until resolved*. Merging the namespaces would force every
   open question through the accept/reject gate, which is the wrong verb for "someone should answer
   this".
-- **`bears_on` naming.** Chosen now, ahead of the step-2 schema MINOR that adds it to §6, so that
-  no thread written under step 1 needs migrating. Until step 2 it is shape-checked only.
-- **`atlas/evidence`** is the step-2 promote target for measurements; reserved here so the verb's
-  grammar does not change twice.
+- **`bears_on` naming.** Chosen at step 1, ahead of the 3.4 MINOR that added it to §6, so that
+  no thread written under step 1 needed migrating; formalised by `schema.bears-on` (3.4), still
+  shape-checked only on threads.
+- **`atlas/evidence`** became a live promote target at 3.4 (`atlas.evidence` Rule 6); the verb's
+  grammar did not change, as intended.
 - **Retention.** `pulse.hygiene` Rule 8 expires open threads past `expires` in place and deletes
   session records and scratch copies older than 30 days; no thread file is ever deleted.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention).

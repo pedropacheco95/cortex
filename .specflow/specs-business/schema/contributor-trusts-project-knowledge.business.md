@@ -5,6 +5,8 @@ implemented_by:
   - ../../specs/schema/validator.spec.md
   - ../../specs/schema/version-2.spec.md
   - ../../specs/schema/validator-insight-checks.spec.md
+  - ../../specs/schema/schema-clauses.spec.md
+  - ../../specs/schema/bears-on.spec.md
 ---
 
 # A contributor can trust the project's knowledge is consistent
@@ -44,3 +46,4 @@ Contributors maintaining a Cortex-managed project — and the AI assistant worki
 ## Notes
 
 - OPEN: whether "every outcome is exercised by at least one end-to-end scenario" is reported by this same consistency check or by a separate verification step.
+- Schema 3.4 (2026-09-15) adds the first *forward* link to the agreed shape — a decision or a measurement naming what it is about — and lets a piece of knowledge point at a numbered section of the agreement itself. Both are checked like every other link: a forward link to something that must exist and does not is a problem to fix; one to something that may legitimately not exist yet (an inferred concept, a moved file, a renumbered section) is worth a second look, never a failure (business rule 3). A decision that points at nothing, or that cites a report the system overwrites daily, is flagged as worth a second look for the same reason.
