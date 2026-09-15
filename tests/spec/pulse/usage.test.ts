@@ -179,3 +179,25 @@ describe('`usage --record` writes evidence from the same counts as the report', 
 });
 
 import { vi } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// Rule 11 (3.4 second revision) — id-shaped pointers land in the written report
+// ---------------------------------------------------------------------------
+import { hookContext, glob } from '../../fixtures/sessions.js';
+
+describe('pulse.usage — Rule 11 id-shaped pointers in the written report', () => {
+  it('counts a Decided: id line followed by its decision read, and one followed by cortex why, as 2 fired / 2 followed', async () => {
+    const root = project('rule-11-ids');
+    const home = tmpHome('rule-11-ids');
+    const line = 'Decided: decision.2026-08-05-x · Open: T-004 Do you want the counter… · more: cortex why R-003';
+    writeSessionTranscript(home, root, 's1', [hookContext(line), toolTurn(glob('src/**'), read('.cortex/atlas/decisions/2026-08-05-x.md'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext(line), toolTurn(bash('cortex why R-003'))]);
+
+    await runUsage(root, { home });
+    const body = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'usage.md'), 'utf-8');
+
+    expect(body).toMatch(/fired 2, followed 2/);
+    expect(body).toMatch(/`cortex why`: 1/);
+    expect(body).toMatch(/`atlas\/decisions\/`: 1/);
+  });
+});

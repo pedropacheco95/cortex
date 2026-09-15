@@ -604,3 +604,90 @@ describe('A second recording supersedes the first', () => {
 });
 
 import { vi } from 'vitest';
+
+// ---------------------------------------------------------------------------
+// Rule 11 (3.4 second revision) — id-shaped pointer targets and the
+// `cortex why <ref>` follow (hooks.search-annotate Rule 7's grammar)
+// ---------------------------------------------------------------------------
+import { pointerPathsIn, pointerTargetsIn } from '../../../src/pulse/usage.js';
+
+describe('pulse.usage — Rule 11: id-shaped pointers and the cortex why follow', () => {
+  const decidedLine = 'Decided: decision.2026-08-05-x · Open: T-004 Do you want the counter… · more: cortex why R-003';
+
+  it('AC: an id-shaped pointer is followed by a read of the file it stands for, or by cortex why <ref>', () => {
+    const root = project('r11-id');
+    const home = tmp('r11-id-home');
+    writeSessionTranscript(home, root, 's1', [
+      hookContext(decidedLine),
+      toolTurn(glob('src/**'), read('/abs/project/.cortex/atlas/decisions/2026-08-05-x.md')),
+    ]);
+    writeSessionTranscript(home, root, 's2', [hookContext(decidedLine), toolTurn(glob('src/**'), bash('cortex why R-003'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(2);
+    expect(counts.pointersFollowed).toBe(2);
+    expect(renderUsageBody(counts)).toMatch(/fired 2, followed 2/);
+  });
+
+  it('pointerTargetsIn maps decision., evidence. and T-NNN ids to the paths they stand for and keeps the why ref', () => {
+    expect(pointerTargetsIn(decidedLine)).toEqual([{ path: '.cortex/atlas/decisions/2026-08-05-x.md', whyRef: 'R-003' }]);
+    expect(pointerTargetsIn('Recall: evidence 2026-09-15 usage · Evidence: evidence.2026-09-15-usage')).toEqual([
+      { path: '.cortex/atlas/evidence/2026-09-15-usage.md' },
+    ]);
+    expect(pointerTargetsIn('Decided: T-004 first, then decision.x')).toEqual([{ path: '.cortex/pulse/threads/T-004-' }]);
+  });
+
+  it('a /-bearing token still wins over an id, and the more: tail never supplies the target', () => {
+    expect(pointerTargetsIn('Recall: decision 2026-07-07 Five (.cortex/atlas/decisions/2026-07-07-five.md) · more: cortex why R-001')).toEqual([
+      { path: '.cortex/atlas/decisions/2026-07-07-five.md', whyRef: 'R-001' },
+    ]);
+    expect(pointerTargetsIn('Decided: decision.x · more: cortex why .specflow/specs/pulse/hygiene.spec.md')).toEqual([
+      { path: '.cortex/atlas/decisions/x.md', whyRef: '.specflow/specs/pulse/hygiene.spec.md' },
+    ]);
+  });
+
+  it('a line with neither a path nor an id points nowhere and is not fired', () => {
+    expect(pointerTargetsIn('Recall: nothing here')).toEqual([]);
+    const root = project('r11-nowhere');
+    const home = tmp('r11-nowhere-home');
+    writeSessionTranscript(home, root, 's1', [hookContext('Recall: nothing here'), toolTurn(bash('cortex why R-003'))]);
+    expect(collectUsage(root, { home }).pointersFired).toBe(0);
+  });
+
+  it('pointerPathsIn stays as the path-only alias', () => {
+    expect(pointerPathsIn(decidedLine)).toEqual(['.cortex/atlas/decisions/2026-08-05-x.md']);
+  });
+
+  it('a T-NNN pointer is followed by a Read of any thread file whose basename starts T-NNN-', () => {
+    const root = project('r11-thread');
+    const home = tmp('r11-thread-home');
+    writeSessionTranscript(home, root, 's1', [
+      hookContext('Decided: T-004 some question'),
+      toolTurn(read('/abs/project/.cortex/pulse/threads/T-004-do-you-want-the-counter.md')),
+    ]);
+    writeSessionTranscript(home, root, 's2', [
+      hookContext('Decided: T-004 some question'),
+      toolTurn(read('/abs/project/.cortex/pulse/threads/T-0041-other.md'), read('.cortex/pulse/threads/T-005-x.md')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(2);
+    expect(counts.pointersFollowed).toBe(1);
+  });
+
+  it('a cortex why with a different ref, or one past the window, does not follow', () => {
+    const root = project('r11-why-miss');
+    const home = tmp('r11-why-miss-home');
+    const filler = Array.from({ length: 10 }, (_, i) => glob(`src/${i}/**`));
+    writeSessionTranscript(home, root, 's1', [hookContext(decidedLine), toolTurn(bash('cortex why R-004'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext(decidedLine), toolTurn(...filler), toolTurn(bash('cortex why R-003'))]);
+    writeSessionTranscript(home, root, 's3', [hookContext(decidedLine), toolTurn(bash('echo "cortex why R-003"'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(3);
+    expect(counts.pointersFollowed).toBe(0);
+  });
+});

@@ -39,19 +39,21 @@ const NUMBERED_HEADING_RE = /^#{2,4}\s+(\d+(?:\.\d+){0,2})[.\s]/;
 const FENCE_RE = /^```/;
 
 /**
- * Scan the heading lines of `cortex-schema.md` once. Absent or unreadable
- * document → an empty index and no exception (the "resolves nothing, without
- * error" criterion).
+ * The one heading scan both loaders share: every numbered heading outside a
+ * fence, in document order, as `[number, text after the number]`. The text has
+ * the number's trailing `.` and surrounding whitespace trimmed
+ * (`## 5. Hook payload contracts` → `["5", "Hook payload contracts"]`).
+ * Absent or unreadable document → no headings and no exception.
  */
-export function loadClauseIndex(root: string): ClauseIndex {
-  const index: ClauseIndex = new Set();
+function scanNumberedHeadings(root: string): [string, string][] {
   let raw: string;
   try {
     raw = fs.readFileSync(path.join(root, SCHEMA_DOC_FILENAME), 'utf-8');
   } catch {
-    return index;
+    return [];
   }
 
+  const headings: [string, string][] = [];
   let inFence = false;
   for (const line of raw.split(/\r?\n/)) {
     if (FENCE_RE.test(line)) {
@@ -60,9 +62,35 @@ export function loadClauseIndex(root: string): ClauseIndex {
     }
     if (inFence) continue;
     const m = NUMBERED_HEADING_RE.exec(line);
-    if (m?.[1]) index.add(m[1]);
+    if (m?.[1]) headings.push([m[1], line.slice(m[0].length).replace(/^[.\s]+/, '').trim()]);
   }
+  return headings;
+}
+
+/**
+ * Scan the heading lines of `cortex-schema.md` once. Absent or unreadable
+ * document → an empty index and no exception (the "resolves nothing, without
+ * error" criterion).
+ */
+export function loadClauseIndex(root: string): ClauseIndex {
+  const index: ClauseIndex = new Set();
+  for (const [number] of scanNumberedHeadings(root)) index.add(number);
   return index;
+}
+
+/**
+ * The same scan keeping the heading TEXT alongside the number (3.4 second
+ * revision — `hooks.search-annotate` Rule 5e matches a schema search's tokens
+ * against it, for that one target only). A number that appears twice keeps its
+ * first heading. Absent document → an empty map, never a throw. Additive:
+ * `ClauseIndex` stays a `Set`, `loadClauseIndex` is unchanged.
+ */
+export function loadClauseHeadings(root: string): Map<string, string> {
+  const headings = new Map<string, string>();
+  for (const [number, text] of scanNumberedHeadings(root)) {
+    if (!headings.has(number)) headings.set(number, text);
+  }
+  return headings;
 }
 
 /** The heading number a well-formed ref names (`schema:§4.11` → `4.11`); `undefined` when the grammar fails. */

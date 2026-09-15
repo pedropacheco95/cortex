@@ -238,23 +238,61 @@ export function searchTargetsIn(unquotedCommand: string): string[] {
   return targets;
 }
 
+/** Rule 11: one fired pointer — the path it stands for, and the `more:` tail's ref when the line carries one. */
+export interface PointerTarget {
+  /** The pointed path, normalised; a `T-NNN` id yields the prefix `.cortex/pulse/threads/T-NNN-`. */
+  path: string;
+  /** The `<ref>` of a trailing ` · more: cortex why <ref>`, when present. */
+  whyRef?: string;
+}
+
+/** Rule 11's `more:` tail — parsed off the line before the target is looked for, so its ref never becomes the target. */
+const MORE_TAIL_RE = /\s*·\s*more:\s*cortex why (\S+)\s*$/;
+
+/** Rule 11 (3.4 second revision): the id shapes a pointer line may carry instead of a path, and the path each stands for. */
+const ID_SHAPES: [RegExp, (id: string) => string][] = [
+  [/^decision\.[^\s·]+$/, (id) => `.cortex/atlas/decisions/${id.slice('decision.'.length)}.md`],
+  [/^evidence\.[^\s·]+$/, (id) => `.cortex/atlas/evidence/${id.slice('evidence.'.length)}.md`],
+  [/^T-\d{3,}$/, (id) => `.cortex/pulse/threads/${id}-`],
+];
+
 /**
- * Rule 11: the pointed paths of every `Recall:` / `Decided:` line in a block of
- * hook-injected text — the first `/`-bearing token of each such line, trailing
- * punctuation stripped. Lines without a path-like token point nowhere and are
- * not counted as fired.
+ * Rule 11: the pointed target of every `Recall:` / `Decided:` line in a block
+ * of hook-injected text — the first `/`-bearing token of each such line
+ * (trailing punctuation stripped) or, when the line carries no such token, its
+ * first id-shaped token mapped to the path it stands for (3.4 second revision:
+ * the `Decided:` grammar names ids, not paths). A ` · more: cortex why <ref>`
+ * tail is split off first and kept as `whyRef`. Lines with neither point
+ * nowhere and are not counted as fired.
  */
-export function pointerPathsIn(text: string): string[] {
-  const paths: string[] = [];
-  for (const line of text.split('\n')) {
-    if (!/^(Recall|Decided):/.test(line)) continue;
-    const token = line
-      .split(/\s+/)
-      .map((t) => t.replace(/^[`'"(\[]+|[`'"),.:;\]]+$/g, ''))
-      .find((t) => t.includes('/'));
-    if (token !== undefined) paths.push(normalisePath(token));
+export function pointerTargetsIn(text: string): PointerTarget[] {
+  const targets: PointerTarget[] = [];
+  for (const rawLine of text.split('\n')) {
+    if (!/^(Recall|Decided):/.test(rawLine)) continue;
+    const tail = MORE_TAIL_RE.exec(rawLine);
+    const line = tail === null ? rawLine : rawLine.slice(0, tail.index);
+    const tokens = line.split(/\s+/).map((t) => t.replace(/^[`'"(\[]+|[`'"),.:;\]]+$/g, ''));
+    const pathToken = tokens.find((t) => t.includes('/'));
+    let pointed: string | undefined;
+    if (pathToken !== undefined) pointed = normalisePath(pathToken);
+    else {
+      for (const token of tokens) {
+        const shape = ID_SHAPES.find(([re]) => re.test(token));
+        if (shape !== undefined) {
+          pointed = shape[1](token);
+          break;
+        }
+      }
+    }
+    if (pointed === undefined) continue;
+    targets.push(tail?.[1] === undefined ? { path: pointed } : { path: pointed, whyRef: tail[1] });
   }
-  return paths;
+  return targets;
+}
+
+/** The pre-3.4-second-revision name: the pointed paths only. */
+export function pointerPathsIn(text: string): string[] {
+  return pointerTargetsIn(text).map((t) => t.path);
 }
 
 /** Rule 11: the hook-injected or user-entry text an entry carries, if any. */
@@ -287,11 +325,31 @@ function injectedText(entry: SessionEntry): string[] {
   return texts;
 }
 
-/** Rule 11: a Read of exactly the pointed path, or a search of it or a directory above it. */
+/**
+ * Rule 11: a Read of exactly the pointed path, or a search of it or a directory
+ * above it. A pointed `…/T-NNN-` prefix (a thread id) matches any path in that
+ * directory whose basename starts with the prefix.
+ */
 function follows(pointed: string, target: string, kind: 'read' | 'search'): boolean {
   const t = normalisePath(target);
+  if (pointed.endsWith('-')) {
+    const slash = pointed.lastIndexOf('/');
+    const dir = pointed.slice(0, slash);
+    const prefix = pointed.slice(slash + 1);
+    const tSlash = t.lastIndexOf('/');
+    const tDir = t.slice(0, tSlash);
+    if ((tDir === dir || tDir.endsWith(`/${dir}`)) && t.slice(tSlash + 1).startsWith(prefix)) return true;
+  }
   if (pointed === t || pointed.endsWith(`/${t}`) || t.endsWith(`/${pointed}`)) return true;
   return kind === 'search' && (pointed.startsWith(`${t}/`) || pointed.includes(`/${t}/`));
+}
+
+/** Rule 11: does a quote-stripped Bash command invoke `cortex why <ref>` in any of its segments? */
+function invokesWhy(unquotedCommand: string, ref: string): boolean {
+  return unquotedCommand.split(/\|\||&&|[|;\n]/).some((segment) => {
+    const tokens = segment.trim().split(/\s+/);
+    return tokens[0] === 'cortex' && tokens[1] === 'why' && tokens[2] === ref;
+  });
 }
 
 /**
@@ -324,7 +382,7 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
     let consulted = false;
     let askedBeforeConsulting = false;
     // Rule 11: pointers still inside their follow-through window, per session.
-    let pending: { path: string; remaining: number }[] = [];
+    let pending: { path: string; whyRef?: string; remaining: number }[] = [];
 
     const search = (target: string): void => {
       const bucket = searchTargetOf(target);
@@ -338,9 +396,9 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
     };
 
     for (const entry of entries) {
-      for (const pointed of injectedText(entry).flatMap(pointerPathsIn)) {
+      for (const pointer of injectedText(entry).flatMap(pointerTargetsIn)) {
         counts.pointersFired += 1;
-        pending.push({ path: pointed, remaining: POINTER_WINDOW });
+        pending.push({ ...pointer, remaining: POINTER_WINDOW });
       }
 
       for (const use of toolUses(entry)) {
@@ -359,6 +417,12 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
           if (recall?.[1]) counts.recallVerbs[recall[1]] = (counts.recallVerbs[recall[1]] ?? 0) + 1;
           // Rule 8: only a segment that is itself a search with a path operand counts.
           for (const target of searchTargetsIn(unquoted)) search(target);
+          // Rule 11: `cortex why <ref>` with the ref a pending pointer's `more:` tail named is following.
+          pending = pending.filter((p) => {
+            if (p.whyRef === undefined || !invokesWhy(unquoted, p.whyRef)) return true;
+            counts.pointersFollowed += 1;
+            return false;
+          });
           continue;
         }
 

@@ -183,3 +183,58 @@ describe('AC: a project without the schema document resolves nothing, without er
     expect(loadClauseIndex(root).size).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3.4 second revision — `loadClauseHeadings`: the same scan, keeping the
+// heading text (hooks.search-annotate Rule 5e reads it for the schema target).
+// ---------------------------------------------------------------------------
+import { loadClauseHeadings } from '../../../src/schema/clauses.js';
+
+describe('loadClauseHeadings — heading text alongside the number (search-annotate Rule 5e)', () => {
+  const HEADINGS_DOC = [
+    '# Cortex Schema',
+    '',
+    '## 5. Hook payload contracts',
+    '',
+    '### 4.11 `recall-index.json` — the compiled recall index (new at 3.4)',
+    '',
+    '```',
+    '## 9. fake',
+    '```',
+    '',
+    '## Appendix A — check table',
+    '',
+  ].join('\n');
+
+  it('maps each numbered heading to its text with the number and its trailing dot or space trimmed', () => {
+    const root = tmp('headings');
+    writeSchemaDoc(root, HEADINGS_DOC);
+    const headings = loadClauseHeadings(root);
+    expect(headings.get('5')).toBe('Hook payload contracts');
+    expect(headings.get('4.11')).toBe('`recall-index.json` — the compiled recall index (new at 3.4)');
+    expect(headings.size).toBe(2);
+  });
+
+  it('skips a heading inside a fence and never maps an appendix', () => {
+    const root = tmp('headings-fence');
+    writeSchemaDoc(root, HEADINGS_DOC);
+    const headings = loadClauseHeadings(root);
+    expect(headings.has('9')).toBe(false);
+    expect([...headings.values()].some((t) => /appendix/i.test(t))).toBe(false);
+  });
+
+  it('agrees with loadClauseIndex on the set of numbers', () => {
+    const root = tmp('headings-agree');
+    writeSchemaDoc(root, AC_DOC);
+    expect([...loadClauseHeadings(root).keys()].sort()).toEqual([...loadClauseIndex(root)].sort());
+  });
+
+  it('a missing document yields an empty map without throwing', () => {
+    const root = tmp('headings-missing');
+    let headings: Map<string, string> | undefined;
+    expect(() => {
+      headings = loadClauseHeadings(root);
+    }).not.toThrow();
+    expect(headings?.size).toBe(0);
+  });
+});

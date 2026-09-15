@@ -181,7 +181,7 @@ The measurement is `pulse.usage` Rule 11 (pointers fired and followed), which al
   `path: ".specflow/specs/pulse/hygiene.spec.md"` and `pattern: "retention"`
 - **When** the hook runs
 - **Then** the first line is `Decided: decision.2026-07-10-x · Open: T-004 Do you want the
-  counter in state/ or the…`
+  counter in state/ or at…`
 
 ### A spec path matches by its id
 
