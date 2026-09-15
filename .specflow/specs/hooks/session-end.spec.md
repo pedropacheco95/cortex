@@ -126,7 +126,19 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
    `.cortex/pulse/state/reads/<session-id>` when that ledger exists, else `null` — recorded, never
    copied.
 
-7. **Text extractors (in transcript order).**
+7. **Text extractors (in transcript order).** The user messages these extractors see are the
+   **human's**: a user-role message is **harness-injected** when its text, after trimming,
+   starts with `<` or `[`, **or** when its first 300 characters contain any of the markers
+   `<teammate-message`, `<system-reminder`, `<task-notification`, `[SYSTEM NOTIFICATION`,
+   `<bash-input>`, `<bash-stdout>`, `<command-name>`, `<local-command` (`HARNESS_MARKERS`,
+   exported from the module) — teammate reports arrive as a prose line
+   `Another Claude session sent a message:` followed by the tag on the next line, so the prefix
+   test alone misses them — and such a message is **ignored** by 7a's
+   "no user message follows", by 7b, by the first-user-message reply rule (Rule 9) and by
+   answered detection (`pulse.threads` Rule 9). A user entry whose content is tool results only
+   (no text block) is likewise not a message. `session_kind` (Rule 6) still reads the raw first
+   user message, because the scheduled-task marker itself starts with `<`. The convention is
+   Claude Code's, observed, externally owned (Notes).
    (a) **`open_question`** — the candidate is the **last assistant text**, taken from the Stop
    companion's file `state/sessions/<session-id>.last.json` when that file exists and its `at` is
    later than every message timestamp in the parsed tail (the transcript lagged; the companion is
@@ -148,8 +160,11 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
    `/<cortex:finding\s+kind="(measurement|conclusion)"(?:\s+bears_on="([^"]*)")?\s*>([^\n<]{1,300})<\/cortex:finding>/g`
    — single line, 1–300 characters, otherwise the tag is skipped (never truncated, never logged).
    Stored as `{ kind, text, bears_on: string[], timestamp, source: "tag" }`, `bears_on` split on
-   commas and trimmed. Plus a **lexicon fallback** for untagged measurements in the tail: any
-   assistant sentence (split on `. `, `! `, `? ` and newlines) that contains a digit **and** matches
+   commas and trimmed. Plus a **lexicon fallback** for untagged measurements in the tail: the
+   assistant text is first reduced to its prose — every `<cortex:finding>` tag is stripped (a
+   tagged sentence is never counted twice), fenced code blocks (``` … ```) are removed, and
+   markdown table rows (lines whose trimmed text starts with `|`) are dropped — then any
+   remaining sentence (split on `. `, `! `, `? ` and newlines) that contains a digit **and** matches
    `/\bover \d+ sessions\b|\d+(\.\d+)?[x×] (cheaper|faster)|\bmedian\b|\bmeasured\b/i` becomes
    `{ kind: "measurement", text, timestamp, source: "lexicon" }`, text capped at 300 characters.
    Tagged findings come first; the combined list is capped at 20. Scheduled sessions skip the
@@ -174,7 +189,9 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
    `approval` per approval, one `finding` per finding, one `artefact` per copied artefact; for a
    **scheduled** session: `finding` and `artefact` threads only — a loop's question or approval is
    addressed to nobody and would be noise), each deduped by normalised text against open threads,
-   and Rule 9 there marks open threads answered by this session. The ids returned land in the
+   and Rule 9 there marks open threads answered by this session — over the assistant messages
+   and the **human** user messages only (Rule 7's harness-injected exclusion), with `S`'s first
+   user message for its reply rule being the first human one. The ids returned land in the
    record as `threads_opened[]` and `threads_answered[]`, in that order; the record is written
    **after** the thread step so it names the ids (a thread-step failure is caught, logged to
    `hook-errors.md`, and the record is still written with empty id lists — the record never depends
@@ -265,6 +282,21 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
 - **Then** `approvals` has exactly one entry, `approval` is `approved, go ahead` and `approved` is
   `Proposal: allocate T-ids from a separate counter file.`
 
+### Harness-injected user entries are not approvals and do not answer questions
+
+- **Given** an interactive transcript with an assistant message ending `Proposal: allocate T-ids
+  from a separate counter file.`, then a user message in the observed two-line teammate shape
+  `Another Claude session sent a message:\n<teammate-message teammate_id="x">…approved, go
+  ahead…</teammate-message>`, then a user message `<system-reminder>…</system-reminder>`, then a
+  user entry carrying only a `tool_result` block whose nested text says `ship it`, then the human's
+  `Approved.`; and an open thread `T-003` whose id appears only inside the teammate message, and a
+  `pulse/sessions/` record listing open question `T-004` as opened by the previous session
+- **When** the hook fires
+- **Then** `approvals` has exactly one entry, `approval` `Approved.` paired with the proposal;
+  `T-003` stays `open`; `T-004` is `answered` (the human's `Approved.` is a non-empty first
+  message); and a transcript whose last assistant question is followed only by a
+  `<task-notification>` user entry still records that question as `open_question`
+
 ### Tagged findings are captured, malformed tags are skipped
 
 - **Given** assistant text containing
@@ -273,6 +305,16 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
 - **When** the hook fires
 - **Then** `findings` has exactly one entry with `kind: measurement`, that text,
   `bears_on: ["src/pulse/usage.ts", "pulse.usage"]` and `source: tag`
+
+### Table rows, code fences and tagged text never feed the lexicon fallback
+
+- **Given** an interactive transcript whose assistant text contains a markdown table row
+  `| 2 | CLI surface | 131,659 | **52,246** | code 2.5× cheaper |`, a fenced code block holding
+  `median 12 ms`, the tag `<cortex:finding kind="measurement">2 insight invocations over 55 sessions</cortex:finding>`,
+  and the prose sentence `The whole pass measured 3.1x faster.`
+- **When** the hook fires
+- **Then** `findings` has exactly two entries: the tag (`source: tag`) and the prose sentence
+  (`source: lexicon`) — nothing from the table row, the code block, or the tag's own text
 
 ### Untagged measurements fall back to the lexicon in interactive sessions only
 
@@ -377,6 +419,15 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
   scheduled session that never produces a record is therefore a finding, not a bug. The transcript
   is written asynchronously and may lag at `SessionEnd`; the docs point hooks that need the final
   assistant text at `Stop`'s `last_assistant_message`, which is exactly why Rule 11 exists.
+- **Harness-injected user entries, as observed 2026-09-15 (externally owned).** Claude Code
+  writes teammate messages, system reminders and notifications, `!`-prefixed shell echoes, skill
+  loads and tool results as `user`-role entries. Most start with `<` or `[` (or are
+  tool-result-only); teammate reports start with the prose line `Another Claude session sent a
+  message:` and carry `<teammate-message …>` on the second line, which is why Rule 7 also scans
+  the first 300 characters for the marker list. The list is the set observed on 2026-09-15; a new
+  harness wrapper shows up as false approvals in `pulse/sessions/` records and is added here. A
+  human message that genuinely starts with `<` or `[`, or quotes a marker early, is lost to the
+  extractors — the accepted cost.
 - **Lexicons are engineering-call constants**, exported from the module and quoted in Rule 7 so
   tests pin them; widening one is a spec edit, not a code tweak.
 - **Why a record and not a proposal.** A record is evidence, not a claim: it says what the session

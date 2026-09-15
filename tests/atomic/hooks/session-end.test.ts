@@ -23,6 +23,9 @@ import {
   extractApprovals,
   extractFindings,
   collectArtefacts,
+  isHarnessInjected,
+  humanMessages,
+  HARNESS_MARKERS,
 } from '../../../src/hooks/session-end.js';
 import type { ExtractedMessage, ExtractedToolUse } from '../../../src/sessions/read.js';
 import { extractMessages, extractToolUses } from '../../../src/sessions/read.js';
@@ -313,6 +316,23 @@ describe('AC — untagged measurements fall back to the lexicon in interactive s
     expect(extractFindings([msg('assistant', FINDING_TAG, T0)], [msg('assistant', SENTENCE, T1)], 'scheduled').length).toBe(1);
   });
 
+  it('table rows, fenced code and tagged text never feed the lexicon; prose still does', () => {
+    const text = [
+      '| 2 | CLI surface | 131,659 | **52,246** | code 2.5× cheaper |',
+      '  | 3 | anatomy | 43,000 | 25,284 | code 1.7× cheaper |',
+      '```',
+      'median 12 ms over 55 sessions',
+      '```',
+      `Measured: ${FINDING_TAG}`,
+      'The whole pass measured 3.1x faster.',
+    ].join('\n');
+    const out = extractFindings([msg('assistant', text, T0)], [msg('assistant', text, T1)], 'interactive');
+    expect(out.map((f) => [f.source, f.text])).toEqual([
+      ['tag', '2 insight invocations over 55 sessions'],
+      ['lexicon', 'The whole pass measured 3.1x faster.'],
+    ]);
+  });
+
   it('a lexicon hit without a digit is ignored; tags come first and the combined list caps at 20', () => {
     expect(extractFindings([], [msg('assistant', 'We measured nothing useful.', T1)], 'interactive')).toEqual([]);
     const tags = Array.from({ length: 15 }, (_, i) => `<cortex:finding kind="conclusion">c${i}</cortex:finding>`).join(' ');
@@ -419,5 +439,49 @@ describe('AC — without scratchpad_dir the path heuristic applies', () => {
     ]);
     expect(out.every((e) => e.copied === false && e.first_heading === null)).toBe(true);
     expect(collectArtefacts(root, 'sess-f', uses, '')).toEqual(out);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 7 preamble — harness-injected user entries
+// ---------------------------------------------------------------------------
+
+describe('Rule 7 — harness-injected user entries are not the human\'s messages', () => {
+  it('a user message starting (after trimming) with < or [ is injected; assistant text never is', () => {
+    expect(isHarnessInjected(msg('user', '<teammate-message teammate_id="x">approved</teammate-message>'))).toBe(true);
+    expect(isHarnessInjected(msg('user', '  \n[SYSTEM NOTIFICATION] go ahead'))).toBe(true);
+    expect(isHarnessInjected(msg('user', '<system-reminder>ship it</system-reminder>'))).toBe(true);
+    // The observed two-line teammate shape: prose first, the tag on the next line.
+    expect(
+      isHarnessInjected(msg('user', 'Another Claude session sent a message:\n<teammate-message teammate_id="x">approved, go ahead</teammate-message>')),
+    ).toBe(true);
+    expect(isHarnessInjected(msg('user', 'Note from the harness\n[SYSTEM NOTIFICATION] proceed'))).toBe(true);
+    expect(isHarnessInjected(msg('user', 'x'.repeat(301) + '\n<teammate-message>late marker</teammate-message>'))).toBe(false);
+    expect(HARNESS_MARKERS).toEqual([
+      '<teammate-message',
+      '<system-reminder',
+      '<task-notification',
+      '[SYSTEM NOTIFICATION',
+      '<bash-input>',
+      '<bash-stdout>',
+      '<command-name>',
+      '<local-command',
+    ]);
+    expect(isHarnessInjected(msg('user', 'Approved.'))).toBe(false);
+    expect(isHarnessInjected(msg('user', 'proceed with <the plan>'))).toBe(false);
+    expect(isHarnessInjected(msg('assistant', '<cortex:finding kind="conclusion">x</cortex:finding>'))).toBe(false);
+  });
+
+  it('humanMessages keeps order and drops only the injected user entries', () => {
+    const list = [
+      msg('assistant', 'Proposal: X.', T0),
+      msg('user', '<teammate-message>approved, go ahead</teammate-message>', T1),
+      msg('user', 'Approved.', T2),
+      msg('assistant', 'Done?', T3),
+      msg('user', '[SYSTEM NOTIFICATION] done', T3),
+    ];
+    expect(humanMessages(list)).toEqual([list[0], list[2], list[3]]);
+    expect(extractApprovals(humanMessages(list))).toEqual([{ approval: 'Approved.', approved: 'Proposal: X.', timestamp: T2 }]);
+    expect(extractOpenQuestion(humanMessages(list), null)?.text).toBe('Done?');
   });
 });

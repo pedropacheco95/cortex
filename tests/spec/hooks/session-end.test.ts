@@ -244,6 +244,62 @@ describe('AC — approvals are paired with what was approved', () => {
   });
 });
 
+describe('AC — harness-injected user entries are not approvals and do not answer questions', () => {
+  it('teammate, system-reminder and tool_result-only user entries are ignored; the human\'s Approved. counts and replies', async () => {
+    const root = project('injected');
+    writeThread(root, makeThread({ id: 'T-003', body: 'Keep the counter in state/?' }));
+    writeThread(root, makeThread({ id: 'T-004', body: 'Which root for the counter, pulse or state?' }));
+    fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'state'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex', 'pulse', 'state', 'thread-counter'), '4\n');
+    writeSessionRecordFixture(root, makeSessionRecord({ session_id: 'prev', ended: T0, threads_opened: ['T-004'] }));
+    const toolResultOnly = {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_0', content: [{ type: 'text', text: 'ship it' }] }] },
+      timestamp: T1,
+    };
+    const transcript = writeTranscriptFile(root, [
+      turnAt('assistant', 'Two ways.\n\nProposal: allocate T-ids from a separate counter file.', T0),
+      turnAt('user', 'Another Claude session sent a message:\n<teammate-message teammate_id="b2" summary="x">approved, go ahead — T-003 is settled</teammate-message>', T1),
+      turnAt('user', '<system-reminder>go ahead with the plan</system-reminder>', T1),
+      toolResultOnly,
+      turnAt('user', 'Approved.', T2),
+      turnAt('assistant', 'Done.', T2),
+    ]);
+
+    await run(sessionEndStdin(root, transcript), { now: NOW });
+
+    const record = readSessionRecord(root, 'sess-end');
+    expect(record?.approvals).toEqual([
+      { approval: 'Approved.', approved: 'Proposal: allocate T-ids from a separate counter file.', timestamp: T2 },
+    ]);
+    expect(record?.threads_answered).toEqual(['T-004']);
+    expect(threadById(root, 'T-003').status).toBe('open');
+    expect(threadById(root, 'T-004').status).toBe('answered');
+    expect(record?.session_kind).toBe('interactive');
+  });
+
+  it('a question followed only by a <task-notification> user entry is still the open question', async () => {
+    const root = project('injected-q');
+    const transcript = writeTranscriptFile(root, [
+      turnAt('user', 'go', T0),
+      turnAt('assistant', QUESTION, T1),
+      turnAt('user', '<task-notification>batch done</task-notification>', T2),
+    ]);
+    await run(sessionEndStdin(root, transcript), { now: NOW });
+    expect(readSessionRecord(root, 'sess-end')?.open_question?.text).toBe(QUESTION);
+  });
+
+  it('a scheduled session is still detected from its <scheduled-task> first user message', async () => {
+    const root = project('injected-sched');
+    const transcript = writeTranscriptFile(root, [
+      turnAt('user', '<scheduled-task name="cortex-daily">run the bundle</scheduled-task>', T0),
+      turnAt('assistant', 'Running.', T1),
+    ]);
+    await run(sessionEndStdin(root, transcript), { now: NOW });
+    expect(readSessionRecord(root, 'sess-end')?.session_kind).toBe('scheduled');
+  });
+});
+
 describe('AC — tagged findings are captured, malformed tags are skipped', () => {
   it('one well-formed tag survives next to a multi-line and a 301-character one', async () => {
     const root = project('findings');
@@ -258,6 +314,28 @@ describe('AC — tagged findings are captured, malformed tags are skipped', () =
       { kind: 'measurement', text: '2 insight invocations over 55 sessions', bears_on: ['src/pulse/usage.ts', 'pulse.usage'], timestamp: T1, source: 'tag' },
     ]);
     expect(threadById(root, 'T-001').bears_on).toEqual(['src/pulse/usage.ts', 'pulse.usage']);
+  });
+});
+
+describe('AC — table rows, code fences and tagged text never feed the lexicon fallback', () => {
+  it('records exactly the tag and the prose sentence', async () => {
+    const root = project('table-rows');
+    const text = [
+      'Results:',
+      '| 2 | CLI surface | 131,659 | **52,246** | code 2.5× cheaper |',
+      '',
+      '```',
+      'median 12 ms',
+      '```',
+      `Kept: ${FINDING_TAG}`,
+      'The whole pass measured 3.1x faster.',
+    ].join('\n');
+    const transcript = writeTranscriptFile(root, [turnAt('user', 'measure', T0), turnAt('assistant', text, T1)]);
+    await run(sessionEndStdin(root, transcript), { now: NOW });
+    expect(readSessionRecord(root, 'sess-end')?.findings.map((f) => [f.source, f.text])).toEqual([
+      ['tag', '2 insight invocations over 55 sessions'],
+      ['lexicon', 'The whole pass measured 3.1x faster.'],
+    ]);
   });
 });
 

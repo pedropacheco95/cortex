@@ -155,6 +155,43 @@ export async function readTranscript(filePath: string, openThreadIds: string[]):
 // Rule 7 — text extractors (pure)
 // ---------------------------------------------------------------------------
 
+/**
+ * Rule 7 preamble: the harness wrappers Claude Code writes as user-role
+ * entries, as observed 2026-09-15 (externally owned; spec Notes).
+ */
+export const HARNESS_MARKERS = [
+  '<teammate-message',
+  '<system-reminder',
+  '<task-notification',
+  '[SYSTEM NOTIFICATION',
+  '<bash-input>',
+  '<bash-stdout>',
+  '<command-name>',
+  '<local-command',
+];
+/** Rule 7 preamble: how far into a user message a marker is looked for. */
+const HARNESS_SCAN_CHARS = 300;
+
+/**
+ * Rule 7 preamble: a user-role message is harness-injected when its trimmed
+ * text starts with `<` or `[`, or when its first HARNESS_SCAN_CHARS characters
+ * contain any HARNESS_MARKERS entry (teammate reports arrive as a prose line
+ * with the tag on the next line). Never an assistant message. Tool-result-only
+ * user entries carry no text block, so `extractMessages` already drops them.
+ */
+export function isHarnessInjected(m: ExtractedMessage): boolean {
+  if (m.role !== 'user') return false;
+  const first = m.text.trimStart()[0];
+  if (first === '<' || first === '[') return true;
+  const head = m.text.slice(0, HARNESS_SCAN_CHARS);
+  return HARNESS_MARKERS.some((marker) => head.includes(marker));
+}
+
+/** The messages the extractors and answered detection see: everything but injected user entries. */
+export function humanMessages(messages: ExtractedMessage[]): ExtractedMessage[] {
+  return messages.filter((m) => !isHarnessInjected(m));
+}
+
 /** The final blank-line-separated block of a text, trimmed. */
 export function lastParagraph(text: string): string {
   const blocks = text
@@ -240,6 +277,20 @@ export function extractApprovals(tailMessages: ExtractedMessage[]): SessionRecor
   return out;
 }
 
+/**
+ * Rule 7c: the prose of an assistant text — `<cortex:finding>` tags stripped
+ * (never counted twice), fenced code blocks removed, markdown table rows
+ * (trimmed lines starting with `|`) dropped.
+ */
+function proseOf(text: string): string {
+  return text
+    .replace(FINDING_TAG_RE, '')
+    .replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1\s*$/gm, '')
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('|'))
+    .join('\n');
+}
+
 /** Rule 7c sentence split: `. `, `! `, `? ` and newlines. */
 function sentencesOf(text: string): string[] {
   return text
@@ -273,8 +324,7 @@ export function extractFindings(
   if (sessionKind === 'interactive') {
     for (const m of tailMessages) {
       if (m.role !== 'assistant') continue;
-      // "Untagged" measurements: a tagged sentence is never counted twice.
-      for (const sentence of sentencesOf(m.text.replace(FINDING_TAG_RE, ''))) {
+      for (const sentence of sentencesOf(proseOf(m.text))) {
         if (!/\d/.test(sentence) || !MEASUREMENT_RE.test(sentence)) continue;
         out.push({ kind: 'measurement', text: cap(sentence, FINDING_CAP), timestamp: m.timestamp ?? null, source: 'lexicon' });
       }
@@ -392,13 +442,17 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
       return SILENT;
     }
 
-    // Rule 6 — header fields.
-    const tailMessages = extractMessages(read.tailEntries);
-    const prefixMessages = extractMessages(read.prefixEntries);
+    // Rule 6 — header fields. `session_kind` reads the raw first user message
+    // (the scheduled-task marker starts with `<`); everything else sees only
+    // the human's user messages (Rule 7 preamble).
+    const rawTail = extractMessages(read.tailEntries);
+    const tailMessages = humanMessages(rawTail);
+    const prefixMessages = humanMessages(extractMessages(read.prefixEntries));
     const firstUserMessages = read.firstUserEntry === null ? [] : extractMessages([read.firstUserEntry]);
-    const kindSource = firstUserMessages.some((m) => m.role === 'user') ? firstUserMessages : tailMessages;
+    const kindSource = firstUserMessages.some((m) => m.role === 'user') ? firstUserMessages : rawTail;
     const sessionKind = detectSessionKind(kindSource);
-    const firstUserText = kindSource.find((m) => m.role === 'user')?.text ?? null;
+    const firstUserText =
+      humanMessages([...firstUserMessages, ...tailMessages]).find((m) => m.role === 'user')?.text ?? null;
     const citation = `claude-sessions/${provenanceUser()}/${sessionId}`;
     const readsPath = readsMemoryPath(root, sessionId);
     const reads = fs.existsSync(readsPath) ? path.relative(root, readsPath).split(path.sep).join('/') : null;

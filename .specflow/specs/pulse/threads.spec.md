@@ -107,8 +107,9 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
 
 9. **Answered detection is deterministic and runs once per session end**, over the threads that
    were `open` **before** this run (threads opened by this same run are never answered by it). An
-   open thread `T` becomes answered by session `S` when any of: (a) **id mention** — the text of any
-   user or assistant message of `S` contains `T`'s id as a whole word (`/\bT-\d{3,}\b/`); (b) **key
+   open thread `T` becomes answered by session `S` when any of (over `S`'s assistant messages and
+   **human** user messages — `hooks.session-end` Rule 7 excludes harness-injected user entries):
+   (a) **id mention** — the text of any user or assistant message of `S` contains `T`'s id as a whole word (`/\bT-\d{3,}\b/`); (b) **key
    mention** — `normaliseText` of `S`'s concatenated message texts contains `T`'s key, provided the
    key is at least 20 characters (shorter keys are too easy to hit by accident — engineering call);
    (c) **reply** (kinds `question` and `offer` only) — the newest session record in
