@@ -32,6 +32,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
+import type { SessionKind } from '../pulse/distil.js';
 import {
   collectCorpus,
   CORPUS_FILE,
@@ -40,6 +41,8 @@ import {
   isDismissed,
   normaliseText,
   type SessionCorpus,
+  readCorpus,
+  refreshCorpus,
 } from '../pulse/distil.js';
 import { allocateSuggestionIds } from '../pulse/suggestion-ids.js';
 import { chooseOuterFence } from '../pulse/fences.js';
@@ -78,29 +81,50 @@ function reportsDir(root: string): string {
 // observed-state file
 // ---------------------------------------------------------------------------
 
+/** Spec Rule 13: an unclaimed worklist session is marked observed anyway on this many unclaimed applies. */
+export const OBSERVE_MAX_ATTEMPTS = 3;
+
 export interface ObserveState {
   kind: 'session-observe-state';
   updated: string;
   /** Session ids already observed by a completed apply. */
   observed: string[];
+  /** Spec Rule 13: worklist sessions left unclaimed → how many applies passed them over (absent in older files → 0). */
+  attempts: Record<string, number>;
 }
 
 export function readObserveState(root: string): ObserveState {
   const p = path.join(stateDir(root), SESSION_OBSERVE_STATE_FILE);
   try {
-    const doc = JSON.parse(fs.readFileSync(p, 'utf-8')) as ObserveState;
+    const doc = JSON.parse(fs.readFileSync(p, 'utf-8')) as Partial<ObserveState>;
     if (doc.kind === 'session-observe-state' && Array.isArray(doc.observed)) {
-      return { kind: 'session-observe-state', updated: doc.updated ?? '', observed: doc.observed.filter((s) => typeof s === 'string') };
+      const attempts: Record<string, number> = {};
+      if (typeof doc.attempts === 'object' && doc.attempts !== null) {
+        for (const [id, n] of Object.entries(doc.attempts)) {
+          if (typeof n === 'number' && Number.isFinite(n) && n > 0) attempts[id] = Math.floor(n);
+        }
+      }
+      return {
+        kind: 'session-observe-state',
+        updated: doc.updated ?? '',
+        observed: doc.observed.filter((s): s is string => typeof s === 'string'),
+        attempts,
+      };
     }
   } catch {
     /* missing/unparseable → fresh state */
   }
-  return { kind: 'session-observe-state', updated: '', observed: [] };
+  return { kind: 'session-observe-state', updated: '', observed: [], attempts: {} };
 }
 
-function writeObserveState(root: string, observed: string[], nowIso: string): void {
+function writeObserveState(root: string, observed: string[], attempts: Record<string, number>, nowIso: string): void {
   fs.mkdirSync(stateDir(root), { recursive: true });
-  const state: ObserveState = { kind: 'session-observe-state', updated: nowIso, observed: [...new Set(observed)].sort() };
+  const state: ObserveState = {
+    kind: 'session-observe-state',
+    updated: nowIso,
+    observed: [...new Set(observed)].sort(),
+    attempts: Object.fromEntries(Object.entries(attempts).sort(([a], [b]) => a.localeCompare(b))),
+  };
   fs.writeFileSync(path.join(stateDir(root), SESSION_OBSERVE_STATE_FILE), JSON.stringify(state, null, 2) + '\n', 'utf-8');
 }
 
@@ -111,6 +135,8 @@ function writeObserveState(root: string, observed: string[], nowIso: string): vo
 export interface ObserveWorklistSession {
   id: string;
   mtime: string;
+  /** Spec Rule 12: how the session was driven; the worklist lists `interactive` first. */
+  kind: SessionKind;
   message_count: number;
 }
 
@@ -119,8 +145,10 @@ export interface ObserveWorklist {
   generated: string;
   /** The shared corpus this worklist was derived from. */
   corpus_generated: string;
-  /** True when an existing corpus was reused (coordination with distil). */
+  /** True when an existing corpus was reused (and refreshed, spec Rule 11) rather than rebuilt. */
   corpus_reused: boolean;
+  /** Spec Rule 11: sessions the refresh appended to a reused corpus (0 when rebuilt). */
+  corpus_appended: number;
   sessions: ObserveWorklistSession[];
 }
 
@@ -139,17 +167,6 @@ export function readObserveWorklist(root: string): ObserveWorklist | null {
   }
 }
 
-function readCorpus(root: string): SessionCorpus | null {
-  const p = path.join(stateDir(root), CORPUS_FILE);
-  if (!fs.existsSync(p)) return null;
-  try {
-    const doc = JSON.parse(fs.readFileSync(p, 'utf-8')) as SessionCorpus;
-    return doc.kind === 'session-corpus' && Array.isArray(doc.sessions) ? doc : null;
-  } catch {
-    return null;
-  }
-}
-
 export interface ObserveCollectOptions {
   home?: string;
   now?: Date;
@@ -160,21 +177,27 @@ export interface ObserveCollectResult {
   sessions: number;
   alreadyObserved: number;
   corpusReused: boolean;
+  /** Spec Rule 11: sessions appended to a reused corpus by the refresh. */
+  corpusAppended: number;
 }
 
 /**
- * Reuse the shared corpus (build it via distil's `collectCorpus` only when
- * absent — one corpus, two readers, spec Rule 1) and emit the worklist of
- * sessions not yet observed.
+ * Reuse the shared corpus — refreshed with every session newer than its
+ * `generated` stamp (spec Rule 11, distil's `refreshCorpus`), built via
+ * distil's `collectCorpus` only when absent (one corpus, two readers, spec
+ * Rule 1) — and emit the worklist of sessions not yet observed, interactive
+ * sessions first (spec Rule 12).
  */
 export function collectObserve(root: string, opts: ObserveCollectOptions = {}): ObserveCollectResult {
   const absRoot = path.resolve(root);
   const now = opts.now ?? new Date();
+  const corpusOpts = { now, ...(opts.home !== undefined ? { home: opts.home } : {}) };
 
-  let corpus = readCorpus(absRoot);
-  const corpusReused = corpus !== null;
+  const refreshed = refreshCorpus(absRoot, corpusOpts);
+  const corpusReused = refreshed !== null;
+  let corpus: SessionCorpus | null = refreshed?.corpus ?? null;
   if (corpus === null) {
-    collectCorpus(absRoot, { now, ...(opts.home !== undefined ? { home: opts.home } : {}) });
+    collectCorpus(absRoot, corpusOpts);
     corpus = readCorpus(absRoot);
   }
   if (corpus === null) {
@@ -182,15 +205,18 @@ export function collectObserve(root: string, opts: ObserveCollectOptions = {}): 
   }
 
   const observed = new Set(readObserveState(absRoot).observed);
-  const sessions: ObserveWorklistSession[] = corpus.sessions
+  const unobserved: ObserveWorklistSession[] = corpus.sessions
     .filter((s) => !observed.has(s.id))
-    .map((s) => ({ id: s.id, mtime: s.mtime, message_count: s.messages.length }));
+    .map((s) => ({ id: s.id, mtime: s.mtime, kind: s.kind, message_count: s.messages.length }));
+  // Interactive first, corpus order preserved within each kind (stable partition).
+  const sessions = [...unobserved.filter((s) => s.kind === 'interactive'), ...unobserved.filter((s) => s.kind !== 'interactive')];
 
   const worklist: ObserveWorklist = {
     kind: 'session-observe-worklist',
     generated: now.toISOString(),
     corpus_generated: corpus.generated,
     corpus_reused: corpusReused,
+    corpus_appended: refreshed?.appended ?? 0,
     sessions,
   };
   fs.mkdirSync(stateDir(absRoot), { recursive: true });
@@ -201,6 +227,7 @@ export function collectObserve(root: string, opts: ObserveCollectOptions = {}): 
     sessions: sessions.length,
     alreadyObserved: corpus.sessions.length - sessions.length,
     corpusReused,
+    corpusAppended: refreshed?.appended ?? 0,
   };
 }
 
@@ -719,7 +746,12 @@ export interface ObserveProposeCounts {
 
 export interface ObserveApplyOptions {
   now?: Date;
-  /** The skill's gated-candidates JSON (array of ObserveCandidate). */
+  /**
+   * The skill's proposals JSON (spec Rule 13): either the legacy bare array of
+   * ObserveCandidate (claims every worklist session) or
+   * `{ observed: string[], candidates: ObserveCandidate[] }` (claims exactly
+   * the listed worklist ids).
+   */
   proposalsFile?: string;
   /** Provenance user override (tests); defaults to the OS username. */
   user?: string;
@@ -727,10 +759,39 @@ export interface ObserveApplyOptions {
 
 export interface ObserveApplyResult {
   reportPath: string;
+  /** Sessions marked observed this run (claimed + expired). */
   observed: number;
+  /** Worklist sessions left unclaimed and carried to the next worklist (spec Rule 13). */
+  unobserved: number;
+  /** Unclaimed sessions marked observed anyway after OBSERVE_MAX_ATTEMPTS (spec Rule 13). */
+  expired: number;
   entriesValidated: number;
   violations: number;
   counts: ObserveProposeCounts;
+}
+
+interface ParsedProposals {
+  candidates: unknown[];
+  /** null → claim every worklist session (legacy array / no file); otherwise the explicit claim list. */
+  claimed: string[] | null;
+}
+
+/** Spec Rule 13: accept the legacy bare array or the `{observed, candidates}` object. */
+function parseProposalsFile(file: string): ParsedProposals {
+  const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as unknown;
+  if (Array.isArray(parsed)) return { candidates: parsed, claimed: null };
+  if (typeof parsed === 'object' && parsed !== null) {
+    const doc = parsed as { observed?: unknown; candidates?: unknown };
+    if (doc.observed !== undefined && !Array.isArray(doc.observed)) {
+      throw new Error(`proposals file ${file}: "observed" must be an array of session ids`);
+    }
+    if (doc.candidates !== undefined && !Array.isArray(doc.candidates)) {
+      throw new Error(`proposals file ${file}: "candidates" must be an array`);
+    }
+    const claimed = Array.isArray(doc.observed) ? doc.observed.filter((id): id is string => typeof id === 'string') : [];
+    return { candidates: Array.isArray(doc.candidates) ? doc.candidates : [], claimed };
+  }
+  throw new Error(`proposals file ${file} must hold a JSON array or an {"observed", "candidates"} object`);
 }
 
 /**
@@ -757,12 +818,9 @@ export function applyObserve(root: string, opts: ObserveApplyOptions = {}): Obse
   const pending = readPendingSections(reportPath);
   const dismissals = readUnexpiredDismissals(absRoot, now.getTime());
 
-  let rawCandidates: unknown[] = [];
-  if (opts.proposalsFile !== undefined) {
-    const parsed = JSON.parse(fs.readFileSync(opts.proposalsFile, 'utf-8')) as unknown;
-    if (!Array.isArray(parsed)) throw new Error(`proposals file ${opts.proposalsFile} must hold a JSON array`);
-    rawCandidates = parsed;
-  }
+  const proposals: ParsedProposals =
+    opts.proposalsFile !== undefined ? parseProposalsFile(opts.proposalsFile) : { candidates: [], claimed: null };
+  const rawCandidates = proposals.candidates;
   counts.received = rawCandidates.length;
 
   const fresh: ObserveCandidate[] = [];
@@ -794,16 +852,51 @@ export function applyObserve(root: string, opts: ObserveApplyOptions = {}): Obse
   }));
   counts.proposed = sections.length;
 
-  // Advance the observed state (the worklist sessions are now observed).
+  // Advance the observed state for the sessions the skill claims it read
+  // (spec Rule 13); unclaimed ones count an attempt and expire on the third.
   const state = readObserveState(absRoot);
-  const observedIds = worklist.sessions.map((s) => s.id);
-  writeObserveState(absRoot, [...state.observed, ...observedIds], nowIso);
+  const worklistIds = worklist.sessions.map((s) => s.id);
+  const claimedSet = proposals.claimed === null ? new Set(worklistIds) : new Set(proposals.claimed);
+  const claimedIds = worklistIds.filter((id) => claimedSet.has(id));
+  const attempts = { ...state.attempts };
+  const unobservedIds: string[] = [];
+  const expiredIds: string[] = [];
+  for (const id of worklistIds) {
+    if (claimedSet.has(id)) {
+      delete attempts[id];
+      continue;
+    }
+    const n = (attempts[id] ?? 0) + 1;
+    if (n >= OBSERVE_MAX_ATTEMPTS) {
+      delete attempts[id];
+      expiredIds.push(id);
+    } else {
+      attempts[id] = n;
+      unobservedIds.push(id);
+    }
+  }
+  const observedIds = [...claimedIds, ...expiredIds];
+  writeObserveState(absRoot, [...state.observed, ...observedIds], attempts, nowIso);
 
   // Always-write report (§4.5): audit summary + carried-forward pending
   // sections + fresh typed proposal sections.
   const body: string[] = ['# Session-observe report', ''];
   body.push(
     `Sessions observed this run: ${observedIds.length}${observedIds.length > 0 ? ` (${observedIds.join(', ')})` : ''}.`,
+  );
+  if (unobservedIds.length > 0) {
+    body.push(
+      `Sessions left unobserved: ${unobservedIds.length} (${unobservedIds.map((id) => `${id}, attempt ${attempts[id]} of ${OBSERVE_MAX_ATTEMPTS}`).join('; ')}) — ` +
+        'not claimed in the proposals file; carried to the next worklist.',
+    );
+  }
+  if (expiredIds.length > 0) {
+    body.push(
+      `Sessions expired unobserved: ${expiredIds.length} (${expiredIds.join(', ')}) — ` +
+        `left unclaimed on ${OBSERVE_MAX_ATTEMPTS} applies and marked observed without being read.`,
+    );
+  }
+  body.push(
     `Enrichment audit: ${audit.valid.length} entr${audit.valid.length === 1 ? 'y' : 'ies'} enriched cleanly, ` +
       `${audit.violations.length} violation(s).`,
     `Gated candidates: ${counts.received} received; ${counts.proposed} proposed, ${counts.carried} carried forward, ` +
@@ -838,6 +931,8 @@ export function applyObserve(root: string, opts: ObserveApplyOptions = {}): Obse
   return {
     reportPath,
     observed: observedIds.length,
+    unobserved: unobservedIds.length,
+    expired: expiredIds.length,
     entriesValidated: audit.valid.length,
     violations: audit.violations.length,
     counts,
@@ -878,7 +973,10 @@ export async function runSessionObserve(root = '.', opts: SessionObserveOptions 
         ...(opts.user !== undefined ? { user: opts.user } : {}),
       });
       console.log(
-        `cortex loop-session-observe: ${r.observed} session(s) marked observed, ` +
+        `cortex loop-session-observe: ${r.observed} session(s) marked observed` +
+          (r.unobserved > 0 ? ` (${r.unobserved} left unobserved)` : '') +
+          (r.expired > 0 ? ` (${r.expired} expired unobserved)` : '') +
+          ', ' +
           `${r.entriesValidated} entr${r.entriesValidated === 1 ? 'y' : 'ies'} enriched cleanly, ` +
           `${r.counts.proposed} proposal(s) written (${r.counts.carried} carried, ${r.counts.malformed} malformed, ` +
           `${r.counts.dismissed} dismissed), ${r.violations} violation(s) — ` +
@@ -892,7 +990,7 @@ export async function runSessionObserve(root = '.', opts: SessionObserveOptions 
     const r = collectObserve(absRoot, collectOpts);
     console.log(
       `cortex loop-session-observe: ${r.sessions} unobserved session(s) in the worklist ` +
-        `(${r.alreadyObserved} already observed; corpus ${r.corpusReused ? 'reused' : 'collected'}) — ` +
+        `(${r.alreadyObserved} already observed; corpus ${r.corpusReused ? `refreshed, ${r.corpusAppended} appended` : 'collected'}) — ` +
         `worklist at .cortex/pulse/state/${SESSION_OBSERVE_WORKLIST_FILE}.` +
         (opts.collect ? '' : ' The observation judgment runs in the cortex-loop-session-observe skill.'),
     );

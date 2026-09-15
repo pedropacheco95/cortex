@@ -25,6 +25,30 @@ import { writePulseReport } from '../loops/report.js';
 /** Paths under these prefixes are loops reading their own state, not orientation (Rule 3). */
 const MACHINERY_PREFIXES = ['.cortex/pulse/state/', '.cortex/pulse/reports/'];
 
+/** Subdirectories whose reads are reported every run, including at zero (Rule 10). */
+const TRACKED_SUBDIRS = ['atlas/decisions', 'pulse/threads'] as const;
+
+/** Command words counted under the recall figure (Rule 9). */
+const RECALL_COMMANDS = ['recall', 'why'] as const;
+
+/** Search buckets by target (Rule 8). */
+export type SearchTarget = 'knowledge' | 'machinery' | 'document' | 'other';
+
+/** Search command words: a segment is a search only when its command is one of these (Rule 8). */
+const SEARCH_COMMANDS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'find']);
+
+/** `.cortex/` module directories that hold project knowledge (Rule 8 knowledge bucket). */
+const KNOWLEDGE_MODULES = new Set(['compass', 'atlas', 'insight', 'archive']);
+
+/** `.cortex/` paths that are Cortex's own machinery (Rule 8 machinery bucket). */
+const MACHINERY_TARGETS = new Set(['.cortex/pulse', '.cortex/cortex.config.json', '.cortex/constellation.json', '.cortex/_index.md']);
+
+/** Root documents whose searches are the document bucket (Rule 8). */
+const DOCUMENT_FILES = new Set(['cortex-schema.md', 'RULES.md', 'CLAUDE.md']);
+
+/** Tool calls after a pointer line within which a matching Read/search counts as followed (Rule 11). */
+const POINTER_WINDOW = 10;
+
 export interface UsageCounts {
   /** Sessions the report was computed over — the denominator for every figure (Rule 4). */
   sessions: number;
@@ -37,18 +61,28 @@ export interface UsageCounts {
   windowEnd?: string;
   /** `cortex insight <verb>` invocations, by verb. */
   insightVerbs: Record<string, number>;
+  /** `cortex recall` / `cortex why` invocations, by command word — always both keys (Rule 9). */
+  recallVerbs: Record<string, number>;
   /** Reads under `.cortex/` that are the assistant orienting itself. */
   orientationReads: number;
   /** Reads under `.cortex/pulse/{state,reports}/` — loop machinery (Rule 3). */
   machineryReads: number;
   /** Orientation reads bucketed by module directory. */
   readsByModule: Record<string, number>;
+  /** Orientation reads under the tracked subdirectories — always every key (Rule 10). */
+  readsBySubdir: Record<string, number>;
   /** Reads of `.cortex/_index.md`. */
   rootIndexReads: number;
   /** Reads of any `_index.md` below the root. */
   moduleIndexReads: number;
-  /** Searches targeting `.cortex/` — Grep tool calls plus bash greps. */
+  /** Searches targeting `.cortex/` — kept for continuity; equals knowledge + machinery (Rule 8). */
   cortexGreps: number;
+  /** Searches by target bucket (Rule 8). */
+  searchesByTarget: Record<SearchTarget, number>;
+  /** Hook-injected `Recall:` / `Decided:` pointer lines seen (Rule 11). */
+  pointersFired: number;
+  /** Pointers whose path was read or searched within the next 10 tool calls (Rule 11). */
+  pointersFollowed: number;
   /** Sessions where the assistant asked before any orientation read (Rule 4). */
   questionSessionsWithoutConsult: number;
 }
@@ -64,12 +98,17 @@ function emptyCounts(): UsageCounts {
     skipped: 0,
     readable: false,
     insightVerbs: {},
+    recallVerbs: Object.fromEntries(RECALL_COMMANDS.map((c) => [c, 0])),
     orientationReads: 0,
     machineryReads: 0,
     readsByModule: {},
+    readsBySubdir: Object.fromEntries(TRACKED_SUBDIRS.map((d) => [d, 0])),
     rootIndexReads: 0,
     moduleIndexReads: 0,
     cortexGreps: 0,
+    searchesByTarget: { knowledge: 0, machinery: 0, document: 0, other: 0 },
+    pointersFired: 0,
+    pointersFollowed: 0,
     questionSessionsWithoutConsult: 0,
   };
 }
@@ -129,6 +168,125 @@ export function stripQuotedSpans(command: string): string {
 }
 
 /**
+ * A path in the form the buckets compare on: forward slashes, no leading `./`,
+ * and cut down to its `.cortex/`-relative form when it is under `.cortex/`.
+ * Trailing slashes are dropped so `.cortex/pulse/` and `.cortex/pulse` agree.
+ */
+function normalisePath(raw: string): string {
+  const slashes = raw.replace(/\\/g, '/').replace(/^\.\//, '');
+  const relative = cortexRelative(slashes) ?? slashes;
+  return relative.length > 1 ? relative.replace(/\/+$/, '') : relative;
+}
+
+/**
+ * Rule 8: the bucket a search target falls in. Knowledge is the four knowledge
+ * modules plus the `.cortex/` tree as a whole; machinery is pulse and the
+ * three root-level machinery files; document is the root documents and
+ * `.specflow/`; everything else is other.
+ */
+export function searchTargetOf(rawPath: string): SearchTarget {
+  const p = normalisePath(rawPath);
+  if (p === '.cortex') return 'knowledge';
+  if (p.startsWith('.cortex/')) {
+    const module = p.split('/')[1] ?? '';
+    if (KNOWLEDGE_MODULES.has(module)) return 'knowledge';
+    if ([...MACHINERY_TARGETS].some((t) => p === t || p.startsWith(`${t}/`))) return 'machinery';
+    return 'other';
+  }
+  const base = p.split('/').pop() ?? '';
+  if (DOCUMENT_FILES.has(base)) return 'document';
+  if (p === '.specflow' || p.startsWith('.specflow/') || p.includes('/.specflow/')) return 'document';
+  return 'other';
+}
+
+/** Rule 8: a token is a path operand when it has a `/`, is `.`, or carries a file extension. */
+function isPathOperand(token: string): boolean {
+  return token === '.' || token.includes('/') || /\.[A-Za-z0-9]+$/.test(token);
+}
+
+/**
+ * Rule 8: the path operands of every search segment in an (already
+ * quote-stripped) command. A segment is a search only when its command word —
+ * after leading `NAME=value` assignments and after `xargs` plus its flags — is
+ * a search command AND a path operand follows. A pipe filter (`| grep x`) has
+ * no path operand and is never a search; each search segment yields exactly
+ * one target, its first path operand.
+ */
+export function searchTargetsIn(unquotedCommand: string): string[] {
+  const targets: string[] = [];
+  for (const segment of unquotedCommand.split(/\|\||&&|[|;\n]/)) {
+    const tokens = segment.trim().split(/\s+/).filter((t) => t.length > 0);
+    let i = 0;
+    while (i < tokens.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[i] as string)) i += 1;
+    if (tokens[i] === 'xargs') {
+      i += 1;
+      while (i < tokens.length && (tokens[i] as string).startsWith('-')) i += 1;
+    }
+    const command = (tokens[i] ?? '').split('/').pop() ?? '';
+    if (!SEARCH_COMMANDS.has(command)) continue;
+    const operand = tokens.slice(i + 1).find((t) => !t.startsWith('-') && isPathOperand(t));
+    if (operand !== undefined) targets.push(operand);
+  }
+  return targets;
+}
+
+/**
+ * Rule 11: the pointed paths of every `Recall:` / `Decided:` line in a block of
+ * hook-injected text — the first `/`-bearing token of each such line, trailing
+ * punctuation stripped. Lines without a path-like token point nowhere and are
+ * not counted as fired.
+ */
+export function pointerPathsIn(text: string): string[] {
+  const paths: string[] = [];
+  for (const line of text.split('\n')) {
+    if (!/^(Recall|Decided):/.test(line)) continue;
+    const token = line
+      .split(/\s+/)
+      .map((t) => t.replace(/^[`'"(\[]+|[`'"),.:;\]]+$/g, ''))
+      .find((t) => t.includes('/'));
+    if (token !== undefined) paths.push(normalisePath(token));
+  }
+  return paths;
+}
+
+/** Rule 11: the hook-injected or user-entry text an entry carries, if any. */
+function injectedText(entry: SessionEntry): string[] {
+  const texts: string[] = [];
+  if (entry.type === 'attachment') {
+    const attachment = entry['attachment'];
+    if (typeof attachment === 'object' && attachment !== null) {
+      const a = attachment as Record<string, unknown>;
+      if (a['type'] === 'hook_additional_context') {
+        const content = a['content'];
+        if (typeof content === 'string') texts.push(content);
+        else if (Array.isArray(content)) for (const c of content) if (typeof c === 'string') texts.push(c);
+      }
+    }
+    return texts;
+  }
+  if (entry.type !== 'user') return texts;
+  const message = entry['message'];
+  if (typeof message !== 'object' || message === null) return texts;
+  const content = (message as Record<string, unknown>)['content'];
+  if (typeof content === 'string') texts.push(content);
+  else if (Array.isArray(content)) {
+    for (const block of content) {
+      if (typeof block !== 'object' || block === null) continue;
+      const b = block as Record<string, unknown>;
+      if (b['type'] === 'text' && typeof b['text'] === 'string') texts.push(b['text']);
+    }
+  }
+  return texts;
+}
+
+/** Rule 11: a Read of exactly the pointed path, or a search of it or a directory above it. */
+function follows(pointed: string, target: string, kind: 'read' | 'search'): boolean {
+  const t = normalisePath(target);
+  if (pointed === t || pointed.endsWith(`/${t}`) || t.endsWith(`/${pointed}`)) return true;
+  return kind === 'search' && (pointed.startsWith(`${t}/`) || pointed.includes(`/${t}/`));
+}
+
+/**
  * Walk this project's transcripts and count. Every figure derives from
  * structured `tool_use` blocks — never from message prose or file content
  * (Rule 2).
@@ -157,27 +315,59 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
     // Rule 4: did this session ask before it consulted? Tracked in stream order.
     let consulted = false;
     let askedBeforeConsulting = false;
+    // Rule 11: pointers still inside their follow-through window, per session.
+    let pending: { path: string; remaining: number }[] = [];
+
+    const search = (target: string): void => {
+      const bucket = searchTargetOf(target);
+      counts.searchesByTarget[bucket] += 1;
+      if (bucket === 'knowledge' || bucket === 'machinery') counts.cortexGreps += 1;
+      pending = pending.filter((p) => {
+        if (!follows(p.path, target, 'search')) return true;
+        counts.pointersFollowed += 1;
+        return false;
+      });
+    };
 
     for (const entry of entries) {
+      for (const pointed of injectedText(entry).flatMap(pointerPathsIn)) {
+        counts.pointersFired += 1;
+        pending.push({ path: pointed, remaining: POINTER_WINDOW });
+      }
+
       for (const use of toolUses(entry)) {
+        // Rule 11: every tool call spends one unit of every pending pointer's window.
+        pending = pending.filter((p) => p.remaining > 0);
+        for (const p of pending) p.remaining -= 1;
+
         if (use.name === 'Bash') {
-          const command = str(use.input['command']);
           // Rule 2: the command string is the ONLY population for verb counts,
           // and quoted spans within it are prose, not invocation.
-          const verb = /\bcortex insight ([a-z]+)/.exec(stripQuotedSpans(command));
+          const unquoted = stripQuotedSpans(str(use.input['command']));
+          const verb = /\bcortex insight ([a-z]+)/.exec(unquoted);
           if (verb?.[1]) counts.insightVerbs[verb[1]] = (counts.insightVerbs[verb[1]] ?? 0) + 1;
-          const unquoted = stripQuotedSpans(command);
-          if (/\bgrep\b/.test(unquoted) && unquoted.includes('.cortex')) counts.cortexGreps += 1;
+          // Rule 9: recall/why are counted per command word, not per argument.
+          const recall = /\bcortex (recall|why)\b/.exec(unquoted);
+          if (recall?.[1]) counts.recallVerbs[recall[1]] = (counts.recallVerbs[recall[1]] ?? 0) + 1;
+          // Rule 8: only a segment that is itself a search with a path operand counts.
+          for (const target of searchTargetsIn(unquoted)) search(target);
           continue;
         }
 
         if (use.name === 'Grep') {
-          if (cortexRelative(str(use.input['path'])) !== null) counts.cortexGreps += 1;
+          const target = str(use.input['path']);
+          if (target.length > 0) search(target);
           continue;
         }
 
         if (use.name === 'Read') {
-          const cortexPath = cortexRelative(str(use.input['file_path']));
+          const filePath = str(use.input['file_path']);
+          pending = pending.filter((p) => {
+            if (!follows(p.path, filePath, 'read')) return true;
+            counts.pointersFollowed += 1;
+            return false;
+          });
+          const cortexPath = cortexRelative(filePath);
           if (cortexPath === null) continue;
           if (MACHINERY_PREFIXES.some((prefix) => cortexPath.startsWith(prefix))) {
             counts.machineryReads += 1;
@@ -187,6 +377,10 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
           consulted = true;
           const module = moduleOf(cortexPath);
           if (module) counts.readsByModule[module] = (counts.readsByModule[module] ?? 0) + 1;
+          // Rule 10: the tracked subdirectories, on top of the module bucket.
+          for (const subdir of TRACKED_SUBDIRS) {
+            if (cortexPath.startsWith(`.cortex/${subdir}/`)) counts.readsBySubdir[subdir] = (counts.readsBySubdir[subdir] ?? 0) + 1;
+          }
           if (cortexPath === '.cortex/_index.md') counts.rootIndexReads += 1;
           else if (cortexPath.endsWith('/_index.md')) counts.moduleIndexReads += 1;
           continue;
@@ -211,6 +405,14 @@ function verbLines(counts: UsageCounts): string[] {
   return verbs.map((verb) => `- \`cortex insight ${verb}\`: ${counts.insightVerbs[verb]}`);
 }
 
+function recallLines(counts: UsageCounts): string[] {
+  return RECALL_COMMANDS.map((command) => `- \`cortex ${command}\`: ${counts.recallVerbs[command] ?? 0}`);
+}
+
+function subdirLines(counts: UsageCounts): string[] {
+  return TRACKED_SUBDIRS.map((subdir) => `- \`${subdir}/\`: ${counts.readsBySubdir[subdir] ?? 0}`);
+}
+
 function moduleLines(counts: UsageCounts): string[] {
   const modules = Object.keys(counts.readsByModule).sort();
   if (modules.length === 0) return ['- (none)'];
@@ -233,8 +435,12 @@ export function renderUsageBody(counts: UsageCounts): string {
       '## Figures',
       '',
       '- `cortex insight` invocations: not measurable',
+      '- `cortex recall` / `cortex why` invocations: not measurable',
       '- `.cortex/` reads: not measurable',
+      '- Tracked subdirectory reads: not measurable',
       '- Searches targeting `.cortex/`: not measurable',
+      '- Searches by target: not measurable',
+      '- Pointer follow-through: not measurable',
       '- Questions asked before any consult: not measurable',
     ].join('\n');
   }
@@ -257,6 +463,12 @@ export function renderUsageBody(counts: UsageCounts): string {
     '',
     ...verbLines(counts),
     '',
+    '## `cortex recall` / `cortex why` invocations',
+    '',
+    'Counted per command word from Bash command fields only, the same population as above.',
+    '',
+    ...recallLines(counts),
+    '',
     '## `.cortex/` reads',
     '',
     `Orientation reads: ${counts.orientationReads} across ${counts.sessions} sessions.`,
@@ -268,11 +480,34 @@ export function renderUsageBody(counts: UsageCounts): string {
     '',
     ...moduleLines(counts),
     '',
+    'Tracked subdirectories (orientation reads, reported every run):',
+    '',
+    ...subdirLines(counts),
+    '',
     `Index reads — root \`_index.md\`: ${counts.rootIndexReads}; module-level: ${counts.moduleIndexReads}.`,
     '',
     '## Searches targeting `.cortex/`',
     '',
     `${counts.cortexGreps} across ${counts.sessions} sessions.`,
+    'This is the knowledge bucket plus the machinery bucket of the table below.',
+    '',
+    '## Searches by target',
+    '',
+    'A search is a command segment that is itself a `grep`/`rg`/`find` with a path operand, or a',
+    'Grep tool call with a path — pipe filters are not searches. Each segment counts once.',
+    '',
+    '| Target | Searches |',
+    '|---|---|',
+    `| knowledge (\`compass/\`, \`atlas/\`, \`insight/\`, \`archive/\`) | ${counts.searchesByTarget.knowledge} |`,
+    `| machinery (\`pulse/\`, config, constellation, root \`_index.md\`) | ${counts.searchesByTarget.machinery} |`,
+    `| document (\`cortex-schema.md\`, \`.specflow/\`, \`RULES.md\`, \`CLAUDE.md\`) | ${counts.searchesByTarget.document} |`,
+    `| other | ${counts.searchesByTarget.other} |`,
+    '',
+    '## Pointer follow-through',
+    '',
+    `Hook-injected \`Recall:\` / \`Decided:\` lines: fired ${counts.pointersFired}, followed ${counts.pointersFollowed}`,
+    `across ${counts.sessions} sessions. Followed means a Read or search of the pointed path within the`,
+    `next ${POINTER_WINDOW} tool calls of the same session.`,
     '',
     '## Questions asked before any consult',
     '',

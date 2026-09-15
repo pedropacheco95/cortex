@@ -187,9 +187,18 @@ export function readThresholdN(root: string): number {
 // collect — deterministic first half
 // ---------------------------------------------------------------------------
 
+/**
+ * Spec Rule 11(a): how a session was driven, decided deterministically from
+ * its first `user` message (`sessionKind`). Consumers (insight.session-observe
+ * Rule 12) read interactive sessions before loop-driven ones.
+ */
+export type SessionKind = 'scheduled' | 'interactive';
+
 export interface CorpusSession {
   id: string;
   mtime: string;
+  /** Absent in corpora written before Rule 11 — `readCorpus` normalises to `interactive`. */
+  kind: SessionKind;
   messages: ExtractedMessage[];
 }
 
@@ -231,16 +240,8 @@ export function collectCorpus(root: string, opts: CollectOptions = {}): CollectR
   const firstRun = since === null;
   if (since === null) since = new Date(now.getTime() - DISTIL_FIRST_RUN_WINDOW_DAYS * DAY_MS);
 
-  const listOpts = opts.home !== undefined ? { home: opts.home, since } : { since };
-  const sessions = listSessions(root, listOpts);
-  const corpusSessions: CorpusSession[] = [];
-  let messageCount = 0;
-  for (const session of sessions) {
-    const { entries } = readSessionFile(session.path);
-    const messages = extractMessages(entries);
-    messageCount += messages.length;
-    corpusSessions.push({ id: session.id, mtime: session.mtime.toISOString(), messages });
-  }
+  const corpusSessions = readCorpusSessions(root, since, opts.home);
+  const messageCount = corpusSessions.reduce((n, s) => n + s.messages.length, 0);
 
   const corpus: SessionCorpus = {
     kind: 'session-corpus',
@@ -248,10 +249,99 @@ export function collectCorpus(root: string, opts: CollectOptions = {}): CollectR
     since: since.toISOString(),
     sessions: corpusSessions,
   };
+  const corpusPath = writeCorpus(root, corpus);
+  return { corpusPath, sessionCount: corpusSessions.length, messageCount, sinceIso: corpus.since, firstRun };
+}
+
+const SCHEDULED_SKILL_PREAMBLE = 'Base directory for this skill:';
+const SCHEDULED_TASK_TAG = '<scheduled-task';
+
+/**
+ * Spec Rule 11(a): `scheduled` when the first `user` message starts with the
+ * skill preamble or carries a `<scheduled-task` tag; `interactive` otherwise
+ * (a session with no user message included). Pure string inspection (R-001).
+ */
+export function sessionKind(messages: ExtractedMessage[]): SessionKind {
+  const first = messages.find((m) => m.role === 'user');
+  if (first === undefined) return 'interactive';
+  const text = first.text.trimStart();
+  return text.startsWith(SCHEDULED_SKILL_PREAMBLE) || text.includes(SCHEDULED_TASK_TAG) ? 'scheduled' : 'interactive';
+}
+
+/** List + read + extract every session with mtime at-or-after `since` (shared by collect and refresh). */
+function readCorpusSessions(root: string, since: Date, home: string | undefined): CorpusSession[] {
+  const listOpts = home !== undefined ? { home, since } : { since };
+  const out: CorpusSession[] = [];
+  for (const session of listSessions(root, listOpts)) {
+    const { entries } = readSessionFile(session.path);
+    const messages = extractMessages(entries);
+    out.push({ id: session.id, mtime: session.mtime.toISOString(), kind: sessionKind(messages), messages });
+  }
+  return out;
+}
+
+function writeCorpus(root: string, corpus: SessionCorpus): string {
   fs.mkdirSync(stateDir(root), { recursive: true });
   const corpusPath = path.join(stateDir(root), CORPUS_FILE);
   fs.writeFileSync(corpusPath, JSON.stringify(corpus, null, 2) + '\n', 'utf-8');
-  return { corpusPath, sessionCount: corpusSessions.length, messageCount, sinceIso: corpus.since, firstRun };
+  return corpusPath;
+}
+
+/**
+ * Read the on-disk corpus, or null when absent/unparseable. A corpus written
+ * before Rule 11 carries no `kind`; every such session loads as `interactive`.
+ */
+export function readCorpus(root: string): SessionCorpus | null {
+  const p = path.join(stateDir(root), CORPUS_FILE);
+  if (!fs.existsSync(p)) return null;
+  try {
+    const doc = JSON.parse(fs.readFileSync(p, 'utf-8')) as SessionCorpus;
+    if (doc.kind !== 'session-corpus' || !Array.isArray(doc.sessions)) return null;
+    return {
+      ...doc,
+      sessions: doc.sessions.map((s) => ({ ...s, kind: s.kind === 'scheduled' ? 'scheduled' : 'interactive' })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface RefreshResult {
+  corpusPath: string;
+  corpus: SessionCorpus;
+  /** Sessions added to the corpus (not previously present). */
+  appended: number;
+  /** Sessions already present that were replaced by a fresher transcript read. */
+  replaced: number;
+}
+
+/**
+ * Spec Rule 11(b): append to an existing corpus every session whose transcript
+ * mtime is at-or-after the corpus's `generated` stamp (upsert by id — a
+ * session already present is replaced by its fresher messages), then re-stamp
+ * `generated`. `since` and `state/distil-last-run` are never touched, so
+ * distil's own since-window (Rules 1, 7) is unaffected. Null when no corpus
+ * exists — callers build one with `collectCorpus` instead.
+ */
+export function refreshCorpus(root: string, opts: CollectOptions = {}): RefreshResult | null {
+  const existing = readCorpus(root);
+  if (existing === null) return null;
+  const now = opts.now ?? new Date();
+  const generatedAt = Date.parse(existing.generated);
+  const since = Number.isNaN(generatedAt) ? new Date(now.getTime() - DISTIL_FIRST_RUN_WINDOW_DAYS * DAY_MS) : new Date(generatedAt);
+
+  const fresh = readCorpusSessions(root, since, opts.home);
+  const byId = new Map(existing.sessions.map((s) => [s.id, s]));
+  let appended = 0;
+  let replaced = 0;
+  for (const session of fresh) {
+    if (byId.has(session.id)) replaced++;
+    else appended++;
+    byId.set(session.id, session);
+  }
+  const corpus: SessionCorpus = { ...existing, generated: now.toISOString(), sessions: [...byId.values()] };
+  const corpusPath = writeCorpus(root, corpus);
+  return { corpusPath, corpus, appended, replaced };
 }
 
 // ---------------------------------------------------------------------------

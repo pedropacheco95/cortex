@@ -45,6 +45,9 @@ This spec is re-pointed at `assistant-learns-from-sessions.business.md` — auto
 8. **Boundary with `cortex-pulse-distil` — resolved via a shared evidence trail (schema §4.10.11).** Distil mines **cross-session repetition** into rule/decision candidates over a wider window; session-observe captures **in-context, per-session** observations from how one session went. Both read the same corpus at a different altitude, and both now read the same evidence: an `insight/observations/` entry's `sessions:` trail (Rule 2) *is* the frequency signal distil looks for. There is no separate double-proposal mechanism to design — an observation this loop enriches once is left as ungated context; if it recurs across enough further sessions, distil reads that same entry's `sessions:` trail and proposes graduation through the existing `rule-candidate`/`decision-candidate` gate, citing the entry's own provenance as evidence. One evidence trail, one gate, no second index to keep in sync.
 9. **S-ids and suppression are the existing shared machinery.** Proposal S-ids are acquired from the shared `pulse/state/suggestion-counter` (global, monotonic, never reused, schema §4.5). A previously-dismissed candidate (matched via `pulse/dismissed.md`, unexpired) is not re-proposed.
 10. **Deterministic Core bookends (R-001).** Corpus collection is pure file I/O and runs in Core (or a Core-adjacent deterministic step, same convention as distil's collect half); only the classification/routing judgment and the enrichment-text drafting are LLM work, never inside Core.
+11. **Corpus freshness — collect refreshes the shared corpus instead of reusing it stale.** `--collect` never treats an on-disk `pulse/state/session-corpus.json` as current merely because it exists. It builds the corpus via distil's `collectCorpus` only when absent; otherwise it calls the shared `refreshCorpus` helper (`pulse.distil` Rule 11), which appends every session whose transcript mtime is at-or-after the corpus's `generated` stamp (upserting by id — a session already present is replaced by its fresher messages) and re-stamps `generated`. The corpus's `since` and distil's `state/distil-last-run` are never touched by this loop, so distil's own since-window semantics (`pulse.distil` Rules 1 and 7) are unchanged. The worklist records `corpus_reused: true` and how many sessions the refresh added (`corpus_appended`).
+12. **Kind tagging — every corpus session carries `kind: 'scheduled' | 'interactive'`.** Detected deterministically in Core from the session's first `user` message: `scheduled` when that text starts with `Base directory for this skill:` or contains `<scheduled-task`; `interactive` otherwise (including a session with no user message). A corpus written before this rule (no `kind`) still loads, each session read as `interactive`. The worklist exposes `kind` per session and orders interactive sessions first (corpus order preserved within each kind), so the skill reads the human-driven sessions before the loop-driven ones.
+13. **Claimed observation — `--apply` advances observed-state only for sessions the skill claims it read.** The proposals file accepts two shapes: the legacy bare JSON array of gated candidates, which (for backward compatibility) claims every worklist session; and the object `{ "observed": ["<session-id>", ...], "candidates": [ ... ] }`, which claims exactly the listed worklist ids (`observed` absent → nothing claimed; `candidates` absent → no gated candidates; ids not in the worklist are ignored). Plain `--apply` with no proposals file behaves like the bare array (claims all — the legacy empty-worklist path). A worklist session left unclaimed increments its `attempts` counter in `session-observe-state.json` (`attempts: { "<id>": n }`, absent in older state files → 0) and stays in the next worklist; on its third unclaimed apply it is marked observed anyway, its counter dropped, and the report lists it under "expired unobserved" so the loss is visible rather than silent.
 
 ## Acceptance Criteria
 
@@ -141,6 +144,40 @@ This spec is re-pointed at `assistant-learns-from-sessions.business.md` — auto
 - **When** distil's judgment runs over the same corpus and reads `insight/observations/` alongside its session-corpus scan (schema §4.10.11)
 - **Then** distil proposes graduation through the existing `rule-candidate`/`decision-candidate` gate, citing the entry's own `sessions:` trail as evidence — it does not independently re-derive the pattern from scratch, and only one live proposal results
 - **And** an entry whose `sessions:` trail has not yet met distil's recurrence threshold is left alone — read as evidence, not proposed
+
+### Collect refreshes a stale corpus with sessions newer than its `generated` stamp
+
+- **Given** an existing `pulse/state/session-corpus.json` generated at T holding session `old-1`, and a fake home whose transcript directory holds `old-1` (mtime before T) plus a new session `new-1` (mtime after T)
+- **When** `cortex loop-session-observe --collect` runs
+- **Then** the corpus now holds both `old-1` and `new-1`, its `generated` advances past T, its `since` is unchanged, `state/distil-last-run` is untouched, and the worklist lists `new-1` with `corpus_reused: true` and `corpus_appended: 1`
+- **And** an `old-1` transcript rewritten after T is replaced in place (one entry per id, fresher messages), never duplicated
+
+### Every corpus session carries a deterministic `kind`, and older corpora still load
+
+- **Given** a fake home with one session whose first user message begins `Base directory for this skill:`, one whose first user message contains `<scheduled-task name="cortex-daily"`, and one whose first user message is ordinary prose
+- **When** the corpus is collected and the worklist written
+- **Then** the first two sessions carry `kind: scheduled` and the third `kind: interactive`, both in the corpus and in the worklist
+- **And given** a pre-existing corpus file whose sessions have no `kind` field, **when** `--collect` reuses it, **then** it loads and every session is treated as `interactive`
+
+### The worklist lists interactive sessions before scheduled ones
+
+- **Given** a corpus holding, in order, sessions `sched-1` (scheduled), `human-1` (interactive), `sched-2` (scheduled), `human-2` (interactive), none yet observed
+- **When** `--collect` writes the worklist
+- **Then** the worklist order is `human-1`, `human-2`, `sched-1`, `sched-2` — interactive first, corpus order preserved within each kind
+
+### Apply advances observed-state only for claimed sessions
+
+- **Given** a worklist of `sess-1` and `sess-2`, and a proposals file `{ "observed": ["sess-1"], "candidates": [] }`
+- **When** `--apply --proposals <file>` runs
+- **Then** `session-observe-state.json` lists `sess-1` under `observed` and `sess-2` under `attempts` with a count of 1, the report says one session was observed and one left unobserved, and the next `--collect` lists `sess-2` again
+- **And given** the legacy bare-array proposals file (or plain `--apply` with no file), **then** every worklist session is claimed, exactly as before
+
+### An unclaimed session expires after three unclaimed applies
+
+- **Given** a session `sess-stuck` that stays in the worklist and is left unclaimed by three consecutive `--apply` runs using the object shape
+- **When** the third apply completes
+- **Then** `sess-stuck` is marked observed, its `attempts` entry is removed, and the report lists it under "expired unobserved"
+- **And** after only two unclaimed applies it is neither observed nor expired — `attempts` reads 2 and it is still in the next worklist
 
 ### The loop never writes gated content directly under any classification
 

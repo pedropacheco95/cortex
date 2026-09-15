@@ -85,3 +85,89 @@ export function writeSessionTranscript(
   if (mtime) fs.utimesSync(file, mtime, mtime);
   return file;
 }
+
+// ---------------------------------------------------------------------------
+// Rule 7 helpers (loops.session-reading tool-use extraction). Additive only —
+// names are distinct from everything above so parallel appends never collide.
+// ---------------------------------------------------------------------------
+
+/** Convenience: a Write tool call (body included, to prove bodies are never extracted). */
+export function writeTool(filePath: string, content = 'file body that must not leak'): ToolUseSpec {
+  return { name: 'Write', input: { file_path: filePath, content } };
+}
+
+/** Convenience: an Edit tool call. */
+export function editTool(filePath: string): ToolUseSpec {
+  return { name: 'Edit', input: { file_path: filePath, old_string: 'a', new_string: 'b' } };
+}
+
+/** Convenience: a NotebookEdit tool call — its observed path key is `notebook_path`. */
+export function notebookEditTool(notebookPath: string): ToolUseSpec {
+  return { name: 'NotebookEdit', input: { notebook_path: notebookPath, new_source: 'x' } };
+}
+
+/** An assistant turn of `tool_use` blocks stamped with an explicit timestamp. */
+export function toolTurnAt(timestamp: string, ...tools: ToolUseSpec[]): Record<string, unknown> {
+  return { ...toolTurn(...tools), timestamp };
+}
+
+/** An assistant turn whose content parts are given verbatim (for malformed-part tests). */
+export function rawAssistantTurn(parts: unknown[], timestamp?: string): Record<string, unknown> {
+  const entry: Record<string, unknown> = { type: 'assistant', message: { role: 'assistant', content: parts } };
+  if (timestamp !== undefined) entry['timestamp'] = timestamp;
+  return entry;
+}
+
+/** The observed `custom-title` metadata entry (shape verified 2026-09-15; no timestamp). */
+export function customTitleEntry(title: string, sessionId = 'sess-0000'): Record<string, unknown> {
+  return { type: 'custom-title', customTitle: title, sessionId };
+}
+
+/** The observed `last-prompt` resume-pointer entry (shape verified 2026-09-15). */
+export function lastPromptEntry(lastPrompt?: string, sessionId = 'sess-0000'): Record<string, unknown> {
+  const entry: Record<string, unknown> = { type: 'last-prompt', leafUuid: 'leaf-0000', sessionId };
+  if (lastPrompt !== undefined) entry['lastPrompt'] = lastPrompt;
+  return entry;
+}
+
+// ---------------------------------------------------------------------------
+// session-kind fixtures (insight.session-observe Rule 12 / pulse.distil Rule 11)
+// ---------------------------------------------------------------------------
+
+/** The first user turn of a scheduled-task session as Claude Desktop writes it. */
+export function scheduledTaskUserTurn(taskName = 'cortex-daily'): Record<string, unknown> {
+  return textTurn(
+    'user',
+    `<scheduled-task name="${taskName}" file="/Users/someone/.claude/scheduled-tasks/${taskName}.md">run the bundle</scheduled-task>`,
+  );
+}
+
+/** The first user turn of a skill-driven scheduled session (skill preamble). */
+export function skillBaseDirUserTurn(skillDir = '/Users/someone/.claude/skills/cortex-loop'): Record<string, unknown> {
+  return textTurn('user', `Base directory for this skill: ${skillDir}\n\nRun the daily loop.`);
+}
+
+/**
+ * A hook-injected context entry, in the shape Claude Code writes when a hook
+ * returns `additionalContext`: an `attachment` entry of type
+ * `hook_additional_context` whose `content` is an array of strings. Used to
+ * prove `pulse.usage` Rule 11 counts pointer lines from hook output.
+ */
+export function hookContext(...lines: string[]): Record<string, unknown> {
+  return {
+    type: 'attachment',
+    attachment: {
+      type: 'hook_additional_context',
+      content: [lines.join('\n')],
+      hookName: 'SessionStart',
+      toolUseID: 'SessionStart',
+      hookEvent: 'SessionStart',
+    },
+    timestamp: '2026-07-01T00:00:00Z',
+  };
+}
+
+/** Convenience: a Glob tool call — an unrelated tool call for window-counting fixtures. */
+export function glob(pattern: string): ToolUseSpec {
+  return { name: 'Glob', input: { pattern } };
+}

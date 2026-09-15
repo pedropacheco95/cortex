@@ -1,9 +1,10 @@
 /**
- * Session-reading layer (spec loops.session-reading, 6 rules; design §11.5,
- * §16.2 step 10). The shared substrate that lets distil and skill-suggest read
- * Claude Code session transcripts for *this project only*: locate the project's
- * transcript directory, enumerate its sessions, and parse their JSONL
- * tolerantly into typed entries.
+ * Session-reading layer (spec loops.session-reading, 7 rules; design §11.5,
+ * §16.2 step 10). The shared substrate that lets distil and session-observe
+ * read Claude Code session transcripts for *this project only*: locate the
+ * project's transcript directory, enumerate its sessions, parse their JSONL
+ * tolerantly into typed entries, and distil messages, tool uses and the
+ * session title from them.
  *
  * Pure Core (governed by R-001): no LLM, no network, no subprocess. Strictly
  * READ-ONLY — this module writes nothing, ever; parsed content is returned
@@ -55,6 +56,22 @@ export interface ExtractedMessage {
   timestamp?: string;
 }
 
+/**
+ * One assistant `tool_use` part distilled to what consumers may see (Rule 7):
+ * the tool name, the enclosing entry's timestamp, and — for the file tools —
+ * the path, or — for Bash — a bounded command prefix. Never bodies, never
+ * `tool_result` contents, never any other input field.
+ */
+export interface ExtractedToolUse {
+  name: string;
+  /** ISO timestamp of the enclosing assistant entry, when it carried one. */
+  timestamp?: string;
+  /** `input.file_path` (or `input.notebook_path`) for Write/Edit/Read/NotebookEdit. */
+  filePath?: string;
+  /** First {@link BASH_COMMAND_CHARS} characters of `input.command` for Bash. */
+  command?: string;
+}
+
 interface ListSessionsOptions {
   /** Injectable home dir so tests never touch the real `~/.claude`. Defaults to `os.homedir()`. */
   home?: string;
@@ -71,6 +88,10 @@ interface ReadSessionOptions {
 }
 
 const JSONL_SUFFIX = '.jsonl';
+/** Rule 7: only these tools contribute a `filePath`; every other input is dropped. */
+const FILE_PATH_TOOLS: ReadonlySet<string> = new Set(['Write', 'Edit', 'Read', 'NotebookEdit']);
+/** Rule 7: a Bash command is carried as a bounded prefix, never whole. */
+const BASH_COMMAND_CHARS = 200;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -222,4 +243,53 @@ export function extractMessages(entries: SessionEntry[]): ExtractedMessage[] {
     messages.push(timestamp !== undefined ? { role, text, timestamp } : { role, text });
   }
   return messages;
+}
+
+/**
+ * Rule 7(a) — every `tool_use` content part of every assistant entry, in
+ * transcript order, reduced to `{ name, timestamp?, filePath?, command? }`.
+ * `filePath` comes from `input.file_path` (falling back to `input.notebook_path`)
+ * for Write/Edit/Read/NotebookEdit; `command` is the first 200 characters of
+ * `input.command` for Bash; nothing else is read from any input — no file
+ * bodies, no `tool_result` contents, no other tool's arguments. Parts that are
+ * not records, lack a string `name`, or carry a non-record input are skipped,
+ * never thrown (Rule 3/6). Pure, in-process, read-only (Rule 5).
+ */
+export function extractToolUses(entries: SessionEntry[]): ExtractedToolUse[] {
+  const uses: ExtractedToolUse[] = [];
+  for (const entry of entries) {
+    if (messageRole(entry) !== 'assistant' || !isRecord(entry.message)) continue;
+    const content = entry.message.content;
+    if (!Array.isArray(content)) continue;
+    const timestamp = typeof entry.timestamp === 'string' ? entry.timestamp : undefined;
+    for (const part of content) {
+      if (!isRecord(part) || part.type !== 'tool_use' || typeof part.name !== 'string') continue;
+      const input = isRecord(part.input) ? part.input : undefined;
+      if (input === undefined) continue;
+      const use: ExtractedToolUse = { name: part.name };
+      if (timestamp !== undefined) use.timestamp = timestamp;
+      if (FILE_PATH_TOOLS.has(part.name)) {
+        const filePath = typeof input.file_path === 'string' ? input.file_path : input.notebook_path;
+        if (typeof filePath === 'string') use.filePath = filePath;
+      } else if (part.name === 'Bash' && typeof input.command === 'string') {
+        use.command = input.command.slice(0, BASH_COMMAND_CHARS);
+      }
+      uses.push(use);
+    }
+  }
+  return uses;
+}
+
+/**
+ * Rule 7(b) — the session's user-assigned title: the `customTitle` of the last
+ * `custom-title` entry (Claude Code appends the entry repeatedly rather than
+ * rewriting it, so the last one is current), or `undefined` when no such entry
+ * carries a string title. Observed, externally owned shape (Rule 6).
+ */
+export function sessionTitle(entries: SessionEntry[]): string | undefined {
+  let title: string | undefined;
+  for (const entry of entries) {
+    if (entry.type === 'custom-title' && typeof entry.customTitle === 'string') title = entry.customTitle;
+  }
+  return title;
 }

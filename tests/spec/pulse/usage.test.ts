@@ -73,3 +73,43 @@ describe('pulse.usage — the report is a valid pulse report', () => {
     expect(body.match(/## Window/g)).toHaveLength(1);
   });
 });
+
+describe('pulse.usage — Rules 8–11 land in the written report', () => {
+  it('renders the Searches by target table, the recall figure, tracked subdirectories, and pointers', async () => {
+    const root = project('rules-8-11');
+    const home = tmpHome('rules-8-11');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(
+        bash('grep -rn "hooks" .cortex/compass/ && cat notes.md | grep hooks'),
+        bash('find .cortex/pulse -name "*.md"'),
+        bash('grep -n "kind:" cortex-schema.md'),
+        bash('cortex recall scanner'),
+        read('.cortex/atlas/decisions/D-004-scanner.md'),
+      ),
+    ]);
+
+    await runUsage(root, { home });
+    const body = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'usage.md'), 'utf-8');
+
+    expect(body).toMatch(/## Searches by target/);
+    expect(body).toMatch(/\| knowledge[^|]*\| 1 \|/);
+    expect(body).toMatch(/\| machinery[^|]*\| 1 \|/);
+    expect(body).toMatch(/\| document[^|]*\| 1 \|/);
+    expect(body).toMatch(/2 across 1 sessions/);
+    expect(body).toMatch(/`cortex recall`: 1/);
+    expect(body).toMatch(/`atlas\/decisions\/`: 1/);
+    expect(body).toMatch(/`pulse\/threads\/`: 0/);
+    expect(body).toMatch(/fired 0, followed 0/);
+  });
+
+  it('marks the new figures not measurable when no session is readable', async () => {
+    const root = project('rules-8-11-empty');
+    const home = tmpHome('rules-8-11-empty');
+
+    await runUsage(root, { home });
+    const body = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'usage.md'), 'utf-8');
+
+    expect(body).toMatch(/Searches by target: not measurable/);
+    expect(body).toMatch(/Pointer follow-through: not measurable/);
+  });
+});

@@ -2,14 +2,22 @@
  * Spec-level test — loops.session-reading. The integrated slice: build a
  * realistic fake home with multiple sessions for one project (plus a
  * prefix-sharing neighbour and a noise-heavy transcript) and walk the full
- * pipeline end-to-end — listSessions → readSession → extractMessages — against
+ * pipeline end-to-end — listSessions → readSession → extractMessages /
+ * extractToolUses / sessionTitle — against
  * an injected home so the real ~/.claude is never touched.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { makeTmpDir, cleanTmp, snapshotTree } from '../../fixtures/init-harness.js';
-import { projectSlug, listSessions, readSession, extractMessages } from '../../../src/sessions/read.js';
+import {
+  projectSlug,
+  listSessions,
+  readSession,
+  extractMessages,
+  extractToolUses,
+  sessionTitle,
+} from '../../../src/sessions/read.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -42,9 +50,13 @@ describe('loops.session-reading — integrated list → read → extract slice',
       'session-newest',
       [
         '{"type":"summary","summary":"session recap"}',
+        '{"type":"custom-title","customTitle":"Rules how-to","sessionId":"session-newest"}',
         '{"type":"user","message":{"role":"user","content":"how do I add a rule?"},"timestamp":"2026-07-02T09:00:00Z"}',
         '{"type":"mode","mode":"default"}',
+        '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_0","name":"Read","input":{"file_path":"/Users/dev/myproject/RULES.md"}},{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"ls .cortex/compass/rules","description":"list rules"}}]},"timestamp":"2026-07-02T09:00:03Z"}',
+        '{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_0","content":"# Rules body that must not leak"}]},"timestamp":"2026-07-02T09:00:04Z"}',
         '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"write it under .cortex/compass/rules/"}]},"timestamp":"2026-07-02T09:00:05Z"}',
+        '{"type":"last-prompt","leafUuid":"leaf-1","sessionId":"session-newest","lastPrompt":"how do I add a rule?"}',
       ],
       3000,
     );
@@ -79,7 +91,13 @@ describe('loops.session-reading — integrated list → read → extract slice',
     // Walk each session: read tolerantly, then extract the messages.
     const conversations = sessions.map((s) => {
       const { entries, skipped } = readSession(root, s.id, { home });
-      return { id: s.id, skipped, messages: extractMessages(entries) };
+      return {
+        id: s.id,
+        skipped,
+        messages: extractMessages(entries),
+        toolUses: extractToolUses(entries),
+        title: sessionTitle(entries),
+      };
     });
 
     const newest = conversations[0];
@@ -89,7 +107,17 @@ describe('loops.session-reading — integrated list → read → extract slice',
       { role: 'assistant', text: 'write it under .cortex/compass/rules/', timestamp: '2026-07-02T09:00:05Z' },
     ]);
 
+    // Rule 7: tool uses ride alongside the messages without changing them.
+    expect(newest?.title).toBe('Rules how-to');
+    expect(newest?.toolUses).toEqual([
+      { name: 'Read', timestamp: '2026-07-02T09:00:03Z', filePath: '/Users/dev/myproject/RULES.md' },
+      { name: 'Bash', timestamp: '2026-07-02T09:00:03Z', command: 'ls .cortex/compass/rules' },
+    ]);
+    expect(JSON.stringify(newest?.toolUses)).not.toContain('must not leak');
+
     const older = conversations[1];
+    expect(older?.title).toBeUndefined();
+    expect(older?.toolUses).toEqual([]);
     expect(older?.skipped).toBe(1); // the one malformed line
     expect(older?.messages).toEqual([
       { role: 'user', text: 'earlier question', timestamp: '2026-07-01T09:00:00Z' },

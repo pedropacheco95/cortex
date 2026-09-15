@@ -18,6 +18,8 @@ import {
   read,
   grep,
   askUser,
+  hookContext,
+  glob,
 } from '../../fixtures/sessions.js';
 
 function tmp(label: string): string {
@@ -236,5 +238,253 @@ describe('pulse.usage — Rule 7: the window is reported', () => {
 
     expect(counts.sessions).toBe(2);
     expect(body).toMatch(/2 sessions/);
+  });
+});
+
+describe('pulse.usage — Rule 8: a search is a segment that searches a path', () => {
+  it('does not count a pipe filter as a search', () => {
+    const root = project('r8-pipe');
+    const home = tmp('r8-pipe-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(bash('cat .cortex/compass/_index.md | grep rules')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.searchesByTarget).toEqual({ knowledge: 0, machinery: 0, document: 0, other: 0 });
+    expect(counts.cortexGreps).toBe(0);
+  });
+
+  it('counts a compound command once, under knowledge, ignoring its pipe filter', () => {
+    const root = project('r8-compound');
+    const home = tmp('r8-compound-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(bash('grep -rn "hooks" .cortex/compass/ && cat notes.md | grep hooks')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.searchesByTarget).toEqual({ knowledge: 1, machinery: 0, document: 0, other: 0 });
+    expect(counts.cortexGreps).toBe(1);
+  });
+
+  it('counts a find into pulse under machinery', () => {
+    const root = project('r8-find');
+    const home = tmp('r8-find-home');
+    writeSessionTranscript(home, root, 's1', [toolTurn(bash('find .cortex/pulse -name "*.md"'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.searchesByTarget.machinery).toBe(1);
+    expect(counts.searchesByTarget.knowledge).toBe(0);
+  });
+
+  it('counts greps into the schema and .specflow/ under document, outside the .cortex/ figure', () => {
+    const root = project('r8-document');
+    const home = tmp('r8-document-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(bash('grep -n "kind:" cortex-schema.md'), bash('rg pulse-usage .specflow/specs/')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.searchesByTarget.document).toBe(2);
+    expect(counts.cortexGreps).toBe(0);
+  });
+
+  it('buckets Grep tool calls by their path', () => {
+    const root = project('r8-greptool');
+    const home = tmp('r8-greptool-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(grep('scanner', '.cortex/atlas/decisions/'), grep('scanner', 'src/')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.searchesByTarget.knowledge).toBe(1);
+    expect(counts.searchesByTarget.other).toBe(1);
+  });
+
+  it('keeps the .cortex/ figure as knowledge plus machinery', () => {
+    const root = project('r8-sum');
+    const home = tmp('r8-sum-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(
+        grep('x', '.cortex/'),
+        bash('grep -rn foo .cortex/insight/'),
+        bash('grep -c kind .cortex/pulse/reports/usage.md'),
+        bash('grep -rn foo RULES.md'),
+        bash('grep -rn foo src/'),
+      ),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.searchesByTarget).toEqual({ knowledge: 2, machinery: 1, document: 1, other: 1 });
+    expect(counts.cortexGreps).toBe(counts.searchesByTarget.knowledge + counts.searchesByTarget.machinery);
+  });
+
+  it('counts the find, not the xargs grep, in a find | xargs grep pipeline', () => {
+    const root = project('r8-xargs');
+    const home = tmp('r8-xargs-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(bash("find .cortex/atlas -name '*.md' | xargs grep -l foo")),
+    ]);
+
+    expect(collectUsage(root, { home }).searchesByTarget).toEqual({ knowledge: 1, machinery: 0, document: 0, other: 0 });
+  });
+
+  it('strips quoted spans before segmenting, so a quoted path is not a target', () => {
+    const root = project('r8-quoted');
+    const home = tmp('r8-quoted-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(bash('grep -rn ".cortex/compass/" docs/'), bash('echo "grep foo .cortex/compass/"')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.searchesByTarget).toEqual({ knowledge: 0, machinery: 0, document: 0, other: 1 });
+  });
+
+  it('renders the Searches by target table', () => {
+    const root = project('r8-render');
+    const home = tmp('r8-render-home');
+    writeSessionTranscript(home, root, 's1', [toolTurn(bash('grep -rn foo .cortex/compass/'))]);
+
+    const body = renderUsageBody(collectUsage(root, { home }));
+
+    expect(body).toMatch(/## Searches by target/);
+    expect(body).toMatch(/\| knowledge[^|]*\| 1 \|/);
+    expect(body).toMatch(/\| machinery[^|]*\| 0 \|/);
+    expect(body).toMatch(/\| document[^|]*\| 0 \|/);
+    expect(body).toMatch(/\| other[^|]*\| 0 \|/);
+  });
+});
+
+describe('pulse.usage — Rule 9: recall and why are counted under their own figure', () => {
+  it('counts cortex recall and cortex why per command word, leaving insight verbs alone', () => {
+    const root = project('r9');
+    const home = tmp('r9-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(bash('cortex recall foo'), bash('cortex why bar'), bash('cortex insight file src/a.ts')),
+      textTurn('assistant', 'You could run cortex recall foo again.'),
+    ]);
+
+    const counts = collectUsage(root, { home });
+    const body = renderUsageBody(counts);
+
+    expect(counts.recallVerbs).toEqual({ recall: 1, why: 1 });
+    expect(counts.insightVerbs).toEqual({ file: 1 });
+    expect(body).toMatch(/`cortex recall`: 1/);
+    expect(body).toMatch(/`cortex why`: 1/);
+  });
+
+  it('reports recall and why at zero rather than omitting them', () => {
+    const root = project('r9-zero');
+    const home = tmp('r9-zero-home');
+    writeSessionTranscript(home, root, 's1', [toolTurn(bash('ls'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.recallVerbs).toEqual({ recall: 0, why: 0 });
+    expect(renderUsageBody(counts)).toMatch(/`cortex recall`: 0/);
+  });
+});
+
+describe('pulse.usage — Rule 10: tracked subdirectories', () => {
+  it('reports atlas/decisions reads and pulse/threads at zero', () => {
+    const root = project('r10');
+    const home = tmp('r10-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(read('.cortex/atlas/decisions/D-001-x.md'), read('.cortex/atlas/domain/insight.md')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+    const body = renderUsageBody(counts);
+
+    expect(counts.readsBySubdir).toEqual({ 'atlas/decisions': 1, 'pulse/threads': 0 });
+    expect(body).toMatch(/`atlas\/decisions\/`: 1/);
+    expect(body).toMatch(/`pulse\/threads\/`: 0/);
+  });
+
+  it('counts a pulse/threads read as orientation and under its subdirectory', () => {
+    const root = project('r10-threads');
+    const home = tmp('r10-threads-home');
+    writeSessionTranscript(home, root, 's1', [toolTurn(read('.cortex/pulse/threads/T-001.md'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.readsBySubdir['pulse/threads']).toBe(1);
+    expect(counts.orientationReads).toBe(1);
+    expect(counts.machineryReads).toBe(0);
+  });
+});
+
+describe('pulse.usage — Rule 11: pointer follow-through', () => {
+  const pointed = '.cortex/atlas/decisions/D-004-scanner.md';
+
+  it('counts a Recall: line followed by a Read within ten tool calls as followed', () => {
+    const root = project('r11-followed');
+    const home = tmp('r11-followed-home');
+    writeSessionTranscript(home, root, 's1', [
+      hookContext('Cortex is active (schema 3.3).', `Recall: ${pointed} — why the scanner is native`),
+      toolTurn(glob('src/**'), bash('ls'), glob('tests/**')),
+      toolTurn(read(`/abs/project/${pointed}`)),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(1);
+    expect(counts.pointersFollowed).toBe(1);
+    expect(renderUsageBody(counts)).toMatch(/fired 1, followed 1/);
+  });
+
+  it('counts a Decided: line whose Read comes after the tenth tool call as fired but not followed', () => {
+    const root = project('r11-late');
+    const home = tmp('r11-late-home');
+    const filler = Array.from({ length: 10 }, (_, i) => glob(`src/${i}/**`));
+    writeSessionTranscript(home, root, 's1', [
+      textTurn('user', `Decided: ${pointed} (2026-08-01)`),
+      toolTurn(...filler),
+      toolTurn(read(pointed)),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(1);
+    expect(counts.pointersFollowed).toBe(0);
+  });
+
+  it('counts a search of a directory above the pointed path as followed', () => {
+    const root = project('r11-search');
+    const home = tmp('r11-search-home');
+    writeSessionTranscript(home, root, 's1', [
+      hookContext(`Recall: ${pointed}`),
+      toolTurn(grep('scanner', '.cortex/atlas/decisions/')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFollowed).toBe(1);
+  });
+
+  it('does not treat a pointer as followed by a tool call in a later session', () => {
+    const root = project('r11-session');
+    const home = tmp('r11-session-home');
+    writeSessionTranscript(home, root, 's1', [hookContext(`Recall: ${pointed}`)]);
+    writeSessionTranscript(home, root, 's2', [toolTurn(read(pointed))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(1);
+    expect(counts.pointersFollowed).toBe(0);
+  });
+
+  it('reports 0 fired, 0 followed when no pointer line exists', () => {
+    const root = project('r11-none');
+    const home = tmp('r11-none-home');
+    writeSessionTranscript(home, root, 's1', [toolTurn(read('.cortex/_index.md'))]);
+
+    expect(renderUsageBody(collectUsage(root, { home }))).toMatch(/fired 0, followed 0/);
   });
 });

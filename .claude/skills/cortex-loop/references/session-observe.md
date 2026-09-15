@@ -43,14 +43,24 @@ are `.cortex/insight/observations/*.md` (and `_index.md`), the `## Insights`
 gated — compass, atlas, RULES.md — goes through the pulse gate as a typed
 proposal, with no exception.
 
-1. From the project root, run `cortex loop-session-observe --collect`. Read
-   `.cortex/pulse/state/session-observe-worklist.json` — the sessions not yet
-   observed. If the worklist is empty, run
+1. From the project root, run `cortex loop-session-observe --collect`. It
+   refreshes the shared corpus with every session newer than its last stamp
+   (spec Rule 11), so the worklist is current even between distil's weekly
+   rebuilds. Read `.cortex/pulse/state/session-observe-worklist.json` — the
+   sessions not yet observed, each tagged `kind: interactive` (a human-driven
+   session) or `kind: scheduled` (a loop-driven one), **interactive sessions
+   listed first** (spec Rule 12). If the worklist is empty, run
    `cortex loop-session-observe --apply` anyway (it records the run in the
    report) and tell the user there was nothing new to observe.
 2. Read each worklist session's messages from
    `.cortex/pulse/state/session-corpus.json` (the shared corpus — the same file
-   `cortex-pulse-distil` reads; never rebuild it yourself). Infer **durable**
+   `cortex-pulse-distil` reads; never rebuild it yourself). **Process the
+   worklist in order — interactive sessions first, then scheduled ones.**
+   Interactive sessions are where the user states context, corrects you, and
+   establishes conventions; scheduled sessions mostly teach how the loops
+   themselves behave and rarely carry project knowledge — read them last and
+   be quicker to find nothing. If you run out of budget before the end, stop:
+   only claim the sessions you actually read (step 5). Infer **durable**
    knowledge from how each session actually went:
    - project context stated in passing (audience, scale, deployment shape,
      working style, stated intent — anything about the project as a whole,
@@ -124,8 +134,19 @@ proposal, with no exception.
    the shared evidence `cortex-pulse-distil` reads for cross-session
    recurrence; it proposes graduation from that trail on its own schedule,
    not you, and not here.
-5. Write the gated candidates to a scratchpad JSON array (empty array when
-   none), each object one of:
+5. Write a scratchpad proposals JSON **object** with two keys (spec Rule 13):
+   ```json
+   {"observed": ["<session-id of every worklist session you actually read>"],
+    "candidates": [ ...gated candidate objects, empty array when none... ]}
+   ```
+   `"observed"` is your claim: only the sessions listed there are marked
+   observed by apply. A worklist session you skipped or ran out of budget for
+   is NOT listed — it stays in the next worklist with an attempts count, and
+   after 3 unclaimed applies Core marks it observed anyway and reports it as
+   "expired unobserved", so nothing is silently lost. Never list a session you
+   did not read. (A bare JSON array is still accepted for backward
+   compatibility, but it claims every worklist session — do not use it.)
+   Each `"candidates"` object is one of:
    ```json
    {"type": "rule-candidate", "pattern": "<the observed convention, verbatim enough for dismissal matching>",
     "title": "<a short display title for the rule>",
@@ -145,18 +166,22 @@ proposal, with no exception.
    can't make (R-001: no LLM judgment in Core) — infer it from the rule's
    content and the codebase layout; omit it only when you're not confident,
    Core falls back to `["**/*"]`.
-6. Run `cortex loop-session-observe --apply --proposals <file>` (plain
-   `--apply` when there were no gated candidates). The deterministic close
+6. Run `cortex loop-session-observe --apply --proposals <file>` — always with
+   the proposals object, even when there were no gated candidates, so your
+   `"observed"` claim is honoured (plain `--apply` with no file claims every
+   worklist session, and is only right when the worklist was empty). The
+   deterministic close
    audits your entry writes (section boundaries, provenance trailers, and
    observations frontmatter shape), verifies compass/atlas are untouched,
    allocates S-ids from the shared counter, drafts the schema-conformant
    rule/decision file for each gated candidate and writes the typed proposal
    sections into `.cortex/pulse/reports/session-observe.md`, and advances the
-   observed-session state. A non-zero exit means you violated a write
-   boundary — fix the entries (revert the offending sections) and re-run
-   apply.
+   observed-session state for the sessions you claimed. A non-zero exit means
+   you violated a write boundary — fix the entries (revert the offending
+   sections) and re-run apply.
 7. Read `.cortex/pulse/reports/session-observe.md` and summarise to the user:
-   sessions observed, project-context observations created or updated (with
+   sessions observed (and any left unobserved or expired unobserved),
+   project-context observations created or updated (with
    theme and whether it was a fresh entry, a re-encounter, or a
    contradiction), per-file entries enriched, proposals written (their S-ids
    and types), any files skipped for lack of an entry, and any violations.

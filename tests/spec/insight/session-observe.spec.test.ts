@@ -20,7 +20,9 @@ import {
   SESSION_OBSERVE_REPORT_FILE,
   SESSION_OBSERVE_WORKLIST_FILE,
 } from '../../../src/insight/session-observe.js';
-import { CORPUS_FILE, proposeFromCandidates, SUGGESTIONS_FILE } from '../../../src/pulse/distil.js';
+import { CORPUS_FILE, DISTIL_LAST_RUN_FILE, proposeFromCandidates, SUGGESTIONS_FILE } from '../../../src/pulse/distil.js';
+import { readObserveState, readObserveWorklist } from '../../../src/insight/session-observe.js';
+import { writeSessionTranscript, textTurn, scheduledTaskUserTurn, skillBaseDirUserTurn } from '../../fixtures/sessions.js';
 import { pulseCli } from '../../../src/pulse/review.js';
 import { checkPulse } from '../../../src/schema/checks/pulse.js';
 import { checkRules } from '../../../src/schema/checks/compass.js';
@@ -121,7 +123,7 @@ function writeCorpus(root: string, sessionIds: string[]): void {
 function collected(label: string, sessions: string[] = ['sess-1']): string {
   const root = makeProject(label);
   writeCorpus(root, sessions);
-  collectObserve(root, { now: NOW });
+  collectObserve(root, { now: NOW, home: tmp(`${label}-home`) });
   return root;
 }
 
@@ -463,6 +465,162 @@ describe('AC: the loop never writes gated content directly under any classificat
     const listed = out.join('\n');
     expect(listed).toContain('rule-candidate');
     expect(listed).toContain('decision-candidate');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rules 11-13: corpus freshness, kind tagging, claimed observation
+// ---------------------------------------------------------------------------
+const CORPUS_T = new Date('2026-07-08T00:00:00Z');
+const OLDER = new Date('2026-07-07T00:00:00Z');
+const NEWER = new Date('2026-07-08T06:00:00Z');
+
+function writeCorpusAt(root: string, generated: Date, sessions: { id: string; kind?: string }[]): void {
+  fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'state'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, '.cortex', 'pulse', 'state', CORPUS_FILE),
+    JSON.stringify({
+      kind: 'session-corpus',
+      generated: generated.toISOString(),
+      since: '2026-07-01T00:00:00Z',
+      sessions: sessions.map((s) => ({ ...s, mtime: generated.toISOString(), messages: [{ role: 'user', text: `msg ${s.id}` }] })),
+    }),
+    'utf-8',
+  );
+}
+
+function corpusOnDisk(root: string): { generated: string; since: string; sessions: { id: string; kind?: string; messages: unknown[] }[] } {
+  return JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'pulse', 'state', CORPUS_FILE), 'utf-8'));
+}
+
+function proposals(root: string, doc: unknown): string {
+  const p = path.join(root, 'proposals.json');
+  fs.writeFileSync(p, JSON.stringify(doc), 'utf-8');
+  return p;
+}
+
+describe('AC: collect refreshes a stale corpus with sessions newer than its generated stamp', () => {
+  it('old-1 stays, new-1 is appended, generated advances, since + distil-last-run untouched, worklist lists new-1', async () => {
+    const root = makeProject('refresh');
+    const home = tmp('refresh-home');
+    writeCorpusAt(root, CORPUS_T, [{ id: 'old-1' }]);
+    const lastRun = path.join(root, '.cortex', 'pulse', 'state', DISTIL_LAST_RUN_FILE);
+    fs.writeFileSync(lastRun, '2026-07-01T00:00:00Z\n', 'utf-8');
+    writeSessionTranscript(home, root, 'old-1', [textTurn('user', 'stale')], OLDER);
+    writeSessionTranscript(home, root, 'new-1', [textTurn('user', 'fresh')], NEWER);
+
+    const r = collectObserve(root, { now: NOW, home });
+    const corpus = corpusOnDisk(root);
+    expect(corpus.sessions.map((s) => s.id).sort()).toEqual(['new-1', 'old-1']);
+    expect(Date.parse(corpus.generated)).toBeGreaterThan(CORPUS_T.getTime());
+    expect(corpus.since).toBe('2026-07-01T00:00:00Z');
+    expect(fs.readFileSync(lastRun, 'utf-8')).toBe('2026-07-01T00:00:00Z\n');
+    expect(r.corpusReused).toBe(true);
+    expect(r.corpusAppended).toBe(1);
+    const worklist = readObserveWorklist(root);
+    expect(worklist?.sessions.map((s) => s.id)).toContain('new-1');
+    expect(worklist?.corpus_reused).toBe(true);
+    expect(worklist?.corpus_appended).toBe(1);
+  });
+
+  it('an old-1 transcript rewritten after generated is replaced in place, never duplicated', () => {
+    const root = makeProject('refresh-upsert');
+    const home = tmp('refresh-upsert-home');
+    writeCorpusAt(root, CORPUS_T, [{ id: 'old-1' }]);
+    writeSessionTranscript(home, root, 'old-1', [textTurn('user', 'stale'), textTurn('user', 'and more')], NEWER);
+    collectObserve(root, { now: NOW, home });
+    const entries = corpusOnDisk(root).sessions.filter((s) => s.id === 'old-1');
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.messages).toHaveLength(2);
+  });
+});
+
+describe('AC: every corpus session carries a deterministic kind, and older corpora still load', () => {
+  it('skill preamble and <scheduled-task> sessions are scheduled; prose is interactive — in corpus and worklist', () => {
+    const root = makeProject('kind');
+    const home = tmp('kind-home');
+    writeSessionTranscript(home, root, 'skill-run', [skillBaseDirUserTurn()], OLDER);
+    writeSessionTranscript(home, root, 'task-run', [scheduledTaskUserTurn('cortex-daily')], OLDER);
+    writeSessionTranscript(home, root, 'human', [textTurn('user', 'ordinary prose question')], OLDER);
+    collectObserve(root, { now: NOW, home });
+    const expected = { 'skill-run': 'scheduled', 'task-run': 'scheduled', human: 'interactive' };
+    expect(Object.fromEntries(corpusOnDisk(root).sessions.map((s) => [s.id, s.kind]))).toEqual(expected);
+    expect(Object.fromEntries((readObserveWorklist(root)?.sessions ?? []).map((s) => [s.id, s.kind]))).toEqual(expected);
+  });
+
+  it('a pre-existing corpus without kind loads with every session treated as interactive', () => {
+    const root = makeProject('kind-legacy');
+    writeCorpusAt(root, CORPUS_T, [{ id: 'sess-a' }, { id: 'sess-b' }]);
+    const r = collectObserve(root, { now: NOW, home: tmp('kind-legacy-home') });
+    expect(r.corpusReused).toBe(true);
+    expect(readObserveWorklist(root)?.sessions.map((s) => s.kind)).toEqual(['interactive', 'interactive']);
+  });
+});
+
+describe('AC: the worklist lists interactive sessions before scheduled ones', () => {
+  it('human-1, human-2, sched-1, sched-2 — interactive first, corpus order preserved within each kind', () => {
+    const root = makeProject('order');
+    writeCorpusAt(root, CORPUS_T, [
+      { id: 'sched-1', kind: 'scheduled' },
+      { id: 'human-1', kind: 'interactive' },
+      { id: 'sched-2', kind: 'scheduled' },
+      { id: 'human-2', kind: 'interactive' },
+    ]);
+    collectObserve(root, { now: NOW, home: tmp('order-home') });
+    expect(readObserveWorklist(root)?.sessions.map((s) => s.id)).toEqual(['human-1', 'human-2', 'sched-1', 'sched-2']);
+  });
+});
+
+describe('AC: apply advances observed-state only for claimed sessions', () => {
+  it('{observed: [sess-1]} marks sess-1 observed, sess-2 gets attempts 1, report says so, next collect lists sess-2', async () => {
+    const root = collected('claim', ['sess-1', 'sess-2']);
+    process.chdir(root);
+    const code = await run(['loop-session-observe', '--apply', '--proposals', proposals(root, { observed: ['sess-1'], candidates: [] })]);
+    expect(code).toBe(0);
+    const state = readObserveState(root);
+    expect(state.observed).toEqual(['sess-1']);
+    expect(state.attempts).toEqual({ 'sess-2': 1 });
+    const rep = report(root);
+    expect(rep).toContain('Sessions observed this run: 1 (sess-1)');
+    expect(rep).toContain('Sessions left unobserved: 1 (sess-2');
+    expect(out.join('\n')).toMatch(/1 session\(s\) marked observed/);
+    collectObserve(root, { now: NOW, home: tmp('claim-home-2') });
+    expect(readObserveWorklist(root)?.sessions.map((s) => s.id)).toEqual(['sess-2']);
+  });
+
+  it('the legacy bare array, and plain --apply with no file, claim every worklist session', async () => {
+    const arrayRoot = collected('claim-array', ['sess-1', 'sess-2']);
+    applyObserve(arrayRoot, { now: NOW, proposalsFile: proposals(arrayRoot, []) });
+    expect(readObserveState(arrayRoot).observed).toEqual(['sess-1', 'sess-2']);
+
+    const plainRoot = collected('claim-plain', ['sess-1', 'sess-2']);
+    applyObserve(plainRoot, { now: NOW });
+    expect(readObserveState(plainRoot).observed).toEqual(['sess-1', 'sess-2']);
+    expect(readObserveState(plainRoot).attempts).toEqual({});
+  });
+});
+
+describe('AC: an unclaimed session expires after three unclaimed applies', () => {
+  it('after two applies: attempts 2, still in the worklist; after the third: observed, attempts dropped, report note', () => {
+    const root = makeProject('expire');
+    const cycle = () => {
+      writeCorpus(root, ['sess-stuck']);
+      collectObserve(root, { now: NOW, home: tmp('expire-home') });
+      return applyObserve(root, { now: NOW, proposalsFile: proposals(root, { observed: [] }) });
+    };
+    cycle();
+    const two = cycle();
+    expect(two.expired).toBe(0);
+    expect(readObserveState(root).attempts).toEqual({ 'sess-stuck': 2 });
+    expect(readObserveState(root).observed).toEqual([]);
+    collectObserve(root, { now: NOW, home: tmp('expire-home-3') });
+    expect(readObserveWorklist(root)?.sessions.map((s) => s.id)).toEqual(['sess-stuck']);
+
+    const three = cycle();
+    expect(three.expired).toBe(1);
+    expect(readObserveState(root).observed).toEqual(['sess-stuck']);
+    expect(readObserveState(root).attempts).toEqual({});
+    expect(report(root)).toMatch(/expired unobserved.*sess-stuck/);
   });
 });
 
