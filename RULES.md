@@ -62,7 +62,7 @@ A many-to-one mapping signals a spec-decomposition problem to fix, not a frontma
 
 ## 11. Respect token budgets for all scaffolding.
 
-CLAUDE.md Cortex section <400 tokens, each `_index.md` <300, SessionStart injection <100, PreRead injection <50, SessionEnd and Stop inject nothing.
+CLAUDE.md Cortex section <400 tokens, each `_index.md` <300 (a generated recall block counts toward the file's budget and collapses to fit it), SessionStart injection <100, PreRead injection <50 for the insight summary plus at most 50 for the recall marker line — combined ceiling 100, or 125 with the writeback invitation (one extended figure, not a second pool), search-time annotation (PreToolUse Grep/Bash) ≤60 and at most two lines, emitted only on a match, SessionEnd and Stop inject nothing.
 
 **Why:** scaffolding is read every session; tokens must buy grounding.
 

@@ -200,3 +200,11 @@ the map can evolve without a literal-for-literal schema edit each time.
   evidence on whether coverage alone changes behaviour. `cortex insight ask` remains forbidden by
   `insight.cli` Rule 7 and deferred by design §11; nothing here relaxes that.
 - **OPEN:** the budget value (Rule 4). An engineering call to be recorded at implementation.
+- **Step 3 of the recall work (2026-09-15) delivers the coverage content another way.** The
+  PreRead marker (`hooks.pre-read-writeback` Rule 6), the search-time pointer
+  (`hooks.search-annotate`) and the generated atlas index blocks (`recall.index-blocks`) surface
+  what is decided, measured and open about the thing a session is reading or searching — at the
+  moment of the read or search, at **zero session-start cost**, from the compiled recall index.
+  This spec's SessionStart map (≤1,800 tokens on every session) was never built; whether to
+  remove its schema §5 text and retire this spec is a **pending decision for Pedro**. Nothing here
+  changes until then: status, Rules and the §5 text stand as written.

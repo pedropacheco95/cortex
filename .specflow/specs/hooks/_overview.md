@@ -18,6 +18,8 @@ All three share: `cortex hook <name>` command signature as the ownership marker 
 
 - `hooks.session-end` — the session record (recall work, step 1): at `SessionEnd`, one bounded deterministic read of the transcript writes `pulse/sessions/<id>.json` (open question or offer, approvals, findings, scratchpad artefact copies) and opens or answers `pulse/threads/` entries via `pulse.threads`. Injects nothing, ever; capture only.
 
+- `hooks.search-annotate` — the search-time pointer (recall work, step 3): `PreToolUse` on `Grep|Bash`, reads `.cortex/recall-index.json` only, matches the search's target path and pattern tokens against the index's subjects and keywords, and injects at most two pointer lines (`Recall:` / `Decided:` — names, ids, dates, paths; never a body, never an instruction), ≤60 tokens, silent on no match and on every failure. Owns the shared query module (`src/recall/query.ts`) the other three consumers use. `hooks.pre-read-writeback` Rule 6 carries the sibling PreRead marker.
+
 _Planned coverage (not yet written):_
 
 - The git post-commit hook — anatomy-refresh-fast (belongs to the loops build phase)

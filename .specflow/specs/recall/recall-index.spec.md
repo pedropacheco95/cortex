@@ -32,7 +32,8 @@ the open threads and the observation themes that bear on it, plus a title-and-ke
 entry so a consumer can render a one-line pointer without opening anything. The three entailment
 rules — a superseded decision drops out, a closed thread drops out, evidence flows through the
 decision that cites it — are computed here and nowhere else. Step 3's hooks read this file only.
-Nothing reads it at 3.4; this step ships the file so there is something to read.
+Nothing read it when 3.4 shipped; the 3.4 second revision (step 3) adds the four read-only
+consumers Rule 12 names.
 
 ## Entities
 
@@ -128,9 +129,14 @@ Nothing reads it at 3.4; this step ships the file so there is something to read.
     tier still exits 0 — hook-safe). Nothing else writes the file. `cortex validate` never writes
     it (read-only).
 
-12. **Read-only consumers, none at 3.4.** The file is the sole surface step 3's hooks read; no
-    hook, verb or loop reads it in this step. `constellation.json` stays curated-only and
-    unchanged in shape by this spec (`bears_on` edges there are `constellation.compiler` Rule 10).
+12. **Read-only consumers — four, at the 3.4 second revision (step 3).** The file is the sole
+    recall surface any consumer reads: `hooks.search-annotate` (the PreToolUse Grep/Bash pointer),
+    `hooks.pre-read-writeback` Rule 6 (the PreRead marker), `recall.why` (`cortex why`, `cortex
+    recall`) and `recall.index-blocks` (the generated blocks in the two atlas `_index.md` files,
+    rendered from the in-process compile). All four go through one loader in `src/recall/query.ts`
+    (`hooks.search-annotate` Rule 12); none writes the file, none reads frontmatter to answer what
+    the index answers, and no loop reads it. `constellation.json` stays curated-only and unchanged
+    in shape by this spec (`bears_on` edges there are `constellation.compiler` Rule 10).
 
 13. **`check.recall-index` (schema Appendix A; `error`; only when the file exists).** Valid JSON
     object; the five top-level keys present; `schemaVersion` a `MAJOR.MINOR` string; every subject

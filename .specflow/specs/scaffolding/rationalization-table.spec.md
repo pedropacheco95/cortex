@@ -151,3 +151,10 @@ contact with a model that is being locally rational.
 - **Deliberately not done:** no hook fires this beyond SessionStart, and no gate enforces it. The
   brainstorm that produced this spec explicitly rejected obstacle-shaped mechanisms in favour of
   better information; a table that blocks would be the thing it was written to avoid.
+- **Step 3 of the recall work (2026-09-15) answers the excuse differently.** The search-time
+  pointer (`hooks.search-annotate`), the PreRead marker (`hooks.pre-read-writeback` Rule 6) and the
+  generated atlas index blocks (`recall.index-blocks`) deliver the coverage this table argues for
+  at the moment of the search or read, at zero session-start cost, with no instruction at all — a
+  pointer that names what exists is the answer to "it probably isn't there". Whether the SessionStart
+  table (and the coverage map it depends on) should be removed from schema §5 is a **pending
+  decision for Pedro**; this spec's status, Rules and the §5 text are unchanged until then.

@@ -9,6 +9,9 @@ implemented_by:
   - ../../specs/pulse/threads.spec.md
   - ../../specs/atlas/evidence.spec.md
   - ../../specs/recall/recall-index.spec.md
+  - ../../specs/hooks/search-annotate.spec.md
+  - ../../specs/recall/why.spec.md
+  - ../../specs/recall/index-blocks.spec.md
 ---
 
 # The assistant reaches for Cortex instead of guessing
@@ -30,22 +33,24 @@ the assistant itself, which has no way today to tell whether asking is worth the
 
 ## User Journey
 
-1. A session begins. The assistant learns, in one place and without asking, which subjects the
-   project holds knowledge about — the rules in force, what has been decided, the terms this
-   project uses in its own way, the operational details, and the concepts its code is organised
-   around.
+1. A session begins, and works. At the moment it searches for something or opens a file the
+   project has knowledge about — a rule, a spec, a source file, the contract document — it
+   learns, without asking and only then, which subjects the project holds knowledge about *for
+   that thing*: what has been decided, what was measured, what question is still open.
 2. Working a task, it hits a question the code cannot answer — why something is the way it is,
    what was decided, what the gotcha is, which tool or account this project uses.
-3. It recognises the question as one the project has covered, because it was told the coverage
-   at the start, and goes straight to the one small file that holds it.
+3. It recognises the question as one the project has covered, because the coverage arrived with
+   the search or the read that raised it, and goes straight to the one small file that holds it
+   — or asks the project directly, by name, for everything that bears on the subject.
 4. It answers from the project's own knowledge instead of asking the developer or reading
    unrelated files to infer it.
 5. The developer can see, without instrumenting anything, whether this is actually happening.
 
 ## Business Rules
 
-1. Knowing what Cortex covers is delivered without being asked for. Everything *below* the
-   coverage level stays pull — the assistant asks for the content when it wants it.
+1. Knowing what Cortex covers is delivered without being asked for — at the moment of the search
+   or the read that makes it relevant, not as a standing list at session start. Everything
+   *below* the coverage level stays pull — the assistant asks for the content when it wants it.
 2. What is delivered is coverage, not content: the subjects the project has knowledge about,
    never the knowledge itself. A table of contents, not the book.
 3. Guidance about consulting Cortex must anticipate and answer the specific reasons for
@@ -65,7 +70,11 @@ the assistant itself, which has no way today to tell whether asking is worth the
 - Consulting the project's knowledge is measurably more frequent after this ships than before;
   the before-figure is recorded, not estimated.
 - The developer stops needing to say "check Cortex."
-- The cost of knowing what Cortex covers stays smaller than the cost of one mistaken file read.
+- The cost of knowing what Cortex covers stays smaller than the cost of one mistaken file read
+  — and is paid only in the sessions, and at the moments, where there is something to point at.
+- When the project points the assistant at a decision, a measurement or an open question, the
+  assistant follows the pointer more often than not; the follow rate is read from the sessions
+  the project already records, and the first measured value is the number to beat.
 
 ## Out of Scope
 
@@ -74,9 +83,13 @@ the assistant itself, which has no way today to tell whether asking is worth the
   outcomes.
 - **A conversational question-answering surface.** Deliberately deferred until there is
   evidence that knowing the coverage is not enough on its own.
-- **Any mechanism that predicts, per moment, which knowledge is relevant.** Relevance-guessing
-  costs something every turn and is wrong invisibly; this outcome delivers stable coverage once
-  and lets the assistant do the matching.
+- **Any mechanism that guesses, per moment, which knowledge is relevant.** Relevance-guessing
+  — inferring from the conversation what the assistant might want next — costs something every
+  turn and is wrong invisibly. What this outcome does instead is exact: it matches the subject
+  the assistant is *already* searching for or reading against what the project has recorded
+  about that subject, costs nothing when nothing matches, and is wrong visibly, because the
+  pointer names the subject it matched. The assistant still does the matching for everything
+  else.
 
 ## Notes
 
@@ -99,6 +112,22 @@ the assistant itself, which has no way today to tell whether asking is worth the
   rule 2 asks for, extended from "what Cortex holds" to "what bears on the thing in front of you".
   Still nothing is pushed into a session in this step (rules 1, 2 and 6 unchanged): the index is
   built, not read; the consumers that read it are step 3.
+- Step 3 of the recall work (added 2026-09-15; schema 3.4, second revision in place) is where the
+  knowledge is finally pushed — as pointers, at the moment they can be followed. Four consumers of
+  the recall index: `hooks/search-annotate.spec.md` (a search into a subject the project has
+  recorded something about gets at most two lines naming it), `hooks/pre-read-writeback.spec.md`
+  Rule 6 (a read of a spec, a rule, a decision, a measurement or the contract document gets one
+  line naming what is decided, measured and open about it — that spec keeps its own business
+  parent and names this outcome as also-supported), `recall/why.spec.md` (`cortex why` and
+  `cortex recall`, the pull side the pointers end with), and `recall/index-blocks.spec.md` (the
+  two atlas indexes list what they hold, so opening the index is enough). The journey's steps 1
+  and 3, business rule 1 and the third out-of-scope bullet were rewritten in this step because
+  the earlier text promised coverage *at session start*; coverage is now delivered at search and
+  read time and the session-start map was never built (its removal is a pending decision — see
+  `scaffolding/coverage-map.spec.md` Notes). Rules 2, 4, 5 and 6 hold unchanged: pointers carry
+  names, ids and paths, never bodies or instructions; every pointer is compiled from files that
+  exist at the moment it fires; the follow rate is read from transcripts the project already has
+  (`pulse/usage.spec.md` Rule 11); and nothing blocks — a hook that finds nothing says nothing.
 - Adjacent but distinct: `../insight/assistant-has-project-knowledge-when-working.business.md`
   covers the *insight* layer answering when asked. This outcome covers the whole knowledge
   layer being reached for at all. That spec's business rule 3 ("never injected as ambient noise

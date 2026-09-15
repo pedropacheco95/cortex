@@ -123,13 +123,20 @@ falsifiable rather than asserted.
 
 11. **Pointer follow-through.** A pointer line is any text line beginning `Recall:` or `Decided:`
     found in hook-injected context — a `hook_additional_context` attachment entry's content, or a
-    user entry's text — and its pointed path is the first token in that line containing `/`
-    (trailing punctuation stripped). The report counts pointers `fired` and, of those, `followed`:
-    a pointer is followed when, within the next 10 `tool_use` calls of the same session, a Read
-    targets the pointed path, or a Rule 8 search targets the pointed path or a directory above it.
-    The 10-call window is fixed and the matching is exact on normalised paths — no fuzziness, so
-    two runs over the same transcripts agree. No hook emits these lines yet; the figure reports
-    0 fired, 0 followed today, and exists so the number to beat is recorded before the hooks land.
+    user entry's text — and its pointed target is the first token in that line containing `/`
+    (trailing punctuation stripped) or, when the line carries no such token, its first
+    **id-shaped** token (3.4 second revision — the `Decided:` grammar of `hooks.search-annotate`
+    Rule 7 names ids, not paths): `decision.<stem>` stands for `.cortex/atlas/decisions/<stem>.md`,
+    `evidence.<stem>` for `.cortex/atlas/evidence/<stem>.md`, and `T-NNN` for any path under
+    `.cortex/pulse/threads/` whose basename starts `T-NNN-`. A line with neither points nowhere
+    and is not fired. The report counts pointers `fired` and, of those, `followed`: a pointer is
+    followed when, within the next 10 `tool_use` calls of the same session, a Read targets the
+    pointed path, a Rule 8 search targets the pointed path or a directory above it, or a Bash
+    command invokes `cortex why <ref>` with the `<ref>` the line's `more:` tail named (the pointer
+    told the session where to pull; pulling is following). The 10-call window is fixed and the
+    matching is exact on normalised paths and ids — no fuzziness, so two runs over the same
+    transcripts agree. The figure reported 0 fired, 0 followed before the hooks landed, so the
+    number to beat is recorded.
 
 12. **`--record` writes the figures as evidence (3.4).** `cortex usage --record` does everything
     `cortex usage` does, then writes one gated evidence file `atlas/evidence/<today>-usage.md`
@@ -249,6 +256,15 @@ falsifiable rather than asserted.
   ten unrelated tool calls and then a Read of that path
 - **When** `cortex usage` runs
 - **Then** the report shows 1 pointer fired and 0 followed
+
+### An id-shaped pointer is followed by a read of the file it stands for
+
+- **Given** a fixture whose session carries the hook-injected line
+  `Decided: decision.2026-08-05-x · Open: T-004 Do you want the counter… · more: cortex why R-003`
+  followed by a Read of `.cortex/atlas/decisions/2026-08-05-x.md` two calls later, and a second
+  session carrying the same line followed by a Bash call `cortex why R-003` within the window
+- **When** `cortex usage` runs
+- **Then** the report shows 2 pointers fired and 2 followed
 
 ### The report is a valid pulse report
 
