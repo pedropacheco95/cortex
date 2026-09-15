@@ -11,15 +11,19 @@
  * `list`, `drop` and `close` write only under `.cortex/pulse/`. `promote` is
  * the one verb with the standing of `pulse-accept`: a human-invoked draft of a
  * gated file — `atlas/decisions/<date>-<slug>.md` (schema §4.3, via the
- * session-observe `decisionFilePayload` shape) or `compass/bugs/B-NNN-<slug>.md`
- * (§4.2) — never clobbering, then marking the thread answered with
- * `resolved_by` = the new file. `--to atlas/evidence` is reserved for step 2.
+ * session-observe `decisionFilePayload` shape), `compass/bugs/B-NNN-<slug>.md`
+ * (§4.2), or — 3.4 — `atlas/evidence/<date>-<slug>.md` (§4.3, `atlas.evidence`
+ * Rule 6: a `finding` thread of kind measurement, `--finding <metric>=<value>`
+ * required, `--bears-on` optional, via the shared evidence writer) — never
+ * clobbering, then marking the thread answered with `resolved_by` = the new
+ * file.
  *
  * Deterministic Core (R-001): fs/path only; no LLM, no network, no subprocess.
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { decisionFilePayload, provenanceUser } from '../insight/session-observe.js';
+import { decisionFilePayload, decisionSlug, provenanceUser } from '../insight/session-observe.js';
+import { ensureEvidenceDir, evidenceFilePayload, type EvidenceFinding } from '../atlas/evidence.js';
 import {
   THREAD_STATUSES,
   type Thread,
@@ -46,17 +50,22 @@ export const BUG_TYPES = [
   'test-defect',
 ] as const;
 
-/** The `--to` targets promote knows; evidence is reserved (step 2), the rest draft today. */
-const PROMOTE_TARGETS = ['atlas/decisions', 'compass/bugs'] as const;
-const RESERVED_TARGET = 'atlas/evidence';
+/** The `--to` targets promote knows (Rule 12; `atlas/evidence` live at 3.4). */
+const PROMOTE_TARGETS = ['atlas/decisions', 'compass/bugs', 'atlas/evidence'] as const;
 /** `title` is the key text cut to this many characters (Rule 12; also the `list` column). */
 const TITLE_CHARS = 80;
+/** The body line that marks a finding thread as a measurement (`atlas.evidence` Rule 6). */
+const MEASUREMENT_KIND_LINE = '**Kind:** measurement';
+/** `--finding <metric>=<value>` — a non-empty metric, `=`, a non-empty value. */
+const FINDING_RE = /^([^=]+)=(.+)$/;
 
 const USAGE = [
   'usage: cortex thread list [--status open|answered|dropped|expired] [--touching <path-or-id>]',
   '       cortex thread drop T-NNN',
   '       cortex thread close T-NNN --by <path>',
-  '       cortex thread promote T-NNN --to atlas/decisions|compass/bugs [--type <bug type>] [--affects <path-or-id>]...',
+  '       cortex thread promote T-NNN --to atlas/decisions',
+  '       cortex thread promote T-NNN --to compass/bugs --type <bug type> [--affects <path-or-id>]...',
+  '       cortex thread promote T-NNN --to atlas/evidence --finding <metric>=<value>... [--bears-on <ref>]...',
 ].join('\n');
 
 export interface ThreadCliOptions {
@@ -237,6 +246,7 @@ function decisionDraft(t: Thread, now: Date, user: string): { targetRel: string;
     },
     now,
     opener?.user ?? user,
+    t.bears_on, // pulse.threads Rule 12 (3.4): the drafted decision carries the thread's subjects
   );
   return { targetRel, payload: payload.replace(/^(date: [^\n]*\n)/m, '$1confidence: INFERRED\n') };
 }
@@ -297,22 +307,94 @@ function bugDraft(root: string, t: Thread, now: Date, type: string, affects: str
   return { targetRel, payload };
 }
 
+/**
+ * `--finding metric=value` → a typed finding: the value is a number when the
+ * text parses as one, else the string as given (`atlas.evidence` Rule 6).
+ * Null when the flag does not match the grammar.
+ */
+function parseFinding(raw: string): EvidenceFinding | null {
+  const m = FINDING_RE.exec(raw);
+  if (m === null) return null;
+  const metric = (m[1] as string).trim();
+  const text = (m[2] as string).trim();
+  if (metric === '' || text === '') return null;
+  const value = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(text) ? Number(text) : text;
+  return { metric, value };
+}
+
+/** The `ended` of `pulse/sessions/<id>.json` for a trail citation, or undefined when absent/unreadable. */
+function sessionEnded(root: string, citation: string): string | undefined {
+  const split = splitCitation(citation);
+  if (split === null) return undefined;
+  try {
+    const raw = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'sessions', `${split.id}.json`), 'utf-8');
+    const ended = (JSON.parse(raw) as Record<string, unknown>)['ended'];
+    return typeof ended === 'string' && ended !== '' ? ended : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The §4.3 evidence draft (`atlas.evidence` Rule 6): `kind: measurement`,
+ * `instrument: session` (the measurement was made by hand in a session),
+ * `window` from the trail's session records (`ended` of the opener and of the
+ * last session; each falls back to the thread's `opened`), `sessions` = the
+ * trail length, `findings` from the flags in the order given, `bears_on`,
+ * `provenance` with one `derives_from` per trail citation, DRAFT body.
+ */
+function evidenceDraft(root: string, t: Thread, now: Date, findings: EvidenceFinding[], bearsOn: string[]): { targetRel: string; payload: string } {
+  const title = keyText(t).slice(0, TITLE_CHARS);
+  const first = t.sessions[0];
+  const last = t.sessions[t.sessions.length - 1];
+  return evidenceFilePayload(
+    {
+      slug: decisionSlug({ title }),
+      title,
+      kind: 'measurement',
+      instrument: 'session',
+      window: {
+        from: (first === undefined ? undefined : sessionEnded(root, first)) ?? t.opened,
+        to: (last === undefined ? undefined : sessionEnded(root, last)) ?? t.opened,
+        sessions: t.sessions.length,
+      },
+      findings,
+      bearsOn,
+      provenance: t.sessions,
+      body: draftBody(t),
+    },
+    now,
+  );
+}
+
 function promoteVerb(argv: string[], root: string, now: Date, user: string): number {
-  const { positional, flags } = parseFlags(argv, ['--affects']);
+  const { positional, flags } = parseFlags(argv, ['--affects', '--finding', '--bears-on']);
   for (const key of flags.keys()) {
-    if (key !== '--to' && key !== '--type' && key !== '--affects') return usage(`unknown flag ${key}.`);
+    if (!['--to', '--type', '--affects', '--finding', '--bears-on'].includes(key)) return usage(`unknown flag ${key}.`);
   }
   // Grammar first (exit 2, nothing read or written), then the thread (exit 1).
   const to = flags.get('--to')?.[0];
-  if (to === undefined || to === '') return usage('promote requires --to atlas/decisions or --to compass/bugs.');
-  if (to === RESERVED_TARGET) {
-    console.error(
-      `cortex thread promote: --to ${RESERVED_TARGET} is reserved for step 2 of the recall work (schema 3.4 adds the evidence artefact); nothing written today.`,
-    );
-    return 2;
-  }
+  if (to === undefined || to === '') return usage(`promote requires --to ${PROMOTE_TARGETS.join('|')}.`);
   if (!(PROMOTE_TARGETS as readonly string[]).includes(to)) {
     return usage(`--to must be one of ${PROMOTE_TARGETS.join('|')} (got "${to}").`);
+  }
+  const findingValues = flags.get('--finding');
+  const bearsOnValues = flags.get('--bears-on');
+  if (to !== 'atlas/evidence') {
+    if (findingValues !== undefined) return usage('--finding applies to --to atlas/evidence only.');
+    if (bearsOnValues !== undefined) return usage('--bears-on applies to --to atlas/evidence only.');
+  }
+  const findings: EvidenceFinding[] = [];
+  if (to === 'atlas/evidence') {
+    if (findingValues === undefined || findingValues.length === 0) {
+      return usage('promote --to atlas/evidence requires at least one --finding <metric>=<value> — the metric and value are a human reading of the finding text Core must not parse out of prose.');
+    }
+    for (const raw of findingValues) {
+      const finding = parseFinding(raw);
+      if (finding === null) return usage(`--finding must be <metric>=<value> (got "${raw}").`);
+      findings.push(finding);
+    }
+    if (bearsOnValues !== undefined && bearsOnValues.some((v) => v === '')) return usage('--bears-on requires a ref.');
   }
   const typeValues = flags.get('--type');
   const type = typeValues?.[0];
@@ -338,6 +420,20 @@ function promoteVerb(argv: string[], root: string, now: Date, user: string): num
   let draft: { targetRel: string; payload: string };
   if (to === 'atlas/decisions') {
     draft = decisionDraft(t, now, user);
+  } else if (to === 'atlas/evidence') {
+    // Rule 6: only a finding thread of kind measurement becomes evidence.
+    if (t.kind !== 'finding') {
+      return usage(`${t.id} is a ${t.kind} thread; --to atlas/evidence needs a finding thread of kind measurement.`);
+    }
+    if (!t.body.split('\n').includes(MEASUREMENT_KIND_LINE)) {
+      const kindLine = /^\*\*Kind:\*\*\s*(.*)$/m.exec(t.body);
+      return usage(`${t.id} is a finding of kind ${kindLine?.[1]?.trim() || 'unknown'}; --to atlas/evidence needs a finding of kind measurement (body line "${MEASUREMENT_KIND_LINE}").`);
+    }
+    const bearsOn = bearsOnValues ?? t.bears_on;
+    if (bearsOn.length === 0) {
+      return usage(`${t.id} bears on nothing; pass --bears-on <ref> (repeatable) — check.evidence requires a non-empty bears_on.`);
+    }
+    draft = evidenceDraft(root, t, now, findings, bearsOn);
   } else {
     const affects = affectsValues ?? t.bears_on.filter((e) => resolvesOnDisk(root, e));
     if (affects.length === 0) {
@@ -353,6 +449,7 @@ function promoteVerb(argv: string[], root: string, now: Date, user: string): num
     console.error(`cortex thread promote: refusing to overwrite existing file ${draft.targetRel}. Nothing written.`);
     return 1;
   }
+  if (to === 'atlas/evidence') ensureEvidenceDir(root); // the directory never exists without its _index.md (§4.3)
   fs.mkdirSync(path.dirname(targetAbs), { recursive: true });
   fs.writeFileSync(targetAbs, draft.payload, 'utf-8');
   updateThreadStatus(root, t.id, { status: 'answered', answered: now.toISOString(), resolved_by: draft.targetRel });

@@ -152,7 +152,9 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'usage') {
     try {
       const { runUsage } = await import('../pulse/usage.js');
-      return await runUsage('.');
+      // `--record` also writes the run as an atlas evidence file (pulse.usage
+      // Rule 12 / atlas.evidence Rule 5): a user-invoked verb is a human act.
+      return await runUsage('.', { record: argv.includes('--record') });
     } catch (err) {
       console.error(`cortex usage: ${(err as Error).message}`);
       return 1;
@@ -398,8 +400,13 @@ export async function run(argv: string[]): Promise<number> {
     try {
       const { compile } = await import('../constellation/compile.js');
       const constellation = await compile('.');
+      // 3.4: the recall index is compiled after the constellation (schema
+      // §4.11; recall.recall-index Rule 11) — the second regenerable file.
+      const { writeRecallIndex } = await import('../recall/index.js');
+      const recall = await writeRecallIndex('.');
       console.log(
-        `cortex scan: wrote .cortex/constellation.json (${constellation.nodes.length} node(s), ${constellation.edges.length} edge(s), ${constellation.counters.droppedRefs} dropped ref(s)).`,
+        `cortex scan: wrote .cortex/constellation.json (${constellation.nodes.length} node(s), ${constellation.edges.length} edge(s), ${constellation.counters.droppedRefs} dropped ref(s)); ` +
+          `recall index: ${recall.counters.subjects} subject(s), ${recall.counters.entries} ${recall.counters.entries === 1 ? 'entry' : 'entries'}.`,
       );
       return 0;
     } catch (err) {

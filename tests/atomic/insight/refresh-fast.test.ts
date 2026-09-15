@@ -22,6 +22,20 @@ import {
   INSIGHT_WORKLIST_FILE,
 } from '../../../src/insight/refresh-fast.js';
 
+// The recall compiler, wrapped so one test can make it throw (spec Rule 9's
+// degradation path); every other call goes straight to the real writer.
+const recallStub = vi.hoisted(() => ({ fail: null as Error | null }));
+vi.mock('../../../src/recall/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/recall/index.js')>();
+  return {
+    ...actual,
+    writeRecallIndex: async (root: string) => {
+      if (recallStub.fail !== null) throw recallStub.fail;
+      return actual.writeRecallIndex(root);
+    },
+  };
+});
+
 const dirs: string[] = [];
 function tmp(label: string): string {
   const d = makeTmpDir(`insight-fast-${label}`);
@@ -148,5 +162,64 @@ describe('fast tier: hook safety (spec Rule 7 — no-op and degradation paths)',
     gitCommitAll(root, 'lockfile + dist');
     await runInsightRefreshFast(root);
     expect(readWorklist(root)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 9 (3.4): the recall index is rebuilt before the ledger gate
+// ---------------------------------------------------------------------------
+describe('fast tier: rebuilds the recall index before its ledger gate (spec Rule 9, 3.4)', () => {
+  /** A committed repo with a `.cortex/` holding one decision bearing on R-001 and NO ledger. */
+  function makeUnextractedProject(label: string): string {
+    const root = tmp(label);
+    gitInit(root);
+    writeConfig(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-001-x.md'), '---\nid: R-001\ntitle: x\n---\n', 'utf-8');
+    fs.mkdirSync(path.join(root, '.cortex', 'atlas', 'decisions'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.cortex', 'atlas', 'decisions', '2026-09-15-d.md'),
+      '---\nid: decision.2026-09-15-d\ntitle: d\ndate: 2026-09-15T00:00:00Z\nbears_on: [R-001]\n---\n\n# d\n',
+      'utf-8',
+    );
+    fs.writeFileSync(path.join(root, 'x.ts'), 'export const x = 1;\n', 'utf-8');
+    gitCommitAll(root, 'c');
+    return root;
+  }
+
+  it('no ledger: the index exists with subjects["R-001"].decided naming the decision, exit 0, no worklist', async () => {
+    const root = makeUnextractedProject('recall-rebuild');
+    expect(await runInsightRefreshFast(root)).toBe(0);
+    const indexPath = path.join(root, '.cortex', 'recall-index.json');
+    expect(fs.existsSync(indexPath)).toBe(true);
+    const doc = JSON.parse(fs.readFileSync(indexPath, 'utf-8')) as { subjects: Record<string, { decided: string[] }> };
+    expect(doc.subjects['R-001']?.decided).toEqual(['decision.2026-09-15-d']);
+    expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', INSIGHT_WORKLIST_FILE))).toBe(false);
+  });
+
+  it('the recall compiler throws: exit 0, one hook-errors.md entry naming insight-refresh-fast and the recall index', async () => {
+    const root = makeUnextractedProject('recall-throws');
+    recallStub.fail = new Error('recall boom');
+    try {
+      expect(await runInsightRefreshFast(root)).toBe(0);
+    } finally {
+      recallStub.fail = null;
+    }
+    expect(fs.existsSync(path.join(root, '.cortex', 'recall-index.json'))).toBe(false);
+    const log = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'hook-errors.md'), 'utf-8');
+    const entries = log.split('\n').filter((l) => l.startsWith('- hook: '));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toContain('insight-refresh-fast');
+    expect(entries[0]).toContain('recall-index.json');
+    expect(entries[0]).toContain('recall boom');
+  });
+
+  it('a non-Cortex repo (no .cortex/) stays untouched — no index is written', async () => {
+    const root = tmp('recall-no-cortex');
+    gitInit(root);
+    fs.writeFileSync(path.join(root, 'x.ts'), 'export const x = 1;\n', 'utf-8');
+    gitCommitAll(root, 'c');
+    expect(await runInsightRefreshFast(root)).toBe(0);
+    expect(fs.existsSync(path.join(root, '.cortex'))).toBe(false);
   });
 });

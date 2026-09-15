@@ -80,9 +80,17 @@ export async function checkAtlas(root: string, index: ProjectIndex): Promise<Vio
     const id = data['id'] as string;
 
     // Decision: decision.YYYY-MM-DD-slug
-    if (id.startsWith('decision.')) {
+    const isDecision = id.startsWith('decision.');
+    if (isDecision) {
       if (!data['title']) violations.push({ severity: 'error', check: 'check.atlas', clause: '§4.4', location: { path: filePath, key: 'title' }, message: 'Decision artefact missing required field "title"' });
       if (!data['date']) violations.push({ severity: 'error', check: 'check.atlas', clause: '§4.4', location: { path: filePath, key: 'date' }, message: 'Decision artefact missing required field "date"' });
+      // 3.4 (§4.3, schema.bears-on Rule 5): a decision nothing points forward
+      // from is a leaf nothing reaches — warn when bears_on is absent or empty.
+      // (Shape and resolution of a present list are check.bears-on's.)
+      const bearsOn = data['bears_on'];
+      if (bearsOn === undefined || bearsOn === null || (Array.isArray(bearsOn) && bearsOn.length === 0)) {
+        violations.push({ severity: 'warning', check: 'check.atlas', clause: '§4.3', location: { path: filePath, key: 'bears_on' }, message: 'decision bears on nothing; add bears_on' });
+      }
     }
     // Stakeholder: stakeholder.slug
     else if (id.startsWith('stakeholder.')) {
@@ -96,11 +104,16 @@ export async function checkAtlas(root: string, index: ProjectIndex): Promise<Vio
     }
 
     // Check supersedes/sources paths
+    const pulseDir = path.join(root, '.cortex', 'pulse');
     for (const key of ['supersedes', 'sources']) {
       if (data[key] && Array.isArray(data[key])) {
         for (const ref of data[key] as string[]) {
-          if (!resolveRelativePath(filePath, ref) && !resolveId(index, ref)) {
+          const resolved = resolveRelativePath(filePath, ref);
+          if (!resolved && !resolveId(index, ref)) {
             violations.push({ severity: 'error', check: 'check.atlas', clause: '§4.4', location: { path: filePath, key }, message: `Atlas "${key}" reference "${ref}" does not resolve` });
+          } else if (isDecision && key === 'sources' && resolved && !path.relative(pulseDir, resolved).startsWith('..')) {
+            // 3.4 (§4.3): pulse reports are overwritten every run — the citation will dangle.
+            violations.push({ severity: 'warning', check: 'check.atlas', clause: '§4.3', location: { path: filePath, key }, message: `Atlas "sources" reference "${ref}" cites a transient report; record it as evidence (atlas/evidence/, schema §4.3)` });
           }
         }
       }

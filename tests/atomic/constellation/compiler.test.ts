@@ -383,6 +383,102 @@ describe('dangling refs dropped and counted (Rule 6)', () => {
   });
 });
 
+describe('bears_on edges — node-shaped refs only (Rule 10, 3.4)', () => {
+  /** The AC fixture: R-001, pulse.usage (dev) and domain.insight exist; B-999 does not. */
+  function bearsOnFixture(root: string): void {
+    makeCortexProject(root);
+    writeRule(root, 'R-001-core.md', `id: R-001\ntitle: Core\ngoverns:\n  - "src/**"`);
+    writeAtlas(root, 'domain/insight.md', `id: domain.insight\nterm: insight\ndefinition: inferred understanding`);
+    writeDevSpec(root, 'pulse/usage.spec.md', `id: pulse.usage\nstatus: draft\nimplements: ../../specs-business/pulse/usage.business.md`);
+    writeBizSpec(root, 'pulse/usage.business.md', `id: pulse.usage-outcome\nstatus: draft\nimplemented_by:\n  - ../../specs/pulse/usage.spec.md`);
+    fs.mkdirSync(path.join(root, 'src', 'pulse'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'pulse', 'usage.ts'), 'export {};\n');
+  }
+
+  it('rule → rule:, id → spec:, domain → atlas:; a missing bug id is dropped and counted; path/concept/clause emit nothing and count nothing', async () => {
+    const root = tmp('bears-on');
+    bearsOnFixture(root);
+    writeAtlas(
+      root,
+      'decisions/2026-09-15-d.md',
+      `id: decision.2026-09-15-d
+title: D
+date: 2026-09-15T00:00:00Z
+bears_on:
+  - R-001
+  - pulse.usage
+  - domain.insight
+  - B-999
+  - src/pulse/usage.ts
+  - "concept:hook-safety"
+  - "schema:§5"`,
+    );
+    writeAtlas(
+      root,
+      'evidence/2026-09-15-usage.md',
+      `id: evidence.2026-09-15-usage
+title: Usage
+date: 2026-09-15T00:00:00Z
+kind: measurement
+instrument: pulse.usage
+bears_on:
+  - pulse.usage`,
+    );
+    const c = await compile(root);
+    expect(edgesOf(c, 'bears_on')).toEqual([
+      { from: 'atlas:decision.2026-09-15-d', to: 'atlas:domain.insight', kind: 'bears_on' },
+      { from: 'atlas:decision.2026-09-15-d', to: 'rule:R-001', kind: 'bears_on' },
+      { from: 'atlas:decision.2026-09-15-d', to: 'spec:pulse.usage', kind: 'bears_on' },
+      { from: 'atlas:evidence.2026-09-15-usage', to: 'spec:pulse.usage', kind: 'bears_on' },
+    ]);
+    expect(c.counters.droppedRefs).toBe(1); // B-999 only — path, concept and clause are not node references
+    expect(c.groups.find((g) => g.id === 'atlas')?.children).toContainEqual({ id: 'atlas:evidence', label: 'evidence' });
+    expect(node(c, 'atlas:evidence.2026-09-15-usage')?.group).toBe('atlas:evidence');
+  });
+
+  it('an id-shaped ref resolves to business: or to any other indexed atlas: node (the related_specs resolution, then the atlas fallback)', async () => {
+    const root = tmp('bears-on-ids');
+    bearsOnFixture(root);
+    writeAtlas(root, 'decisions/2025-12-01-old.md', `id: decision.2025-12-01-old\ntitle: Old\ndate: 2025-12-01T00:00:00Z`);
+    writeAtlas(
+      root,
+      'decisions/2026-09-15-d.md',
+      `id: decision.2026-09-15-d
+title: D
+date: 2026-09-15T00:00:00Z
+bears_on:
+  - pulse.usage-outcome
+  - decision.2025-12-01-old
+  - no.such-id`,
+    );
+    const c = await compile(root);
+    expect(edgesOf(c, 'bears_on')).toEqual([
+      { from: 'atlas:decision.2026-09-15-d', to: 'atlas:decision.2025-12-01-old', kind: 'bears_on' },
+      { from: 'atlas:decision.2026-09-15-d', to: 'business:pulse.usage-outcome', kind: 'bears_on' },
+    ]);
+    expect(c.counters.droppedRefs).toBe(1); // no.such-id
+  });
+
+  it('only decisions and evidence carry the edge: bears_on on a stakeholder or domain term emits nothing and counts nothing', async () => {
+    const root = tmp('bears-on-carriers');
+    bearsOnFixture(root);
+    writeAtlas(root, 'stakeholders/pedro.md', `id: stakeholder.pedro\nname: Pedro\nrole: owner\nbears_on:\n  - R-001\n  - B-999`);
+    const c = await compile(root);
+    expect(edgesOf(c, 'bears_on')).toEqual([]);
+    expect(c.counters.droppedRefs).toBe(0);
+  });
+
+  it('a malformed bears_on (scalar or non-string entries) emits nothing and counts nothing — complaining is check.bears-on\'s job', async () => {
+    const root = tmp('bears-on-malformed');
+    bearsOnFixture(root);
+    writeAtlas(root, 'decisions/2026-09-15-a.md', `id: decision.2026-09-15-a\ntitle: A\ndate: 2026-09-15T00:00:00Z\nbears_on: 42`);
+    writeAtlas(root, 'decisions/2026-09-15-b.md', `id: decision.2026-09-15-b\ntitle: B\ndate: 2026-09-15T00:00:00Z\nbears_on:\n  - 7\n  - R-001`);
+    const c = await compile(root);
+    expect(edgesOf(c, 'bears_on')).toEqual([{ from: 'atlas:decision.2026-09-15-b', to: 'rule:R-001', kind: 'bears_on' }]);
+    expect(c.counters.droppedRefs).toBe(0);
+  });
+});
+
 describe('counters (Rule 8)', () => {
   it('per-module node counts plus edges and droppedRefs — and NO anatomy key (v3.0)', async () => {
     const root = tmp('counters');

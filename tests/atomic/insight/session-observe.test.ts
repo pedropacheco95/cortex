@@ -23,6 +23,7 @@ import {
   validateObserveCandidate,
   decisionSlug,
   decisionFilePayload,
+  readLedgerSeed,
   ruleFilePayload,
   splitEntrySections,
   PROVENANCE_TRAILER_RE,
@@ -38,6 +39,10 @@ import { checkAtlas } from '../../../src/schema/checks/atlas.js';
 import { checkRules } from '../../../src/schema/checks/compass.js';
 import { checkProvenance } from '../../../src/schema/checks/provenance.js';
 import { buildIndex } from '../../../src/schema/index-build.js';
+import { checkBearsOn } from '../../../src/schema/checks/bears-on.js';
+import { loadClauseIndex } from '../../../src/schema/clauses.js';
+import { readsMemoryPath } from '../../../src/hooks/pre-read.js';
+import matter from 'gray-matter';
 import { CANONICAL_TASK_NAMES } from '../../../src/cli/task-scoping.js';
 import { SCHEDULED_TASKS } from '../../../src/cli/templates.js';
 
@@ -594,6 +599,42 @@ describe('candidate validation and decision drafting', () => {
     expect(payload).toContain('- derives_from: claude-sessions/pedro/sess-1');
     expect(payload).toContain('- derives_from: claude-sessions/pedro/sess-2');
     expect(payload).toContain('Because ingress.');
+    // no seed → no key at all (schema §4.3: bears_on is optional on decisions)
+    expect(payload).not.toContain('bears_on');
+  });
+
+  it('decisionFilePayload emits a non-empty bears_on seed as a YAML list after date: and before provenance: (3.4)', () => {
+    const { payload } = decisionFilePayload(
+      { type: 'decision-candidate', title: 'Polling over webhooks', reasoning: 'Because ingress.', sessionIds: ['sess-1'] },
+      NOW,
+      'pedro',
+      ['.cortex/compass/rules/R-001-core-no-llm-calls.md', '.specflow/specs/pulse/usage.spec.md'],
+    );
+    const lines = payload.split('\n');
+    const dateAt = lines.findIndex((l) => l.startsWith('date: '));
+    const bearsAt = lines.indexOf('bears_on:');
+    const provAt = lines.indexOf('provenance:');
+    expect(bearsAt).toBeGreaterThan(dateAt);
+    expect(provAt).toBeGreaterThan(bearsAt);
+    expect(lines.slice(bearsAt, provAt)).toEqual([
+      'bears_on:',
+      '  - .cortex/compass/rules/R-001-core-no-llm-calls.md',
+      '  - .specflow/specs/pulse/usage.spec.md',
+    ]);
+    expect((matter(payload).data as { bears_on: string[] }).bears_on).toEqual([
+      '.cortex/compass/rules/R-001-core-no-llm-calls.md',
+      '.specflow/specs/pulse/usage.spec.md',
+    ]);
+  });
+
+  it('decisionFilePayload with an explicitly empty seed omits bears_on (an absent ledger yields no key)', () => {
+    const { payload } = decisionFilePayload(
+      { type: 'decision-candidate', title: 'x', reasoning: 'y', sessionIds: ['sess-1'] },
+      NOW,
+      'pedro',
+      [],
+    );
+    expect(payload).not.toContain('bears_on');
   });
 
   it('ruleFilePayload drafts §4.2-conformant frontmatter (B-010: the rule-candidate equivalent of decisionFilePayload)', () => {
@@ -715,12 +756,19 @@ describe('decision-candidate in the typed pulse gate', () => {
     expect(fs.existsSync(path.join(root, decisionRel))).toBe(true);
 
     const index = await buildIndex(root);
-    expect(await checkAtlas(root, index)).toEqual([]);
+    const atlas = await checkAtlas(root, index);
+    expect(atlas.filter((v) => v.severity === 'error')).toEqual([]);
+    // No ledger on disk → no seed → the landed decision carries check.atlas's
+    // "bears on nothing" warning until a human adds one (spec Rule 6, 3.4).
+    expect(atlas.map((v) => `${v.severity} ${v.location.key} ${v.message}`)).toEqual([
+      'warning bears_on decision bears on nothing; add bears_on',
+    ]);
     // provenance is well-formed (claude-sessions refs are shape-checked only)
     expect(await checkProvenance(root)).toEqual([]);
     const written = fs.readFileSync(path.join(root, decisionRel), 'utf-8');
     expect(written).toContain('id: decision.2026-07-08-polling-over-webhooks');
     expect(written).toContain('derives_from: claude-sessions/pedro/sess-1');
+    expect(written).not.toContain('bears_on');
   });
 
   it('accept refuses a decision-candidate targeting outside atlas/decisions/', async () => {
@@ -735,6 +783,135 @@ describe('decision-candidate in the typed pulse gate', () => {
     );
     expect(await pulseCli('pulse-accept', ['S-009'], root)).toBe(1);
     expect(fs.existsSync(path.join(root, 'evil.md'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.4 — the decision-candidate's bears_on is Core-seeded from the originating
+// session's read ledger (spec Rule 6; schema §4.3, §6 rule 6).
+// ---------------------------------------------------------------------------
+
+/** The AC ledger: a src/ line, two gated lines, a duplicate, then eleven
+ *  further distinct `.cortex/` paths — 13 distinct gated lines in all. */
+const LEDGER_GATED_FIRST_TWO = ['.cortex/compass/rules/R-001-core-no-llm-calls.md', '.specflow/specs/pulse/usage.spec.md'];
+const LEDGER_ELEVEN_MORE = Array.from({ length: 11 }, (_, i) => `.cortex/insight/concepts/theme-${String(i + 1).padStart(2, '0')}.md`);
+const AC_LEDGER_LINES = [
+  'src/pulse/usage.ts',
+  LEDGER_GATED_FIRST_TWO[0]!,
+  LEDGER_GATED_FIRST_TWO[1]!,
+  LEDGER_GATED_FIRST_TWO[0]!, // the duplicate
+  ...LEDGER_ELEVEN_MORE,
+];
+
+function writeLedger(root: string, sessionId: string, lines: string[]): void {
+  const p = readsMemoryPath(root, sessionId);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, lines.join('\n') + '\n', 'utf-8');
+}
+
+/** Materialise every gated ledger target so check.bears-on's path refs resolve
+ *  (a missing path is only a warning, but the AC wants a clean pass). */
+function writeLedgerTargets(root: string): void {
+  for (const rel of [...LEDGER_GATED_FIRST_TWO, ...LEDGER_ELEVEN_MORE, 'src/pulse/usage.ts']) {
+    const p = path.join(root, ...rel.split('/'));
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, `# ${path.basename(rel)}\n`, 'utf-8');
+  }
+}
+
+const DECISION_CANDIDATE = {
+  type: 'decision-candidate',
+  title: 'Polling over webhooks',
+  reasoning: 'On 2026-07-08 we chose polling because the integration has no public ingress.',
+  sessionIds: ['sess-1'],
+};
+
+function proposedFileFrontmatter(report: string, id: string): Record<string, unknown> {
+  const start = report.indexOf(`## ${id}:`);
+  expect(start).toBeGreaterThanOrEqual(0);
+  const section = report.slice(start);
+  const fenceOpen = section.indexOf('\n```', section.indexOf('**Proposed file:**'));
+  const bodyStart = section.indexOf('\n', fenceOpen + 1) + 1;
+  const fence = section.slice(fenceOpen + 1, bodyStart - 1);
+  const bodyEnd = section.indexOf(`\n${fence}`, bodyStart);
+  return matter(section.slice(bodyStart, bodyEnd)).data as Record<string, unknown>;
+}
+
+describe('readLedgerSeed: the read-ledger seed for a decision-candidate (spec Rule 6, 3.4)', () => {
+  it('keeps .cortex/ and .specflow/ lines in ledger order, collapses duplicates first-seen, caps at 12', () => {
+    const root = tmp('seed-ac');
+    writeLedger(root, 's1', AC_LEDGER_LINES);
+    const seed = readLedgerSeed(root, ['s1']);
+    expect(seed).toHaveLength(12);
+    expect(seed.slice(0, 2)).toEqual(LEDGER_GATED_FIRST_TWO);
+    expect(seed).toEqual([...LEDGER_GATED_FIRST_TWO, ...LEDGER_ELEVEN_MORE.slice(0, 10)]);
+    expect(seed).not.toContain('src/pulse/usage.ts');
+  });
+
+  it('concatenates ledgers in candidate order, dedupes across sessions, skips an absent ledger, and honours the cap argument', () => {
+    const root = tmp('seed-multi');
+    writeLedger(root, 's1', ['.cortex/compass/preferences.md', 'README.md', '.specflow/specs/a.spec.md']);
+    writeLedger(root, 's3', ['.specflow/specs/a.spec.md', '.cortex/atlas/_index.md']);
+    expect(readLedgerSeed(root, ['s1', 's2', 's3'])).toEqual([
+      '.cortex/compass/preferences.md',
+      '.specflow/specs/a.spec.md',
+      '.cortex/atlas/_index.md',
+    ]);
+    expect(readLedgerSeed(root, ['s1', 's3'], 2)).toEqual(['.cortex/compass/preferences.md', '.specflow/specs/a.spec.md']);
+  });
+
+  it('no ledger on disk → an empty seed, never a throw', () => {
+    const root = tmp('seed-none');
+    expect(readLedgerSeed(root, ['sess-1'])).toEqual([]);
+  });
+});
+
+describe("a decision-candidate's bears_on is seeded from the session's read ledger (spec AC, 3.4)", () => {
+  it('the proposed file carries exactly 12 entries in ledger order, and the accepted decision passes check.atlas + check.bears-on clean', async () => {
+    const root = makeGitProject('seed-apply');
+    writeLedgerTargets(root);
+    gitCommitAll(root, 'ledger targets'); // gated roots must be clean for the enrichment audit
+    collectFor(root);
+    writeLedger(root, 'sess-1', AC_LEDGER_LINES);
+    applyObserve(root, { now: NOW, user: 'pedro', proposalsFile: writeProposals(root, 'p.json', { observed: ['sess-1'], candidates: [DECISION_CANDIDATE] }) });
+
+    const report = fs.readFileSync(reportPath(root, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
+    const proposed = proposedFileFrontmatter(report, 'S-001');
+    expect(proposed['bears_on']).toEqual([...LEDGER_GATED_FIRST_TWO, ...LEDGER_ELEVEN_MORE.slice(0, 10)]);
+    expect((proposed['bears_on'] as string[]).slice(0, 2)).toEqual(LEDGER_GATED_FIRST_TWO);
+    expect(proposed['bears_on']).not.toContain('src/pulse/usage.ts');
+
+    expect(await pulseCli('pulse-accept', ['S-001'], root)).toBe(0);
+    const decisionRel = '.cortex/atlas/decisions/2026-07-08-polling-over-webhooks.md';
+    const landed = matter(fs.readFileSync(path.join(root, decisionRel), 'utf-8')).data as Record<string, unknown>;
+    expect(landed['bears_on']).toEqual(proposed['bears_on']);
+
+    const index = await buildIndex(root);
+    const atlas = await checkAtlas(root, index);
+    expect(atlas).toEqual([]); // no error, and no "bears on nothing" warning
+    expect(await checkBearsOn(root, index, loadClauseIndex(root))).toEqual([]);
+  });
+
+  it('the same candidate with no ledger on disk → no bears_on key, and the section is otherwise identical', () => {
+    const seeded = makeGitProject('seed-with');
+    writeLedgerTargets(seeded);
+    gitCommitAll(seeded, 'ledger targets');
+    collectFor(seeded);
+    writeLedger(seeded, 'sess-1', AC_LEDGER_LINES);
+    applyObserve(seeded, { now: NOW, user: 'pedro', proposalsFile: writeProposals(seeded, 'p.json', { observed: ['sess-1'], candidates: [DECISION_CANDIDATE] }) });
+
+    const bare = makeGitProject('seed-without');
+    collectFor(bare);
+    applyObserve(bare, { now: NOW, user: 'pedro', proposalsFile: writeProposals(bare, 'p.json', { observed: ['sess-1'], candidates: [DECISION_CANDIDATE] }) });
+
+    const seededReport = fs.readFileSync(reportPath(seeded, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
+    const bareReport = fs.readFileSync(reportPath(bare, SESSION_OBSERVE_REPORT_FILE), 'utf-8');
+    expect(bareReport).not.toContain('bears_on');
+    expect(proposedFileFrontmatter(bareReport, 'S-001')['bears_on']).toBeUndefined();
+    expect(proposedFileFrontmatter(seededReport, 'S-001')['bears_on']).toHaveLength(12);
+    // Strip the seeded bears_on block (the key line and its 12 items): what remains is byte-identical.
+    const stripped = seededReport.replace(/^bears_on:\n(?: {2}- .*\n){12}/m, '');
+    expect(stripped).toBe(bareReport);
   });
 });
 

@@ -427,6 +427,21 @@ export function checkInsightObservations(root: string): Violation[] {
         }
       }
     }
+    // bears_on (3.4, §4.10.11): optional; when present, a list of non-empty
+    // strings — shape only. The surface is ungated, so entries are never
+    // resolved here (schema.bears-on Rule 4); the recall index resolves them.
+    if ('bears_on' in data && data['bears_on'] !== undefined) {
+      const bearsOn = data['bears_on'];
+      if (!Array.isArray(bearsOn)) {
+        err('bears_on', 'frontmatter "bears_on" must be a list of non-empty strings');
+      } else {
+        for (const entry of bearsOn as unknown[]) {
+          if (typeof entry !== 'string' || entry.trim() === '') {
+            err('bears_on', `bears_on entry ${JSON.stringify(entry)} is not a non-empty string`);
+          }
+        }
+      }
+    }
   }
 
   return violations;

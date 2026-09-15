@@ -1,6 +1,6 @@
 ---
 id: atlas.evidence
-status: draft
+status: implemented
 depends_on:
   - core-cli.init
   - schema.bears-on

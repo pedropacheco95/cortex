@@ -236,6 +236,87 @@ date: "2024-01-01"
   });
 });
 
+describe('check.atlas (3.4): the two decision warnings — bears on nothing; sources under pulse/', () => {
+  let tmpDir: string;
+  beforeAll(() => { tmpDir = makeTmpFixture('atlas-34'); });
+  afterAll(() => cleanup(tmpDir));
+
+  function writeDecision(name: string, frontmatter: string): string {
+    const decisionsDir = path.join(tmpDir, '.cortex', 'atlas', 'decisions');
+    fs.mkdirSync(decisionsDir, { recursive: true });
+    const p = path.join(decisionsDir, `${name}.md`);
+    fs.writeFileSync(p, `---\n${frontmatter}\n---\n\n# ${name}\n`);
+    return p;
+  }
+
+  function atlasAt(report: Awaited<ReturnType<typeof validate>>, p: string) {
+    return report.violations.filter((v) => v.check === 'check.atlas' && v.location.path === p);
+  }
+
+  it('a decision with no bears_on → exactly one check.atlas warning at key bears_on, clause §4.3; the tree stays conformant', async () => {
+    const p = writeDecision('2026-09-15-seedless', 'id: decision.2026-09-15-seedless\ntitle: Seedless\ndate: 2026-09-15T00:00:00Z');
+    const report = await validate(tmpDir);
+    expect(atlasAt(report, p)).toEqual([
+      { severity: 'warning', check: 'check.atlas', clause: '§4.3', location: { path: p, key: 'bears_on' }, message: 'decision bears on nothing; add bears_on' },
+    ]);
+    expect(report.conformant).toBe(true);
+    fs.rmSync(p);
+  });
+
+  it('a decision whose sources: resolves under .cortex/pulse/ → one check.atlas warning at key sources containing "record it as evidence", and no error for that file', async () => {
+    const reportsDir = path.join(tmpDir, '.cortex', 'pulse', 'reports');
+    fs.mkdirSync(reportsDir, { recursive: true });
+    fs.writeFileSync(path.join(reportsDir, 'usage.md'), '---\nkind: pulse-usage-report\ngenerated: 2026-09-15T00:00:00Z\nloop: cortex-usage\n---\n\n# Usage\n');
+    const p = writeDecision(
+      '2026-08-05-x',
+      'id: decision.2026-08-05-x\ntitle: X\ndate: 2026-08-05T00:00:00Z\nsources:\n  - ../../pulse/reports/usage.md\nbears_on:\n  - "schema:§5"',
+    );
+    const report = await validate(tmpDir);
+    const mine = atlasAt(report, p);
+    expect(mine.filter((v) => v.severity === 'error')).toEqual([]);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ severity: 'warning', clause: '§4.3', location: { path: p, key: 'sources' } });
+    expect(mine[0]!.message).toContain('record it as evidence');
+    expect(mine[0]!.message).toContain('../../pulse/reports/usage.md');
+    fs.rmSync(p);
+  });
+
+  it('a decision with a bears_on list and a durable sources: target carries neither warning; an empty list is still "nothing"', async () => {
+    const ok = writeDecision(
+      '2026-09-15-ok',
+      'id: decision.2026-09-15-ok\ntitle: Ok\ndate: 2026-09-15T00:00:00Z\nsources:\n  - 2026-07-01-sample-decision.md\nbears_on:\n  - R-001',
+    );
+    const empty = writeDecision('2026-09-15-empty', 'id: decision.2026-09-15-empty\ntitle: Empty\ndate: 2026-09-15T00:00:00Z\nbears_on: []');
+    const report = await validate(tmpDir);
+    expect(atlasAt(report, ok)).toEqual([]);
+    expect(atlasAt(report, empty).map((v) => `${v.severity} ${v.location.key}`)).toEqual(['warning bears_on']);
+    fs.rmSync(ok);
+    fs.rmSync(empty);
+  });
+
+  it('a sources: entry that does not resolve keeps the existing error and gets no pulse warning', async () => {
+    const p = writeDecision(
+      '2026-09-15-dangling',
+      'id: decision.2026-09-15-dangling\ntitle: Dangling\ndate: 2026-09-15T00:00:00Z\nsources:\n  - ../../pulse/reports/gone.md\nbears_on:\n  - R-001',
+    );
+    const report = await validate(tmpDir);
+    const mine = atlasAt(report, p);
+    expect(mine.map((v) => `${v.severity} ${v.location.key}`)).toEqual(['error sources']);
+    expect(mine[0]!.message).not.toContain('record it as evidence');
+    fs.rmSync(p);
+  });
+
+  it('the two warnings are decision-only: a stakeholder without bears_on is not warned', async () => {
+    const stakeholdersDir = path.join(tmpDir, '.cortex', 'atlas', 'stakeholders');
+    fs.mkdirSync(stakeholdersDir, { recursive: true });
+    const p = path.join(stakeholdersDir, 'fixture-person.md');
+    fs.writeFileSync(p, '---\nid: stakeholder.fixture-person\nname: Fixture Person\nrole: reviewer\n---\n\n# Fixture Person\n');
+    const report = await validate(tmpDir);
+    expect(atlasAt(report, p)).toEqual([]);
+    fs.rmSync(p);
+  });
+});
+
 describe('check.atlas B-006: raw atlas/sources/ material is exempt from the id requirement; .meta.md sidecars are validated', () => {
   let tmpDir: string;
   beforeAll(() => { tmpDir = makeTmpFixture('atlas-sources'); });

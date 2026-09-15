@@ -86,7 +86,9 @@ proposal, with no exception.
        directory doesn't exist yet) with frontmatter `kind:
        insight-observation`, `updated: <now, ISO-8601 UTC>`, `salient`
        (below), `sessions: [claude-sessions/<user>/<session-id>]`, and
-       current-truth prose body — no log, no bullet list;
+       current-truth prose body — no log, no bullet list; an entry MAY also
+       carry `bears_on:` (a list of the rules, specs, files or clauses the
+       observation is about — schema §4.10.11, 3.4) when the session named them;
      - **re-encounter** (the same fact restated or reconfirmed): append the
        session id to `sessions:`, bump `updated`, and only touch the body if
        the newer session sharpens the wording — never create a second entry

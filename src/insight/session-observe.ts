@@ -547,15 +547,57 @@ export function provenanceUser(): string {
 }
 
 /**
+ * Read-ledger prefixes a decision seed keeps (schema §4.3, §6 rule 6; spec
+ * Rule 6, 3.4) — the same filter `pulse.threads` Rule 4 applies to a thread's
+ * seed (`src/pulse/threads.ts`, `ledgerBearsOn`; defined here rather than
+ * imported so that file stays untouched by this change).
+ */
+const READ_LEDGER_PREFIXES = ['.cortex/', '.specflow/'] as const;
+/** The seed cap (spec Rule 6 — a standing-authority constant, not re-decided). */
+export const DECISION_SEED_CAP = 12;
+
+/**
+ * The `bears_on` seed for a decision-candidate (spec Rule 6, 3.4): for each
+ * originating session in candidate order, the read ledger
+ * `pulse/state/reads/<session-id>` (written by the PreRead hook; the same
+ * conventional path `pulse.threads` reads) — keeping only lines under
+ * `.cortex/` or `.specflow/`, deduplicated first-seen, capped. An absent
+ * ledger (hygiene deletes them after 14 days) contributes nothing; nothing
+ * throws. Core-computed, never LLM-supplied (R-001).
+ */
+export function readLedgerSeed(root: string, sessionIds: string[], cap = DECISION_SEED_CAP): string[] {
+  const seed: string[] = [];
+  for (const sid of sessionIds) {
+    let raw: string;
+    try {
+      raw = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'state', 'reads', sid), 'utf-8');
+    } catch {
+      continue;
+    }
+    for (const line of raw.split('\n')) {
+      const rel = line.trim();
+      if (!READ_LEDGER_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue;
+      if (!seed.includes(rel)) seed.push(rel);
+      if (seed.length >= cap) return seed;
+    }
+  }
+  return seed;
+}
+
+/**
  * The full proposed decision file (§4.3): schema-conformant frontmatter —
- * `id: decision.<YYYY-MM-DD>-<slug>`, `title`, `date`, plus `provenance`
- * carrying the claude-sessions refs — and the reasoning as the body. Accept
- * writes this verbatim to `atlas/decisions/YYYY-MM-DD-<slug>.md`.
+ * `id: decision.<YYYY-MM-DD>-<slug>`, `title`, `date`, an optional `bears_on`
+ * (3.4 — the Core-computed seed, emitted only when non-empty; between `date`
+ * and `provenance`), plus `provenance` carrying the claude-sessions refs — and
+ * the reasoning as the body. Accept writes this verbatim to
+ * `atlas/decisions/YYYY-MM-DD-<slug>.md`. `bearsOn` is optional so the other
+ * caller (`thread promote`, `src/pulse/thread-cli.ts`) compiles unchanged.
  */
 export function decisionFilePayload(
   candidate: Extract<ObserveCandidate, { type: 'decision-candidate' }>,
   now: Date,
   user: string,
+  bearsOn: string[] = [],
 ): { targetRel: string; payload: string } {
   const date = now.toISOString().slice(0, 10);
   const slug = decisionSlug(candidate);
@@ -563,11 +605,13 @@ export function decisionFilePayload(
   const provenance = candidate.sessionIds
     .map((sid) => `  - derives_from: claude-sessions/${user}/${sid}`)
     .join('\n');
+  const bearsOnLines = bearsOn.length > 0 ? ['bears_on:', ...bearsOn.map((ref) => `  - ${ref}`)] : [];
   const payload = [
     '---',
     `id: decision.${date}-${slug}`,
     `title: ${JSON.stringify(candidate.title)}`,
     `date: ${now.toISOString()}`,
+    ...bearsOnLines,
     'provenance:',
     provenance,
     '---',
@@ -715,7 +759,9 @@ function candidateSectionText(
       fence,
     ].join('\n');
   }
-  const { targetRel, payload } = decisionFilePayload(candidate, now, user);
+  // 3.4: the bears_on seed is Core-computed from the session's read ledger
+  // (spec Rule 6) — the candidate JSON shape is unchanged and never overrides it.
+  const { targetRel, payload } = decisionFilePayload(candidate, now, user, readLedgerSeed(absRoot, candidate.sessionIds));
   const fence = chooseOuterFence(payload);
   return [
     `## ${id}: ${candidate.title}`,

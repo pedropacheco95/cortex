@@ -488,3 +488,119 @@ describe('pulse.usage — Rule 11: pointer follow-through', () => {
     expect(renderUsageBody(collectUsage(root, { home }))).toMatch(/fired 0, followed 0/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 12 / atlas.evidence Rule 5 — `cortex usage --record`
+// ---------------------------------------------------------------------------
+import matter from 'gray-matter';
+import { usageFindings, usageEvidenceFields, type UsageCounts } from '../../../src/pulse/usage.js';
+
+function seededCounts(root: string, home: string): UsageCounts {
+  writeSessionTranscript(home, root, 's1', [
+    toolTurn(bash('cortex insight file src/a.ts'), bash('cortex insight concept auth'), bash('cortex insight file src/b.ts'), grep('x', '.cortex/compass/')),
+  ]);
+  return collectUsage(root, { home });
+}
+
+describe('usage --record: findings are the report figures in the Rule 5 fixed order', () => {
+  it('searches, then one insight.<verb> per verb seen (sorted, unit invocations), then recall, reads, pointers, questions', () => {
+    const root = project('findings');
+    const home = tmp('findings-home');
+    const counts = seededCounts(root, home);
+
+    expect(usageFindings(counts)).toEqual([
+      { metric: 'searches.knowledge', value: 1 },
+      { metric: 'searches.machinery', value: 0 },
+      { metric: 'searches.document', value: 0 },
+      { metric: 'searches.other', value: 0 },
+      { metric: 'insight.concept', value: 1, unit: 'invocations' },
+      { metric: 'insight.file', value: 2, unit: 'invocations' },
+      { metric: 'recall.recall', value: 0 },
+      { metric: 'recall.why', value: 0 },
+      { metric: 'reads.atlas-decisions', value: 0 },
+      { metric: 'reads.pulse-threads', value: 0 },
+      { metric: 'pointers.fired', value: 0 },
+      { metric: 'pointers.followed', value: 0 },
+      { metric: 'questions.before-consult', value: 0 },
+    ]);
+  });
+
+  it('usageEvidenceFields carries the slug, title, instrument, window denominator, bears_on and the report body; supersedes only when a previous file is named', () => {
+    const root = project('fields');
+    const home = tmp('fields-home');
+    const counts = seededCounts(root, home);
+    const now = new Date('2026-09-15T15:58:00.000Z');
+
+    const fields = usageEvidenceFields(counts, now);
+    expect(fields.slug).toBe('usage');
+    expect(fields.kind).toBe('measurement');
+    expect(fields.instrument).toBe('pulse.usage');
+    expect(fields.title).toBe(`Cortex usage over 1 sessions (${counts.windowStart} to ${counts.windowEnd})`);
+    expect(fields.window).toEqual({ from: counts.windowStart, to: counts.windowEnd, sessions: 1 });
+    expect(fields.bearsOn).toEqual(['schema:§5', 'pulse.usage']);
+    expect(fields.supersedes ?? []).toEqual([]);
+    expect(fields.body).toBe(renderUsageBody(counts));
+
+    expect(usageEvidenceFields(counts, now, '2026-09-01-usage.md').supersedes).toEqual(['2026-09-01-usage.md']);
+  });
+});
+
+describe('Nothing measurable records nothing', () => {
+  it('a home with no transcript directory: the report names the unreadable state, no atlas/evidence/, exit 1', async () => {
+    const root = project('record-empty');
+    const home = tmp('record-empty-home');
+    const logs: string[] = [];
+    const errs: string[] = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => { logs.push(a.join(' ')); });
+    const errSpy = vi.spyOn(console, 'error').mockImplementation((...a: unknown[]) => { errs.push(a.join(' ')); });
+
+    const code = await runUsage(root, { home, now: new Date('2026-09-15T15:58:00.000Z'), record: true });
+
+    logSpy.mockRestore();
+    errSpy.mockRestore();
+    expect(code).toBe(1);
+    const report = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'usage.md'), 'utf-8');
+    expect(report).toMatch(/not measurable/);
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas'))).toBe(false);
+    expect([...logs, ...errs].join('\n')).toMatch(/nothing measurable — no evidence written/);
+  });
+
+  it('without --record nothing is written under atlas/ even when sessions are readable', async () => {
+    const root = project('no-record');
+    const home = tmp('no-record-home');
+    seededCounts(root, home);
+    expect(await runUsage(root, { home })).toBe(0);
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas'))).toBe(false);
+  });
+});
+
+describe('A second recording supersedes the first', () => {
+  it('2026-09-01-usage.md present → the new file supersedes it; the same day again exits 1 naming the existing file, atlas/ unchanged', async () => {
+    const root = project('record-supersedes');
+    const home = tmp('record-supersedes-home');
+    seededCounts(root, home);
+    const evidenceDir = path.join(root, '.cortex', 'atlas', 'evidence');
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    fs.writeFileSync(path.join(evidenceDir, '_index.md'), '# Evidence — index\n', 'utf-8');
+    fs.writeFileSync(path.join(evidenceDir, '2026-09-01-usage.md'), '---\nid: evidence.2026-09-01-usage\n---\n', 'utf-8');
+    const errs: string[] = [];
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation((...a: unknown[]) => { errs.push(a.join(' ')); });
+
+    expect(await runUsage(root, { home, now: new Date('2026-09-15T15:58:00.000Z'), record: true })).toBe(0);
+    const target = path.join(evidenceDir, '2026-09-15-usage.md');
+    const data = matter(fs.readFileSync(target, 'utf-8')).data as Record<string, unknown>;
+    expect(data['id']).toBe('evidence.2026-09-15-usage');
+    expect(data['supersedes']).toEqual(['2026-09-01-usage.md']);
+    expect(fs.readFileSync(path.join(evidenceDir, '_index.md'), 'utf-8')).toBe('# Evidence — index\n');
+
+    const atlasBefore = fs.readdirSync(evidenceDir).map((f) => [f, fs.readFileSync(path.join(evidenceDir, f), 'utf-8')]);
+    expect(await runUsage(root, { home, now: new Date('2026-09-15T18:00:00.000Z'), record: true })).toBe(1);
+    expect(errs.join('\n')).toMatch(/2026-09-15-usage\.md/);
+    const atlasAfter = fs.readdirSync(evidenceDir).map((f) => [f, fs.readFileSync(path.join(evidenceDir, f), 'utf-8')]);
+    expect(atlasAfter).toEqual(atlasBefore);
+    vi.restoreAllMocks();
+  });
+});
+
+import { vi } from 'vitest';

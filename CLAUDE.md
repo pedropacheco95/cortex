@@ -96,7 +96,7 @@ pnpm test:scenario        # scenario layer (full sandbox)
 - Never ignore RULES.md.
 - Never use npm — use pnpm.
 
-<!-- cortex:start v3.3 -->
+<!-- cortex:start v3.4 -->
 ## Cortex
 
 Cortex is active on **cortex**. The knowledge layer lives in `.cortex/`:
@@ -115,7 +115,7 @@ Specs are the source of truth: `.specflow/specs-business/` (outcomes) and
 `.specflow/specs/` (implementation), linked by `implements:`/`implemented_by:`. Don't
 let the trees drift.
 
-Modules present: compass, atlas, archive, insight, pulse. Schema: 3.3.
+Modules present: compass, atlas, archive, insight, pulse. Schema: 3.4.
 
 ## Cortex Insight
 

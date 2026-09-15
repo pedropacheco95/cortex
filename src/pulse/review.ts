@@ -21,6 +21,7 @@ import {
   type SuggestionType,
 } from './types.js';
 import { planPromotion } from './promote.js';
+import { ensureEvidenceDir } from '../atlas/evidence.js';
 
 const DEFAULT_DISMISSED_WINDOW_DAYS = 90;
 
@@ -654,6 +655,9 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
     const nextSource = annotateStatus(sourceLines, suggestion, 'accepted').join('\n');
 
     // All computed — now write the (small) blast radius (Rule 7).
+    // An evidence-candidate lands in atlas/evidence/, which never exists
+    // without its _index.md (§4.3, 3.4 — the compass-core-file precedent).
+    if (suggestion.type === 'evidence-candidate') ensureEvidenceDir(root);
     fs.mkdirSync(path.dirname(targetAbs), { recursive: true });
     fs.writeFileSync(targetAbs, nextTarget, 'utf-8');
     if (insightWrite !== null) fs.writeFileSync(insightWrite.abs, insightWrite.content, 'utf-8');

@@ -60,3 +60,29 @@ export function gatedFiles(root: string, rel: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
 }
+
+// ---------------------------------------------------------------------------
+// atlas.evidence Rule 6 — promote --to atlas/evidence reads the trail's session
+// records for the window, and its bears_on must resolve for check.bears-on.
+// Additive only.
+// ---------------------------------------------------------------------------
+
+/** A minimal `pulse/sessions/<id>.json` record carrying `ended` (the window source). */
+export function seedSessionRecord(root: string, sessionId: string, ended: string, user = 'fixture-user'): string {
+  const dir = path.join(root, '.cortex', 'pulse', 'sessions');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `${sessionId}.json`);
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ kind: 'pulse-session-record', session_id: sessionId, session: `claude-sessions/${user}/${sessionId}`, ended }, null, 2) + '\n',
+    'utf-8',
+  );
+  return file;
+}
+
+/** A dev spec file at `rel` carrying `id` so a bare-id `bears_on` entry resolves through the index. */
+export function seedSpecFile(root: string, rel: string, id: string): void {
+  const abs = path.join(root, rel);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, `---\nid: ${id}\nstatus: draft\n---\n\n# ${id}\n`, 'utf-8');
+}

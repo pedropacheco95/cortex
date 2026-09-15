@@ -30,12 +30,16 @@ export const CONFIG_DEFAULTS: Record<string, unknown> = {
  *  v3.0 amendment (Decision 1): `archive/` is a fifth, MIXED git policy within
  *  the one module — only `documents/*\/source.<ext>` (the verbatim, possibly
  *  sensitive raw source) is gitignored; `_index.md`, `register.md`,
- *  `metadata.yaml`, `extracted/`, and `types/` are committed (schema §4.4). */
+ *  `metadata.yaml`, `extracted/`, and `types/` are committed (schema §4.4).
+ *  3.4 amendment (Decision 1): the compiled, regenerable recall index
+ *  (`recall-index.json`, schema §4.11) joins the gitignored set in the same
+ *  quadrant as `constellation.json`. */
 export const GITIGNORE_LINES = [
   '.cortex/atlas/sources/',
   '.cortex/pulse/',
   '.cortex/constellation.json',
   '.cortex/archive/documents/*/source.*',
+  '.cortex/recall-index.json',
 ];
 
 /**
@@ -107,10 +111,12 @@ why, or what a domain term means.
 - \`stakeholders/\` — one file per person/org and their role.
 - \`decisions/\` — dated narrative decisions (YYYY-MM-DD-slug).
 - \`domain/\` — one file per domain term with its definition.
+- \`evidence/\` — dated measurements, experiments and audits (YYYY-MM-DD-slug) with typed findings; what a decision cites instead of a transient report.
 - \`sources/\` — raw materials (gitignored; may be sensitive).
 
-**How to navigate:** from a decision, follow \`sources:\` to raw material and
-\`compass_rules:\` to rules derived from it; \`supersedes:\` walks decision history.
+**How to navigate:** from a decision, follow \`sources:\` to raw material or evidence and
+\`compass_rules:\` to rules derived from it; \`supersedes:\` walks decision history;
+\`bears_on:\` names the rules, specs, terms, clauses and files it constrains.
 `,
   'atlas/stakeholders': `# Stakeholders — index
 
@@ -133,6 +139,20 @@ a rule — before proposing to change any of them.
 
 **How to navigate:** follow \`compass_rules:\` to the rules a decision produced,
 \`supersedes:\` to the decision it replaced, and \`sources:\` to the raw material.
+`,
+  'atlas/evidence': `# Evidence — index
+
+**Read this when:** you need the number behind a claim — a usage figure, an audit
+count, a measured before/after — or before re-measuring something.
+
+**What's here:**
+- \`YYYY-MM-DD-<slug>.md\` — one dated measurement, experiment or audit: what was
+  measured (\`findings\`), over what window and denominator, with what \`instrument\`,
+  and what it \`bears_on\`.
+
+**How to navigate:** follow \`bears_on:\` to the rule, spec or clause the number is
+about; \`supersedes:\` walks the re-measurement chain (newest wins); decisions cite a
+file here via \`sources:\`.
 `,
   'atlas/domain': `# Domain terms — index
 

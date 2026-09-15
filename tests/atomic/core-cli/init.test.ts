@@ -147,7 +147,7 @@ describe('exit codes: validation failure → 1 (exit 3 retired with the purpose 
 // Rule 2 — gitignore exactness
 // ---------------------------------------------------------------------------
 describe('Rule 2: gitignore', () => {
-  it('creates .gitignore with exactly the four paths (no .cortex/anatomy/, step 7) and never a bare .cortex/', async () => {
+  it('creates .gitignore with exactly the five paths (no .cortex/anatomy/, step 7; recall-index.json at 3.4) and never a bare .cortex/', async () => {
     const root = makeTmpDir('gi-proj');
     const home = makeTmpDir('gi-home');
     try {
@@ -162,6 +162,9 @@ describe('Rule 2: gitignore', () => {
           // gitignored — _index.md/register.md/metadata.yaml/extracted/types
           // are all committed (schema §4.4, Decision 1 v3.0 amendment).
           '.cortex/archive/documents/*/source.*',
+          // 3.4 (Decision 1 amendment): the compiled recall index joins the
+          // regenerable quadrant next to constellation.json (schema §4.11).
+          '.cortex/recall-index.json',
         ].sort(),
       );
       expect(lines).not.toContain('.cortex/');
@@ -183,6 +186,7 @@ describe('Rule 2: gitignore', () => {
         '.cortex/pulse/',
         '.cortex/constellation.json',
         '.cortex/archive/documents/*/source.*',
+        '.cortex/recall-index.json',
       ]) {
         expect(lines.filter((l) => l === wanted)).toHaveLength(1);
       }
@@ -233,7 +237,7 @@ describe('Rule 3: skeleton', () => {
       return found;
     };
     const indexes = walk(path.join(root, '.cortex'));
-    expect(indexes.length).toBe(12); // root + compass(+bugs,rules) + atlas(+3 subdirs,sources) + pulse + insight (anatomy/, concepts/ carry none, §4.10.1 v3) + archive (documents/, types/ carry none, §4.4) — no module-level anatomy/ since step 7
+    expect(indexes.length).toBe(13); // root + compass(+bugs,rules) + atlas(+4 subdirs incl. evidence at 3.4,sources) + pulse + insight (anatomy/, concepts/ carry none, §4.10.1 v3) + archive (documents/, types/ carry none, §4.4) — no module-level anatomy/ since step 7
     const insightIndex = path.join(root, '.cortex', 'insight', '_index.md');
     for (const idx of indexes) {
       const content = fs.readFileSync(idx, 'utf-8');

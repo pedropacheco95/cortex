@@ -250,6 +250,81 @@ describe('AC compiler.8: import edges are excluded', () => {
 });
 
 // ===========================================================================
+// AC 11 (3.4): bears_on emits edges for node-shaped refs only
+// ===========================================================================
+
+describe('AC compiler.11 (3.4): bears_on emits edges for node-shaped refs only', () => {
+  it(
+    'decision + evidence bears_on → four edges to rule:/spec:/atlas: nodes, droppedRefs up by exactly one (B-999), no edge or drop for path/concept/clause, and an atlas:evidence child',
+    async () => {
+      const root = tmp('bears-on');
+      knowledgeFixture(root);
+      writeAtlas(root, 'domain/insight.md', `id: domain.insight\nterm: insight\ndefinition: inferred understanding`);
+      writeDevSpec(root, 'pulse/usage.spec.md', `id: pulse.usage\nstatus: draft\nimplements: ../../specs-business/pulse/usage.business.md`);
+      writeBizSpec(root, 'pulse/usage.business.md', `id: pulse.usage-outcome\nstatus: draft\nimplemented_by:\n  - ../../specs/pulse/usage.spec.md`);
+      fs.mkdirSync(path.join(root, 'src', 'pulse'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'src', 'pulse', 'usage.ts'), 'export {};\n');
+
+      const before = await compile(root);
+      expect(before.edges.some((e) => e.kind === 'bears_on')).toBe(false);
+      expect(before.groups.find((g) => g.id === 'atlas')?.children.map((ch) => ch.id)).not.toContain('atlas:evidence');
+
+      writeAtlas(
+        root,
+        'decisions/2026-09-15-d.md',
+        `id: decision.2026-09-15-d
+title: D
+date: 2026-09-15T00:00:00Z
+bears_on:
+  - R-001
+  - pulse.usage
+  - domain.insight
+  - B-999
+  - src/pulse/usage.ts
+  - "concept:hook-safety"
+  - "schema:§5"`,
+      );
+      writeAtlas(
+        root,
+        'evidence/2026-09-15-usage.md',
+        `id: evidence.2026-09-15-usage
+title: Cortex usage
+date: 2026-09-15T00:00:00Z
+kind: measurement
+instrument: pulse.usage
+window:
+  from: 2026-09-01
+  to: 2026-09-15
+findings:
+  - metric: sessions
+    value: 41
+bears_on:
+  - pulse.usage`,
+      );
+
+      const after = await compile(root);
+      const bearsOn = after.edges.filter((e) => e.kind === 'bears_on');
+      const fromDecision = bearsOn.filter((e) => e.from === 'atlas:decision.2026-09-15-d').map((e) => e.to);
+      expect(fromDecision.sort()).toEqual(['atlas:domain.insight', 'rule:R-001', 'spec:pulse.usage']);
+      expect(bearsOn.filter((e) => e.from === 'atlas:evidence.2026-09-15-usage')).toEqual([
+        { from: 'atlas:evidence.2026-09-15-usage', to: 'spec:pulse.usage', kind: 'bears_on' },
+      ]);
+      expect(bearsOn).toHaveLength(4);
+      expect(after.counters.droppedRefs - before.counters.droppedRefs).toBe(1);
+      for (const e of after.edges) {
+        expect(e.to).not.toMatch(/usage\.ts|hook-safety|schema:/);
+      }
+      expect(after.groups.find((g) => g.id === 'atlas')?.children).toContainEqual({ id: 'atlas:evidence', label: 'evidence' });
+
+      // The emitted artefact still passes its own check (AC 1 holds with the new edge kind).
+      const report = await validate(root, { root });
+      expect(report.violations.filter((v) => v.check === 'check.constellation')).toEqual([]);
+    },
+    TEST_TIMEOUT,
+  );
+});
+
+// ===========================================================================
 // AC 9: Deterministic modulo timestamp
 // ===========================================================================
 

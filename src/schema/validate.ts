@@ -17,10 +17,12 @@ import { checkScenarios } from './checks/scenario.js';
 import { checkXrefSymmetry, checkXrefUnique, checkXrefAcyclic } from './checks/xref.js';
 import { checkProvenance } from './checks/provenance.js';
 import { checkBearsOn } from './checks/bears-on.js';
+import { checkEvidence } from './checks/evidence.js';
 import { checkHookConfig } from './checks/hooks.js';
 import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
 import { checkConstellation } from './checks/constellation.js';
+import { checkRecallIndex } from './checks/recall-index.js';
 import {
   checkInsightIndex,
   checkInsightEntry,
@@ -138,6 +140,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   // bears_on — the forward edge on the two gated carriers (§6, 3.4)
   allViolations.push(...await checkBearsOn(root, index, clauses));
   // 3.4 — batch 1 adds checkEvidence below this line; batch 2 adds checkRecallIndex after checkConstellation
+  allViolations.push(...await checkEvidence(root)); // atlas/evidence/ frontmatter (§4.3, 3.4) — tolerant of the directory being absent
 
   // Hook config check
   allViolations.push(...checkHookConfig(root, config));
@@ -150,6 +153,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
 
   // constellation.json check (§4.9 — only when the file exists)
   allViolations.push(...checkConstellation(root));
+  allViolations.push(...checkRecallIndex(root)); // recall-index.json (§4.11 — only when the file exists; 3.4)
 
   // Insight-module checks (§4.10 v3, §7.4) — each tolerant of an absent
   // insight/ module. v2's check.insight-prose / check.insight-ownership are

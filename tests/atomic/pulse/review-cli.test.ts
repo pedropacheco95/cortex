@@ -631,3 +631,122 @@ ${PAYLOAD}
     expect(target).toBe(PAYLOAD);
   });
 });
+
+// ---------------------------------------------------------------------------
+// atlas.evidence Rule 7 — evidence-candidate in the typed pulse gate (schema §4.5.1)
+// ---------------------------------------------------------------------------
+import {
+  SUGGESTION_TYPES,
+  CREATE_ONLY_TYPES,
+  isTargetPermitted,
+  permittedRoots,
+  permittedRootsLabel,
+} from '../../../src/pulse/types.js';
+
+describe('An evidence-candidate is gated like a decision-candidate (the types table)', () => {
+  it('evidence-candidate is the seventh type, create-only, permitted exactly under .cortex/atlas/evidence/', () => {
+    expect([...SUGGESTION_TYPES]).toHaveLength(7);
+    expect(SUGGESTION_TYPES).toContain('evidence-candidate');
+    expect([...CREATE_ONLY_TYPES]).toEqual(['evidence-candidate']);
+    expect(permittedRoots('evidence-candidate')).toEqual([{ kind: 'dir', prefix: '.cortex/atlas/evidence/' }]);
+    expect(permittedRootsLabel('evidence-candidate')).toBe('.cortex/atlas/evidence/');
+  });
+
+  it('isTargetPermitted truth table for evidence-candidate', () => {
+    const rows: [string, boolean][] = [
+      ['.cortex/atlas/evidence/2026-09-15-audit.md', true],
+      ['./.cortex/atlas/evidence/2026-09-15-audit.md', true],
+      ['.cortex/atlas/decisions/y.md', false],
+      ['.cortex/atlas/evidence.md', false],
+      ['.cortex/atlas/', false],
+      ['.cortex/compass/rules/R-001.md', false],
+      ['RULES.md', false],
+      ['.claude/skills/x/SKILL.md', false],
+    ];
+    for (const [target, expected] of rows) expect(isTargetPermitted('evidence-candidate', target), target).toBe(expected);
+    // the decision-candidate root stays what it was: the change is additive
+    expect(isTargetPermitted('decision-candidate', '.cortex/atlas/evidence/x.md')).toBe(false);
+  });
+});
+
+const EVIDENCE_REPORT_HEADER = `---
+kind: pulse-audit
+generated: 2026-09-15T00:00:00Z
+loop: cortex-loop-audit
+---
+
+# Audit
+
+`;
+
+const EVIDENCE_PAYLOAD = `---
+id: evidence.2026-09-15-audit
+title: "Validator audit"
+date: 2026-09-15T15:58:00.000Z
+kind: audit
+instrument: cortex validate
+window:
+  from: 2026-09-15
+  to: 2026-09-15
+findings:
+  - metric: violations
+    value: 0
+bears_on:
+  - R-001
+---
+
+Zero violations.
+`;
+
+function evidenceCandidate(id: string, target: string): string {
+  return `## ${id}: Validator audit count
+
+**Type:** evidence-candidate
+**Target:** ${target}
+
+**Proposed file:**
+
+\`\`\`
+${EVIDENCE_PAYLOAD}\`\`\`
+
+`;
+}
+
+describe('An evidence-candidate is gated like a decision-candidate (accept)', () => {
+  it('accept creates the file byte-exact and atlas/evidence/_index.md alongside it when the directory is absent', async () => {
+    const root = makeProject('evidence-accept', {
+      extra: { '.cortex/pulse/reports/audit.md': EVIDENCE_REPORT_HEADER + evidenceCandidate('S-031', '.cortex/atlas/evidence/2026-09-15-audit.md') },
+    });
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas'))).toBe(false);
+
+    const code = await pulseCli('pulse-accept', ['S-031'], root);
+    expect(code).toBe(0);
+    const target = path.join(root, '.cortex', 'atlas', 'evidence', '2026-09-15-audit.md');
+    // byte-exact to the fenced block — the lines between the fences, no trailing newline (the B-003 precedent)
+    expect(fs.readFileSync(target, 'utf-8')).toBe(EVIDENCE_PAYLOAD.replace(/\n$/, ''));
+    const index = fs.readFileSync(path.join(root, '.cortex', 'atlas', 'evidence', '_index.md'), 'utf-8');
+    expect(index).toMatch(/^# Evidence — index\n/);
+    expect(fs.readdirSync(path.join(root, '.cortex', 'atlas'))).toEqual(['evidence']);
+    expect(fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'audit.md'), 'utf-8')).toContain('**Status:** accepted');
+  });
+
+  it('accept never overwrites an existing evidence file, and refuses a target outside atlas/evidence/', async () => {
+    const root = makeProject('evidence-clobber', {
+      extra: {
+        '.cortex/pulse/reports/audit.md':
+          EVIDENCE_REPORT_HEADER +
+          evidenceCandidate('S-031', '.cortex/atlas/evidence/2026-09-15-audit.md') +
+          evidenceCandidate('S-032', '.cortex/atlas/decisions/2026-09-15-audit.md'),
+        '.cortex/atlas/evidence/_index.md': '# Evidence — index\n',
+        '.cortex/atlas/evidence/2026-09-15-audit.md': 'human-written\n',
+      },
+    });
+    const before = snapshotTree(root);
+    expect(await pulseCli('pulse-accept', ['S-031'], root)).toBe(1);
+    expect(stderr()).toContain('2026-09-15-audit.md');
+    expect(snapshotTree(root)).toEqual(before);
+    expect(await pulseCli('pulse-accept', ['S-032'], root)).toBe(1);
+    expect(stderr()).toContain('.cortex/atlas/evidence/');
+    expect(snapshotTree(root)).toEqual(before);
+  });
+});

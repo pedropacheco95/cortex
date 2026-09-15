@@ -680,6 +680,37 @@ describe('check.insight-observations', () => {
     expect(errors.some((e) => e.location.key === 'sessions' && e.message.includes('not a well-formed'))).toBe(true);
   });
 
+  it('bears_on (3.4) is shape-checked only: a list of non-empty strings passes even when nothing resolves', async () => {
+    const root = tmp('obs-bears-on-ok');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/_index.md', '# Observations\n\n**Read this when:** …\n\n**What\'s here:** scale.md\n');
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION.replace('salient: false\n', 'salient: false\nbears_on:\n  - R-999\n  - src/gone.ts\n  - "schema:§99"\n'));
+    const report = await validate(root, { root });
+    expect(report.violations.filter((v) => v.check === 'check.insight-observations')).toEqual([]);
+    expect(report.violations.filter((v) => v.check === 'check.bears-on')).toEqual([]);
+  });
+
+  it('bears_on (3.4): a scalar is one error at key bears_on, clause §4.10.11', async () => {
+    const root = tmp('obs-bears-on-scalar');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/_index.md', '# Observations\n\n**Read this when:** …\n\n**What\'s here:** scale.md\n');
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION.replace('salient: false\n', 'salient: false\nbears_on: x\n'));
+    const mine = await violationsFor(root, 'check.insight-observations');
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ severity: 'error', clause: '§4.10.11', location: { key: 'bears_on' } });
+  });
+
+  it('bears_on (3.4): an empty-string or non-string entry is an error at key bears_on; an absent key is not', async () => {
+    const root = tmp('obs-bears-on-entries');
+    makeInsightProject(root);
+    writeInsight(root, 'observations/_index.md', '# Observations\n\n**Read this when:** …\n\n**What\'s here:** scale.md, audience.md\n');
+    writeInsight(root, 'observations/scale.md', GOOD_OBSERVATION.replace('salient: false\n', 'salient: false\nbears_on:\n  - ""\n  - 7\n'));
+    writeInsight(root, 'observations/audience.md', GOOD_OBSERVATION);
+    const mine = await violationsFor(root, 'check.insight-observations');
+    expect(mine.length).toBeGreaterThanOrEqual(1);
+    expect(mine.every((v) => v.severity === 'error' && v.location.key === 'bears_on' && v.location.path.endsWith('scale.md'))).toBe(true);
+  });
+
   it('a present but empty observations/ directory (no entries yet) is clean', async () => {
     const root = tmp('obs-dir-no-entries');
     makeInsightProject(root);

@@ -68,7 +68,7 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
   it('.cortex/ matches the schema §1 layout with an _index.md in every directory', () => {
     const dirs = [
       '', 'compass', 'compass/bugs', 'compass/rules',
-      'atlas', 'atlas/stakeholders', 'atlas/decisions', 'atlas/domain', 'atlas/sources',
+      'atlas', 'atlas/stakeholders', 'atlas/decisions', 'atlas/domain', 'atlas/evidence', 'atlas/sources',
       'pulse', 'insight', 'archive',
     ];
     for (const d of dirs) {
@@ -84,6 +84,14 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
     expect(fs.existsSync(path.join(root, '.cortex', 'constellation.json'))).toBe(true);
     const doc = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'constellation.json'), 'utf-8'));
     expect(doc).toBeTypeOf('object');
+  });
+
+  it('the recall index is compiled directly by init, after the constellation (schema §4.11, 3.4)', () => {
+    const indexPath = path.join(root, '.cortex', 'recall-index.json');
+    expect(fs.existsSync(indexPath)).toBe(true);
+    const doc = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+    expect(Object.keys(doc)).toEqual(['schemaVersion', 'generated', 'subjects', 'entries', 'counters']);
+    expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('cortex.config.json declares the current schemaVersion', () => {
@@ -163,14 +171,16 @@ describe('AC4: gitignore additions are exact and idempotent', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('contains the four paths exactly once each, no anatomy line, and no bare .cortex/ line', () => {
+  it('contains the five paths exactly once each, no anatomy line, and no bare .cortex/ line; the evidence index and recall index exist', () => {
     const lines = fs.readFileSync(path.join(root, '.gitignore'), 'utf-8').split('\n').map((l) => l.trim());
-    for (const wanted of ['.cortex/atlas/sources/', '.cortex/pulse/', '.cortex/constellation.json', '.cortex/archive/documents/*/source.*']) {
+    for (const wanted of ['.cortex/atlas/sources/', '.cortex/pulse/', '.cortex/constellation.json', '.cortex/archive/documents/*/source.*', '.cortex/recall-index.json']) {
       expect(lines.filter((l) => l === wanted)).toHaveLength(1);
     }
     expect(lines).not.toContain('.cortex/');
     expect(lines).not.toContain('.cortex/anatomy/'); // retired at step 7
     expect(lines).toContain('node_modules/');
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas', 'evidence', '_index.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, '.cortex', 'recall-index.json'))).toBe(true);
   });
 });
 

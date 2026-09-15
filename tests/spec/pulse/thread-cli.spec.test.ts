@@ -14,12 +14,15 @@ import * as path from 'path';
 import matter from 'gray-matter';
 import { makeTmpDir, cleanTmp, snapshotTree } from '../../fixtures/init-harness.js';
 import { makeThread, threadCitation, readThreadRaw } from '../../fixtures/threads.js';
-import { seedThreads, readThread, seedBug, touchProjectFile, gatedFiles } from '../../fixtures/thread-cli.js';
+import { seedThreads, readThread, seedBug, touchProjectFile, gatedFiles, seedSessionRecord, seedSpecFile } from '../../fixtures/thread-cli.js';
 import { threadCli, DRAFT_LINE_PREFIX } from '../../../src/pulse/thread-cli.js';
 import { buildIndex } from '../../../src/schema/index-build.js';
+import { loadClauseIndex } from '../../../src/schema/clauses.js';
 import { checkAtlas } from '../../../src/schema/checks/atlas.js';
 import { checkBugs } from '../../../src/schema/checks/compass.js';
 import { checkProvenance } from '../../../src/schema/checks/provenance.js';
+import { checkBearsOn } from '../../../src/schema/checks/bears-on.js';
+import { checkEvidence } from '../../../src/schema/checks/evidence.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -59,7 +62,13 @@ function decisionsDir(root: string): string {
 
 async function gatedErrors(root: string): Promise<string[]> {
   const index = await buildIndex(root);
-  const violations = [...(await checkAtlas(root, index)), ...checkBugs(root, index), ...(await checkProvenance(root))];
+  const violations = [
+    ...(await checkAtlas(root, index)),
+    ...checkBugs(root, index),
+    ...(await checkProvenance(root)),
+    ...(await checkBearsOn(root, index, loadClauseIndex(root))),
+    ...(await checkEvidence(root)),
+  ];
   return violations.filter((v) => v.severity === 'error').map((v) => `${v.check}: ${v.message}`);
 }
 
@@ -70,6 +79,7 @@ async function gatedErrors(root: string): Promise<string[]> {
 describe('Promote to a decision drafts a schema-valid file', () => {
   it('writes the §4.3 decision with INFERRED confidence and the trail as provenance, then answers the thread', async () => {
     const root = tmp('decision');
+    seedSpecFile(root, '.specflow/specs/pulse/usage.spec.md', 'pulse.usage'); // the thread's bears_on must resolve once the draft carries it (3.4)
     const s1 = threadCitation('s1', USER);
     const s2 = threadCitation('s2', USER);
     const body = '2 insight invocations over 55 sessions\n**Kind:** measurement\n**Source:** tag';
@@ -226,16 +236,22 @@ describe('Promote to a bug requires a type and resolvable `affects`', () => {
 // Rules 10 + 12 — refusals, reserved target, no clobber, terminal state
 // ---------------------------------------------------------------------------
 
-describe('Promote refuses the reserved and unknown targets, and never clobbers', () => {
-  it('atlas/evidence and compass/rules exit 2 untouched; decisions succeeds once and then exits 1 on the existing target', async () => {
+describe('Promote refuses unknown targets, and never clobbers', () => {
+  it('compass/rules exits 2; atlas/evidence on a question thread exits 2 naming the kind; decisions succeeds once and then exits 1 on the existing target', async () => {
     const root = tmp('refusals');
     seedThreads(root, [makeThread({ id: 'T-009', body: 'Keep the counter under state/' })]);
 
     const before = snapshotTree(root);
-    expect(await threadCli(['promote', 'T-009', '--to', 'atlas/evidence'], root, { now: NOW })).toBe(2);
-    expect(stderr()).toMatch(/step 2/);
-    expect(stderr()).toMatch(/atlas\/evidence/);
+    expect(await threadCli(['promote', 'T-009', '--to', 'compass/rules'], root, { now: NOW })).toBe(2);
+    expect(stderr()).toMatch(/--to/);
     expect(snapshotTree(root)).toEqual(before);
+    err = [];
+
+    expect(await threadCli(['promote', 'T-009', '--to', 'atlas/evidence', '--finding', 'x=1'], root, { now: NOW })).toBe(2);
+    expect(stderr()).toMatch(/question/);
+    expect(stderr()).not.toMatch(/reserved/);
+    expect(snapshotTree(root)).toEqual(before);
+    expect(readThread(root, 'T-009')?.status).toBe('open');
     err = [];
 
     expect(await threadCli(['promote', 'T-009', '--to', 'compass/rules'], root, { now: NOW })).toBe(2);
@@ -334,5 +350,101 @@ describe('Rule 11 — `cortex thread` is dispatched by the CLI entry under the p
     expect(await run(['thread', 'close', 'T-001'])).toBe(2);
     expect(await run(['thread', 'close', 'T-001', '--by', 'RULES.md'])).toBe(0);
     expect(readThread(root, 'T-001')?.resolved_by).toBe('RULES.md');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 12 (3.4) — promote to evidence (atlas.evidence Rule 6)
+// ---------------------------------------------------------------------------
+
+describe('Promote to evidence drafts a schema-valid file from a measurement finding', () => {
+  it('T-007 (finding, measurement, two cited sessions with records) → the §4.3 evidence file, the thread answered, every gated check clean', async () => {
+    const root = tmp('evidence');
+    seedSpecFile(root, '.specflow/specs/pulse/usage.spec.md', 'pulse.usage');
+    const s1 = threadCitation('s1', USER);
+    const s2 = threadCitation('s2', USER);
+    seedSessionRecord(root, 's1', '2026-09-10T08:00:00.000Z', USER);
+    seedSessionRecord(root, 's2', '2026-09-14T20:00:00.000Z', USER);
+    const body = '2 insight invocations over 55 sessions\n**Kind:** measurement\n**Source:** tag';
+    seedThreads(root, [
+      makeThread({
+        id: 'T-007',
+        kind: 'finding',
+        session: s1,
+        sessions: [s1, s2],
+        bears_on: ['pulse.usage', '.specflow/specs/pulse/usage.spec.md'],
+        body,
+      }),
+    ]);
+
+    expect(
+      await threadCli(['promote', 'T-007', '--to', 'atlas/evidence', '--finding', 'insight.invocations=2', '--finding', 'sessions=55'], root, { now: NOW, user: USER }),
+    ).toBe(0);
+
+    const targetRel = '.cortex/atlas/evidence/2026-09-15-2-insight-invocations-over-55-sessions.md';
+    const target = path.join(root, targetRel);
+    expect(fs.existsSync(target)).toBe(true);
+    expect(stdout()).toContain(targetRel);
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas', 'evidence', '_index.md'))).toBe(true);
+
+    const raw = fs.readFileSync(target, 'utf-8');
+    const parsed = matter(raw);
+    const data = parsed.data as Record<string, unknown>;
+    expect(data['id']).toBe('evidence.2026-09-15-2-insight-invocations-over-55-sessions');
+    expect(data['title']).toBe('2 insight invocations over 55 sessions');
+    expect(raw).toMatch(/\ntitle: "2 insight invocations over 55 sessions"\ndate: 2026-09-15T12:00:00\.000Z\nkind: measurement\ninstrument: session\nwindow:\n/);
+    expect(data['kind']).toBe('measurement');
+    expect(data['instrument']).toBe('session');
+    expect(data['window']).toEqual({ from: new Date('2026-09-10T08:00:00.000Z'), to: new Date('2026-09-14T20:00:00.000Z'), sessions: 2 });
+    expect(data['findings']).toEqual([
+      { metric: 'insight.invocations', value: 2 },
+      { metric: 'sessions', value: 55 },
+    ]);
+    expect(data['bears_on']).toEqual(['pulse.usage', '.specflow/specs/pulse/usage.spec.md']);
+    expect(data['provenance']).toEqual([{ derives_from: s1 }, { derives_from: s2 }]);
+    expect('supersedes' in data).toBe(false);
+
+    const draftLine = `${DRAFT_LINE_PREFIX} T-007 by \`cortex thread promote\`; review before relying on it.`;
+    expect(parsed.content.replace(/^\n/, '')).toBe(`${draftLine}\n\n${body}\n`);
+
+    const t = readThread(root, 'T-007');
+    expect(t?.status).toBe('answered');
+    expect(t?.resolved_by).toBe(targetRel);
+    expect(t?.answered).toBe('2026-09-15T12:00:00.000Z');
+    expect(t?.body).toBe(body);
+
+    expect(await gatedErrors(root)).toEqual([]);
+
+    // No clobber on a second promote of a same-keyed thread the same day.
+    seedThreads(root, [makeThread({ id: 'T-012', kind: 'finding', session: s1, sessions: [s1], bears_on: ['pulse.usage'], body })]);
+    const after = snapshotTree(root);
+    expect(await threadCli(['promote', 'T-012', '--to', 'atlas/evidence', '--finding', 'x=1'], root, { now: NOW, user: USER })).toBe(1);
+    expect(stderr()).toMatch(/2026-09-15-2-insight-invocations-over-55-sessions\.md/);
+    expect(snapshotTree(root)).toEqual(after);
+    expect(readThread(root, 'T-012')?.status).toBe('open');
+  });
+
+  it('the four refusals of the AC leave threads and filesystem unchanged and name the kind, --finding, or --bears-on', async () => {
+    const root = tmp('evidence-refusals');
+    seedThreads(root, [
+      makeThread({ id: 'T-008', kind: 'question', body: 'Should the counter live under state/?' }),
+      makeThread({ id: 'T-009', kind: 'finding', body: 'Hygiene never expires unparseable threads\n**Kind:** conclusion\n**Source:** lexicon' }),
+      makeThread({ id: 'T-010', kind: 'finding', body: 'Two invocations\n**Kind:** measurement\n**Source:** tag', bears_on: [] }),
+    ]);
+    const before = snapshotTree(root);
+    const runs: [string[], RegExp][] = [
+      [['T-008', '--to', 'atlas/evidence', '--finding', 'x=1'], /question/],
+      [['T-009', '--to', 'atlas/evidence', '--finding', 'x=1'], /conclusion/],
+      [['T-010', '--to', 'atlas/evidence'], /--finding/],
+      [['T-010', '--to', 'atlas/evidence', '--finding', 'x=1'], /--bears-on/],
+    ];
+    for (const [argv, pattern] of runs) {
+      err = [];
+      expect(await threadCli(['promote', ...argv], root, { now: NOW, user: USER })).toBe(2);
+      expect(stderr()).toMatch(pattern);
+      expect(snapshotTree(root)).toEqual(before);
+    }
+    for (const id of ['T-008', 'T-009', 'T-010']) expect(readThread(root, id)?.status).toBe('open');
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas'))).toBe(false);
   });
 });

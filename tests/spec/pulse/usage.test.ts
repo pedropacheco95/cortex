@@ -113,3 +113,69 @@ describe('pulse.usage — Rules 8–11 land in the written report', () => {
     expect(body).toMatch(/Pointer follow-through: not measurable/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 12 — `--record` writes the evidence file from the same counts (atlas.evidence Rule 5)
+// ---------------------------------------------------------------------------
+import { validate } from '../../../src/schema/validate.js';
+import { evidenceProject, evidenceHome } from '../../fixtures/evidence.js';
+import { grep } from '../../fixtures/sessions.js';
+
+describe('`usage --record` writes evidence from the same counts as the report', () => {
+  it('41 sessions (2026-07-01 to 2026-09-15): the report as before, plus a check.evidence-valid file whose body equals the report body', async () => {
+    const root = evidenceProject('record');
+    const home = evidenceHome('record');
+    const NOW = new Date('2026-09-15T15:58:00.000Z');
+    const first = new Date('2026-07-01T12:00:00.000Z');
+    const last = new Date('2026-09-15T12:00:00.000Z');
+    const knowledgeSearches = Array.from({ length: 54 }, () => grep('hooks', '.cortex/compass/'));
+    writeSessionTranscript(home, root, 's01', [toolTurn(bash('cortex insight file src/a.ts'), bash('cortex insight file src/b.ts'), ...knowledgeSearches)], first);
+    for (let i = 2; i <= 40; i++) {
+      const mtime = new Date(first.getTime() + ((last.getTime() - first.getTime()) * (i - 1)) / 40);
+      writeSessionTranscript(home, root, `s${String(i).padStart(2, '0')}`, [toolTurn(read('src/a.ts'))], mtime);
+    }
+    writeSessionTranscript(home, root, 's41', [toolTurn(read('src/a.ts'))], last);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const code = await runUsage(root, { home, now: NOW, record: true });
+    vi.restoreAllMocks();
+    expect(code).toBe(0);
+
+    const reportRaw = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'reports', 'usage.md'), 'utf-8');
+    expect((matter(reportRaw).data as Record<string, unknown>)['kind']).toBe('pulse-usage');
+    expect(reportRaw).toMatch(/41 sessions, 2026-07-01 to 2026-09-15/);
+
+    const target = path.join(root, '.cortex', 'atlas', 'evidence', '2026-09-15-usage.md');
+    expect(fs.existsSync(target)).toBe(true);
+    const evidenceRaw = fs.readFileSync(target, 'utf-8');
+    const parsed = matter(evidenceRaw);
+    const data = parsed.data as Record<string, unknown>;
+    expect(data['id']).toBe('evidence.2026-09-15-usage');
+    expect(data['title']).toBe('Cortex usage over 41 sessions (2026-07-01 to 2026-09-15)');
+    expect(data['kind']).toBe('measurement');
+    expect(data['instrument']).toBe('pulse.usage');
+    expect(data['window']).toEqual({ from: new Date('2026-07-01T00:00:00Z'), to: new Date('2026-09-15T00:00:00Z'), sessions: 41 });
+    const findings = data['findings'] as { metric: string; value: unknown; unit?: string }[];
+    expect(findings.map((f) => f.metric)).toEqual([
+      'searches.knowledge', 'searches.machinery', 'searches.document', 'searches.other',
+      'insight.file',
+      'recall.recall', 'recall.why', 'reads.atlas-decisions', 'reads.pulse-threads',
+      'pointers.fired', 'pointers.followed', 'questions.before-consult',
+    ]);
+    expect(findings).toContainEqual({ metric: 'searches.knowledge', value: 54 });
+    expect(findings).toContainEqual({ metric: 'insight.file', value: 2, unit: 'invocations' });
+    expect(findings).toContainEqual({ metric: 'reads.atlas-decisions', value: 0 });
+    expect('supersedes' in data).toBe(false);
+    expect(data['bears_on']).toEqual(['schema:§5', 'pulse.usage']);
+    expect(parsed.content.trim()).toBe(matter(reportRaw).content.trim());
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas', 'evidence', '_index.md'))).toBe(true);
+
+    const report = await validate(root);
+    expect(report.violations.filter((v) => v.severity === 'error').map((v) => `${v.check}: ${v.message}`)).toEqual([]);
+
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+});
+
+import { vi } from 'vitest';

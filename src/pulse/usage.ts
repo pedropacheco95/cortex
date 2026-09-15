@@ -18,9 +18,17 @@
  * module never interprets its own numbers and emits no recommendation — what
  * the figures mean is the reader's judgment, not this command's (Rule 5).
  */
+import * as fs from 'fs';
 import * as path from 'path';
 import { listSessions, readSessionFile, type SessionEntry } from '../sessions/read.js';
 import { writePulseReport } from '../loops/report.js';
+import {
+  ensureEvidenceDir,
+  evidenceFilePayload,
+  latestEvidenceMatching,
+  type EvidenceFields,
+  type EvidenceFinding,
+} from '../atlas/evidence.js';
 
 /** Paths under these prefixes are loops reading their own state, not orientation (Rule 3). */
 const MACHINERY_PREFIXES = ['.cortex/pulse/state/', '.cortex/pulse/reports/'];
@@ -517,21 +525,109 @@ export function renderUsageBody(counts: UsageCounts): string {
   ].join('\n');
 }
 
+// ---------------------------------------------------------------------------
+// Rule 12 / atlas.evidence Rule 5 — `--record`
+// ---------------------------------------------------------------------------
+
+/** The evidence slug `--record` writes under: `atlas/evidence/<today>-usage.md`. */
+const USAGE_EVIDENCE_SLUG = 'usage';
+
+/** What the usage figures are about (schema §6): the hooks clause and this verb's spec. */
+const USAGE_BEARS_ON = ['schema:§5', 'pulse.usage'];
+
+/**
+ * The report figures as typed findings, in the fixed order `atlas.evidence`
+ * Rule 5 pins: searches by bucket, one `insight.<verb>` per verb seen
+ * (sorted, `unit: invocations`), recall, the tracked reads, pointers, and
+ * questions. `unit` is omitted where the metric name already says it.
+ */
+export function usageFindings(counts: UsageCounts): EvidenceFinding[] {
+  const findings: EvidenceFinding[] = [
+    { metric: 'searches.knowledge', value: counts.searchesByTarget.knowledge },
+    { metric: 'searches.machinery', value: counts.searchesByTarget.machinery },
+    { metric: 'searches.document', value: counts.searchesByTarget.document },
+    { metric: 'searches.other', value: counts.searchesByTarget.other },
+  ];
+  for (const verb of Object.keys(counts.insightVerbs).sort()) {
+    findings.push({ metric: `insight.${verb}`, value: counts.insightVerbs[verb] ?? 0, unit: 'invocations' });
+  }
+  for (const command of RECALL_COMMANDS) findings.push({ metric: `recall.${command}`, value: counts.recallVerbs[command] ?? 0 });
+  for (const subdir of TRACKED_SUBDIRS) findings.push({ metric: `reads.${subdir.replace('/', '-')}`, value: counts.readsBySubdir[subdir] ?? 0 });
+  findings.push(
+    { metric: 'pointers.fired', value: counts.pointersFired },
+    { metric: 'pointers.followed', value: counts.pointersFollowed },
+    { metric: 'questions.before-consult', value: counts.questionSessionsWithoutConsult },
+  );
+  return findings;
+}
+
+/**
+ * The evidence fields for a recording of `counts` at `now`: the Rule 7 window
+ * with the session count as denominator, the findings above, the fixed
+ * `bears_on`, `supersedes` the previous `*-usage.md` when one is named, and
+ * the report body verbatim as narrative. Requires readable counts.
+ */
+export function usageEvidenceFields(counts: UsageCounts, now: Date, previous?: string): EvidenceFields {
+  const from = counts.windowStart ?? now.toISOString().slice(0, 10);
+  const to = counts.windowEnd ?? now.toISOString().slice(0, 10);
+  return {
+    slug: USAGE_EVIDENCE_SLUG,
+    title: `Cortex usage over ${counts.sessions} sessions (${from} to ${to})`,
+    kind: 'measurement',
+    instrument: 'pulse.usage',
+    window: { from, to, sessions: counts.sessions },
+    findings: usageFindings(counts),
+    bearsOn: [...USAGE_BEARS_ON],
+    supersedes: previous === undefined ? [] : [previous],
+    body: renderUsageBody(counts),
+  };
+}
+
+/**
+ * Write the evidence file for `counts` (Rule 12). Refusals — exit 1, nothing
+ * under `atlas/`: the counts are not readable (evidence of nothing is not
+ * evidence); today's file already exists (one recording per day; delete it to
+ * re-record). Otherwise `atlas/evidence/` and its `_index.md` are ensured,
+ * the file is written, and its path printed.
+ */
+function recordUsageEvidence(root: string, counts: UsageCounts, now: Date): number {
+  if (!counts.readable) {
+    console.error('cortex usage --record: nothing measurable — no evidence written');
+    return 1;
+  }
+  const previous = latestEvidenceMatching(root, USAGE_EVIDENCE_SLUG);
+  const { targetRel, payload } = evidenceFilePayload(usageEvidenceFields(counts, now, previous), now);
+  const targetAbs = path.join(root, ...targetRel.split('/'));
+  if (fs.existsSync(targetAbs)) {
+    console.error(`cortex usage --record: ${targetRel} already exists — one recording per day; delete it to re-record. Nothing written.`);
+    return 1;
+  }
+  ensureEvidenceDir(root);
+  fs.writeFileSync(targetAbs, payload, 'utf-8');
+  console.log(`cortex usage --record: wrote ${targetRel}`);
+  return 0;
+}
+
 /**
  * Write `.cortex/pulse/reports/usage.md`. Always-write (schema §4.5), through
  * the shared pulse report writer so the header shape matches every other loop.
+ * With `record`, then write the same counts as a gated evidence file
+ * (Rule 12; `atlas.evidence` Rule 5) — the report is written first and
+ * regardless; the recording's refusals are its own exit code.
  */
-export async function runUsage(root: string, opts: CollectOptions & { now?: Date } = {}): Promise<number> {
+export async function runUsage(root: string, opts: CollectOptions & { now?: Date; record?: boolean } = {}): Promise<number> {
   const counts = collectUsage(root, opts);
-  const generated = (opts.now ?? new Date()).toISOString();
+  const now = opts.now ?? new Date();
+  const generated = now.toISOString();
+  const absRoot = path.resolve(root);
   const file = writePulseReport(
-    path.resolve(root),
+    absRoot,
     'usage.md',
     'pulse-usage',
     'usage',
     generated,
     renderUsageBody(counts),
   );
-  console.log(`cortex usage: wrote ${path.relative(path.resolve(root), file)}`);
-  return 0;
+  console.log(`cortex usage: wrote ${path.relative(absRoot, file)}`);
+  return opts.record === true ? recordUsageEvidence(absRoot, counts, now) : 0;
 }

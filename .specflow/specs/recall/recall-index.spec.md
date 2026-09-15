@@ -1,6 +1,6 @@
 ---
 id: recall.recall-index
-status: draft
+status: implemented
 depends_on:
   - schema.bears-on
   - schema.schema-clauses
@@ -214,7 +214,7 @@ Nothing reads it at 3.4; this step ships the file so there is something to read.
 - **Given** a decision titled `Insight's pull-only stance is widened to permit concept names at
   SessionStart` with `bears_on: [schema:§5]` and a 400-word body
 - **When** the index is compiled
-- **Then** its `keywords` are exactly `["concept", "insight", "names", "permit", "pull",
+- **Then** its `keywords` are exactly `["concept", "insight", "names", "only", "permit", "pull",
   "schema:§5", "sessionstart", "stance", "widened"]` and no token from the body appears
 
 ### Dependencies are not closed over

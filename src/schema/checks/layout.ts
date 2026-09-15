@@ -37,6 +37,7 @@ export function checkLayout(root: string): Violation[] {
     'atlas/decisions',
     'atlas/stakeholders',
     'atlas/domain',
+    'atlas/evidence', // 3.4 — present-tolerant like the rest; its _index.md required when it exists
   ];
   for (const sub of subDirs) {
     const subPath = path.join(cortexDir, sub);

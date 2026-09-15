@@ -18,12 +18,22 @@
  * `governs:` globs and scenario `covers:` no longer produce edges — a glob
  * references paths (not nodes) and scenario specs are not a node kind, so
  * neither emission counts as a dropped ref (§4.9: `spec_links` removed).
+ *
+ * Edge kinds (§6, one per producing field): `implements`, `depends_on`,
+ * `governed_by`, `source`, `related_specs`, `compass_rules`, `supersedes`,
+ * `sources`, and — new at 3.4 (Rule 10) — `bears_on`, the forward edge from
+ * an atlas decision or evidence node to the node its ref names (rule → `rule:`,
+ * bug → `bug:`, domain term → `atlas:`, id → `spec:`/`business:`/`atlas:`);
+ * the path, `concept:` and `schema:` shapes name things that are not nodes and,
+ * like `governs` globs, emit no edge and count no dropped ref. Threads and
+ * observations are ungated and never enter the constellation.
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
 import { specsRoot, businessRoot, SPECS_GLOB, BUSINESS_GLOB } from '../paths.js';
+import { classifyRef } from '../schema/refs.js';
 
 export interface ConstellationGroupChild {
   id: string;
@@ -357,6 +367,35 @@ export async function assembleConstellation(root: string): Promise<Constellation
     }
     for (const id of toStringList(artefact.data['related_specs'])) {
       addEdge(artefact.nodeId, specIdToNode(id), 'related_specs');
+    }
+    // bears_on (§4.9, §6; Rule 10, new at 3.4): decisions and evidence only.
+    // Classified by shape (schema.bears-on Rule 1); only node-shaped refs
+    // emit — path / concept / clause are `continue`d, uncounted, like globs.
+    if (artefact.nodeId.startsWith('atlas:decision.') || artefact.nodeId.startsWith('atlas:evidence.')) {
+      for (const ref of toStringList(artefact.data['bears_on'])) {
+        switch (classifyRef(ref)) {
+          case 'rule':
+            addEdge(artefact.nodeId, `rule:${ref}`, 'bears_on');
+            break;
+          case 'bug':
+            addEdge(artefact.nodeId, `bug:${ref}`, 'bears_on');
+            break;
+          case 'domain':
+            addEdge(artefact.nodeId, `atlas:${ref}`, 'bears_on');
+            break;
+          case 'id':
+            // the related_specs resolution first, then any other indexed atlas id;
+            // an id whose node was not emitted is dropped and counted (Rule 6).
+            addEdge(
+              artefact.nodeId,
+              specIdToNode(ref) ?? (nodeIds.has(`atlas:${ref}`) ? `atlas:${ref}` : undefined),
+              'bears_on',
+            );
+            break;
+          default:
+            continue; // path / concept / clause — not nodes, not dropped refs
+        }
+      }
     }
   }
 

@@ -281,3 +281,117 @@ describe('Only pulse is written outside `promote`', () => {
     for (const k of changed) expect(k.startsWith(path.join('.cortex', 'pulse') + path.sep)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// atlas.evidence Rule 6 — `thread promote --to atlas/evidence` (grammar and refusals)
+// ---------------------------------------------------------------------------
+import matter from 'gray-matter';
+import { seedSessionRecord } from '../../fixtures/thread-cli.js';
+
+const MEASUREMENT = '2 insight invocations over 55 sessions\n**Kind:** measurement\n**Source:** tag';
+
+function seedEvidenceThreads(root: string): void {
+  seedThreads(root, [
+    makeThread({ id: 'T-008', kind: 'question', body: 'Should the counter live under state/?' }),
+    makeThread({ id: 'T-009', kind: 'finding', body: 'Hygiene never expires unparseable threads\n**Kind:** conclusion\n**Source:** lexicon', bears_on: ['pulse.usage'] }),
+    makeThread({ id: 'T-010', kind: 'finding', body: MEASUREMENT, bears_on: [] }),
+    makeThread({ id: 'T-011', kind: 'finding', body: MEASUREMENT, bears_on: ['pulse.usage'], session: threadCitation('s1'), sessions: [threadCitation('s1'), threadCitation('s2')] }),
+  ]);
+}
+
+async function refused(root: string, argv: string[], pattern: RegExp): Promise<void> {
+  const before = snapshotTree(root);
+  err = [];
+  expect(await threadCli(['promote', ...argv], root, { now: NOW })).toBe(2);
+  expect(stderr()).toMatch(pattern);
+  expect(snapshotTree(root)).toEqual(before);
+}
+
+describe('Promote to evidence refuses the wrong kind and demands findings', () => {
+  it('a question thread and a conclusion finding exit 2 naming the kind; nothing written, threads stay open', async () => {
+    const root = tmp('evidence-kind');
+    seedEvidenceThreads(root);
+    await refused(root, ['T-008', '--to', 'atlas/evidence', '--finding', 'x=1'], /question/);
+    await refused(root, ['T-009', '--to', 'atlas/evidence', '--finding', 'x=1'], /conclusion/);
+    expect(readThread(root, 'T-008')?.status).toBe('open');
+    expect(readThread(root, 'T-009')?.status).toBe('open');
+  });
+
+  it('no --finding exits 2 naming --finding; a malformed --finding (no `=`) too', async () => {
+    const root = tmp('evidence-finding');
+    seedEvidenceThreads(root);
+    await refused(root, ['T-010', '--to', 'atlas/evidence'], /--finding/);
+    await refused(root, ['T-011', '--to', 'atlas/evidence', '--finding', 'nope'], /--finding/);
+    await refused(root, ['T-011', '--to', 'atlas/evidence', '--finding', '=1'], /--finding/);
+    expect(readThread(root, 'T-011')?.status).toBe('open');
+  });
+
+  it('an empty resulting bears_on exits 2 naming --bears-on', async () => {
+    const root = tmp('evidence-bears-on');
+    seedEvidenceThreads(root);
+    await refused(root, ['T-010', '--to', 'atlas/evidence', '--finding', 'x=1'], /--bears-on/);
+    await refused(root, ['T-011', '--to', 'atlas/evidence', '--finding', 'x=1', '--bears-on'], /--bears-on/);
+    expect(readThread(root, 'T-010')?.status).toBe('open');
+  });
+
+  it('--finding and --bears-on are usage errors with any other --to; --type and --affects are usage errors with atlas/evidence', async () => {
+    const root = tmp('evidence-flags');
+    seedEvidenceThreads(root);
+    await refused(root, ['T-011', '--to', 'atlas/decisions', '--finding', 'x=1'], /--finding/);
+    await refused(root, ['T-011', '--to', 'compass/bugs', '--type', 'test-defect', '--bears-on', 'pulse.usage'], /--bears-on/);
+    await refused(root, ['T-011', '--to', 'atlas/evidence', '--finding', 'x=1', '--type', 'test-defect'], /--type/);
+    await refused(root, ['T-011', '--to', 'atlas/evidence', '--finding', 'x=1', '--affects', 'src/x.ts'], /--affects/);
+    await refused(root, ['T-011'], /atlas\/evidence/);
+  });
+});
+
+describe('Promote to evidence drafts from the flags and the trail', () => {
+  it('--bears-on replaces the thread list; a numeric value is stored as a number, others as strings; the window falls back to `opened` without session records', async () => {
+    const root = tmp('evidence-draft');
+    seedEvidenceThreads(root);
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'x.ts'), '', 'utf-8');
+
+    expect(
+      await threadCli(
+        ['promote', 'T-011', '--to', 'atlas/evidence', '--finding', 'rate=0.5', '--finding', 'label=abc', '--finding', 'n=12', '--bears-on', 'src/x.ts', '--bears-on', 'R-001'],
+        root,
+        { now: NOW },
+      ),
+    ).toBe(0);
+
+    const target = path.join(root, '.cortex', 'atlas', 'evidence', '2026-09-16-2-insight-invocations-over-55-sessions.md');
+    expect(fs.existsSync(target)).toBe(true);
+    const data = matter(fs.readFileSync(target, 'utf-8')).data as Record<string, unknown>;
+    expect(data['findings']).toEqual([
+      { metric: 'rate', value: 0.5 },
+      { metric: 'label', value: 'abc' },
+      { metric: 'n', value: 12 },
+    ]);
+    expect(data['bears_on']).toEqual(['src/x.ts', 'R-001']);
+    expect(data['window']).toEqual({ from: new Date('2026-09-15T10:00:00.000Z'), to: new Date('2026-09-15T10:00:00.000Z'), sessions: 2 });
+    expect(data['instrument']).toBe('session');
+    expect(data['kind']).toBe('measurement');
+    expect(fs.existsSync(path.join(root, '.cortex', 'atlas', 'evidence', '_index.md'))).toBe(true);
+    expect(readThread(root, 'T-011')?.resolved_by).toBe('.cortex/atlas/evidence/2026-09-16-2-insight-invocations-over-55-sessions.md');
+  });
+
+  it('the window spans the opener record\'s `ended` to the last record\'s `ended` when both exist; one missing record falls back to `opened` for that end', async () => {
+    const root = tmp('evidence-window');
+    seedEvidenceThreads(root);
+    seedSessionRecord(root, 's1', '2026-09-10T08:00:00.000Z');
+    seedSessionRecord(root, 's2', '2026-09-14T20:00:00.000Z');
+    expect(await threadCli(['promote', 'T-011', '--to', 'atlas/evidence', '--finding', 'x=1'], root, { now: NOW })).toBe(0);
+    const [file] = fs.readdirSync(path.join(root, '.cortex', 'atlas', 'evidence')).filter((f) => f !== '_index.md');
+    const data = matter(fs.readFileSync(path.join(root, '.cortex', 'atlas', 'evidence', file as string), 'utf-8')).data as Record<string, unknown>;
+    expect(data['window']).toEqual({ from: new Date('2026-09-10T08:00:00.000Z'), to: new Date('2026-09-14T20:00:00.000Z'), sessions: 2 });
+
+    const root2 = tmp('evidence-window-partial');
+    seedEvidenceThreads(root2);
+    seedSessionRecord(root2, 's2', '2026-09-14T20:00:00.000Z');
+    expect(await threadCli(['promote', 'T-011', '--to', 'atlas/evidence', '--finding', 'x=1'], root2, { now: NOW })).toBe(0);
+    const [file2] = fs.readdirSync(path.join(root2, '.cortex', 'atlas', 'evidence')).filter((f) => f !== '_index.md');
+    const data2 = matter(fs.readFileSync(path.join(root2, '.cortex', 'atlas', 'evidence', file2 as string), 'utf-8')).data as Record<string, unknown>;
+    expect(data2['window']).toEqual({ from: new Date('2026-09-15T10:00:00.000Z'), to: new Date('2026-09-14T20:00:00.000Z'), sessions: 2 });
+  });
+});

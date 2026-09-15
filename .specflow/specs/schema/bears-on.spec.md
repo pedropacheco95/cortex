@@ -1,6 +1,6 @@
 ---
 id: schema.bears-on
-status: draft
+status: implemented
 depends_on:
   - schema.validator
   - schema.schema-clauses

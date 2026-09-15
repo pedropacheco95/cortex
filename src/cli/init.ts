@@ -546,6 +546,10 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   // curated constellation directly so the renderer works day-1.
   const { compile } = await import('../constellation/compile.js');
   await compile(absRoot);
+  // Recall index (schema §4.11, 3.4): compiled after the constellation so a
+  // fresh project has both regenerable files on day one (core-cli.init Rule 2).
+  const { writeRecallIndex } = await import('../recall/index.js');
+  await writeRecallIndex(absRoot);
 
   // Rule 10 — CLAUDE.md managed block.
   const claudeMdState = upsertClaudeMd(absRoot);

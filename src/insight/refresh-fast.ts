@@ -7,7 +7,9 @@
  * comment-only / whitespace / import-reordering changes are ruled out), and
  * flags the survivors into `.cortex/pulse/state/insight-refresh-worklist.json` for
  * the daily loop. `ledger.json` is NOT updated here — that happens only on a
- * successful re-extraction (daily apply).
+ * successful re-extraction (daily apply). Since 3.4 it also rebuilds the
+ * recall index (`.cortex/recall-index.json`, schema §4.11) before its ledger
+ * gate, whenever `.cortex/` exists (spec Rule 9).
  *
  * Hook-safe: every failure degrades to exit 0 with a `pulse/hook-errors.md`
  * entry; an unextracted project (no ledger) and a non-repo are silent no-ops.
@@ -195,6 +197,21 @@ export async function runInsightRefreshFast(root = '.', opts: RefreshFastOptions
   const absRoot = path.resolve(root);
   const now = opts.now ?? new Date();
   try {
+    // 3.4 (spec Rule 9; recall.recall-index Rule 11): rebuild the recall
+    // index BEFORE the ledger gate, so a project that has never run an
+    // extraction still gets a fresh `.cortex/recall-index.json` on every
+    // commit — only when `.cortex/` exists (a non-Cortex repo stays
+    // untouched). Pure file I/O; a failure is one hook-errors entry and the
+    // tier carries on to its own work.
+    if (fs.existsSync(path.join(absRoot, '.cortex'))) {
+      try {
+        const { writeRecallIndex } = await import('../recall/index.js');
+        await writeRecallIndex(absRoot);
+      } catch (err) {
+        appendHookError(absRoot, { hook: HOOK_NAME, file: '.cortex/recall-index.json', failure: (err as Error).message }, now);
+      }
+    }
+
     // Unextracted project (no ledger) → silent no-op: there is nothing to
     // keep fresh until cortex-extract-insight has run.
     const ledger = readLedger(absRoot);

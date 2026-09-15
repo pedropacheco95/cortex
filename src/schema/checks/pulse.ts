@@ -24,6 +24,7 @@ import type { Violation } from '../types.js';
 import {
   SUGGESTION_TYPES,
   PAYLOAD_SHAPES,
+  CREATE_ONLY_TYPES,
   isTargetPermitted,
   permittedRootsLabel,
   type SuggestionType,
@@ -153,6 +154,10 @@ export async function checkPulse(root: string): Promise<Violation[]> {
               ? `${section.id}: no payload shape (expected exactly one of ${PAYLOAD_SHAPES.join(', ')})`
               : `${section.id}: ${shapesPresent.length} payload shapes present (${shapesPresent.join(', ')}) — exactly one required`,
         });
+      }
+      // Create-only types (§4.5.1, 3.4): the one payload shape must be `**Proposed file:**`.
+      if (shapesPresent.length === 1 && CREATE_ONLY_TYPES.has(effectiveType) && shapesPresent[0] !== '**Proposed file:**') {
+        violations.push({ severity: 'error', check: 'check.pulse', clause: '§4.5.1', location: { path: filePath, key: section.id }, message: `${section.id}: type "${effectiveType}" is create-only — the payload must be "**Proposed file:**", not ${shapesPresent[0]}` });
       }
     }
   }

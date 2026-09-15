@@ -1,6 +1,6 @@
 ---
 id: schema.schema-clauses
-status: draft
+status: implemented
 depends_on:
   - schema.validator
 governs:

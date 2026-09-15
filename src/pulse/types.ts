@@ -1,7 +1,8 @@
 /**
  * The typed pulse gate's shared type→policy contract (schema §4.5.1, §4.5.2).
- * The six `**Type:**` values (v3.0 adds `decision-candidate`, addendum A7.4),
- * the three payload-operation shapes, and the per-type permitted `**Target:**`
+ * The seven `**Type:**` values (v3.0 adds `decision-candidate`, addendum A7.4;
+ * 3.4 adds `evidence-candidate`, create-only into `atlas/evidence/`), the
+ * three payload-operation shapes, and the per-type permitted `**Target:**`
  * roots — extracted so the runtime accept (src/pulse/review.ts) and the
  * validator (src/schema/checks/pulse.ts) share ONE copy of the policy and
  * cannot drift.
@@ -13,7 +14,7 @@
  * Pure module: no fs, no LLM, no network (R-001).
  */
 
-/** The six suggestion types (§4.5.1; `decision-candidate` new at v3.0, A7.4). */
+/** The seven suggestion types (§4.5.1; `decision-candidate` new at v3.0, A7.4; `evidence-candidate` new at 3.4). */
 export const SUGGESTION_TYPES = [
   'rule-candidate',
   'skill-proposal',
@@ -21,8 +22,16 @@ export const SUGGESTION_TYPES = [
   'gated-layer-update',
   'user-directed-capture',
   'decision-candidate',
+  'evidence-candidate',
 ] as const;
 export type SuggestionType = (typeof SUGGESTION_TYPES)[number];
+
+/**
+ * Types whose only payload shape is `**Proposed file:**` (§4.5.1): evidence is
+ * never appended to or edited — a re-measurement is a new file that
+ * `supersedes` the old one (§4.3). `check.pulse` errors on any other shape.
+ */
+export const CREATE_ONLY_TYPES: ReadonlySet<SuggestionType> = new Set<SuggestionType>(['evidence-candidate']);
 
 /** Absent `**Type:**` → rule-candidate (v1-era tolerance, §4.5.1). */
 export const DEFAULT_SUGGESTION_TYPE: SuggestionType = 'rule-candidate';
@@ -49,6 +58,8 @@ const ATLAS: RootSpec = { kind: 'dir', prefix: '.cortex/atlas/' };
 /** `decision-candidate` targets exactly the sole-home decisions directory
  *  (§4.5.1 note: `atlas/decisions/` specifically, not all of `atlas/`). */
 const ATLAS_DECISIONS: RootSpec = { kind: 'dir', prefix: '.cortex/atlas/decisions/' };
+/** `evidence-candidate` targets exactly `atlas/evidence/` (§4.5.1 note, 3.4). */
+const ATLAS_EVIDENCE: RootSpec = { kind: 'dir', prefix: '.cortex/atlas/evidence/' };
 const INSIGHT_MAP: RootSpec = { kind: 'dir', prefix: '.cortex/insight/map/' };
 const RULES: RootSpec = { kind: 'file', path: 'RULES.md' };
 const SKILL: RootSpec = { kind: 'skill' };
@@ -70,6 +81,9 @@ export function permittedRoots(type: SuggestionType): RootSpec[] {
     case 'decision-candidate':
       // parallel to rule-candidate, targeting the decisions sole home (A7.4).
       return [ATLAS_DECISIONS];
+    case 'evidence-candidate':
+      // the evidence directory specifically, create-only (3.4).
+      return [ATLAS_EVIDENCE];
   }
 }
 
@@ -102,5 +116,7 @@ export function permittedRootsLabel(type: SuggestionType): string {
       return '.cortex/compass/, .cortex/atlas/, .cortex/insight/map/, RULES.md';
     case 'decision-candidate':
       return '.cortex/atlas/decisions/';
+    case 'evidence-candidate':
+      return '.cortex/atlas/evidence/';
   }
 }
