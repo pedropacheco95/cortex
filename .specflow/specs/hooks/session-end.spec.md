@@ -62,8 +62,11 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
    "cortex hook stop"}` with no matcher. Both are dispatched by `src/hooks/cli.ts` under the names
    `session-end` and `stop`. The `cortex hook ` prefix is the ownership marker (schema §5);
    `check.hook-config` requires both entries whenever the settings file carries any Cortex-owned
-   hook entry (schema Appendix A). The explicit `timeout: 10` lifts SessionEnd's shared 1.5 s
-   default budget for this one hook; the hook itself targets well under 100 ms (Rule 5).
+   hook entry (schema Appendix A). The explicit `timeout: 10` (seconds; Claude Code caps it at 60) lifts SessionEnd's shared
+   1.5 s default budget for this one hook; the hook itself targets well under 100 ms (Rule 5).
+   `mergeSettings` writes the field on the inner `{"type": "command", …}` object;
+   `check.hook-config` detects entries by the command string alone, so the `timeout` field is
+   neither required nor rejected by it, and a user who edits the value keeps a conformant file.
 
 2. **Always silent, always exit 0.** Empty stdout in every case for both hooks — the
    PostWrite/PostRead envelope discipline. Claude Code ignores `SessionEnd`'s exit code and output
