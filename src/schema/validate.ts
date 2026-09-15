@@ -9,6 +9,7 @@ import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatch
 import { checkRules, checkBugs } from './checks/compass.js';
 import { checkAtlas } from './checks/atlas.js';
 import { checkPulse } from './checks/pulse.js';
+import { checkThreads } from './checks/threads.js';
 import { checkDevSpecs } from './checks/devspec.js';
 import { checkBizSpecs, checkBusinessStatus } from './checks/bizspec.js';
 import { checkScenarios } from './checks/scenario.js';
@@ -108,6 +109,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
 
   // Pulse checks
   allViolations.push(...await checkPulse(root));
+  allViolations.push(...await checkThreads(root)); // §4.5.3 threads ledger (3.3 third revision)
 
   // Dev spec checks
   allViolations.push(...await checkDevSpecs(root, index));

@@ -43,3 +43,31 @@ export function readThreadRaw(root: string, id: string): string | null {
   const name = fs.readdirSync(dir).find((f) => f.startsWith(`${id}-`) && f.endsWith('.md'));
   return name === undefined ? null : fs.readFileSync(path.join(dir, name), 'utf-8');
 }
+
+/**
+ * Raw ledger-file text in the §4.5.3 field order — hand-assembled (not via
+ * `serialiseThread`) so byte-identity assertions exercise the on-disk shape,
+ * not the serialiser. Only the fields given are overridden.
+ */
+export function threadRawFixture(
+  overrides: Partial<Thread> & { answered?: string; resolved_by?: string } = {},
+): string {
+  const t = makeThread(overrides);
+  const lines = [
+    '---',
+    `id: ${t.id}`,
+    `kind: ${t.kind}`,
+    `status: ${t.status}`,
+    `opened: ${t.opened}`,
+    `session: ${t.session}`,
+    'sessions:',
+    ...t.sessions.map((s) => `  - ${s}`),
+    t.bears_on.length === 0 ? 'bears_on: []' : 'bears_on:',
+    ...t.bears_on.map((b) => `  - ${b}`),
+    `expires: ${t.expires}`,
+  ];
+  if (t.answered !== undefined) lines.push(`answered: ${t.answered}`);
+  if (t.resolved_by !== undefined) lines.push(`resolved_by: ${t.resolved_by}`);
+  lines.push('---', '', t.body, '');
+  return lines.join('\n');
+}

@@ -1,6 +1,6 @@
 ---
 id: pulse.threads
-status: draft
+status: implemented
 depends_on:
   - core-cli.init
   - pulse.hygiene

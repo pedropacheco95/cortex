@@ -19,6 +19,8 @@ import * as path from 'path';
 import matter from 'gray-matter';
 import { normaliseText } from './distil.js';
 import { decisionSlug } from '../insight/session-observe.js';
+import type { ExtractedMessage } from '../sessions/read.js';
+import type { SessionKind } from './distil.js';
 
 export const THREAD_KINDS = ['question', 'offer', 'approval', 'finding', 'artefact'] as const;
 export const THREAD_STATUSES = ['open', 'answered', 'dropped', 'expired'] as const;
@@ -382,4 +384,310 @@ export function allocateThreadIds(root: string, n: number): string[] {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${current + n}\n`, 'utf-8');
   return ids;
+}
+
+// ---------------------------------------------------------------------------
+// the session record (schema §4.5.3) — assembled by hooks.session-end,
+// consumed here by Rule 3 (open) and Rule 9 (answered)
+// ---------------------------------------------------------------------------
+
+/** Rule 7a of the hook spec: the last assistant paragraph when it asks or offers. */
+export interface SessionRecordOpenQuestion {
+  kind: 'question' | 'offer';
+  /** ≤600 characters. */
+  text: string;
+  /** The companion's `at` or the message timestamp; null when the entry carried none. */
+  timestamp: string | null;
+  source: 'stop' | 'transcript';
+}
+
+/** Rule 7b: a user approval paired with the assistant paragraph it approved. */
+export interface SessionRecordApproval {
+  approval: string;
+  approved: string;
+  timestamp: string | null;
+}
+
+/** Rule 7c: a tagged or lexicon-matched finding. `bears_on` is present for tags. */
+export interface SessionRecordFinding {
+  kind: 'measurement' | 'conclusion';
+  /** ≤300 characters. */
+  text: string;
+  bears_on?: string[];
+  timestamp: string | null;
+  source: 'tag' | 'lexicon';
+}
+
+/** Rule 8: one scratchpad Write/Edit target and whether its copy was taken. */
+export interface SessionRecordArtefact {
+  path: string;
+  copied: boolean;
+  first_heading: string | null;
+}
+
+/** `pulse/sessions/<session-id>.json` — every field present, `null` where absent. */
+export interface SessionRecord {
+  kind: 'pulse-session-record';
+  session_id: string;
+  /** `claude-sessions/<user>/<session-id>` (§6). */
+  session: string;
+  title: string | null;
+  session_kind: SessionKind;
+  /** iso-datetime, the hook's wall-clock. */
+  ended: string;
+  reason: string;
+  partial: boolean;
+  open_question: SessionRecordOpenQuestion | null;
+  approvals: SessionRecordApproval[];
+  findings: SessionRecordFinding[];
+  artefacts: SessionRecordArtefact[];
+  /** Project-relative path of the read ledger when it exists. */
+  reads: string | null;
+  threads_opened: string[];
+  threads_answered: string[];
+}
+
+/** Rule 9b: keys shorter than this never count as a mention (engineering call). */
+export const KEY_MIN_CHARS = 20;
+/** Rule 4: the `bears_on` cap. */
+export const BEARS_ON_CAP = 12;
+/** Rule 9a: a thread id as a whole word. */
+const ID_MENTION_RE = /\bT-\d{3,}\b/g;
+
+/**
+ * The scratch copy's basename for the `occurrence`-th (1-based) artefact
+ * sharing a basename within one session: `notes.md`, `notes-2.md`, `notes-3.md`
+ * (hook spec Rule 8). Shared by the copier and the artefact thread body so
+ * the `**Copy:**` line names the file that was actually written.
+ */
+export function scratchCopyBasename(basename: string, occurrence: number): string {
+  if (occurrence <= 1) return basename;
+  const ext = path.extname(basename);
+  return `${basename.slice(0, basename.length - ext.length)}-${occurrence}${ext}`;
+}
+
+/** Project-relative path of the scratch copy of the `index`-th record artefact. */
+function scratchCopyRel(sessionId: string, artefacts: SessionRecordArtefact[], index: number): string {
+  const base = path.basename(artefacts[index]?.path ?? '');
+  let occurrence = 0;
+  for (let i = 0; i <= index; i++) {
+    if (path.basename(artefacts[i]?.path ?? '') === base) occurrence++;
+  }
+  return `.cortex/pulse/scratch/${sessionId}/${scratchCopyBasename(base, occurrence)}`;
+}
+
+/**
+ * Rule 4b: the session's read-ledger lines under `.cortex/` or `.specflow/`,
+ * in order — from the record's `reads` path when the hook recorded one, else
+ * the conventional `pulse/state/reads/<session-id>`.
+ */
+function ledgerBearsOn(root: string, record: SessionRecord): string[] {
+  const file =
+    typeof record.reads === 'string' && record.reads !== ''
+      ? path.join(root, ...record.reads.split('/'))
+      : path.join(root, '.cortex', 'pulse', 'state', 'reads', record.session_id);
+  let raw: string;
+  try {
+    raw = fs.readFileSync(file, 'utf-8');
+  } catch {
+    return [];
+  }
+  return raw
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('.cortex/') || l.startsWith('.specflow/'));
+}
+
+/** Rule 4: tag targets first, then ledger lines; deduplicated; capped. */
+function seedBearsOn(tagTargets: string[], ledger: string[]): string[] {
+  const out: string[] = [];
+  for (const e of [...tagTargets, ...ledger]) {
+    if (e !== '' && !out.includes(e)) out.push(e);
+    if (out.length === BEARS_ON_CAP) break;
+  }
+  return out;
+}
+
+interface ThreadCandidate {
+  kind: ThreadKind;
+  body: string;
+  tagTargets: string[];
+}
+
+/** Rule 3 / Rule 8: the record's thread candidates in creation order. */
+function candidatesOf(record: SessionRecord): ThreadCandidate[] {
+  const out: ThreadCandidate[] = [];
+  const scheduled = record.session_kind === 'scheduled';
+  if (!scheduled && record.open_question !== null) {
+    out.push({ kind: record.open_question.kind, body: record.open_question.text, tagTargets: [] });
+  }
+  if (!scheduled) {
+    for (const a of record.approvals) out.push({ kind: 'approval', body: approvalBody(a.approved, a.approval), tagTargets: [] });
+  }
+  for (const f of record.findings) {
+    out.push({ kind: 'finding', body: findingBody(f.text, f.kind, f.source), tagTargets: f.bears_on ?? [] });
+  }
+  record.artefacts.forEach((a, i) => {
+    if (!a.copied) return;
+    out.push({
+      kind: 'artefact',
+      body: artefactBody(a.path, a.first_heading, scratchCopyRel(record.session_id, record.artefacts, i)),
+      tagTargets: [],
+    });
+  });
+  return out;
+}
+
+/**
+ * Rules 3, 4, 7, 8: open one thread per record item — question/offer,
+ * approvals, findings, copied artefacts, in that order (finding and artefact
+ * only for a scheduled session) — deduped by normalised key against every
+ * `open` thread: a match opens nothing, appends this session's citation to
+ * the matched trail (once) and reports the matched id in the item's position.
+ * Ids are allocated once for the new threads, consecutively. Returns the ids
+ * in creation order — the record's `threads_opened`.
+ */
+export function openThreadsFromRecord(root: string, record: SessionRecord, now: Date): string[] {
+  const candidates = candidatesOf(record);
+  if (candidates.length === 0) return [];
+  const opened = now.toISOString();
+  const expires = threadExpires(now);
+  const ledger = ledgerBearsOn(root, record);
+  const citation = record.session;
+
+  const openByKey = new Map<string, Thread>();
+  for (const t of listThreads(root).threads) {
+    if (t.status === 'open' && !openByKey.has(threadKey(t))) openByKey.set(threadKey(t), t);
+  }
+
+  // First pass: match against open threads (and within this run), decide what is new.
+  const fresh: Thread[] = [];
+  const slots: ({ matched: string } | { fresh: number })[] = [];
+  const freshByKey = new Map<string, number>();
+  for (const c of candidates) {
+    const draft: Thread = {
+      id: 'T-000',
+      kind: c.kind,
+      status: 'open',
+      opened,
+      session: citation,
+      sessions: [citation],
+      bears_on: seedBearsOn(c.tagTargets, ledger),
+      expires,
+      body: c.body,
+    };
+    const key = threadKey(draft);
+    const existing = openByKey.get(key);
+    if (existing !== undefined) {
+      if (!existing.sessions.includes(citation)) {
+        const updated = updateThreadStatus(root, existing.id, { sessions: [...existing.sessions, citation] });
+        if (updated !== null) openByKey.set(key, updated);
+      }
+      slots.push({ matched: existing.id });
+      continue;
+    }
+    const pending = freshByKey.get(key);
+    if (pending !== undefined) {
+      slots.push({ fresh: pending });
+      continue;
+    }
+    freshByKey.set(key, fresh.length);
+    slots.push({ fresh: fresh.length });
+    fresh.push(draft);
+  }
+
+  const ids = allocateThreadIds(root, fresh.length);
+  fresh.forEach((t, i) => {
+    t.id = ids[i] ?? t.id;
+    writeThread(root, t);
+  });
+  return slots.map((s) => ('matched' in s ? s.matched : (ids[s.fresh] ?? 'T-000')));
+}
+
+/** Inputs of {@link detectAnswered}: session `S` as the hook saw it. */
+export interface DetectAnsweredOptions {
+  sessionId: string;
+  /** `claude-sessions/<user>/<session-id>` — becomes `resolved_by`. */
+  citation: string;
+  sessionKind: SessionKind;
+  /** Every message the hook parsed (tail and prefix hits) — Rule 9a/9b. */
+  messages: ExtractedMessage[];
+  /** `S`'s first user message text, or null when none — Rule 9c. */
+  firstUserText: string | null;
+  /** The record's `ended` — becomes `answered`. */
+  ended: string;
+  /** The threads that were `open` before this run; nothing else is evaluated. */
+  openBefore: Thread[];
+}
+
+/** Rule 9c: the newest record in `pulse/sessions/` other than `sessionId`, by greatest `ended`. */
+function newestOtherRecord(root: string, sessionId: string): SessionRecord | null {
+  const dir = path.join(root, '.cortex', 'pulse', 'sessions');
+  let names: string[];
+  try {
+    names = fs.readdirSync(dir).filter((n) => n.endsWith('.json')).sort();
+  } catch {
+    return null;
+  }
+  let best: SessionRecord | null = null;
+  let bestMs = -Infinity;
+  for (const name of names) {
+    let rec: SessionRecord;
+    try {
+      rec = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf-8')) as SessionRecord;
+    } catch {
+      continue;
+    }
+    if (typeof rec !== 'object' || rec === null || rec.session_id === sessionId) continue;
+    if (!Array.isArray(rec.threads_opened)) continue;
+    const ms = Date.parse(typeof rec.ended === 'string' ? rec.ended : '');
+    if (Number.isFinite(ms) && ms > bestMs) {
+      best = rec;
+      bestMs = ms;
+    }
+  }
+  return best;
+}
+
+/**
+ * Rule 9: over the threads open *before* this run, mark answered every thread
+ * that session `S` (a) names by id as a whole word in any message, (b) restates
+ * — `S`'s normalised concatenated text contains the thread key, keys under
+ * {@link KEY_MIN_CHARS} excepted — or (c) replies to: `S` is interactive with a
+ * non-empty first user message and the newest *other* record lists the thread
+ * (a `question`/`offer`) in its `threads_opened`. Exactly these three tests;
+ * a thread whose trail already carries `S` is skipped (re-fire safety).
+ * Each answered thread gets `status: answered`, `answered: <ended>`,
+ * `resolved_by: <citation>`, body untouched. Returns the ids, by id order.
+ */
+export function detectAnswered(root: string, opts: DetectAnsweredOptions): string[] {
+  const open = opts.openBefore.filter((t) => t.status === 'open').sort((a, b) => idNumber(a.id) - idNumber(b.id));
+  if (open.length === 0) return [];
+
+  const idMentions = new Set<string>();
+  for (const m of opts.messages) {
+    for (const hit of m.text.matchAll(ID_MENTION_RE)) idMentions.add(hit[0]);
+  }
+  const concatenated = normaliseText(opts.messages.map((m) => m.text).join('\n'));
+
+  let replyTargets: Set<string> | null = null;
+  if (opts.sessionKind === 'interactive' && opts.firstUserText !== null && opts.firstUserText.trim() !== '') {
+    const newest = newestOtherRecord(root, opts.sessionId);
+    if (newest !== null) replyTargets = new Set(newest.threads_opened);
+  }
+
+  const answered: string[] = [];
+  for (const t of open) {
+    // A session never answers a thread it raised itself (a re-fired SessionEnd
+    // sees its own earlier threads as "open before" — hook spec Rule 4).
+    if (t.sessions.includes(opts.citation)) continue;
+    const key = threadKey(t);
+    const byId = idMentions.has(t.id);
+    const byKey = key.length >= KEY_MIN_CHARS && concatenated.includes(key);
+    const byReply = replyTargets !== null && (t.kind === 'question' || t.kind === 'offer') && replyTargets.has(t.id);
+    if (!byId && !byKey && !byReply) continue;
+    const updated = updateThreadStatus(root, t.id, { status: 'answered', answered: opts.ended, resolved_by: opts.citation });
+    if (updated !== null) answered.push(t.id);
+  }
+  return answered;
 }

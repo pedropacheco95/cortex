@@ -12,6 +12,8 @@
  *        `**Proposed addition:**`/`**Proposed edit:**`/`**Proposed file:**`
  *        (zero or >1 → error).
  *
+ * Skips `threads/**` (3.3 third revision — the ledger is check.threads's).
+ *
  * Pure structural inspection — no LLM, no network (R-001), read-only.
  */
 import * as fs from 'fs';
@@ -68,7 +70,9 @@ export async function checkPulse(root: string): Promise<Violation[]> {
 
   if (!fs.existsSync(pulseDir)) return violations;
 
-  const files = await fg('**/*.md', { cwd: pulseDir, absolute: true, ignore: ['**/_index.md'] });
+  // threads/** is skipped: the ledger has its own check (check.threads, §4.5.3)
+  // and the kind/generated/loop header rule does not apply to it.
+  const files = await fg('**/*.md', { cwd: pulseDir, absolute: true, ignore: ['**/_index.md', 'threads/**'] });
 
   for (const filePath of files) {
     let raw: string;

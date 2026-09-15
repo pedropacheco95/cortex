@@ -6,9 +6,13 @@ import type { Violation } from '../types.js';
  * `check.hook-config` (schema §5): the Read-pair entries (PreRead + PostRead,
  * registered as `cortex hook pre-read` / `cortex hook post-read`) are present
  * in `.claude/settings.json` **together, iff** `cortex.config.json`
- * `hooks.preRead` is true — which is the default (§10.1). Detection keys on
- * the `cortex hook ` command ownership marker, so user-owned Read hooks are
- * never implicated.
+ * `hooks.preRead` is true — which is the default (§10.1); and (3.3 third
+ * revision) the `SessionEnd` (`cortex hook session-end`) and `Stop`
+ * (`cortex hook stop`) entries are both present whenever the file carries
+ * **any** Cortex-owned entry — the remedy is `cortex sync`. Detection keys on
+ * the `cortex hook ` command ownership marker and the command string alone
+ * (a `timeout` field is neither required nor rejected), so user-owned hooks
+ * are never implicated.
  */
 export function checkHookConfig(root: string, config: Record<string, unknown>): Violation[] {
   const violations: Violation[] = [];
@@ -56,6 +60,26 @@ export function checkHookConfig(root: string, config: Record<string, unknown>): 
       location: { path: settingsPath, key: 'hooks' },
       message: 'cortex.config.json hooks.preRead is false but .claude/settings.json still carries Read-pair entries (`cortex hook pre-read`/`cortex hook post-read`) — the pair is removed together with the flag',
     });
+  }
+
+  // 3.3 third revision: a project whose hooks Cortex manages carries the whole
+  // set — SessionEnd + Stop are required whenever ANY Cortex-owned entry is.
+  const anyCortex = hooksJson.includes('cortex hook ');
+  if (anyCortex) {
+    const required: ReadonlyArray<readonly [command: string, key: string, event: string]> = [
+      ['cortex hook session-end', 'hooks.SessionEnd', 'SessionEnd'],
+      ['cortex hook stop', 'hooks.Stop', 'Stop'],
+    ];
+    for (const [command, key, event] of required) {
+      if (hooksJson.includes(command)) continue;
+      violations.push({
+        severity: 'error',
+        check: 'check.hook-config',
+        clause: '§5',
+        location: { path: settingsPath, key },
+        message: `.claude/settings.json carries Cortex-owned hook entries but is missing the ${event} entry \`${command}\` (the SessionEnd and Stop rows register with the rest of the set); run \`cortex sync\``,
+      });
+    }
   }
 
   return violations;

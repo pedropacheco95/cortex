@@ -502,7 +502,10 @@ describe('Rule 11: settings.json deep-merge', () => {
       expect(merged.model).toBe('opus');
       expect(merged.permissions).toEqual(existing.permissions);
       expect(merged.env).toEqual(existing.env);
-      expect(merged.hooks.Stop).toEqual(existing.hooks.Stop);
+      // the user's Stop entry is preserved first; Cortex's Stop row is appended after it
+      expect(merged.hooks.Stop[0]).toEqual(existing.hooks.Stop[0]);
+      expect(merged.hooks.Stop).toHaveLength(2);
+      expect(JSON.stringify(merged.hooks.Stop[1])).toContain('cortex hook stop');
       // pre-existing PreToolUse entry preserved, cortex entry appended
       expect(JSON.stringify(merged.hooks.PreToolUse)).toContain('my-guard');
       expect(JSON.stringify(merged.hooks.PreToolUse)).toContain('cortex hook pre-write');
@@ -524,6 +527,29 @@ describe('Rule 11: settings.json deep-merge', () => {
       expect(raw.split('cortex hook session-start').length - 1).toBe(1);
       expect(raw.split('cortex hook pre-write').length - 1).toBe(1);
       expect(raw.split('cortex hook post-write').length - 1).toBe(1);
+      expect(raw.split('cortex hook session-end').length - 1).toBe(1);
+      expect(raw.split('cortex hook stop').length - 1).toBe(1);
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+
+  it('registers SessionEnd (timeout: 10, no matcher) and Stop (no timeout, no matcher) exactly once each', async () => {
+    const root = makeTmpDir('merge4-proj');
+    const home = makeTmpDir('merge4-home');
+    try {
+      const result = await init(root, { noLlm: true, home, ...DARWIN });
+      const merged = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8'));
+      expect(merged.hooks.SessionEnd).toEqual([
+        { hooks: [{ type: 'command', command: 'cortex hook session-end', timeout: 10 }] },
+      ]);
+      expect(merged.hooks.Stop).toEqual([{ hooks: [{ type: 'command', command: 'cortex hook stop' }] }]);
+      // no other entry gained a timeout
+      const others = JSON.stringify({ ...merged.hooks, SessionEnd: undefined });
+      expect(others).not.toContain('timeout');
+      expect(result.exitCode).toBe(0);
+      const report = await validate(root, { root });
+      expect(report.violations.filter((v) => v.check === 'check.hook-config')).toEqual([]);
     } finally {
       cleanTmp(root); cleanTmp(home);
     }

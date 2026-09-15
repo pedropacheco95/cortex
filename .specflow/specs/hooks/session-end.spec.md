@@ -1,6 +1,6 @@
 ---
 id: hooks.session-end
-status: draft
+status: implemented
 depends_on:
   - core-cli.init
   - loops.session-reading

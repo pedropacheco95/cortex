@@ -227,7 +227,11 @@ describe('AC6: settings.json merge preserves unrelated keys', () => {
   it('cortex hook entries present; model and Stop hook unchanged', () => {
     const settings = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8'));
     expect(settings.model).toBe('opus');
-    expect(settings.hooks.Stop).toEqual([{ matcher: '*' }]);
+    // the user's Stop entry is untouched and stays first; Cortex's own Stop row follows it
+    expect(settings.hooks.Stop[0]).toEqual({ matcher: '*' });
+    expect(settings.hooks.Stop).toHaveLength(2);
+    expect(JSON.stringify(settings.hooks.Stop[1])).toContain('cortex hook stop');
+    expect(JSON.stringify(settings.hooks.SessionEnd)).toContain('cortex hook session-end');
     expect(JSON.stringify(settings.hooks.SessionStart)).toContain('cortex hook session-start');
     expect(JSON.stringify(settings.hooks.PreToolUse)).toContain('cortex hook pre-write');
     expect(JSON.stringify(settings.hooks.PostToolUse)).toContain('cortex hook post-write');

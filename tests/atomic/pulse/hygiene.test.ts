@@ -28,12 +28,16 @@ import {
   checkSpecOrphans,
   checkAgedTodos,
   cleanStaleReadLedgers,
+  expireThreads,
+  cleanStaleSessionRecords,
   runHygiene,
   ORPHAN_BRANCH_DAYS,
   STALE_PR_DAYS,
   AGED_TODO_DAYS,
   READS_RETENTION_DAYS,
+  SESSION_RECORD_RETENTION_DAYS,
 } from '../../../src/pulse/hygiene.js';
+import { threadRawFixture, readThreadRaw } from '../../fixtures/threads.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -324,5 +328,122 @@ describe('retention: cleanStaleReadLedgers prunes aged pulse/state/reads/ ledger
     const { body } = parsePulseReport(path.join(root, '.cortex', 'pulse', 'reports', 'hygiene.md'));
     expect(body).toContain('Stale session-read ledgers cleaned: 1');
     expect(body).toContain('pulse/state/reads/');
+  });
+});
+
+// ===========================================================================
+// Rule 8 (a): thread expiry in place — pulse.threads Rule 10, schema §4.5.3
+// ===========================================================================
+describe('Rule 8a: expireThreads flips open threads past their expiry to expired, in place', () => {
+  const NOW = Date.parse('2026-09-15T12:00:00.000Z');
+
+  it('expires the open thread past its expiry with every other line byte-identical; future and non-open threads untouched', () => {
+    const root = tmp('threads-expire');
+    const t1 = threadRawFixture({ id: 'T-001', status: 'open', expires: '2026-08-01T00:00:00Z' });
+    const t2 = threadRawFixture({ id: 'T-002', status: 'open', expires: '2026-09-16T12:00:00.000Z' });
+    const t3 = threadRawFixture({ id: 'T-003', status: 'answered', expires: '2026-08-01T00:00:00Z', answered: '2026-08-02T00:00:00.000Z', resolved_by: 'claude-sessions/u/s2' });
+    writeAt(root, '.cortex/pulse/threads/T-001-x.md', t1);
+    writeAt(root, '.cortex/pulse/threads/T-002-y.md', t2);
+    writeAt(root, '.cortex/pulse/threads/T-003-z.md', t3);
+
+    expect(expireThreads(root, NOW)).toEqual({ expired: 1, skipped: 0 });
+
+    const after1 = readThreadRaw(root, 'T-001') as string;
+    expect(after1).toContain('\nstatus: expired\n');
+    expect(after1.replace('status: expired', 'status: open')).toBe(t1);
+    expect(readThreadRaw(root, 'T-002')).toBe(t2);
+    expect(readThreadRaw(root, 'T-003')).toBe(t3);
+    expect(fs.readdirSync(path.join(root, '.cortex', 'pulse', 'threads')).sort()).toEqual([
+      'T-001-x.md',
+      'T-002-y.md',
+      'T-003-z.md',
+    ]);
+  });
+
+  it('a thread whose frontmatter does not parse is skipped and counted, never deleted or rewritten', () => {
+    const root = tmp('threads-skip');
+    const bad = '---\nid: T-004\nstatus: open\nexpires: 2026-08-01T00:00:00Z\n---\n\nno kind, no session\n';
+    writeAt(root, '.cortex/pulse/threads/T-004-bad.md', bad);
+    writeAt(root, '.cortex/pulse/threads/T-005-worse.md', 'not even frontmatter\n');
+    expect(expireThreads(root, NOW)).toEqual({ expired: 0, skipped: 2 });
+    expect(readThreadRaw(root, 'T-004')).toBe(bad);
+    expect(readThreadRaw(root, 'T-005')).toBe('not even frontmatter\n');
+  });
+
+  it('tolerates an absent threads directory', () => {
+    const root = tmp('threads-absent');
+    expect(expireThreads(root, NOW)).toEqual({ expired: 0, skipped: 0 });
+  });
+});
+
+// ===========================================================================
+// Rule 8 (b)+(c): session-record, scratch and Stop-companion retention
+// ===========================================================================
+describe('Rule 8b/c: cleanStaleSessionRecords deletes aged records, their scratch copies and orphan companions', () => {
+  const STALE = SESSION_RECORD_RETENTION_DAYS + 1;
+
+  function writeRecord(root: string, id: string, agedDays: number): string {
+    const abs = writeAt(root, path.join('.cortex', 'pulse', 'sessions', `${id}.json`), '{}\n');
+    setMtimeDaysAgo(abs, agedDays);
+    return abs;
+  }
+  function writeScratch(root: string, id: string, agedDays: number): string {
+    const file = writeAt(root, path.join('.cortex', 'pulse', 'scratch', id, 'notes.md'), '# n\n');
+    setMtimeDaysAgo(file, agedDays);
+    const dir = path.dirname(file);
+    setMtimeDaysAgo(dir, agedDays);
+    return dir;
+  }
+  function writeCompanion(root: string, id: string, agedDays: number): string {
+    const abs = writeAt(root, path.join('.cortex', 'pulse', 'state', 'sessions', `${id}.last.json`), '{}\n');
+    setMtimeDaysAgo(abs, agedDays);
+    return abs;
+  }
+
+  it('deletes old.json with scratch/old/ and gone.last.json; keeps the fresh trio; returns the three counts', () => {
+    const root = tmp('records-mixed');
+    const oldRecord = writeRecord(root, 'old', STALE);
+    const oldScratch = writeScratch(root, 'old', STALE);
+    const goneCompanion = writeCompanion(root, 'gone', STALE);
+    const newRecord = writeRecord(root, 'new', 1);
+    const newScratch = writeScratch(root, 'new', 1);
+    const newCompanion = writeCompanion(root, 'new', 1);
+
+    expect(cleanStaleSessionRecords(root)).toEqual({ records: 1, scratchDirs: 1, companions: 1 });
+    expect(fs.existsSync(oldRecord)).toBe(false);
+    expect(fs.existsSync(oldScratch)).toBe(false);
+    expect(fs.existsSync(goneCompanion)).toBe(false);
+    expect(fs.existsSync(newRecord)).toBe(true);
+    expect(fs.existsSync(path.join(newScratch, 'notes.md'))).toBe(true);
+    expect(fs.existsSync(newCompanion)).toBe(true);
+  });
+
+  it('a scratch directory matching a deleted record goes even when its own mtime is fresh', () => {
+    const root = tmp('records-scratch-by-name');
+    writeRecord(root, 'old', STALE);
+    const scratch = writeScratch(root, 'old', 0);
+    expect(cleanStaleSessionRecords(root)).toEqual({ records: 1, scratchDirs: 1, companions: 0 });
+    expect(fs.existsSync(scratch)).toBe(false);
+  });
+
+  it('a scratch directory past the window is deleted on its own mtime without any record', () => {
+    const root = tmp('records-scratch-orphan');
+    const stale = writeScratch(root, 'lonely', STALE);
+    const fresh = writeScratch(root, 'recent', 1);
+    expect(cleanStaleSessionRecords(root)).toEqual({ records: 0, scratchDirs: 1, companions: 0 });
+    expect(fs.existsSync(stale)).toBe(false);
+    expect(fs.existsSync(fresh)).toBe(true);
+  });
+
+  it('never touches other pulse/state/ files and tolerates absent directories', () => {
+    const root = tmp('records-absent');
+    expect(cleanStaleSessionRecords(root)).toEqual({ records: 0, scratchDirs: 0, companions: 0 });
+    const counter = writeAt(root, '.cortex/pulse/state/thread-counter', '3\n');
+    setMtimeDaysAgo(counter, STALE);
+    const other = writeAt(root, '.cortex/pulse/state/sessions/keep.json', '{}\n');
+    setMtimeDaysAgo(other, STALE);
+    expect(cleanStaleSessionRecords(root)).toEqual({ records: 0, scratchDirs: 0, companions: 0 });
+    expect(fs.existsSync(counter)).toBe(true);
+    expect(fs.existsSync(other)).toBe(true);
   });
 });

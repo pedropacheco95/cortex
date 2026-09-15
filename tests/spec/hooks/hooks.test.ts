@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { runHook } from '../../../src/hooks/cli.js';
+import { readHookErrorEntries } from '../../../src/hooks/errors.js';
 import { makeTmpDir, cleanTmp, makeCortexProject } from '../../fixtures/hooks-harness.js';
 
 const dirs: string[] = [];
@@ -25,7 +26,7 @@ function stdinJson(fields: Record<string, unknown>): string {
 }
 
 describe('cortex hook dispatch matches the init-registered command names', () => {
-  it('all five registered names are handled with exit 0; unknown names stay silent', async () => {
+  it('all seven registered names are handled with exit 0; unknown names stay silent', async () => {
     const root = tmp('dispatch');
     makeCortexProject(root);
     // Registered command suffixes per core-cli.init Rule 11 / hooks.* Rule 1:
@@ -39,6 +40,12 @@ describe('cortex hook dispatch matches the init-registered command names', () =>
     // transcript_path, so it degrades to silence (insight module present):
     expect(await runHook('pre-read', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
     expect(await runHook('post-read', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
+    // session-end and stop (hooks.session-end Rule 1): both dispatch and stay
+    // silent — stop has no last_assistant_message here, session-end no
+    // transcript_path (it logs one degradation entry and writes no record).
+    expect(await runHook('stop', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
+    expect(await runHook('session-end', stdinJson({ cwd: root }))).toEqual({ exitCode: 0, stdout: '' });
+    expect(readHookErrorEntries(root).some((e) => e.startsWith('- hook: session-end |'))).toBe(true);
     expect(await runHook('nonsense', 'not even json')).toEqual({ exitCode: 0, stdout: '' });
   });
 });

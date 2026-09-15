@@ -13,6 +13,12 @@
  * logic), (e) spec orphans, (f) aged TODO/FIXME comments. Mid-conversation
  * drop-off detection is deferred to the agentic layer (Rule 5) and named as
  * such in the footer.
+ *
+ * Two sanctioned deletions ride along (Rules 7 and 8): aged per-session read
+ * ledgers, and — schema §4.5.3 — aged session records with their scratch
+ * copies and orphaned Stop-companion files. Open threads past their `expires`
+ * are expired IN PLACE (a one-line frontmatter edit); no thread is ever
+ * deleted (`pulse.threads` Rule 10).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,6 +32,7 @@ import { hasExcludedSegment, buildIgnoreFilter } from '../insight/exclude.js';
 import { gitExec, isGitRepo, gitLastCommitEpoch } from '../loops/git-info.js';
 import { writePulseReport } from '../loops/report.js';
 import { specsRoot, SPECS_GLOB } from '../paths.js';
+import { parseThreadFile, THREADS_DIR, THREAD_TTL_DAYS } from './threads.js';
 
 // Engineering-call constants (Rule 2) — stated in the report footer.
 export const ORPHAN_BRANCH_DAYS = 30;
@@ -35,6 +42,11 @@ export const AGED_TODO_DAYS = 30;
  *  pruned deterministically each sweep. TODO: promote to cortex.config.json as
  *  pulse.readsRetentionDays. */
 export const READS_RETENTION_DAYS = 14;
+/** Session records under `pulse/sessions/`, their `pulse/scratch/<id>/` copies
+ *  and orphaned `pulse/state/sessions/*.last.json` Stop companions older than
+ *  this are deleted each sweep (Rule 8, schema §4.5.3). In-code beside
+ *  READS_RETENTION_DAYS, pending the same cortex.config.json promotion. */
+export const SESSION_RECORD_RETENTION_DAYS = 30;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_TODO_FILE_BYTES = 512 * 1024;
@@ -355,6 +367,174 @@ export function cleanStaleReadLedgers(root: string, nowMs = Date.now()): number 
 }
 
 // ---------------------------------------------------------------------------
+// Rule 8 (a): thread expiry in place — pulse.threads Rule 10, schema §4.5.3
+// ---------------------------------------------------------------------------
+
+const THREAD_FILE_RE = /^T-\d{3,}-.*\.md$/;
+
+/**
+ * Replace the `status:` line inside the YAML frontmatter block only, leaving
+ * every other byte of the file untouched. `null` when the file has no
+ * frontmatter block or no `status:` line in it.
+ */
+function rewriteFrontmatterStatus(raw: string, status: string): string | null {
+  const block = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (block === null) return null;
+  const fm = block[1]!;
+  const statusLine = /^status:[^\n]*$/m;
+  if (!statusLine.test(fm)) return null;
+  const start = raw.indexOf(fm, block.index!);
+  return raw.slice(0, start) + fm.replace(statusLine, `status: ${status}`) + raw.slice(start + fm.length);
+}
+
+/**
+ * Every `pulse/threads/T-NNN-*.md` whose frontmatter parses, whose `status` is
+ * `open` and whose `expires` is earlier than `nowMs` gets `status: expired` —
+ * the frontmatter line rewritten in place, body and every other field
+ * untouched, no file ever deleted. Files whose frontmatter does not parse are
+ * skipped and counted. An absent directory means nothing to do.
+ */
+export function expireThreads(root: string, nowMs = Date.now()): { expired: number; skipped: number } {
+  const dir = path.join(root, '.cortex', ...THREADS_DIR.split('/'));
+  let names: string[];
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return { expired: 0, skipped: 0 };
+  }
+  let expired = 0;
+  let skipped = 0;
+  for (const name of names) {
+    if (!THREAD_FILE_RE.test(name)) continue;
+    const abs = path.join(dir, name);
+    let raw: string;
+    try {
+      raw = fs.readFileSync(abs, 'utf-8');
+    } catch {
+      skipped++;
+      continue;
+    }
+    const thread = parseThreadFile(raw);
+    if (thread === null) {
+      skipped++;
+      continue;
+    }
+    if (thread.status !== 'open' || !(Date.parse(thread.expires) < nowMs)) continue;
+    const rewritten = rewriteFrontmatterStatus(raw, 'expired');
+    if (rewritten === null) {
+      skipped++;
+      continue;
+    }
+    try {
+      fs.writeFileSync(abs, rewritten, 'utf-8');
+      expired++;
+    } catch {
+      skipped++;
+    }
+  }
+  return { expired, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// Rule 8 (b)+(c): session-record, scratch and Stop-companion retention
+// ---------------------------------------------------------------------------
+
+function listDirEntries(dir: string): fs.Dirent[] {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Delete (b) every `pulse/sessions/<id>.json` whose mtime is older than
+ * SESSION_RECORD_RETENTION_DAYS together with `pulse/scratch/<id>/`, any
+ * `pulse/scratch/<id>/` past the window on its own mtime, and (c) every
+ * `pulse/state/sessions/<id>.last.json` Stop companion past the window.
+ * Nothing else under `pulse/` is touched; absent directories and per-file
+ * errors are tolerated (best-effort housekeeping, like the reads ledgers).
+ */
+export function cleanStaleSessionRecords(
+  root: string,
+  nowMs = Date.now(),
+): { records: number; scratchDirs: number; companions: number } {
+  const pulse = path.join(root, '.cortex', 'pulse');
+  const cutoff = nowMs - SESSION_RECORD_RETENTION_DAYS * DAY_MS;
+  const sessionsDir = path.join(pulse, 'sessions');
+  const scratchDir = path.join(pulse, 'scratch');
+  const companionsDir = path.join(pulse, 'state', 'sessions');
+  let records = 0;
+  let scratchDirs = 0;
+  let companions = 0;
+  const deletedIds = new Set<string>();
+
+  for (const entry of listDirEntries(sessionsDir)) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+    const abs = path.join(sessionsDir, entry.name);
+    try {
+      if (fs.statSync(abs).mtimeMs < cutoff) {
+        fs.unlinkSync(abs);
+        records++;
+        deletedIds.add(entry.name.slice(0, -'.json'.length));
+      }
+    } catch {
+      /* vanished or unremovable — skip it */
+    }
+  }
+
+  for (const entry of listDirEntries(scratchDir)) {
+    if (!entry.isDirectory()) continue;
+    const abs = path.join(scratchDir, entry.name);
+    try {
+      if (deletedIds.has(entry.name) || fs.statSync(abs).mtimeMs < cutoff) {
+        fs.rmSync(abs, { recursive: true, force: true });
+        scratchDirs++;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  for (const entry of listDirEntries(companionsDir)) {
+    if (!entry.isFile() || !entry.name.endsWith('.last.json')) continue;
+    const abs = path.join(companionsDir, entry.name);
+    try {
+      if (fs.statSync(abs).mtimeMs < cutoff) {
+        fs.unlinkSync(abs);
+        companions++;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  return { records, scratchDirs, companions };
+}
+
+/** The "Threads and session records" section (Rule 8): four counts, or the empty line. */
+function renderRetentionSection(
+  threads: { expired: number; skipped: number },
+  retention: { records: number; scratchDirs: number; companions: number },
+): string {
+  const lines = ['## Threads and session records', ''];
+  const total = threads.expired + retention.records + retention.scratchDirs + retention.companions;
+  if (total === 0) {
+    lines.push('No threads past expiry and no session records past retention this cycle.');
+  } else {
+    lines.push(`- Threads expired in place: ${threads.expired} (open threads past their \`expires\` under \`pulse/threads/\`; never deleted).`);
+    lines.push(`- Session records deleted: ${retention.records} (older than ${SESSION_RECORD_RETENTION_DAYS} days under \`pulse/sessions/\`).`);
+    lines.push(`- Scratch directories deleted: ${retention.scratchDirs} (\`pulse/scratch/<session-id>/\` — with a deleted record, or past the window on its own mtime).`);
+    lines.push(`- Stop-companion files deleted: ${retention.companions} (\`pulse/state/sessions/*.last.json\` past the window).`);
+  }
+  if (threads.skipped > 0) {
+    lines.push(`- Thread files skipped: ${threads.skipped} (frontmatter did not parse — left untouched; \`cortex validate\` names them).`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
 // the sweep + report (always-write, schema §4.5)
 // ---------------------------------------------------------------------------
 
@@ -388,18 +568,25 @@ export async function runHygiene(root = '.', opts: HygieneOptions = {}): Promise
   const skipped = sections.filter((s) => s.skipped);
   const findingsTotal = sections.reduce((n, s) => n + s.findings.length, 0);
 
-  // Deterministic retention: prune aged per-session read ledgers (pulse reorg).
+  // Deterministic retention: prune aged per-session read ledgers (Rule 7).
   const readsCleaned = cleanStaleReadLedgers(absRoot, nowMs);
+  // Rule 8: expire open threads in place; delete aged records, scratch copies
+  // and orphaned Stop companions (schema §4.5.3).
+  const threadsExpired = expireThreads(absRoot, nowMs);
+  const recordsCleaned = cleanStaleSessionRecords(absRoot, nowMs);
 
   const body = [
     '# Hygiene report',
     '',
     ...sections.map(renderSection),
+    renderRetentionSection(threadsExpired, recordsCleaned),
     '---',
     '',
     `Thresholds: orphan branches ≥ ${ORPHAN_BRANCH_DAYS} days unmerged; stale PRs ≥ ${STALE_PR_DAYS} days without update; aged TODO/FIXME ≥ ${AGED_TODO_DAYS} days since the file's last commit (untracked files and non-git projects are never "aged").`,
     '',
     `Stale session-read ledgers cleaned: ${readsCleaned} (older than ${READS_RETENTION_DAYS} days under \`pulse/state/reads/\`).`,
+    '',
+    `Session-record retention: \`pulse/sessions/\` records, their \`pulse/scratch/<session-id>/\` copies and \`pulse/state/sessions/*.last.json\` companions older than ${SESSION_RECORD_RETENTION_DAYS} days are deleted; open threads under \`pulse/threads/\` past their own \`expires\` (opened + ${THREAD_TTL_DAYS} days) are expired in place, never deleted.`,
     '',
     `Skipped checks: ${skipped.length > 0 ? skipped.map((s) => `${s.title} (${s.skipped})`).join('; ') : 'none'}. Mid-conversation drop-off detection was not run — deferred to the agentic layer (design §10.2).`,
   ].join('\n');
@@ -413,7 +600,7 @@ export async function runHygiene(root = '.', opts: HygieneOptions = {}): Promise
     body,
   );
   console.log(
-    `cortex pulse-hygiene: wrote .cortex/pulse/reports/hygiene.md (${findingsTotal} finding(s), ${skipped.length} check(s) skipped, ${readsCleaned} stale read ledger(s) cleaned).`,
+    `cortex pulse-hygiene: wrote .cortex/pulse/reports/hygiene.md (${findingsTotal} finding(s), ${skipped.length} check(s) skipped, ${readsCleaned} stale read ledger(s) cleaned, ${threadsExpired.expired} thread(s) expired, ${recordsCleaned.records} session record(s) deleted).`,
   );
   return 0;
 }

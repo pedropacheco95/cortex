@@ -20,8 +20,9 @@ import {
   ruleMd,
   parsePulseReport,
 } from '../../fixtures/loops-harness.js';
-import { runHygiene } from '../../../src/pulse/hygiene.js';
+import { runHygiene, SESSION_RECORD_RETENTION_DAYS } from '../../../src/pulse/hygiene.js';
 import { run } from '../../../src/cli/cli.js';
+import { threadRawFixture, readThreadRaw } from '../../fixtures/threads.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -188,12 +189,7 @@ describe('AC: gh absence degrades to a notice', () => {
 
 // ===========================================================================
 describe('AC: Only the report is written', () => {
-  it('a full-tree snapshot differs only by pulse/reports/hygiene.md', async () => {
-    const root = makeCleanProject('only-report');
-    const before = snapshotTree(root);
-    await runHygiene(root, { ghBin: emptyGhStub() });
-    const after = snapshotTree(root);
-
+  function diffTrees(before: Map<string, string>, after: Map<string, string>): string[] {
     const changed: string[] = [];
     for (const [rel, content] of after) {
       if (!before.has(rel) || before.get(rel) !== content) changed.push(rel);
@@ -201,7 +197,129 @@ describe('AC: Only the report is written', () => {
     for (const rel of before.keys()) {
       if (!after.has(rel)) changed.push(`(deleted) ${rel}`);
     }
-    expect(changed).toEqual([REPORT_REL]);
+    return changed.sort();
+  }
+
+  it('a full-tree snapshot differs only by pulse/reports/hygiene.md', async () => {
+    const root = makeCleanProject('only-report');
+    const before = snapshotTree(root);
+    await runHygiene(root, { ghBin: emptyGhStub() });
+    const after = snapshotTree(root);
+    expect(diffTrees(before, after)).toEqual([REPORT_REL]);
+  });
+
+  it('with Rule 7/8 work to do, the diff is exactly the report, the expired thread, and the aged deletions', async () => {
+    const root = makeCleanProject('only-report-rule8');
+    const stale = new Date(Date.now() - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000);
+    const age = (abs: string): void => fs.utimesSync(abs, stale, stale);
+    writeAt(root, '.cortex/pulse/threads/T-001-x.md', threadRawFixture({ id: 'T-001', expires: '2026-08-01T00:00:00Z' }));
+    writeAt(root, '.cortex/pulse/threads/T-002-y.md', threadRawFixture({ id: 'T-002', expires: '2999-01-01T00:00:00Z' }));
+    age(writeAt(root, '.cortex/pulse/sessions/old.json', '{}\n'));
+    age(writeAt(root, '.cortex/pulse/scratch/old/notes.md', '# n\n'));
+    age(path.join(root, '.cortex', 'pulse', 'scratch', 'old'));
+    age(writeAt(root, '.cortex/pulse/state/sessions/gone.last.json', '{}\n'));
+    writeAt(root, '.cortex/pulse/sessions/new.json', '{}\n');
+    writeAt(root, '.cortex/pulse/suggestions.md', '---\nkind: pulse-suggestions\n---\n');
+
+    const before = snapshotTree(root);
+    await runHygiene(root, { ghBin: emptyGhStub(), now: new Date('2026-09-15T00:00:00.000Z') });
+    const after = snapshotTree(root);
+    expect(diffTrees(before, after)).toEqual(
+      [
+        REPORT_REL,
+        path.join('.cortex', 'pulse', 'threads', 'T-001-x.md'),
+        `(deleted) ${path.join('.cortex', 'pulse', 'sessions', 'old.json')}`,
+        `(deleted) ${path.join('.cortex', 'pulse', 'scratch', 'old', 'notes.md')}`,
+        `(deleted) ${path.join('.cortex', 'pulse', 'state', 'sessions', 'gone.last.json')}`,
+      ].sort(),
+    );
+  });
+});
+
+// ===========================================================================
+describe('AC: An open thread past its expiry is expired in place', () => {
+  it('T-001 becomes expired with every other line byte-identical; T-002/T-003 untouched; all three remain; the section reports 1 expired', async () => {
+    const root = makeCleanProject('thread-expiry');
+    const t1 = threadRawFixture({ id: 'T-001', status: 'open', expires: '2026-08-01T00:00:00Z' });
+    const t2 = threadRawFixture({ id: 'T-002', status: 'open', expires: '2026-09-16T00:00:00Z' });
+    const t3 = threadRawFixture({
+      id: 'T-003',
+      status: 'answered',
+      expires: '2026-08-01T00:00:00Z',
+      answered: '2026-08-02T00:00:00.000Z',
+      resolved_by: '.cortex/atlas/decisions/x.md',
+    });
+    writeAt(root, '.cortex/pulse/threads/T-001-x.md', t1);
+    writeAt(root, '.cortex/pulse/threads/T-002-y.md', t2);
+    writeAt(root, '.cortex/pulse/threads/T-003-z.md', t3);
+
+    const code = await runHygiene(root, { ghBin: emptyGhStub(), now: new Date('2026-09-15T00:00:00.000Z') });
+    expect(code).toBe(0);
+
+    const after1 = readThreadRaw(root, 'T-001') as string;
+    expect(after1).toMatch(/^status: expired$/m);
+    expect(after1.replace('status: expired', 'status: open')).toBe(t1);
+    expect(readThreadRaw(root, 'T-002')).toBe(t2);
+    expect(readThreadRaw(root, 'T-003')).toBe(t3);
+    expect(fs.readdirSync(path.join(root, '.cortex', 'pulse', 'threads'))).toHaveLength(3);
+
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    const section = body.split('## Threads and session records')[1]?.split('\n## ')[0] ?? '';
+    expect(section).toMatch(/Threads expired in place: 1\b/);
+    expect(section).not.toContain('No threads past expiry');
+  });
+});
+
+// ===========================================================================
+describe('AC: Old session records and their scratch copies are deleted together', () => {
+  it('old.json, scratch/old/ and gone.last.json go; the fresh trio stays; the section reports 1 record, 1 scratch directory, 1 companion', async () => {
+    const root = makeCleanProject('record-retention');
+    const stale = new Date(Date.now() - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000);
+    const age = (abs: string): string => {
+      fs.utimesSync(abs, stale, stale);
+      return abs;
+    };
+    const oldJson = age(writeAt(root, '.cortex/pulse/sessions/old.json', '{}\n'));
+    const oldNotes = age(writeAt(root, '.cortex/pulse/scratch/old/notes.md', '# n\n'));
+    age(path.dirname(oldNotes));
+    const gone = age(writeAt(root, '.cortex/pulse/state/sessions/gone.last.json', '{}\n'));
+    const newJson = writeAt(root, '.cortex/pulse/sessions/new.json', '{}\n');
+    const newNotes = writeAt(root, '.cortex/pulse/scratch/new/notes.md', '# n\n');
+    const newLast = writeAt(root, '.cortex/pulse/state/sessions/new.last.json', '{}\n');
+
+    const code = await runHygiene(root, { ghBin: emptyGhStub() });
+    expect(code).toBe(0);
+
+    expect(fs.existsSync(oldJson)).toBe(false);
+    expect(fs.existsSync(path.dirname(oldNotes))).toBe(false);
+    expect(fs.existsSync(gone)).toBe(false);
+    expect(fs.existsSync(newJson)).toBe(true);
+    expect(fs.existsSync(newNotes)).toBe(true);
+    expect(fs.existsSync(newLast)).toBe(true);
+
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    const section = body.split('## Threads and session records')[1]?.split('\n## ')[0] ?? '';
+    expect(section).toMatch(/Session records deleted: 1\b/);
+    expect(section).toMatch(/Scratch directories deleted: 1\b/);
+    expect(section).toMatch(/Stop-companion files deleted: 1\b/);
+    expect(section).toMatch(/Threads expired in place: 0\b/);
+  });
+});
+
+// ===========================================================================
+describe('AC: Nothing to expire reports the empty line', () => {
+  it('no threads/, sessions/ or scratch/ directory → the exact empty line, exit 0, and the footer names the window', async () => {
+    const root = makeCleanProject('nothing-to-expire');
+    for (const d of ['threads', 'sessions', 'scratch']) {
+      expect(fs.existsSync(path.join(root, '.cortex', 'pulse', d))).toBe(false);
+    }
+    const code = await runHygiene(root, { ghBin: emptyGhStub() });
+    expect(code).toBe(0);
+    const { body } = parsePulseReport(path.join(root, REPORT_REL));
+    expect(body).toContain('## Threads and session records');
+    expect(body).toContain('No threads past expiry and no session records past retention this cycle.');
+    expect(body).toContain(`${SESSION_RECORD_RETENTION_DAYS} days`);
+    expect(body).toMatch(/pulse\/sessions\//);
   });
 });
 

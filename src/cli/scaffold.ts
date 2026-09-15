@@ -410,6 +410,8 @@ interface HookEntry {
   event: string;
   matcher?: string;
   command: string;
+  /** Seconds; written on the inner `{ type: 'command', … }` object when set. */
+  timeout?: number;
 }
 
 function cortexHookEntries(preRead: boolean): HookEntry[] {
@@ -417,6 +419,12 @@ function cortexHookEntries(preRead: boolean): HookEntry[] {
     { event: 'SessionStart', command: 'cortex hook session-start' },
     { event: 'PreToolUse', matcher: 'Write|Edit', command: 'cortex hook pre-write' },
     { event: 'PostToolUse', matcher: 'Write|Edit', command: 'cortex hook post-write' },
+    // 3.3 third revision (hooks.session-end Rule 1): the session record and
+    // its Stop companion. No matcher on either (a SessionEnd matcher filters
+    // by reason; the record is wanted on every reason). The explicit timeout
+    // lifts SessionEnd's shared 1.5 s default budget for this one hook.
+    { event: 'SessionEnd', command: 'cortex hook session-end', timeout: 10 },
+    { event: 'Stop', command: 'cortex hook stop' },
   ];
   // The Read pair registers and unregisters together under the one
   // hooks.preRead flag (schema §5, §10.1 — default true).
@@ -451,7 +459,13 @@ export function mergeSettings(root: string, preRead: boolean): string[] {
     if (!already) {
       const hookObj: Record<string, unknown> = {
         ...(entry.matcher !== undefined ? { matcher: entry.matcher } : {}),
-        hooks: [{ type: 'command', command: entry.command }],
+        hooks: [
+          {
+            type: 'command',
+            command: entry.command,
+            ...(entry.timeout !== undefined ? { timeout: entry.timeout } : {}),
+          },
+        ],
       };
       eventArr.push(hookObj);
     }

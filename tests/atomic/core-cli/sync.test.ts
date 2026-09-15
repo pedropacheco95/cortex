@@ -326,6 +326,34 @@ describe('Rules 6 & 7: sync repairs missing hooks/git-hook exactly like init wou
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
+  it('a project initialised before the SessionEnd/Stop rows gains both on sync, once, with timeout on SessionEnd only; a second sync is idempotent', async () => {
+    const { root, home } = await bootstrap('r67-sessionend');
+    const settingsPath = path.join(root, '.claude', 'settings.json');
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    delete settings.hooks.SessionEnd;
+    delete settings.hooks.Stop;
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+    expect(fs.readFileSync(settingsPath, 'utf-8')).not.toContain('cortex hook session-end');
+
+    const first = await sync(root, { home, ...DARWIN_SYNC });
+    expect(first.exitCode).toBe(0);
+    const after = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    expect(after.hooks.SessionEnd).toEqual([
+      { hooks: [{ type: 'command', command: 'cortex hook session-end', timeout: 10 }] },
+    ]);
+    expect(after.hooks.Stop).toEqual([{ hooks: [{ type: 'command', command: 'cortex hook stop' }] }]);
+    // the other five entries are unchanged
+    for (const ev of ['SessionStart', 'PreToolUse', 'PostToolUse']) {
+      expect(after.hooks[ev]).toEqual(settings.hooks[ev]);
+    }
+
+    await sync(root, { home, ...DARWIN_SYNC });
+    const raw = fs.readFileSync(settingsPath, 'utf-8');
+    expect(raw.split('cortex hook session-end').length - 1).toBe(1);
+    expect(raw.split('cortex hook stop').length - 1).toBe(1);
+    cleanTmp(root); cleanTmp(home);
+  }, TEST_TIMEOUT);
+
   it('git post-commit hook is re-appended if it was deleted before sync (git repo present)', async () => {
     const { root, home } = await bootstrap('r67-githook');
     fs.rmSync(path.join(root, '.git', 'hooks', 'post-commit'), { force: true });

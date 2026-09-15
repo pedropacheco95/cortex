@@ -10,7 +10,8 @@
  * `cortex pulse-list|pulse-accept|pulse-reject` (spec pulse.review-cli, Rule 1),
  * `cortex pulse-hygiene` (spec pulse.hygiene, Rule 1), `cortex usage` — the
  * read-side adoption report over session transcripts (spec pulse.usage,
- * Rule 1), the deterministic
+ * Rule 1), `cortex thread list|drop|close|promote` — the human verbs over
+ * the threads ledger (spec pulse.threads, Rules 11–12), the deterministic
  * loops `cortex loop-rule-decay|loop-atlas-staleness|loop-onboarding-drift|`
  * `loop-spec-drift|loop-specflow-lint|loop-specflow-verify` (specs loops.*,
  * Rule 1 each), the two collect/judge/propose loops
@@ -98,6 +99,7 @@ const PULSE_LOOP_COMMANDS = new Set([
   'loop-insight-refresh',
   'loop-session-observe',
   'usage',
+  'thread',
 ]);
 
 export async function run(argv: string[]): Promise<number> {
@@ -429,6 +431,15 @@ export async function run(argv: string[]): Promise<number> {
       console.error(`cortex constellation: ${(err as Error).message}`);
       return 1;
     }
+  }
+
+  // `cortex thread list|drop|close|promote …` — the human verbs over the
+  // threads ledger (pulse.threads Rule 11; promote is Rule 12's draft of a
+  // gated file, the thread counterpart of pulse-accept). Runs under the
+  // PULSE_LOOP_COMMANDS chokepoint above like the other pulse verbs.
+  if (argv[0] === 'thread') {
+    const { threadCli } = await import('../pulse/thread-cli.js');
+    return threadCli(argv.slice(1));
   }
 
   // `cortex insight file|concept|element [--json]` — the deterministic,
