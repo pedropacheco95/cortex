@@ -141,8 +141,7 @@ the assistant itself, which has no way today to tell whether asking is worth the
   two atlas indexes list what they hold, so opening the index is enough). The journey's steps 1
   and 3, business rule 1 and the third out-of-scope bullet were rewritten in this step because
   the earlier text promised coverage *at session start*; coverage is now delivered at search and
-  read time and the session-start map was never built (its removal is a pending decision — see
-  `scaffolding/coverage-map.spec.md` Notes). Rules 2, 4, 5 and 6 hold unchanged: pointers carry
+  read time and the session-start map was never built (retired 2026-09-16 — see the bullet below). Rules 2, 4, 5 and 6 hold unchanged: pointers carry
   names, ids and paths, never bodies or instructions; every pointer is compiled from files that
   exist at the moment it fires; the follow rate is read from transcripts the project already has
   (`pulse/usage.spec.md` Rule 11); and nothing blocks — a hook that finds nothing says nothing.
@@ -162,9 +161,21 @@ the assistant itself, which has no way today to tell whether asking is worth the
   carry an id, a date, the question's own words and a path — a name for a gap, not knowledge;
   every line is compiled from a ledger file that exists when it fires; both measurements come
   from transcripts the project already has.
+- **The session-start map and table are retired (2026-09-16; schema 3.4, fourth revision in
+  place).** `scaffolding/coverage-map.spec.md` and `scaffolding/rationalization-table.spec.md` —
+  the first two implementers listed above — were specified at schema 3.3 and never built. The
+  developer approved removing them from the contract; both files stay in `implemented_by:` with a
+  retirement banner, retained as the design to reuse if the idea is reopened. The decision, its
+  reasons (never built; the 2026-08-06 five-round experiment in which session-start injection
+  made agents dearer and won no round; steps 3 and 4 delivering coverage at the moment of need at
+  zero cost when nothing matches) and its **"Revisit when"** conditions are in
+  `.cortex/atlas/decisions/2026-09-16-session-start-coverage-injection-retired.md`. Business
+  rules 1 to 6 are unchanged by the retirement — rule 1 already promised coverage at the search,
+  the read or the prompt, "not as a standing list at session start"; the retirement makes the
+  contract match the promise.
 - Adjacent but distinct: `../insight/assistant-has-project-knowledge-when-working.business.md`
   covers the *insight* layer answering when asked. This outcome covers the whole knowledge
   layer being reached for at all. That spec's business rule 3 ("never injected as ambient noise
-  at session start") is written about knowledge content; the reading taken here is that coverage
-  is not content. **OPEN — flagged for the developer:** if that reading is rejected, the rule
-  needs revisiting explicitly rather than this outcome working around it.
+  at session start") was in tension with the session-start map; with the map retired nothing is
+  injected at session start beyond the observations digest that spec already carried, and the
+  question this note used to hold open (is coverage content?) no longer needs answering.

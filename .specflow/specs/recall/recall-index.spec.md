@@ -105,7 +105,7 @@ consumers Rule 12 names.
    (observation), as an iso string; `keywords` — the title's lowercase tokens of three or more
    characters split on non-alphanumerics, plus every `bears_on` ref verbatim (resolving or not),
    sorted and deduplicated. **Never body text**: the index carries names, identifiers and paths,
-   not knowledge content — the same line schema §5's coverage map holds, so an injected pointer
+   not knowledge content — the same line schema §5's pointer grammar holds, so an injected pointer
    built from it can never leak a rule's text or a decision's reasoning.
 
 9. **Determinism.** `subjects` keys and `entries` keys are emitted in sorted (code-point) order;

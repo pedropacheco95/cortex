@@ -7,12 +7,24 @@ depends_on:
 implements: ../../specs-business/scaffolding/assistant-reaches-for-cortex-instead-of-guessing.business.md
 governed_by:
   - R-001
-governs:
-  - "src/hooks/session-start.ts"
-  - "src/hooks/coverage-map.ts"
 ---
 
 # Coverage Map — the SessionStart payload says what Cortex holds
+
+> **RETIRED at schema 3.4 fourth revision (2026-09-16), unbuilt.** Decision:
+> `.cortex/atlas/decisions/2026-09-16-session-start-coverage-injection-retired.md`.
+> The SessionStart coverage map this spec describes was specified in the 3.3 second
+> revision and never implemented (`src/hooks/coverage-map.ts` never existed; the
+> `governs:` list is removed because its targets do not). Its intent — the assistant
+> knows what the project holds knowledge about — is delivered instead at the moment of
+> need by `hooks.pre-read-writeback` Rule 6 (the PreRead recall marker),
+> `hooks.search-annotate` (the search-time pointer), `recall.index-blocks` (the
+> generated atlas index blocks) and `hooks.prompt-route` (open-thread routing), at zero
+> cost when nothing matches. Schema §5 no longer carries the map, its budget or the
+> concept-names widening; `hooks.session-start` Rule 10 is a retired stub. The idea is
+> parked, not rejected — the decision's "Revisit when" names the reopening conditions
+> and the re-run that would settle it. Rules and criteria below are retained verbatim as
+> the design to reuse if it is reopened.
 
 ## Intent
 
@@ -200,11 +212,14 @@ the map can evolve without a literal-for-literal schema edit each time.
   evidence on whether coverage alone changes behaviour. `cortex insight ask` remains forbidden by
   `insight.cli` Rule 7 and deferred by design §11; nothing here relaxes that.
 - **OPEN:** the budget value (Rule 4). An engineering call to be recorded at implementation.
-- **Step 3 of the recall work (2026-09-15) delivers the coverage content another way.** The
-  PreRead marker (`hooks.pre-read-writeback` Rule 6), the search-time pointer
-  (`hooks.search-annotate`) and the generated atlas index blocks (`recall.index-blocks`) surface
-  what is decided, measured and open about the thing a session is reading or searching — at the
-  moment of the read or search, at **zero session-start cost**, from the compiled recall index.
-  This spec's SessionStart map (≤1,800 tokens on every session) was never built; whether to
-  remove its schema §5 text and retire this spec is a **pending decision for Pedro**. Nothing here
-  changes until then: status, Rules and the §5 text stand as written.
+- **Steps 3 and 4 of the recall work (2026-09-15/16) deliver the coverage content another way.**
+  The PreRead marker (`hooks.pre-read-writeback` Rule 6), the search-time pointer
+  (`hooks.search-annotate`), the generated atlas index blocks (`recall.index-blocks`) and the
+  open-thread prompt router (`hooks.prompt-route`) surface what is decided, measured and open
+  about the thing a session is reading, searching or asking about — at the moment of the read,
+  search or prompt, at **zero session-start cost**, from the compiled recall index.
+- **Retired 2026-09-16.** This spec's SessionStart map (≤1,800 tokens on every session) was never
+  built; Pedro approved removing it from schema §5 and retiring this spec (banner above). `status`
+  stays `draft` because the dev-spec status enum (§4.6) has no retired value — the banner is the
+  project's retirement marker, as for the `anatomy/` specs. The reopening conditions and the
+  experiment that would settle it are in the decision file.

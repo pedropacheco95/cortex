@@ -281,7 +281,7 @@ producers; no hook reads evidence yet (step 3).
   automatic rewrite.
 - **`instrument: session` for promoted findings** is deliberate: the measurement was made by
   hand in a session, and the honest instrument name says so; `provenance:` carries the sessions.
-- **Not done:** no `E-NNN` counter (Rule 8); no evidence line in the SessionStart coverage map or
+- **Not done:** no `E-NNN` counter (Rule 8); no evidence line in the SessionStart coverage map (itself retired 2026-09-16) or
   the `cortex usage` tracked-subdirectory pair (step 3, once something reads the directory); no
   `evidence-candidate` producer (Rule 7).
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention).

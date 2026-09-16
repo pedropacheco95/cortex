@@ -6,12 +6,23 @@ depends_on:
 implements: ../../specs-business/scaffolding/assistant-reaches-for-cortex-instead-of-guessing.business.md
 governed_by:
   - R-001
-governs:
-  - "src/hooks/session-start.ts"
-  - "src/cli/templates.ts"
 ---
 
 # Rationalization Table — answer the excuse, don't repeat the instruction
+
+> **RETIRED at schema 3.4 fourth revision (2026-09-16), unbuilt.** Decision:
+> `.cortex/atlas/decisions/2026-09-16-session-start-coverage-injection-retired.md`.
+> This table was specified to ship only alongside `scaffolding.coverage-map` (Rule 3), which is
+> retired by the same decision, so it is retired with it; neither was ever implemented, and the
+> `governs:` list is removed because the spec no longer constrains those files. The excuse it
+> answered — "it probably isn't in Cortex" — is answered instead by a pointer that names what
+> exists, at the moment of the search (`hooks.search-annotate`), the read
+> (`hooks.pre-read-writeback` Rule 6), the index (`recall.index-blocks`) or the prompt
+> (`hooks.prompt-route`), with no instruction at all. Schema §5 no longer carries the table or
+> its budget; `hooks.session-start` Rule 11 is a retired stub. **Rule 1's removal of the
+> insight-query mandate from the CLAUDE.md block (§8) was only ever specified here and did not
+> land; the block is unchanged and that removal is now a separate call.** Parked, not rejected —
+> see the decision's "Revisit when". Rules and criteria below are retained verbatim.
 
 ## Intent
 
@@ -151,10 +162,13 @@ contact with a model that is being locally rational.
 - **Deliberately not done:** no hook fires this beyond SessionStart, and no gate enforces it. The
   brainstorm that produced this spec explicitly rejected obstacle-shaped mechanisms in favour of
   better information; a table that blocks would be the thing it was written to avoid.
-- **Step 3 of the recall work (2026-09-15) answers the excuse differently.** The search-time
-  pointer (`hooks.search-annotate`), the PreRead marker (`hooks.pre-read-writeback` Rule 6) and the
-  generated atlas index blocks (`recall.index-blocks`) deliver the coverage this table argues for
-  at the moment of the search or read, at zero session-start cost, with no instruction at all — a
-  pointer that names what exists is the answer to "it probably isn't there". Whether the SessionStart
-  table (and the coverage map it depends on) should be removed from schema §5 is a **pending
-  decision for Pedro**; this spec's status, Rules and the §5 text are unchanged until then.
+- **Steps 3 and 4 of the recall work (2026-09-15/16) answer the excuse differently.** The
+  search-time pointer (`hooks.search-annotate`), the PreRead marker (`hooks.pre-read-writeback`
+  Rule 6), the generated atlas index blocks (`recall.index-blocks`) and the open-thread prompt
+  router (`hooks.prompt-route`) deliver the coverage this table argues for at the moment of the
+  search, read or prompt, at zero session-start cost, with no instruction at all — a pointer that
+  names what exists is the answer to "it probably isn't there".
+- **Retired 2026-09-16.** Pedro approved removing the SessionStart table and the coverage map it
+  depends on from schema §5 and retiring both specs (banner above). `status` stays `draft` because
+  the dev-spec status enum (§4.6) has no retired value — the banner is the retirement marker, as
+  for the `anatomy/` specs. The reopening conditions are in the decision file.

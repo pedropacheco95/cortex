@@ -19,7 +19,8 @@ Cortex has no way to answer "is any of this being used". The question was settle
 by grepping session transcripts — and the answer was that `cortex insight` had been invoked twice
 in 53 sessions while its `concept` and `element` verbs had never been invoked at all. That
 measurement is the reason `scaffolding.coverage-map` and `scaffolding.rationalization-table`
-exist, and there is currently no way to repeat it.
+were written (both retired unbuilt on 2026-09-16 in favour of the read/search/prompt-time
+pointers this spec's Rules 11 and 13 measure), and there is currently no way to repeat it.
 
 This spec makes it a command. It is **read-side**: the evidence already exists in Claude Code's
 session transcripts, which `loops.session-reading` already reads, read-only, for this project
