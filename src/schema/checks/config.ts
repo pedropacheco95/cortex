@@ -109,6 +109,39 @@ export function checkConfig(root: string): ConfigResult {
     }
   }
 
+  // §10.1 3.4 third revision: `hooks.readDefer` (boolean, default false) is the
+  // PreRead row's read-deferral mode — RULES.md rule 6's one measured exception
+  // (`hooks.pre-read-writeback` Rule 7). Absent or `false` is the default and
+  // never a violation; a non-boolean is an ERROR (the hook treats anything but
+  // boolean `true` as off, so `"yes"` would be a silent no-op without this);
+  // `true` beside `hooks.preRead: false` is a WARNING — the mode lives inside
+  // the Read pair's entry, which that flag removes, so it cannot fire.
+  const hooks = config['hooks'];
+  if (typeof hooks === 'object' && hooks !== null && !Array.isArray(hooks)) {
+    const hooksBlock = hooks as Record<string, unknown>;
+    const readDefer = hooksBlock['readDefer'];
+    if (readDefer !== undefined) {
+      if (typeof readDefer !== 'boolean') {
+        violations.push({
+          severity: 'error',
+          check: 'check.config',
+          clause: '§10.1',
+          location: { path: configPath, key: 'hooks.readDefer' },
+          message: `cortex.config.json "hooks.readDefer" must be a boolean, got ${JSON.stringify(readDefer)}`,
+        });
+      } else if (readDefer && hooksBlock['preRead'] === false) {
+        violations.push({
+          severity: 'warning',
+          check: 'check.config',
+          clause: '§10.1',
+          location: { path: configPath, key: 'hooks.readDefer' },
+          message:
+            'hooks.readDefer is true but hooks.preRead is false — the Read pair is not registered, so the deferral mode cannot fire',
+        });
+      }
+    }
+  }
+
   const knownKeys = ['schemaVersion', 'profile', 'anatomy', 'hooks', 'pulse', 'insight', 'harness', 'loop'];
   for (const key of Object.keys(config)) {
     if (!knownKeys.includes(key)) {

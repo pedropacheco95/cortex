@@ -40,9 +40,14 @@ const PAIR = {
 /** The SessionEnd + Stop rows (3.3 third revision) — required whenever any
  *  Cortex-owned entry is present, so fixtures that carry the Read pair carry
  *  these too (otherwise the count under test would include their absence). */
+/** The UserPromptSubmit row (3.4 third revision, hooks.prompt-route Rule 1) —
+ *  no matcher (the event supports none), required under the same whole-set
+ *  condition, and NOT behind hooks.preRead. */
+const PROMPT_ROW = { hooks: [{ type: 'command', command: 'cortex hook prompt-route' }] };
 const SESSION_ROWS = {
   SessionEnd: [{ hooks: [{ type: 'command', command: 'cortex hook session-end', timeout: 10 }] }],
   Stop: [{ hooks: [{ type: 'command', command: 'cortex hook stop' }] }],
+  UserPromptSubmit: [PROMPT_ROW],
 };
 const FULL = { ...PAIR, ...SESSION_ROWS };
 
@@ -119,13 +124,14 @@ describe('check.hook-config: SessionEnd and Stop rows (3.3 third revision, hooks
       ...PAIR,
       SessionEnd: [{ hooks: [{ type: 'command', command: 'cortex hook session-end', timeout: 42 }] }],
       Stop: [{ hooks: [{ type: 'command', command: 'cortex hook stop' }] }],
+      UserPromptSubmit: [PROMPT_ROW],
     });
     expect(checkHookConfig(root, {})).toEqual([]);
   });
 
   it('other Cortex entries present but both rows missing → two errors naming each, keyed hooks.SessionEnd / hooks.Stop, remedy `cortex sync`', () => {
     const root = tmp('hc-se-missing');
-    writeSettings(root, PAIR);
+    writeSettings(root, { ...PAIR, UserPromptSubmit: [PROMPT_ROW] });
     const violations = checkHookConfig(root, {});
     expect(violations).toHaveLength(2);
     expect(violations.every((v) => v.severity === 'error' && v.check === 'check.hook-config' && v.clause === '§5')).toBe(true);
@@ -140,7 +146,7 @@ describe('check.hook-config: SessionEnd and Stop rows (3.3 third revision, hooks
 
   it('only one of the two missing → exactly that one error', () => {
     const root = tmp('hc-se-half');
-    writeSettings(root, { ...PAIR, SessionEnd: SESSION_ROWS.SessionEnd });
+    writeSettings(root, { ...PAIR, SessionEnd: SESSION_ROWS.SessionEnd, UserPromptSubmit: [PROMPT_ROW] });
     const violations = checkHookConfig(root, {});
     expect(violations).toHaveLength(1);
     expect(violations[0]!.location.key).toBe('hooks.Stop');
@@ -203,5 +209,66 @@ describe('check.hook-config: the PreToolUse Grep|Bash row (3.4 second revision, 
     });
     const violations = checkHookConfig(stale, { hooks: { preRead: false } });
     expect(violations.map((v) => v.location.key)).toEqual(['hooks.PreToolUse']);
+  });
+});
+
+describe('check.hook-config: the UserPromptSubmit row (3.4 third revision, hooks.prompt-route Rule 1)', () => {
+  const WITHOUT_PROMPT = { SessionEnd: SESSION_ROWS.SessionEnd, Stop: SESSION_ROWS.Stop };
+
+  it('other Cortex entries present but the row missing → exactly one error keyed hooks.UserPromptSubmit naming `cortex hook prompt-route`, `UserPromptSubmit` and `cortex sync`', () => {
+    const root = tmp('hc-pr-missing');
+    writeSettings(root, { ...PAIR, ...WITHOUT_PROMPT });
+    const violations = checkHookConfig(root, {});
+    expect(violations).toHaveLength(1);
+    const v = violations[0]!;
+    expect(v.severity).toBe('error');
+    expect(v.check).toBe('check.hook-config');
+    expect(v.clause).toBe('§5');
+    expect(v.location.key).toBe('hooks.UserPromptSubmit');
+    expect(v.message).toContain('cortex hook prompt-route');
+    expect(v.message).toContain('UserPromptSubmit');
+    expect(v.message).toMatch(/run `cortex sync`$/);
+  });
+
+  it('is not behind hooks.preRead (nor hooks.readDefer): with the flag false and no Read pair, the row is still required — and its presence passes', () => {
+    const missing = tmp('hc-pr-flag-off-missing');
+    writeSettings(missing, {
+      SessionStart: [{ hooks: [{ type: 'command', command: 'cortex hook session-start' }] }],
+      PreToolUse: [SEARCH_ROW],
+      ...WITHOUT_PROMPT,
+    });
+    const violations = checkHookConfig(missing, { hooks: { preRead: false, readDefer: false } });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]!.message).toContain('cortex hook prompt-route');
+
+    const present = tmp('hc-pr-flag-off-present');
+    writeSettings(present, {
+      SessionStart: [{ hooks: [{ type: 'command', command: 'cortex hook session-start' }] }],
+      PreToolUse: [SEARCH_ROW],
+      ...SESSION_ROWS,
+    });
+    expect(checkHookConfig(present, { hooks: { preRead: false } })).toEqual([]);
+  });
+
+  it('a user-owned UserPromptSubmit hook without the ownership marker neither satisfies nor triggers the check', () => {
+    const none = tmp('hc-pr-user-only');
+    writeSettings(none, { UserPromptSubmit: [{ hooks: [{ type: 'command', command: 'my-own-prompt-guard' }] }] });
+    expect(checkHookConfig(none, { hooks: { preRead: false } })).toEqual([]);
+
+    const stale = tmp('hc-pr-user-plus-cortex');
+    writeSettings(stale, {
+      UserPromptSubmit: [{ hooks: [{ type: 'command', command: 'my-own-prompt-guard' }] }],
+      PreToolUse: [SEARCH_ROW],
+      ...WITHOUT_PROMPT,
+    });
+    const violations = checkHookConfig(stale, { hooks: { preRead: false } });
+    expect(violations.map((v) => v.location.key)).toEqual(['hooks.UserPromptSubmit']);
+  });
+
+  it('the whole always-on set missing → four errors, one per row, in table order', () => {
+    const root = tmp('hc-pr-all-missing');
+    writeSettings(root, { SessionStart: [{ hooks: [{ type: 'command', command: 'cortex hook session-start' }] }] });
+    const violations = checkHookConfig(root, { hooks: { preRead: false } });
+    expect(violations.map((v) => v.location.key)).toEqual(['hooks.SessionEnd', 'hooks.Stop', 'hooks.PreToolUse', 'hooks.UserPromptSubmit']);
   });
 });

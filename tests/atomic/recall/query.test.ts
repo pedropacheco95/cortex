@@ -591,3 +591,144 @@ describe('selectPointers — Rules 8–10', () => {
     expect(a).toEqual(b);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3.4 third revision — the `Open:` line and its budget (`hooks.prompt-route`
+// Rule 9; schema §5 grammar third shape), plus the shared fired-memory reader.
+// ---------------------------------------------------------------------------
+import {
+  OPEN_TITLE_MAX,
+  THREAD_LIST_TAIL,
+  POINTER_BUDGET_CHARS,
+  POINTER_MAX_LINES,
+  openLine,
+  fitOpenLines,
+  readFiredKeys,
+} from '../../../src/recall/query.js';
+
+describe('Open: lines — hooks.prompt-route Rule 9', () => {
+  const T006_PATH = '.cortex/pulse/threads/T-006-do-you-want-the-counter-in-state-or-at-the-pulse-root.md';
+  const T006_TEXT = 'Do you want the counter in state/ or at the pulse root?';
+
+  it('the constants are pinned: key text cut to 80, the thread-list tail', () => {
+    expect(OPEN_TITLE_MAX).toBe(80);
+    expect(THREAD_LIST_TAIL).toBe(' · more: cortex thread list');
+  });
+
+  it('AC "The first prompt of a session surfaces the previous session\'s hanging question": the exact string', () => {
+    expect(openLine('T-006', '2026-09-15T10:00:00.000Z', T006_TEXT, T006_PATH)).toBe(
+      `Open: T-006 (2026-09-15) Do you want the counter in state/ or at the pulse root? (${T006_PATH})`,
+    );
+    expect(fitOpenLines([{ id: 'T-006', opened: '2026-09-15T10:00:00.000Z', keyText: T006_TEXT, relPath: T006_PATH }], false)).toEqual([
+      `Open: T-006 (2026-09-15) Do you want the counter in state/ or at the pulse root? (${T006_PATH})`,
+    ]);
+  });
+
+  it('key text is whitespace-collapsed and cut on a word boundary with a trailing …; ids, dates and paths never', () => {
+    const line = openLine('T-010', '2026-09-10', 'Should   the recall\n index be rebuilt on every commit?', '.cortex/pulse/threads/T-010-x.md', 20);
+    expect(line).toBe('Open: T-010 (2026-09-10) Should the recall… (.cortex/pulse/threads/T-010-x.md)');
+  });
+
+  it('AC "Three qualifying threads show the two newest and point onward": two short lines, the tail on the second', () => {
+    const lines = fitOpenLines(
+      [
+        { id: 'T-012', opened: '2026-09-14T00:00:00Z', keyText: 'Should the recall index be rebuilt on every commit?', relPath: '.cortex/pulse/threads/T-012-rebuild.md' },
+        { id: 'T-011', opened: '2026-09-12T00:00:00Z', keyText: 'Should the recall index be rebuilt on every commit?', relPath: '.cortex/pulse/threads/T-011-rebuild.md' },
+      ],
+      true,
+    );
+    // Two full 80-width lines plus the tail run to 262 characters, so the first
+    // cut (40) applies and both lines then fit at 236: the key text is cut, the
+    // ids, dates and paths are intact, and the tail sits on the second line.
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe('Open: T-012 (2026-09-14) Should the recall index be rebuilt on… (.cortex/pulse/threads/T-012-rebuild.md)');
+    expect(lines[1]).toBe('Open: T-011 (2026-09-12) Should the recall index be rebuilt on… (.cortex/pulse/threads/T-011-rebuild.md)' + THREAD_LIST_TAIL);
+    expect(lines.join('\n').length).toBeLessThanOrEqual(POINTER_BUDGET_CHARS);
+    // With a shorter key text the 80 width survives untouched.
+    const short = fitOpenLines(
+      [
+        { id: 'T-012', opened: '2026-09-14T00:00:00Z', keyText: 'Rebuild the index on commit?', relPath: '.cortex/pulse/threads/T-012-rebuild.md' },
+        { id: 'T-011', opened: '2026-09-12T00:00:00Z', keyText: 'Rebuild the index on commit?', relPath: '.cortex/pulse/threads/T-011-rebuild.md' },
+      ],
+      true,
+    );
+    expect(short[0]).toBe('Open: T-012 (2026-09-14) Rebuild the index on commit? (.cortex/pulse/threads/T-012-rebuild.md)');
+    expect(short[1]).toBe('Open: T-011 (2026-09-12) Rebuild the index on commit? (.cortex/pulse/threads/T-011-rebuild.md)' + THREAD_LIST_TAIL);
+    // Without `more`, no tail.
+    expect(fitOpenLines([{ id: 'T-012', opened: '2026-09-14', keyText: 'x', relPath: '.cortex/pulse/threads/T-012-x.md' }], false)[0]).not.toContain('more:');
+  });
+
+  it('AC "Budget cuts the key text, then the second line, never the path": two 200-char texts, 60-char slugs', () => {
+    const text = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' ').slice(0, 200);
+    const slug = 'a'.repeat(60);
+    const items = [
+      { id: 'T-021', opened: '2026-09-15T00:00:00Z', keyText: text, relPath: `.cortex/pulse/threads/T-021-${slug}.md` },
+      { id: 'T-020', opened: '2026-09-14T00:00:00Z', keyText: text, relPath: `.cortex/pulse/threads/T-020-${slug}.md` },
+    ];
+    const lines = fitOpenLines(items, false);
+    const payload = lines.join('\n');
+    expect(payload.length).toBeLessThanOrEqual(POINTER_BUDGET_CHARS);
+    expect(lines.length).toBeLessThanOrEqual(POINTER_MAX_LINES);
+    for (const line of lines) {
+      expect(line.startsWith('Open: T-')).toBe(true);
+      expect(line.replace(THREAD_LIST_TAIL, '')).toMatch(/ \(\.cortex\/pulse\/threads\/T-02\d-a{60}\.md\)$/);
+      expect(line).toContain('…');
+    }
+    // Only one line fits here, and the second thread is now unshown, so the tail appears.
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.endsWith(THREAD_LIST_TAIL)).toBe(true);
+    expect(lines[0]).toContain('T-021');
+  });
+
+  it('the cuts go 80 → 40 → 20 before the second line is dropped', () => {
+    // Paths of 50 chars: at 80 two lines overflow, at 40 they fit.
+    const text = Array.from({ length: 30 }, (_, i) => `w${i}`).join(' '); // > 80 chars
+    const rel = (id: string) => `.cortex/pulse/threads/${id}-${'b'.repeat(20)}.md`;
+    const lines = fitOpenLines(
+      [
+        { id: 'T-031', opened: '2026-09-15', keyText: text, relPath: rel('T-031') },
+        { id: 'T-030', opened: '2026-09-14', keyText: text, relPath: rel('T-030') },
+      ],
+      false,
+    );
+    expect(lines).toHaveLength(2);
+    expect(lines.join('\n').length).toBeLessThanOrEqual(POINTER_BUDGET_CHARS);
+    for (const line of lines) {
+      const title = /^Open: T-\d+ \(\S+\) (.*) \(\.cortex/.exec(line)?.[1] ?? '';
+      expect(title.length).toBeLessThanOrEqual(40);
+      expect(title.length).toBeGreaterThan(20);
+      expect(title.endsWith('…')).toBe(true);
+    }
+  });
+
+  it('when even one 20-char line with the tail is over budget, the tail goes last', () => {
+    const longPath = `.cortex/pulse/threads/T-040-${'c'.repeat(190)}.md`;
+    const lines = fitOpenLines([{ id: 'T-040', opened: '2026-09-15', keyText: 'a question that is long enough to be cut', relPath: longPath }], true);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).not.toContain('more:');
+    expect(lines[0]).toContain(`(${longPath})`);
+  });
+
+  it('no items → no lines', () => {
+    expect(fitOpenLines([], false)).toEqual([]);
+    expect(fitOpenLines([], true)).toEqual([]);
+  });
+
+  it('the imperative-free grammar: no read/consult/check/should/you tokens are ever added by the formatter', () => {
+    const line = openLine('T-006', '2026-09-15', 'the counter', T006_PATH);
+    const words = line.replace(/\(.*\)$/, '').split(/\s+/);
+    for (const banned of ['read', 'consult', 'check', 'should', 'you']) expect(words).not.toContain(banned);
+  });
+});
+
+describe('readFiredKeys — the per-session recall-fired memory, shared by both hooks', () => {
+  it('reads newline-separated keys, skipping blank lines; an absent file is the empty set', () => {
+    const dir = makeTmpDir('fired');
+    const file = path.join(dir, 'sess-1');
+    fs.writeFileSync(file, 'T-004\n\nR-001\ndecision.x\n', 'utf-8');
+    expect([...readFiredKeys(file)]).toEqual(['T-004', 'R-001', 'decision.x']);
+    expect(readFiredKeys(path.join(dir, 'missing')).size).toBe(0);
+    expect(readFiredKeys(dir).size).toBe(0); // a directory reads as empty, never throws
+    cleanTmp(dir);
+  });
+});

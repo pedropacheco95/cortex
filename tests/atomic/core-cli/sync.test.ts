@@ -402,6 +402,30 @@ describe('Rules 6 & 7: sync repairs missing hooks/git-hook exactly like init wou
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
+  it('a project initialised before the UserPromptSubmit row gains `cortex hook prompt-route` on sync, once, with no matcher and the other events untouched; a second sync is idempotent', async () => {
+    const { root, home } = await bootstrap('r68-prompt-route');
+    const settingsPath = path.join(root, '.claude', 'settings.json');
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    const promptRow = { hooks: [{ type: 'command', command: 'cortex hook prompt-route' }] };
+    expect(settings.hooks.UserPromptSubmit).toEqual([promptRow]);
+    delete settings.hooks.UserPromptSubmit;
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+    expect(fs.readFileSync(settingsPath, 'utf-8')).not.toContain('cortex hook prompt-route');
+
+    const first = await sync(root, { home, ...DARWIN_SYNC });
+    expect(first.exitCode).toBe(0);
+    const after = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    expect(after.hooks.UserPromptSubmit).toEqual([promptRow]);
+    for (const ev of ['SessionStart', 'PreToolUse', 'PostToolUse', 'SessionEnd', 'Stop']) {
+      expect(after.hooks[ev]).toEqual(settings.hooks[ev]);
+    }
+
+    await sync(root, { home, ...DARWIN_SYNC });
+    const raw = fs.readFileSync(settingsPath, 'utf-8');
+    expect(raw.split('cortex hook prompt-route').length - 1).toBe(1);
+    cleanTmp(root); cleanTmp(home);
+  }, TEST_TIMEOUT);
+
   it('git post-commit hook is re-appended if it was deleted before sync (git repo present)', async () => {
     const { root, home } = await bootstrap('r67-githook');
     fs.rmSync(path.join(root, '.git', 'hooks', 'post-commit'), { force: true });

@@ -521,6 +521,12 @@ describe('usage --record: findings are the report figures in the Rule 5 fixed or
       { metric: 'reads.pulse-threads', value: 0 },
       { metric: 'pointers.fired', value: 0 },
       { metric: 'pointers.followed', value: 0 },
+      // 3.4 third revision (Rule 13; atlas.evidence Rule 5): the four deferral
+      // counts sit between pointers.followed and questions.before-consult.
+      { metric: 'deferrals.deferred', value: 0 },
+      { metric: 'deferrals.proceeded', value: 0 },
+      { metric: 'deferrals.later', value: 0 },
+      { metric: 'deferrals.abandoned', value: 0 },
       { metric: 'questions.before-consult', value: 0 },
     ]);
   });
@@ -631,7 +637,7 @@ describe('pulse.usage — Rule 11: id-shaped pointers and the cortex why follow'
   });
 
   it('pointerTargetsIn maps decision., evidence. and T-NNN ids to the paths they stand for and keeps the why ref', () => {
-    expect(pointerTargetsIn(decidedLine)).toEqual([{ path: '.cortex/atlas/decisions/2026-08-05-x.md', whyRef: 'R-003' }]);
+    expect(pointerTargetsIn(decidedLine)).toEqual([{ path: '.cortex/atlas/decisions/2026-08-05-x.md', whyRef: 'R-003', moreCommand: 'why' }]);
     expect(pointerTargetsIn('Recall: evidence 2026-09-15 usage · Evidence: evidence.2026-09-15-usage')).toEqual([
       { path: '.cortex/atlas/evidence/2026-09-15-usage.md' },
     ]);
@@ -640,10 +646,10 @@ describe('pulse.usage — Rule 11: id-shaped pointers and the cortex why follow'
 
   it('a /-bearing token still wins over an id, and the more: tail never supplies the target', () => {
     expect(pointerTargetsIn('Recall: decision 2026-07-07 Five (.cortex/atlas/decisions/2026-07-07-five.md) · more: cortex why R-001')).toEqual([
-      { path: '.cortex/atlas/decisions/2026-07-07-five.md', whyRef: 'R-001' },
+      { path: '.cortex/atlas/decisions/2026-07-07-five.md', whyRef: 'R-001', moreCommand: 'why' },
     ]);
     expect(pointerTargetsIn('Decided: decision.x · more: cortex why .specflow/specs/pulse/hygiene.spec.md')).toEqual([
-      { path: '.cortex/atlas/decisions/x.md', whyRef: '.specflow/specs/pulse/hygiene.spec.md' },
+      { path: '.cortex/atlas/decisions/x.md', whyRef: '.specflow/specs/pulse/hygiene.spec.md', moreCommand: 'why' },
     ]);
   });
 
@@ -689,5 +695,193 @@ describe('pulse.usage — Rule 11: id-shaped pointers and the cortex why follow'
 
     expect(counts.pointersFired).toBe(3);
     expect(counts.pointersFollowed).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 11 (3.4 third revision) — the `Evidence:` / `Open:` prefixes, the
+// `cortex thread list` tail, the thread-verb follow
+// ---------------------------------------------------------------------------
+import { pointerTargetsIn as targetsIn, DEFER_RETRY_WINDOW, deferredPathsIn } from '../../../src/pulse/usage.js';
+import { toolResultTurn } from '../../fixtures/sessions.js';
+
+describe('pulse.usage — Rule 11 (third revision): Open: pointers and the thread verbs', () => {
+  const openLine =
+    'Open: T-006 (2026-09-15) Do you want the counter in state/ or at the pulse root? (.cortex/pulse/threads/T-006-do-you-want-the-counter.md) · more: cortex thread list';
+
+  it('AC: an Open pointer is fired and followed by a thread verb, by cortex thread list, or by a Read of the thread file', () => {
+    const root = project('r11-open');
+    const home = tmp('r11-open-home');
+    writeSessionTranscript(home, root, 's1', [hookContext(openLine), toolTurn(glob('src/**'), bash('cortex thread close T-006 --by .cortex/atlas/decisions/x.md'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext(openLine), toolTurn(glob('src/**'), bash('cortex thread list'))]);
+    writeSessionTranscript(home, root, 's3', [hookContext(openLine), toolTurn(read('.cortex/pulse/threads/T-006-do-you-want-the-counter.md'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(3);
+    expect(counts.pointersFollowed).toBe(3);
+    expect(renderUsageBody(counts)).toMatch(/fired 3, followed 3/);
+  });
+
+  it('AC: a marker beginning Evidence: or Open: is fired', () => {
+    const root = project('r11-prefixes');
+    const home = tmp('r11-prefixes-home');
+    writeSessionTranscript(home, root, 's1', [hookContext('Evidence: evidence.2026-09-15-usage · Open: T-004'), toolTurn(glob('src/**'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext('Open: T-004'), toolTurn(glob('src/**'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(2);
+    expect(counts.pointersFollowed).toBe(0);
+  });
+
+  it('pointerTargetsIn: the Open: line points at its parenthesised path, not at the state/ inside the key text, and carries the thread id and the tail command', () => {
+    expect(targetsIn(openLine)).toEqual([
+      { path: '.cortex/pulse/threads/T-006-do-you-want-the-counter.md', threadId: 'T-006', moreCommand: 'thread list' },
+    ]);
+    expect(targetsIn('Open: T-004')).toEqual([{ path: '.cortex/pulse/threads/T-004-', threadId: 'T-004' }]);
+    expect(targetsIn('Evidence: evidence.2026-09-15-usage · Open: T-004')).toEqual([{ path: '.cortex/atlas/evidence/2026-09-15-usage.md' }]);
+    // The thread-list tail never supplies a target; a lone tail line points nowhere.
+    expect(targetsIn('Open: nothing · more: cortex thread list')).toEqual([]);
+  });
+
+  it('the thread verbs follow only with the line\'s own id; drop and promote count like close; a quoted or echoed verb does not', () => {
+    const root = project('r11-verbs');
+    const home = tmp('r11-verbs-home');
+    writeSessionTranscript(home, root, 's1', [hookContext(openLine), toolTurn(bash('cortex thread close T-007'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext(openLine), toolTurn(bash('cd /x && cortex thread drop T-006'))]);
+    writeSessionTranscript(home, root, 's3', [hookContext(openLine), toolTurn(bash('cortex thread promote T-006 --to decision'))]);
+    writeSessionTranscript(home, root, 's4', [hookContext(openLine), toolTurn(bash('echo "cortex thread list"'))]);
+    writeSessionTranscript(home, root, 's5', [hookContext(openLine), toolTurn(bash('cortex thread list --all | head'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(5);
+    expect(counts.pointersFollowed).toBe(3);
+  });
+
+  it('cortex thread list follows only a pointer whose tail named it; a thread verb past the window does not follow', () => {
+    const root = project('r11-list-scope');
+    const home = tmp('r11-list-scope-home');
+    const noTail = 'Open: T-006 (2026-09-15) the counter (.cortex/pulse/threads/T-006-do-you-want-the-counter.md)';
+    const filler = Array.from({ length: 10 }, (_, i) => glob(`src/${i}/**`));
+    writeSessionTranscript(home, root, 's1', [hookContext(noTail), toolTurn(bash('cortex thread list'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext(openLine), toolTurn(...filler), toolTurn(bash('cortex thread close T-006'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(2);
+    expect(counts.pointersFollowed).toBe(0);
+  });
+
+  it('the report names the four prefixes', () => {
+    const root = project('r11-report');
+    const home = tmp('r11-report-home');
+    writeSessionTranscript(home, root, 's1', [toolTurn(glob('src/**'))]);
+    expect(renderUsageBody(collectUsage(root, { home }))).toMatch(/`Recall:` \/ `Decided:` \/ `Evidence:` \/ `Open:` lines/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 13 (3.4 third revision) — Read deferrals
+// ---------------------------------------------------------------------------
+
+describe('pulse.usage — Rule 13: read deferrals', () => {
+  const deferred = (p: string, tok = 2532, lines = 235) =>
+    `Deferred: ${p} (~${tok} tok, ${lines} lines). Implements the PreRead hook.\nConnections: -\nRules: R-001.\nReading this path again proceeds without this notice.`;
+
+  it('DEFER_RETRY_WINDOW is 3 and deferredPathsIn extracts the normalised path of every Deferred: line', () => {
+    expect(DEFER_RETRY_WINDOW).toBe(3);
+    expect(deferredPathsIn(deferred('src/hooks/pre-read.ts'))).toEqual(['src/hooks/pre-read.ts']);
+    expect(deferredPathsIn('Deferred: ./src/a.ts (~1 tok, 40 lines). x\nDeferred: src/b.ts (~2 tok, 41 lines). y')).toEqual(['src/a.ts', 'src/b.ts']);
+    expect(deferredPathsIn('Rules: R-001.\nnot a deferral')).toEqual([]);
+    expect(deferredPathsIn('')).toEqual([]);
+  });
+
+  it('AC "A deferral retried within three calls is proceeded": tool_result line, one unrelated call, then the Read', () => {
+    const root = project('r13-proceeded');
+    const home = tmp('r13-proceeded-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolTurn(read('src/hooks/pre-read.ts')),
+      toolResultTurn(deferred('src/hooks/pre-read.ts')),
+      toolTurn(glob('src/**')),
+      toolTurn(read('/abs/project/src/hooks/pre-read.ts')),
+    ]);
+
+    const counts = collectUsage(root, { home });
+    const body = renderUsageBody(counts);
+
+    expect(counts.deferralsDeferred).toBe(1);
+    expect(counts.deferralsProceeded).toBe(1);
+    expect(counts.deferralsLater).toBe(0);
+    expect(counts.deferralsAbandoned).toBe(0);
+    expect(body).toMatch(/## Read deferrals/);
+    expect(body).toMatch(/deferred 1, proceeded 1, later 0, abandoned 0/);
+    expect(body).toMatch(/proceed-rate: 1\.00/);
+  });
+
+  it('AC "A late retry is later, a missing one is abandoned": four unrelated calls then the Read; an attachment-carried line with no Read', () => {
+    const root = project('r13-later');
+    const home = tmp('r13-later-home');
+    writeSessionTranscript(home, root, 's1', [
+      toolResultTurn(deferred('src/a.ts'), { asBlocks: true }),
+      toolTurn(glob('a/**'), glob('b/**'), glob('c/**'), glob('d/**')),
+      toolTurn(read('src/a.ts')),
+    ]);
+    writeSessionTranscript(home, root, 's2', [hookContext(deferred('src/b.ts')), toolTurn(glob('x/**'), read('src/c.ts'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.deferralsDeferred).toBe(2);
+    expect(counts.deferralsProceeded).toBe(0);
+    expect(counts.deferralsLater).toBe(1);
+    expect(counts.deferralsAbandoned).toBe(1);
+    expect(renderUsageBody(counts)).toMatch(/deferred 2, proceeded 0, later 1, abandoned 1/);
+    expect(renderUsageBody(counts)).toMatch(/proceed-rate: 0\.00/);
+  });
+
+  it('the third tool call is still inside the window; the window is per session and never crosses one', () => {
+    const root = project('r13-edge');
+    const home = tmp('r13-edge-home');
+    writeSessionTranscript(home, root, 's1', [toolResultTurn(deferred('src/a.ts')), toolTurn(glob('a/**'), glob('b/**'), read('src/a.ts'))]);
+    writeSessionTranscript(home, root, 's2', [toolResultTurn(deferred('src/b.ts'))]);
+    writeSessionTranscript(home, root, 's3', [toolTurn(read('src/b.ts'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.deferralsProceeded).toBe(1);
+    expect(counts.deferralsAbandoned).toBe(1);
+    expect(counts.deferralsDeferred).toBe(2);
+  });
+
+  it('AC "Read deferrals are reported even at zero and recorded in order": zeros, proceed-rate -, findings after pointers.followed', () => {
+    const root = project('r13-zero');
+    const home = tmp('r13-zero-home');
+    writeSessionTranscript(home, root, 's1', [toolTurn(read('src/a.ts'))]);
+
+    const counts = collectUsage(root, { home });
+    const body = renderUsageBody(counts);
+
+    expect(body).toMatch(/## Read deferrals/);
+    expect(body).toMatch(/deferred 0, proceeded 0, later 0, abandoned 0/);
+    expect(body).toMatch(/proceed-rate: -/);
+    const metrics = usageFindings(counts).map((f) => f.metric);
+    const at = metrics.indexOf('pointers.followed');
+    expect(metrics.slice(at, at + 6)).toEqual([
+      'pointers.followed',
+      'deferrals.deferred',
+      'deferrals.proceeded',
+      'deferrals.later',
+      'deferrals.abandoned',
+      'questions.before-consult',
+    ]);
+  });
+
+  it('an unreadable transcript location renders the section as not measurable, not as zeros', () => {
+    const root = project('r13-unreadable');
+    const home = tmp('r13-unreadable-home');
+    const body = renderUsageBody(collectUsage(root, { home }));
+    expect(body).toMatch(/Read deferrals: not measurable/);
+    expect(body).not.toMatch(/deferred 0/);
   });
 });

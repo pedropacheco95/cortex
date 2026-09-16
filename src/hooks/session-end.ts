@@ -45,6 +45,7 @@ import type {
   SessionRecordFinding,
   SessionRecordArtefact,
 } from '../pulse/threads.js';
+import { HARNESS_MARKERS, isHarnessText } from './harness.js';
 import { readTranscriptTail } from './post-read.js';
 import { readsMemoryPath } from './pre-read.js';
 import { stopStatePath } from './stop.js';
@@ -157,34 +158,22 @@ export async function readTranscript(filePath: string, openThreadIds: string[]):
 
 /**
  * Rule 7 preamble: the harness wrappers Claude Code writes as user-role
- * entries, as observed 2026-09-15 (externally owned; spec Notes).
+ * entries, as observed 2026-09-15 (externally owned; spec Notes). The list and
+ * the string predicate live in `./harness.ts` (shared with `hooks.prompt-route`
+ * Rule 4); this module re-exports the list where the spec names it.
  */
-export const HARNESS_MARKERS = [
-  '<teammate-message',
-  '<system-reminder',
-  '<task-notification',
-  '[SYSTEM NOTIFICATION',
-  '<bash-input>',
-  '<bash-stdout>',
-  '<command-name>',
-  '<local-command',
-];
-/** Rule 7 preamble: how far into a user message a marker is looked for. */
-const HARNESS_SCAN_CHARS = 300;
+export { HARNESS_MARKERS };
 
 /**
  * Rule 7 preamble: a user-role message is harness-injected when its trimmed
- * text starts with `<` or `[`, or when its first HARNESS_SCAN_CHARS characters
- * contain any HARNESS_MARKERS entry (teammate reports arrive as a prose line
- * with the tag on the next line). Never an assistant message. Tool-result-only
- * user entries carry no text block, so `extractMessages` already drops them.
+ * text starts with `<` or `[`, or when its first 300 characters contain any
+ * HARNESS_MARKERS entry (teammate reports arrive as a prose line with the tag
+ * on the next line) — `isHarnessText`, the shared string form. Never an
+ * assistant message. Tool-result-only user entries carry no text block, so
+ * `extractMessages` already drops them.
  */
 export function isHarnessInjected(m: ExtractedMessage): boolean {
-  if (m.role !== 'user') return false;
-  const first = m.text.trimStart()[0];
-  if (first === '<' || first === '[') return true;
-  const head = m.text.slice(0, HARNESS_SCAN_CHARS);
-  return HARNESS_MARKERS.some((marker) => head.includes(marker));
+  return m.role === 'user' && isHarnessText(m.text);
 }
 
 /** The messages the extractors and answered detection see: everything but injected user entries. */

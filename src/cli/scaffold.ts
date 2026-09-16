@@ -429,6 +429,11 @@ function cortexHookEntries(preRead: boolean): HookEntry[] {
     // pointer on Grep and Bash. Always registered — it is not behind
     // hooks.preRead, which is the Read pair's flag alone.
     { event: 'PreToolUse', matcher: 'Grep|Bash', command: 'cortex hook search-annotate' },
+    // 3.4 third revision (hooks.prompt-route Rule 1): the open-thread router
+    // on every prompt. No matcher — the event supports none (one written here
+    // is silently ignored) and the hook filters harness prompts itself. Always
+    // registered — behind neither hooks.preRead nor hooks.readDefer.
+    { event: 'UserPromptSubmit', command: 'cortex hook prompt-route' },
   ];
   // The Read pair registers and unregisters together under the one
   // hooks.preRead flag (schema §5, §10.1 — default true).

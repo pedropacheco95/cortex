@@ -469,3 +469,378 @@ describe('Rule 6: recall marker', () => {
     expect(fs.readFileSync(hookErrorsPath(root), 'utf-8')).toContain('insight entry unreadable');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 7: read deferral (3.4 third revision; recall work, step 4) — the ONE
+// measured exception to warn-never-block (RULES.md rule 6). Every criterion
+// below is a first Read under `hooks.readDefer: true` unless it says otherwise;
+// every run with the flag absent or false must be byte-identical to today.
+// ---------------------------------------------------------------------------
+import {
+  isDeferrableKind,
+  readDeferPath,
+  READ_DEFER_DIR,
+  READ_DEFER_MIN_LINES,
+  READ_DEFER_CIRCUIT_BREAKER,
+  DEFER_REASON_MAX_CHARS,
+} from '../../../src/hooks/pre-read.js';
+import { writeTranscriptFile } from '../../fixtures/session-end-harness.js';
+import { textTurn, skillBaseDirUserTurn, scheduledTaskUserTurn } from '../../fixtures/sessions.js';
+
+const DEFER_ON = { schemaVersion: '3.4', hooks: { preRead: true, readDefer: true }, loop: { enabled: false } };
+const DEFER_OFF = { schemaVersion: '3.4', hooks: { preRead: true, readDefer: false }, loop: { enabled: false } };
+
+const A_PURPOSE = 'Counts Cortex usage from session transcripts.';
+const A_CONNECTIONS = [
+  'Uses:',
+  '- src/sessions/read.ts: `listSessions`, `readSessionFile` — the read-only transcript layer',
+  '- src/loops/report.ts: `writePulseReport` — the shared pulse-report writer',
+  '',
+  'Used by:',
+  '- src/cli/cli.ts: dynamic import — `cortex usage` dispatches here',
+  '',
+  'Related:',
+  '- src/pulse/hygiene.ts: `READS_RETENTION_DAYS` — not a Uses/Used-by bullet, never rendered',
+].join('\n');
+const A_INVITE = 'If this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/a.ts">corrected one-line purpose</cortex:purpose>';
+const RETRY_SENTENCE = 'Reading this path again proceeds without this notice.';
+
+/** The eligible fixture entry the ACs name: 235 lines, 2532 tokens, a Purpose, Uses/Used-by bullets. */
+function writeEligible(root: string, rel = 'src/a.ts', extra: Record<string, unknown> = {}): void {
+  writeInsightEntry(root, rel, { purpose: A_PURPOSE, tokens: 2532, lines: 235, connections: A_CONNECTIONS, ...extra });
+}
+
+function interactiveTranscript(dir: string, name = 'interactive.jsonl'): string {
+  return writeTranscriptFile(dir, [textTurn('user', 'please look at usage'), textTurn('assistant', 'ok')], name);
+}
+
+/** A deferral-eligible project: flag on, the entry, an R-001 rule over src/**, an interactive transcript. */
+function makeDeferProject(label: string, config: Record<string, unknown> = DEFER_ON): { root: string; transcript: string } {
+  const root = makeProject(label, config);
+  writeEligible(root);
+  writeRule(root, 'R-001-core.md', `id: R-001\ntitle: Core\nsource:\n  - ../bugs/B-001.md\ngoverns:\n  - "src/**/*.ts"`);
+  return { root, transcript: interactiveTranscript(root) };
+}
+
+function deferStdin(root: string, filePath: string, transcript: string | undefined, sessionId = 's1'): Record<string, unknown> {
+  return { ...stdinFor(root, filePath, sessionId), ...(transcript !== undefined ? { transcript_path: transcript } : {}) };
+}
+
+function ledgerPath(root: string, sessionId = 's1'): string {
+  return path.join(root, '.cortex', READ_DEFER_DIR, sessionId);
+}
+
+const EXPECTED_ALLOW = `src/a.ts: ${A_PURPOSE} (~2532 tok). Rules: R-001.\n${A_INVITE}`;
+
+/** Every stdout the criteria produce — "the deny never leaks" is asserted over all of them. */
+const seenStdouts: string[] = [];
+async function track(p: Promise<{ exitCode: number; stdout: string }>): Promise<{ exitCode: number; stdout: string }> {
+  const r = await p;
+  seenStdouts.push(r.stdout);
+  expect(r.exitCode).toBe(0);
+  return r;
+}
+
+describe('Rule 7: read deferral — constants and helpers', () => {
+  it('the standing-authority constants are pinned', () => {
+    expect(READ_DEFER_MIN_LINES).toBe(40);
+    expect(READ_DEFER_CIRCUIT_BREAKER).toBe(25);
+    expect(DEFER_REASON_MAX_CHARS).toBe(1000);
+    expect(READ_DEFER_DIR).toBe('pulse/state/read-deferred');
+  });
+
+  it('readDeferPath sanitises the session id like the read-memory does', () => {
+    const p = readDeferPath('/proj', '../../etc/passwd');
+    expect(path.basename(p)).toBe('.._.._etc_passwd');
+    expect(p).toBe(path.join('/proj', '.cortex', 'pulse', 'state', 'read-deferred', '.._.._etc_passwd'));
+  });
+
+  it('isDeferrableKind: source files yes; marked targets, .cortex/, .specflow/, RULES.md, CLAUDE.md, the schema doc, _index/_overview no', () => {
+    for (const p of ['src/a.ts', 'src/pulse/usage.ts', 'docs/guide.md', 'package.json', 'src/hooks/index.ts']) {
+      expect(isDeferrableKind(p), p).toBe(true);
+    }
+    for (const p of [
+      '.specflow/specs/pulse/usage.spec.md',
+      '.specflow/specs/pulse/_overview.md',
+      '.specflow/specs-business/pulse/team-sees-usage.business.md',
+      '.cortex/compass/rules/R-001-core-no-llm-calls.md',
+      '.cortex/compass/bugs/B-018-x.md',
+      '.cortex/atlas/decisions/2026-08-05-x.md',
+      '.cortex/insight/anatomy/src/a.ts.md',
+      'cortex-schema.md',
+      'RULES.md',
+      'CLAUDE.md',
+      'src/hooks/_index.md',
+      '_index.md',
+      'docs/_overview.md',
+    ]) expect(isDeferrableKind(p), p).toBe(false);
+  });
+});
+
+describe('Rule 7: read deferral — the criteria', () => {
+  it('AC: flag absent, false, or "yes" → never a deny; the Rule 2 allow payload, no read-deferred/ directory, under 75 tokens', async () => {
+    const variants: Array<[string, Record<string, unknown>]> = [
+      ['absent', { schemaVersion: '3.4', hooks: { preRead: true }, loop: { enabled: false } }],
+      ['false', DEFER_OFF],
+      ['yes', { schemaVersion: '3.4', hooks: { preRead: true, readDefer: 'yes' }, loop: { enabled: false } }],
+    ];
+    for (const [label, config] of variants) {
+      const { root, transcript } = makeDeferProject(`flagoff-${label}`, config);
+      const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
+      const env = parseEnvelope(result.stdout);
+      expect(env.permissionDecision, label).toBe('allow');
+      expect(env.additionalContext, label).toBe(EXPECTED_ALLOW);
+      expect(Math.ceil(env.additionalContext.length / 4), label).toBeLessThanOrEqual(75);
+      expect(fs.existsSync(path.join(root, '.cortex', READ_DEFER_DIR)), label).toBe(false);
+      expect(result.stdout, label).not.toContain('deny');
+    }
+  });
+
+  it('AC: flag on — the first read of a source file is deferred, with the summary in its place (the four pinned lines)', async () => {
+    const { root, transcript } = makeDeferProject('deny');
+    const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
+    const parsed = JSON.parse(result.stdout) as { hookSpecificOutput: Record<string, unknown> };
+    expect(Object.keys(parsed)).toEqual(['hookSpecificOutput']);
+    expect(Object.keys(parsed.hookSpecificOutput)).toEqual(['hookEventName', 'permissionDecision', 'permissionDecisionReason']);
+    const env = parseEnvelope(result.stdout);
+    expect(env.hookEventName).toBe('PreToolUse');
+    expect(env.permissionDecision).toBe('deny');
+    const reason = env.permissionDecisionReason as string;
+    const lines = reason.split('\n');
+    expect(lines).toEqual([
+      `Deferred: src/a.ts (~2532 tok, 235 lines). ${A_PURPOSE}`,
+      'Connections: src/sessions/read.ts: `listSessions`, `readSessionFile`; src/loops/report.ts: `writePulseReport`; src/cli/cli.ts: dynamic import',
+      'Rules: R-001.',
+      RETRY_SENTENCE,
+    ]);
+    expect(reason.length).toBeLessThanOrEqual(DEFER_REASON_MAX_CHARS);
+    // Neither the writeback invitation nor a recall marker rides on a deny.
+    expect(reason).not.toContain('<cortex:purpose');
+    expect(reason).not.toMatch(/^(Decided|Evidence|Open):/m);
+    // The ledger was written; the read-memory was NOT (nothing was read).
+    expect(fs.readFileSync(ledgerPath(root), 'utf-8')).toBe('src/a.ts\n');
+    expect(fs.existsSync(readsMemoryPath(root, 's1'))).toBe(false);
+  });
+
+  it('AC: the retry proceeds with the ordinary payload and no duplicate note; the third read is the duplicate', async () => {
+    const { root, transcript } = makeDeferProject('retry');
+    const stdin = deferStdin(root, path.join(root, 'src/a.ts'), transcript);
+    const first = await track(run(stdin));
+    expect(parseEnvelope(first.stdout).permissionDecision).toBe('deny');
+
+    const second = await track(run(stdin));
+    const secondEnv = parseEnvelope(second.stdout);
+    expect(secondEnv.permissionDecision).toBe('allow');
+    expect(secondEnv.additionalContext).toBe(EXPECTED_ALLOW);
+    expect(secondEnv.additionalContext).not.toContain('(already read this session)');
+    expect(fs.readFileSync(readsMemoryPath(root, 's1'), 'utf-8')).toBe('src/a.ts\n');
+    // One deferral per session per file: the ledger did not grow.
+    expect(fs.readFileSync(ledgerPath(root), 'utf-8')).toBe('src/a.ts\n');
+
+    const third = await track(run(stdin));
+    const thirdEnv = parseEnvelope(third.stdout);
+    expect(thirdEnv.permissionDecision).toBe('allow');
+    expect(thirdEnv.additionalContext).toBe(`${EXPECTED_ALLOW}\n(already read this session)`);
+  });
+
+  it('a path already in the Rule 4 read-memory (read before the flag was switched on) is never deferred', async () => {
+    const { root, transcript } = makeDeferProject('memfirst');
+    const mem = readsMemoryPath(root, 's1');
+    fs.mkdirSync(path.dirname(mem), { recursive: true });
+    fs.writeFileSync(mem, 'src/a.ts\n');
+    const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
+    const env = parseEnvelope(result.stdout);
+    expect(env.permissionDecision).toBe('allow');
+    expect(env.additionalContext).toBe(`${EXPECTED_ALLOW}\n(already read this session)`);
+    expect(fs.existsSync(ledgerPath(root))).toBe(false);
+  });
+
+  it('AC: gated and scaffolding kinds are never deferred — each payload is byte-identical to the flag-off run', async () => {
+    const kinds = [
+      '.specflow/specs/pulse/usage.spec.md',
+      '.cortex/compass/rules/R-001-core-no-llm-calls.md',
+      'cortex-schema.md',
+      'RULES.md',
+      'src/hooks/_index.md',
+    ];
+    for (const [i, rel] of kinds.entries()) {
+      const on = makeProject(`gated-on-${i}`, DEFER_ON);
+      const off = makeProject(`gated-off-${i}`, DEFER_OFF);
+      for (const root of [on, off]) {
+        writeInsightEntry(root, rel, { purpose: `Describes ${rel}.`, lines: 300, tokens: 900, connections: A_CONNECTIONS });
+        fs.writeFileSync(path.join(root, 'cortex-schema.md'), '## 5. Hook payload contracts\n');
+      }
+      const onResult = await track(run(deferStdin(on, path.join(on, rel), interactiveTranscript(on))));
+      const offResult = await track(run(deferStdin(off, path.join(off, rel), interactiveTranscript(off))));
+      expect(onResult, rel).toEqual(offResult);
+      expect(onResult.stdout, rel).not.toContain('deny');
+      expect(parseEnvelope(onResult.stdout).permissionDecision, rel).toBe('allow');
+      expect(fs.existsSync(path.join(on, '.cortex', READ_DEFER_DIR)), rel).toBe(false);
+    }
+  });
+
+  it('AC: a tiny file (39 lines) or one without an entry is never deferred; an entry lacking size_lines is unreadable today (silent + logged), still never a deny', async () => {
+    const root = makeProject('tiny', DEFER_ON);
+    const transcript = interactiveTranscript(root);
+    writeInsightEntry(root, 'src/tiny.ts', { purpose: 'Tiny.', lines: 39, tokens: 300, connections: A_CONNECTIONS });
+    const tiny = await track(run(deferStdin(root, path.join(root, 'src/tiny.ts'), transcript)));
+    expect(parseEnvelope(tiny.stdout).permissionDecision).toBe('allow');
+    expect(parseEnvelope(tiny.stdout).additionalContext.startsWith('src/tiny.ts: Tiny. (~300 tok).')).toBe(true);
+
+    // Exactly 40 lines is the boundary: READ_DEFER_MIN_LINES is inclusive.
+    writeInsightEntry(root, 'src/forty.ts', { purpose: 'Forty.', lines: 40, tokens: 300, connections: A_CONNECTIONS });
+    const forty = await track(run(deferStdin(root, path.join(root, 'src/forty.ts'), transcript)));
+    expect(parseEnvelope(forty.stdout).permissionDecision).toBe('deny');
+
+    // An entry lacking size_lines fails the insight parser (entry.ts) before
+    // Rule 7 can see it: today's behaviour is silence plus one log entry, and
+    // Rule 7 must not turn that into a deny. (Spec AC says "allow payload" —
+    // reported as a spec discrepancy; the parser is not this batch's file.)
+    const p = insightEntryPath(root, 'src/nolines.ts');
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(
+      p,
+      `---\npath: src/nolines.ts\nextracted_at: '2026-06-30T14:00:00.000Z'\nextraction_level: 2\nsize_tokens: 900\ncentrality: medium\nbuilt_at_commit: 'abc1234'\nsource_sha256: ${'a'.repeat(64)}\n---\n\n## Purpose\n\nNo lines.\n\n## Connections\n\n- none observed.\n`,
+    );
+    const nolines = await track(run(deferStdin(root, path.join(root, 'src/nolines.ts'), transcript)));
+    expect(nolines).toEqual({ exitCode: 0, stdout: '' });
+    expect(fs.readFileSync(hookErrorsPath(root), 'utf-8')).toContain('insight entry unreadable');
+
+    const none = await track(run(deferStdin(root, path.join(root, 'src/none.ts'), transcript)));
+    expect(none).toEqual({ exitCode: 0, stdout: '' });
+
+    // Only the 40-line file was deferred; the others never touched the ledger.
+    expect(fs.readFileSync(ledgerPath(root), 'utf-8')).toBe('src/forty.ts\n');
+  });
+
+  it('AC: the circuit breaker holds at 25 — a 26th eligible file gets the allow payload and the ledger keeps 25 lines', async () => {
+    const { root, transcript } = makeDeferProject('breaker');
+    const ledger = ledgerPath(root);
+    fs.mkdirSync(path.dirname(ledger), { recursive: true });
+    const held = Array.from({ length: READ_DEFER_CIRCUIT_BREAKER }, (_, i) => `src/held-${i}.ts`);
+    fs.writeFileSync(ledger, held.join('\n') + '\n');
+    const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
+    const env = parseEnvelope(result.stdout);
+    expect(env.permissionDecision).toBe('allow');
+    expect(env.additionalContext).toBe(EXPECTED_ALLOW);
+    expect(fs.readFileSync(ledger, 'utf-8').split('\n').filter((l) => l.length > 0)).toHaveLength(25);
+  });
+
+  it('at 24 held paths the 25th deferral still happens (the breaker counts lines, strictly fewer than 25)', async () => {
+    const { root, transcript } = makeDeferProject('breaker24');
+    const ledger = ledgerPath(root);
+    fs.mkdirSync(path.dirname(ledger), { recursive: true });
+    fs.writeFileSync(ledger, Array.from({ length: 24 }, (_, i) => `src/held-${i}.ts`).join('\n') + '\n');
+    const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
+    expect(parseEnvelope(result.stdout).permissionDecision).toBe('deny');
+    expect(fs.readFileSync(ledger, 'utf-8').split('\n').filter((l) => l.length > 0)).toHaveLength(25);
+  });
+
+  it('AC: scheduled and unknown sessions are never deferred — skill preamble, scheduled-task tag, a missing path, no transcript_path', async () => {
+    const { root } = makeDeferProject('sessions');
+    const preamble = writeTranscriptFile(root, [skillBaseDirUserTurn(), textTurn('assistant', 'ok')], 'preamble.jsonl');
+    const tagged = writeTranscriptFile(root, [scheduledTaskUserTurn(), textTurn('assistant', 'ok')], 'tagged.jsonl');
+    const variants: Array<[string, string | undefined]> = [
+      ['preamble', preamble],
+      ['tag', tagged],
+      ['missing', path.join(root, 'nope.jsonl')],
+      ['absent', undefined],
+    ];
+    for (const [label, transcript] of variants) {
+      const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript, `sess-${label}`)));
+      const env = parseEnvelope(result.stdout);
+      expect(env.permissionDecision, label).toBe('allow');
+      expect(env.additionalContext, label).toBe(EXPECTED_ALLOW);
+    }
+    expect(fs.existsSync(path.join(root, '.cortex', READ_DEFER_DIR))).toBe(false);
+  });
+
+  it('no session_id → no ledger possible → never a deny (the retry guarantee cannot be kept)', async () => {
+    const { root, transcript } = makeDeferProject('nosession');
+    const stdin = { cwd: root, tool_name: 'Read', tool_input: { file_path: path.join(root, 'src/a.ts') }, transcript_path: transcript };
+    const result = await track(run(stdin));
+    expect(parseEnvelope(result.stdout).permissionDecision).toBe('allow');
+    expect(parseEnvelope(result.stdout).additionalContext).toBe(EXPECTED_ALLOW);
+    expect(fs.existsSync(path.join(root, '.cortex', READ_DEFER_DIR))).toBe(false);
+  });
+
+  it('AC: an unwritable ledger (a directory in its place) means allow, once logged naming pre-read and the ledger path', async () => {
+    const { root, transcript } = makeDeferProject('unwritable');
+    fs.mkdirSync(ledgerPath(root), { recursive: true });
+    const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
+    expect(result.exitCode).toBe(0);
+    const env = parseEnvelope(result.stdout);
+    expect(env.permissionDecision).toBe('allow');
+    expect(env.additionalContext).toBe(EXPECTED_ALLOW);
+    const log = fs.readFileSync(hookErrorsPath(root), 'utf-8');
+    const entries = log.split('\n').filter((l) => l.startsWith('- hook: '));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toContain('hook: pre-read');
+    expect(entries[0]).toContain('.cortex/pulse/state/read-deferred/s1');
+  });
+
+  it('Connections: at most six items, Uses/Used-by bullets only, the " — " tail dropped; "-" when the section has none', async () => {
+    const { root, transcript } = makeDeferProject('connections');
+    const many = ['Uses:', ...Array.from({ length: 8 }, (_, i) => `- src/u${i}.ts: \`sym${i}\` — why it is used`)].join('\n');
+    writeEligible(root, 'src/many.ts', { connections: many });
+    const manyResult = await track(run(deferStdin(root, path.join(root, 'src/many.ts'), transcript)));
+    const manyLines = (parseEnvelope(manyResult.stdout).permissionDecisionReason as string).split('\n');
+    expect(manyLines[1]).toBe('Connections: ' + Array.from({ length: 6 }, (_, i) => `src/u${i}.ts: \`sym${i}\``).join('; '));
+
+    writeEligible(root, 'src/bare.ts', { connections: '- none observed.' });
+    const bareResult = await track(run(deferStdin(root, path.join(root, 'src/bare.ts'), transcript)));
+    const bareLines = (parseEnvelope(bareResult.stdout).permissionDecisionReason as string).split('\n');
+    expect(bareLines[1]).toBe('Connections: -');
+    expect(bareLines[2]).toBe('Rules: R-001.');
+  });
+
+  it('no governing rule → "Rules: -." on line three', async () => {
+    const root = makeProject('norules', DEFER_ON);
+    writeEligible(root);
+    const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), interactiveTranscript(root))));
+    const lines = (parseEnvelope(result.stdout).permissionDecisionReason as string).split('\n');
+    expect(lines[2]).toBe('Rules: -.');
+  });
+
+  it('budget: Connections items are dropped from the end first, the purpose stays whole', async () => {
+    const { root, transcript } = makeDeferProject('budget-conn');
+    const purpose = 'P'.repeat(600);
+    const items = Array.from({ length: 6 }, (_, i) => `- src/very/long/path/to/module-${i}.ts: \`${'s'.repeat(50)}\` — tail`);
+    writeEligible(root, 'src/b.ts', { purpose, connections: ['Uses:', ...items].join('\n') });
+    const result = await track(run(deferStdin(root, path.join(root, 'src/b.ts'), transcript)));
+    const reason = parseEnvelope(result.stdout).permissionDecisionReason as string;
+    const lines = reason.split('\n');
+    expect(reason.length).toBeLessThanOrEqual(DEFER_REASON_MAX_CHARS);
+    expect(lines[0]).toBe(`Deferred: src/b.ts (~2532 tok, 235 lines). ${purpose}`);
+    expect(lines[1].startsWith('Connections: src/very/long/path/to/module-0.ts:')).toBe(true);
+    expect(lines[1].split('; ').length).toBeLessThan(6);
+    expect(lines[1].split('; ').length).toBeGreaterThan(0);
+    expect(lines[3]).toBe(RETRY_SENTENCE);
+  });
+
+  it('budget: then the purpose is trimmed with …; the first line prefix and the closing sentence are never cut', async () => {
+    const { root, transcript } = makeDeferProject('budget-purpose');
+    const purpose = 'Q'.repeat(1200);
+    writeEligible(root, 'src/c.ts', { purpose, connections: '- none observed.' });
+    const result = await track(run(deferStdin(root, path.join(root, 'src/c.ts'), transcript)));
+    const reason = parseEnvelope(result.stdout).permissionDecisionReason as string;
+    const lines = reason.split('\n');
+    expect(reason.length).toBeLessThanOrEqual(DEFER_REASON_MAX_CHARS);
+    expect(lines).toHaveLength(4);
+    expect(lines[0].startsWith('Deferred: src/c.ts (~2532 tok, 235 lines). QQQ')).toBe(true);
+    expect(lines[0].endsWith('…')).toBe(true);
+    expect(lines[1]).toBe('Connections: -');
+    expect(lines[2]).toBe('Rules: R-001.');
+    expect(lines[3]).toBe(RETRY_SENTENCE);
+  });
+
+  it('AC: the deny never leaks — across every run above the JSON never contains "ask" or updatedInput, and deny appeared only where named', () => {
+    expect(seenStdouts.length).toBeGreaterThan(20);
+    for (const out of seenStdouts) {
+      expect(out).not.toContain('"ask"');
+      expect(out).not.toContain('updatedInput');
+    }
+    // Denies: the first-read AC, the retry AC's first run, the 40-line boundary, the 24-held run, the two Connections runs, the norules run, the two budget runs = 9.
+    expect(seenStdouts.filter((out) => out.includes('"permissionDecision":"deny"'))).toHaveLength(9);
+  });
+});

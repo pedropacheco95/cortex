@@ -161,17 +161,19 @@ export function hookErrorsPath(root: string): string {
   return path.join(root, '.cortex', 'pulse', 'reports', 'hook-errors.md');
 }
 
-/** Parse hook stdout as the pinned JSON envelope. */
+/** Parse hook stdout as the pinned JSON envelope (`permissionDecisionReason` rides only on the PreRead Rule 7 deny). */
 export function parseEnvelope(stdout: string): {
   hookEventName: string;
   additionalContext: string;
   permissionDecision?: string;
+  permissionDecisionReason?: string;
 } {
   const parsed = JSON.parse(stdout) as { hookSpecificOutput: Record<string, unknown> };
   return parsed.hookSpecificOutput as unknown as {
     hookEventName: string;
     additionalContext: string;
     permissionDecision?: string;
+    permissionDecisionReason?: string;
   };
 }
 

@@ -210,7 +210,7 @@ describe('AC: Only the report is written', () => {
 
   it('with Rule 7/8 work to do, the diff is exactly the report, the expired thread, and the aged deletions', async () => {
     const root = makeCleanProject('only-report-rule8');
-    const stale = new Date(Date.now() - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000);
+    const stale = new Date(Date.parse('2026-09-15T00:00:00.000Z') - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000) /* anchored to the fixed now, not the wall clock */;
     const age = (abs: string): void => fs.utimesSync(abs, stale, stale);
     writeAt(root, '.cortex/pulse/threads/T-001-x.md', threadRawFixture({ id: 'T-001', expires: '2026-08-01T00:00:00Z' }));
     writeAt(root, '.cortex/pulse/threads/T-002-y.md', threadRawFixture({ id: 'T-002', expires: '2999-01-01T00:00:00Z' }));
@@ -274,7 +274,7 @@ describe('AC: An open thread past its expiry is expired in place', () => {
 describe('AC: Old session records and their scratch copies are deleted together', () => {
   it('old.json, scratch/old/ and gone.last.json go; the fresh trio stays; the section reports 1 record, 1 scratch directory, 1 companion', async () => {
     const root = makeCleanProject('record-retention');
-    const stale = new Date(Date.now() - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000);
+    const stale = new Date(Date.parse('2026-09-15T00:00:00.000Z') - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000) /* anchored to the fixed now, not the wall clock */;
     const age = (abs: string): string => {
       fs.utimesSync(abs, stale, stale);
       return abs;

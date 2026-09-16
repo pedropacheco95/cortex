@@ -250,6 +250,10 @@ describe('AC6: settings.json merge preserves unrelated keys', () => {
       matcher: 'Grep|Bash',
       hooks: [{ type: 'command', command: 'cortex hook search-annotate' }],
     });
+    // hooks.prompt-route Rule 1: the UserPromptSubmit row registers with the set, no matcher.
+    expect(settings.hooks.UserPromptSubmit).toEqual([
+      { hooks: [{ type: 'command', command: 'cortex hook prompt-route' }] },
+    ]);
   });
 
   it('check.hook-config passes', async () => {

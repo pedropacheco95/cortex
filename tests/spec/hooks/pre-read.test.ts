@@ -194,7 +194,7 @@ describe('AC: flag off → hook not registered', () => {
       const result = await init(root, { noLlm: true, home, platform: 'darwin' });
       expect(result.exitCode).toBe(0);
       const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
-      expect(config.hooks).toEqual({ preRead: true }); // self-documenting explicit default
+      expect(config.hooks).toEqual({ preRead: true, readDefer: false }); // self-documenting explicit defaults (Rule 7a, 3.4 third revision)
       const settings = fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8');
       expect(settings).toContain('cortex hook pre-read');
       expect(settings).toContain('cortex hook post-read');
@@ -318,5 +318,100 @@ describe('Rule 6: the recall marker rides on reads of specs, rules and the schem
 
     // Marker-only reads write no ledger and nothing degrades.
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  }, TEST_TIMEOUT);
+});
+
+// ---------------------------------------------------------------------------
+// Rule 7: the read-deferral mode (3.4 third revision; recall work, step 4) —
+// the integrated slice through `cortex hook pre-read`: flag on, a real rule,
+// an interactive transcript; deny → retry allow → duplicate note, a gated
+// read alongside is never deferred, and the flag-off run is today's payload.
+// ---------------------------------------------------------------------------
+import { READ_DEFER_DIR, readsMemoryPath } from '../../../src/hooks/pre-read.js';
+import { checkConfig } from '../../../src/schema/checks/config.js';
+import { writeTranscriptFile } from '../../fixtures/session-end-harness.js';
+import { textTurn } from '../../fixtures/sessions.js';
+
+describe('Rule 7: one deny per file per session, the retry always proceeds, gated kinds and the flag-off project untouched', () => {
+  const PURPOSE = 'Counts Cortex usage from session transcripts.';
+  const CONNECTIONS = [
+    'Uses:',
+    '- src/sessions/read.ts: `listSessions`, `readSessionFile` — the read-only transcript layer',
+    '',
+    'Used by:',
+    '- src/cli/cli.ts: dynamic import — `cortex usage` dispatches here',
+  ].join('\n');
+
+  function seed(root: string, readDefer: boolean): string {
+    makeCortexProject(root, {
+      config: { schemaVersion: '3.4', hooks: { preRead: true, readDefer }, loop: { enabled: false } },
+    });
+    writeInsightEntry(root, 'src/pulse/usage.ts', { purpose: PURPOSE, tokens: 3320, lines: 302, connections: CONNECTIONS });
+    writeInsightEntry(root, '.specflow/specs/pulse/usage.spec.md', { purpose: 'Specifies usage.', tokens: 900, lines: 300 });
+    writeRule(root, 'R-001-core.md', `id: R-001\ntitle: Core\nsource:\n  - ../bugs/B-001.md\ngoverns:\n  - "src/**/*.ts"`);
+    return writeTranscriptFile(root, [textTurn('user', 'why is usage low?'), textTurn('assistant', 'let me look')]);
+  }
+
+  const readVia = (root: string, transcript: string, rel: string) =>
+    runHook('pre-read', JSON.stringify({ ...stdinFor(root, path.join(root, rel), 'sess-r7'), transcript_path: transcript }));
+
+  it('through the hook CLI: deny with the four-line reason, then allow without the note, then the note; the spec read is never deferred', async () => {
+    const root = tmp('rule7-on');
+    const transcript = seed(root, true);
+    // check.config is quiet for a well-formed `true` beside `preRead: true`.
+    expect(checkConfig(root).violations.filter((v) => String(v.location.key ?? '').includes('readDefer'))).toEqual([]);
+
+    const first = await readVia(root, transcript, 'src/pulse/usage.ts');
+    expect(first.exitCode).toBe(0);
+    const firstEnv = parseEnvelope(first.stdout);
+    expect(firstEnv.hookEventName).toBe('PreToolUse');
+    expect(firstEnv.permissionDecision).toBe('deny');
+    expect((firstEnv.permissionDecisionReason as string).split('\n')).toEqual([
+      `Deferred: src/pulse/usage.ts (~3320 tok, 302 lines). ${PURPOSE}`,
+      'Connections: src/sessions/read.ts: `listSessions`, `readSessionFile`; src/cli/cli.ts: dynamic import',
+      'Rules: R-001.',
+      'Reading this path again proceeds without this notice.',
+    ]);
+    expect((firstEnv.permissionDecisionReason as string).length).toBeLessThanOrEqual(1000);
+    expect(fs.readFileSync(path.join(root, '.cortex', READ_DEFER_DIR, 'sess-r7'), 'utf-8')).toBe('src/pulse/usage.ts\n');
+    expect(fs.existsSync(readsMemoryPath(root, 'sess-r7'))).toBe(false);
+
+    const second = await readVia(root, transcript, 'src/pulse/usage.ts');
+    const secondEnv = parseEnvelope(second.stdout);
+    expect(secondEnv.permissionDecision).toBe('allow');
+    expect(secondEnv.additionalContext).toBe(
+      `src/pulse/usage.ts: ${PURPOSE} (~3320 tok). Rules: R-001.\nIf this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/pulse/usage.ts">corrected one-line purpose</cortex:purpose>`,
+    );
+    expect(fs.readFileSync(readsMemoryPath(root, 'sess-r7'), 'utf-8')).toBe('src/pulse/usage.ts\n');
+
+    const third = await readVia(root, transcript, 'src/pulse/usage.ts');
+    expect(parseEnvelope(third.stdout).additionalContext.endsWith('\n(already read this session)')).toBe(true);
+
+    // A gated kind in the same session, with an entry and 300 lines: the ordinary payload, ledger unchanged.
+    const spec = await readVia(root, transcript, '.specflow/specs/pulse/usage.spec.md');
+    const specEnv = parseEnvelope(spec.stdout);
+    expect(specEnv.permissionDecision).toBe('allow');
+    expect(specEnv.additionalContext.startsWith('.specflow/specs/pulse/usage.spec.md: Specifies usage. (~900 tok).')).toBe(true);
+    expect(fs.readFileSync(path.join(root, '.cortex', READ_DEFER_DIR, 'sess-r7'), 'utf-8')).toBe('src/pulse/usage.ts\n');
+
+    for (const r of [first, second, third, spec]) {
+      expect(r.exitCode).toBe(0);
+      expect(r.stdout).not.toContain('"ask"');
+      expect(r.stdout).not.toContain('updatedInput');
+    }
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  }, TEST_TIMEOUT);
+
+  it('the same first read with readDefer: false is today\'s payload and creates no ledger', async () => {
+    const root = tmp('rule7-off');
+    const transcript = seed(root, false);
+    const result = await readVia(root, transcript, 'src/pulse/usage.ts');
+    const env = parseEnvelope(result.stdout);
+    expect(env.permissionDecision).toBe('allow');
+    expect(env.additionalContext).toBe(
+      `src/pulse/usage.ts: ${PURPOSE} (~3320 tok). Rules: R-001.\nIf this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/pulse/usage.ts">corrected one-line purpose</cortex:purpose>`,
+    );
+    expect(fs.existsSync(path.join(root, '.cortex', READ_DEFER_DIR))).toBe(false);
+    expect(fs.readFileSync(readsMemoryPath(root, 'sess-r7'), 'utf-8')).toBe('src/pulse/usage.ts\n');
   }, TEST_TIMEOUT);
 });

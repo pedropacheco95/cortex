@@ -16,10 +16,16 @@ export const PRESENT_MODULES = 'compass, atlas, archive, insight, pulse';
  *  config keys are deferred to the insight-refresh loop spec and are not yet
  *  part of the contract. `hooks.preRead` governs the Read pair (PreRead +
  *  PostRead) and defaults TRUE; init writes it explicitly on fresh projects
- *  so the config self-documents (§10.1). */
+ *  so the config self-documents (§10.1). 3.4 third revision: `hooks.readDefer`
+ *  (boolean, default FALSE) switches on the PreRead row's read-deferral mode
+ *  (§5 row (d); `hooks.pre-read-writeback` Rule 7 — RULES.md rule 6's one
+ *  measured exception). It registers no hook and changes nothing while false;
+ *  init writes it explicitly as false on fresh projects for the same
+ *  self-documenting reason (`cortex sync` does not add it to an existing
+ *  config; absent means false). */
 export const CONFIG_DEFAULTS: Record<string, unknown> = {
   schemaVersion: SCHEMA_VERSION,
-  hooks: { preRead: true },
+  hooks: { preRead: true, readDefer: false },
   pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
   harness: { maxIterations: 3 },
   loop: { enabled: false },

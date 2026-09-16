@@ -126,8 +126,11 @@ falsifiable rather than asserted.
     `Evidence:` and a leading `Open:` are what the `hooks.pre-read-writeback` Rule 6 marker begins
     with when its `Decided:` part is empty, a gap in the earlier two-prefix rule closed here)
     found in hook-injected context — a `hook_additional_context` attachment entry's content, or a
-    user entry's text — and its pointed target is the first token in that line containing `/`
-    (trailing punctuation stripped) or, when the line carries no such token, its first
+    user entry's text — and its pointed target is the path inside the line's trailing
+    parenthesised `(<path>)` when present (the `Recall:` and `Open:` grammars end that way, and an
+    `Open:` line's key text may itself contain a `/`-bearing word such as `state/`), otherwise the
+    first token in that line containing `/` (trailing punctuation stripped) or, when the line
+    carries no such token, its first
     **id-shaped** token (3.4 second revision — the `Decided:` grammar of `hooks.search-annotate`
     Rule 7 names ids, not paths): `decision.<stem>` stands for `.cortex/atlas/decisions/<stem>.md`,
     `evidence.<stem>` for `.cortex/atlas/evidence/<stem>.md`, and `T-NNN` for any path under

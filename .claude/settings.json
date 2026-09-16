@@ -79,6 +79,16 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cortex hook prompt-route"
+          }
+        ]
+      }
     ]
   }
 }

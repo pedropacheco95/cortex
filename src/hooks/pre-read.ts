@@ -26,6 +26,18 @@
  * malformed index or no subject → the payload is byte-identical to before,
  * and nothing is logged.
  *
+ * Rule 7 (3.4 third revision; recall work, step 4): the read-deferral mode
+ * behind `hooks.readDefer` (default off) — the ONE measured exception to
+ * warn-never-block (RULES.md rule 6, schema §5 row (d)). When the flag is on,
+ * the session is interactive, the target is a source file with an insight
+ * entry of ≥40 lines, and the path is in neither the read-memory nor the
+ * per-session deferral ledger (`pulse/state/read-deferred/<session>`, <25
+ * lines), the hook appends the path to that ledger and answers the Read with
+ * `permissionDecision: deny` carrying four pinned lines (Purpose, Connections,
+ * Rules, the retry sentence; ≤1,000 chars). The second Read always proceeds
+ * with the ordinary payload. Every failure inside Rule 7 falls through to the
+ * ordinary payload — never to a deny. Measured by `pulse.usage` Rule 13.
+ *
  * Warn-never-block: always exit 0; silence is the common case (no entry, no
  * `.cortex/`, flag off); internal errors degrade to silence + hook-errors.md.
  */
@@ -38,6 +50,7 @@ import { READ_TIME_MARKER } from './post-read.js';
 import { appendHookError } from './errors.js';
 import { renameIfLegacy } from '../pulse/migrate.js';
 import { candidateKeys, loadRecallIndex, markerLine, moreTail } from '../recall/query.js';
+import { sessionKindFromTranscriptHead } from './transcript-head.js';
 import type { RecallSubject } from '../recall/index.js';
 import { SCHEMA_DOC_FILENAME } from '../schema/clauses.js';
 import type { HookRunResult, HookRunOptions } from './session-start.js';
@@ -79,6 +92,42 @@ export function readsMemoryPath(root: string, sessionId: string): string {
 export function legacyReadsMemoryPath(root: string, sessionId: string): string {
   const safe = sessionId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
   return path.join(root, '.cortex', 'pulse', `.reads-${safe}`);
+}
+
+// ---------------------------------------------------------------------------
+// Rule 7 — the read-deferral mode (3.4 third revision; recall work, step 4).
+// The ONE measured exception to warn-never-block, RULES.md rule 6. Default off.
+// ---------------------------------------------------------------------------
+
+/** Rule 7(d): an entry with fewer lines than this is cheaper to read than to describe — never deferred. */
+export const READ_DEFER_MIN_LINES = 40;
+/** Rule 7(f): a session held this many times is never held again. */
+export const READ_DEFER_CIRCUIT_BREAKER = 25;
+/** Rule 7: the deny reason's ceiling, 250 tokens at the chars/4 estimate. */
+export const DEFER_REASON_MAX_CHARS = 1000;
+/** Rule 7(e): the per-session deferral ledger's directory under `.cortex/` (a sibling of the Rule 4 read-memory). */
+export const READ_DEFER_DIR = 'pulse/state/read-deferred';
+/** Rule 7: at most this many `<path>: <symbols>` items on the Connections line. */
+const DEFER_CONNECTIONS_MAX = 6;
+
+/** The per-session deferral ledger — `pulse/state/read-deferred/<sanitised session id>`, the read-memory idiom. */
+export function readDeferPath(root: string, sessionId: string): string {
+  const safe = sessionId.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
+  return path.join(root, '.cortex', READ_DEFER_DIR, safe);
+}
+
+/**
+ * Rule 7(c): a deferrable kind is a source file — not a Rule 6 marked target,
+ * not under `.cortex/` or `.specflow/`, not `RULES.md`, `CLAUDE.md` or the
+ * schema document, and not an `_index.md` / `_overview.md`. Gated and
+ * scaffolding files are read for exactness and are never deferred.
+ */
+export function isDeferrableKind(relPath: string): boolean {
+  if (isMarkedTarget(relPath)) return false;
+  if (relPath.startsWith('.cortex/') || relPath.startsWith('.specflow/')) return false;
+  if (relPath === 'RULES.md' || relPath === 'CLAUDE.md' || relPath === SCHEMA_DOC_FILENAME) return false;
+  if (/(^|\/)_(index|overview)\.md$/.test(relPath)) return false;
+  return true;
 }
 
 const SILENT: HookRunResult = { exitCode: 0, stdout: '' };
@@ -208,6 +257,88 @@ function recallMarker(root: string, relPath: string): string | null {
   return null;
 }
 
+/** Rule 7's closing sentence — the retry contract, never trimmed. */
+const DEFER_RETRY_SENTENCE = 'Reading this path again proceeds without this notice.';
+
+/** The Rule 7 deny envelope: exit 0, `permissionDecision: deny`, the reason in `permissionDecisionReason`. */
+function denyEnvelope(reason: string): HookRunResult {
+  return {
+    exitCode: 0,
+    stdout: JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: reason,
+      },
+    }),
+  };
+}
+
+/**
+ * Rule 7's `{{CONNECTIONS}}` items: the entry's `## Connections` section
+ * reduced to the bullets under a `Uses:` or `Used by:` heading, each rendered
+ * `<path>: <symbols>` with the bullet's explanatory tail after ` — ` dropped.
+ * Bullets under any other heading (or none) are not connections.
+ */
+export function connectionItems(section: string): string[] {
+  const items: string[] = [];
+  let underConnections = false;
+  for (const raw of section.split('\n')) {
+    const line = raw.trim();
+    if (line === '') continue;
+    if (!line.startsWith('- ')) {
+      underConnections = /^\**(Uses|Used by)\**:/.test(line);
+      continue;
+    }
+    if (!underConnections) continue;
+    const m = /^- ([^:]+): ([^—]+)/.exec(line);
+    if (m === null) continue;
+    items.push(`${(m[1] as string).trim()}: ${(m[2] as string).trim()}`);
+  }
+  return items;
+}
+
+/**
+ * Rule 7's reason, pinned line by line and fitted to DEFER_REASON_MAX_CHARS:
+ * Connections items are dropped from the end first, then the purpose is
+ * trimmed with `…` — never the first line's `Deferred: <path>` and never the
+ * closing sentence.
+ */
+export function deferReason(
+  relPath: string,
+  tokens: number,
+  lines: number,
+  purpose: string,
+  connections: string[],
+  ruleIds: string[],
+): string {
+  const rulesLine = `Rules: ${ruleIds.length > 0 ? ruleIds.join(' ') : '-'}.`;
+  const compose = (p: string, items: string[]): string =>
+    [
+      `Deferred: ${relPath} (~${tokens} tok, ${lines} lines). ${p}`,
+      `Connections: ${items.length > 0 ? items.join('; ') : '-'}`,
+      rulesLine,
+      DEFER_RETRY_SENTENCE,
+    ].join('\n');
+  let items = connections.slice(0, DEFER_CONNECTIONS_MAX);
+  let reason = compose(purpose, items);
+  while (reason.length > DEFER_REASON_MAX_CHARS && items.length > 0) {
+    items = items.slice(0, -1);
+    reason = compose(purpose, items);
+  }
+  if (reason.length > DEFER_REASON_MAX_CHARS) {
+    const excess = reason.length - DEFER_REASON_MAX_CHARS;
+    reason = compose(purpose.slice(0, Math.max(0, purpose.length - excess - 1)) + '…', items);
+  }
+  return reason;
+}
+
+/** The non-empty lines of a ledger file, or `[]` when it does not exist. Throws when it cannot be read (a directory in its place). */
+function ledgerLines(ledgerPath: string): string[] {
+  if (!fs.existsSync(ledgerPath)) return [];
+  return fs.readFileSync(ledgerPath, 'utf-8').split('\n').filter((l) => l.length > 0);
+}
+
 /** First non-empty line of an entry's `## Purpose` section, whitespace-collapsed. */
 export function purposeFirstLine(purposeSection: string): string {
   for (const line of purposeSection.split('\n')) {
@@ -237,9 +368,14 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     if (!fs.existsSync(configPath)) return SILENT;
 
     // Rule 3: flag off → silent (default TRUE per §10.1; only explicit false opts out).
+    // Rule 7(a): `hooks.readDefer` is on only as boolean `true` (absent, false
+    // or any non-boolean → off; a non-boolean is check.config's error).
+    let readDefer = false;
     try {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
-      if ((config['hooks'] as Record<string, unknown> | undefined)?.['preRead'] === false) return SILENT;
+      const hooks = config['hooks'] as Record<string, unknown> | undefined;
+      if (hooks?.['preRead'] === false) return SILENT;
+      readDefer = hooks?.['readDefer'] === true;
     } catch {
       // Unparseable config: check.config's business — treat as default-on.
     }
@@ -287,8 +423,73 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     // carries no read-time provenance marker (post-read writes the marker).
     const invite = !purposeSection.includes(READ_TIME_MARKER);
 
-    // Rule 4: duplicate-read detection via the per-session read-memory.
     const sessionId = typeof stdin['session_id'] === 'string' ? stdin['session_id'] : '';
+    const ruleIds = applicableRuleIds(root, relPath);
+
+    // Rule 7: the read-deferral mode — the ONE measured exception to
+    // warn-never-block (RULES.md rule 6), default off. Conditions (a)–(g) in
+    // the spec's order, cheapest first; every failure inside this block falls
+    // through to the ordinary Rules 2–6 payload below, never to a deny. The
+    // ledger is written BEFORE the deny so the retry is always recognised; the
+    // Rule 4 read-memory is NOT written on a deferral (nothing was read).
+    if (readDefer && sessionId !== '' && isDeferrableKind(relPath)) {
+      try {
+        const linesRaw: unknown = (entryResult.entry.frontmatter as unknown as Record<string, unknown>)['size_lines'];
+        const sizeLines = typeof linesRaw === 'number' && Number.isFinite(linesRaw) ? linesRaw : 0; // (d): missing counts as tiny
+        if (sizeLines >= READ_DEFER_MIN_LINES) {
+          const deferPath = readDeferPath(root, sessionId);
+          const memPath = readsMemoryPath(root, sessionId);
+          renameIfLegacy(legacyReadsMemoryPath(root, sessionId), memPath);
+          // (e) + (f): both ledgers must be readable — an unreadable ledger
+          // cannot keep the one-deny-per-file guarantee, so it means allow, once logged.
+          let held: string[] | null = null;
+          let alreadyReadBefore = false;
+          try {
+            held = ledgerLines(deferPath);
+            alreadyReadBefore = ledgerLines(memPath).includes(relPath);
+          } catch (err) {
+            appendHookError(
+              root,
+              { hook: HOOK_NAME, file: path.relative(root, deferPath), failure: `read deferral ledger unreadable: ${(err as Error).message}` },
+              now,
+            );
+          }
+          if (
+            held !== null &&
+            !alreadyReadBefore &&
+            !held.includes(relPath) &&
+            held.length < READ_DEFER_CIRCUIT_BREAKER &&
+            // (g): interactive sessions only — scheduled and unknown never defer.
+            sessionKindFromTranscriptHead(typeof stdin['transcript_path'] === 'string' ? stdin['transcript_path'] : undefined) ===
+              'interactive'
+          ) {
+            // Order of effects: the ledger first; if the append fails, no deny.
+            let appended = false;
+            try {
+              fs.mkdirSync(path.dirname(deferPath), { recursive: true });
+              fs.appendFileSync(deferPath, relPath + '\n', 'utf-8');
+              appended = true;
+            } catch (err) {
+              appendHookError(
+                root,
+                { hook: HOOK_NAME, file: path.relative(root, deferPath), failure: `read deferral ledger unwritable: ${(err as Error).message}` },
+                now,
+              );
+            }
+            if (appended) {
+              return denyEnvelope(
+                deferReason(relPath, tokens, sizeLines, purpose, connectionItems(entryResult.sections['Connections'] ?? ''), ruleIds),
+              );
+            }
+          }
+        }
+      } catch (err) {
+        // Anything else inside Rule 7 degrades to the ordinary payload plus one log entry.
+        appendHookError(root, { hook: HOOK_NAME, file: relPath, failure: `read deferral: ${(err as Error).message}` }, now);
+      }
+    }
+
+    // Rule 4: duplicate-read detection via the per-session read-memory.
     let alreadyRead = false;
     if (sessionId) {
       const memPath = readsMemoryPath(root, sessionId);
@@ -308,8 +509,6 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
         appendHookError(root, { hook: HOOK_NAME, file: path.relative(root, memPath), failure: (err as Error).message }, now);
       }
     }
-
-    const ruleIds = applicableRuleIds(root, relPath);
 
     // Payload per schema §5 (v3), pinned line by line; the Rule 6 marker last.
     const inviteLine = `If this purpose is wrong or stale after reading, emit: <cortex:purpose file="${relPath}">corrected one-line purpose</cortex:purpose>`;

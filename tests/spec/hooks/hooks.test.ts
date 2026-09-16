@@ -12,6 +12,8 @@ import { readHookErrorEntries } from '../../../src/hooks/errors.js';
 import { clearRecallIndexCache } from '../../../src/recall/query.js';
 import { makeTmpDir, cleanTmp, makeCortexProject } from '../../fixtures/hooks-harness.js';
 import { sampleRecallIndex, writeRecallIndexFixture } from '../../fixtures/recall-query.js';
+import { writeThread } from '../../../src/pulse/threads.js';
+import { makeThread } from '../../fixtures/threads.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -28,7 +30,7 @@ function stdinJson(fields: Record<string, unknown>): string {
 }
 
 describe('cortex hook dispatch matches the init-registered command names', () => {
-  it('all eight registered names are handled with exit 0; unknown names stay silent', async () => {
+  it('all nine registered names are handled with exit 0; unknown names stay silent', async () => {
     const root = tmp('dispatch');
     makeCortexProject(root);
     // Registered command suffixes per core-cli.init Rule 11 / hooks.* Rule 1:
@@ -63,6 +65,16 @@ describe('cortex hook dispatch matches the init-registered command names', () =>
     );
     expect(pointed.exitCode).toBe(0);
     expect(pointed.stdout).toContain('Decided: decision.2026-07-10-x');
+    // prompt-route (hooks.prompt-route Rule 1): dispatches; no ledger yet, so
+    // silent AND unlogged (Rule 10)…
+    expect(await runHook('prompt-route', stdinJson({ cwd: root, prompt: 'T-001 please' }))).toEqual({ exitCode: 0, stdout: '' });
+    expect(readHookErrorEntries(root).some((e) => e.startsWith('- hook: prompt-route |'))).toBe(false);
+    // …and with an open thread named by the prompt the name really dispatches.
+    writeThread(root, makeThread({ id: 'T-001', kind: 'offer', body: 'I can wire the counter into the usage report' }));
+    const routed = await runHook('prompt-route', stdinJson({ cwd: root, prompt: 'T-001 please' }));
+    expect(routed.exitCode).toBe(0);
+    expect(routed.stdout).toContain('"hookEventName":"UserPromptSubmit"');
+    expect(routed.stdout).toContain('Open: T-001 (');
     expect(await runHook('nonsense', 'not even json')).toEqual({ exitCode: 0, stdout: '' });
   });
 });

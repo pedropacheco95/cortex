@@ -171,3 +171,24 @@ export function hookContext(...lines: string[]): Record<string, unknown> {
 export function glob(pattern: string): ToolUseSpec {
   return { name: 'Glob', input: { pattern } };
 }
+
+// ---------------------------------------------------------------------------
+// pulse.usage Rule 13 fixtures (3.4 third revision) — additive.
+// ---------------------------------------------------------------------------
+
+/**
+ * A user entry carrying one `tool_result` block — the shape Claude Code writes
+ * for a tool's outcome, including a denied Read's `permissionDecisionReason`.
+ * `content` is a string by default; pass `asBlocks` for the `[{type:'text'}]` form.
+ */
+export function toolResultTurn(text: string, opts: { toolUseId?: string; asBlocks?: boolean } = {}): Record<string, unknown> {
+  const content = opts.asBlocks === true ? [{ type: 'text', text }] : text;
+  return {
+    type: 'user',
+    message: {
+      role: 'user',
+      content: [{ type: 'tool_result', tool_use_id: opts.toolUseId ?? 'toolu_0', content, is_error: true }],
+    },
+    timestamp: '2026-07-01T00:00:00Z',
+  };
+}

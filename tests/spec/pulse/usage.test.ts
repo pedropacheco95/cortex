@@ -111,6 +111,7 @@ describe('pulse.usage — Rules 8–11 land in the written report', () => {
 
     expect(body).toMatch(/Searches by target: not measurable/);
     expect(body).toMatch(/Pointer follow-through: not measurable/);
+    expect(body).toMatch(/Read deferrals: not measurable/);
   });
 });
 
@@ -160,8 +161,17 @@ describe('`usage --record` writes evidence from the same counts as the report', 
       'searches.knowledge', 'searches.machinery', 'searches.document', 'searches.other',
       'insight.file',
       'recall.recall', 'recall.why', 'reads.atlas-decisions', 'reads.pulse-threads',
-      'pointers.fired', 'pointers.followed', 'questions.before-consult',
+      'pointers.fired', 'pointers.followed',
+      'deferrals.deferred', 'deferrals.proceeded', 'deferrals.later', 'deferrals.abandoned',
+      'questions.before-consult',
     ]);
+    // Rule 13: the flag was off in every session, so the four zeros are the baseline, not "not measurable".
+    for (const metric of ['deferrals.deferred', 'deferrals.proceeded', 'deferrals.later', 'deferrals.abandoned']) {
+      expect(findings).toContainEqual({ metric, value: 0 });
+    }
+    expect(reportRaw).toMatch(/## Read deferrals/);
+    expect(reportRaw).toMatch(/deferred 0, proceeded 0, later 0, abandoned 0/);
+    expect(reportRaw).toMatch(/proceed-rate: -/);
     expect(findings).toContainEqual({ metric: 'searches.knowledge', value: 54 });
     expect(findings).toContainEqual({ metric: 'insight.file', value: 2, unit: 'invocations' });
     expect(findings).toContainEqual({ metric: 'reads.atlas-decisions', value: 0 });

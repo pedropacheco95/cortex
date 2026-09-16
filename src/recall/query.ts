@@ -523,3 +523,82 @@ export function selectPointers(
   const fired = [...(leadKey === null ? [] : [leadKey]), ...kept.flatMap(idsOf)];
   return { lines: renderAll(), fired };
 }
+
+// ---------------------------------------------------------------------------
+// 3.4 third revision — the `Open:` line (`hooks.prompt-route` Rule 9; schema §5
+// grammar third shape) and the fired memory both hooks share (Rule 8 there,
+// `hooks.search-annotate` Rule 9)
+// ---------------------------------------------------------------------------
+
+/** Rule 9's key-text width, before the budget cuts it to 40 then 20. */
+export const OPEN_TITLE_MAX = 80;
+/** Rule 9's onward pointer when more threads qualified than were shown. */
+export const THREAD_LIST_TAIL = ' · more: cortex thread list';
+/** The Rule 9 budget cuts, in order, after the initial OPEN_TITLE_MAX render. */
+const OPEN_BUDGET_CUTS = [THREAD_TITLE_MAX, BUDGET_TITLE_MAX] as const;
+
+/**
+ * `Open: <T-NNN> (<YYYY-MM-DD>) <key text cut to titleMax> (<path>)` — the key
+ * text whitespace-collapsed and cut on a word boundary with a trailing `…`; the
+ * id, the date and the path are never cut. No imperative, no second person, no
+ * body beyond the key text (`pulse.usage` Rule 11 counts it by its prefix).
+ */
+export function openLine(id: string, openedIso: string, keyText: string, relPath: string, titleMax: number = OPEN_TITLE_MAX): string {
+  const text = cutTitle(keyText.replace(/\s+/g, ' ').trim(), titleMax);
+  return `Open: ${id} (${openedIso.slice(0, 10)}) ${text} (${relPath})`;
+}
+
+/** One thread the router wants to name: what `openLine` needs, before the budget. */
+export interface OpenLineItem {
+  id: string;
+  /** iso-datetime (or date) the thread was opened. */
+  opened: string;
+  /** `keyText(thread)` — the question, offer or approval text, uncut. */
+  keyText: string;
+  /** The thread file's project-relative POSIX path. */
+  relPath: string;
+}
+
+/**
+ * Rule 9's budget, in the spec's order. Up to POINTER_MAX_LINES lines are
+ * rendered at 80; while the joined payload (the tail on the last line when
+ * `more`) exceeds POINTER_BUDGET_CHARS: re-render at 40, then 20; then drop
+ * the second line — something is now unshown, so `more` becomes true and the
+ * tail moves to the first line; then drop the tail. Ids, dates and paths are
+ * never cut, so a pathological path can still leave one line over budget —
+ * the caller emits it as is rather than truncating a path.
+ */
+export function fitOpenLines(items: OpenLineItem[], more: boolean): string[] {
+  let kept = items.slice(0, POINTER_MAX_LINES);
+  if (kept.length === 0) return [];
+  let titleMax: number = OPEN_TITLE_MAX;
+  let tail = more ? THREAD_LIST_TAIL : '';
+  const renderAll = (): string[] => kept.map((it, i) => openLine(it.id, it.opened, it.keyText, it.relPath, titleMax) + (i === kept.length - 1 ? tail : ''));
+  const overBudget = (): boolean => renderAll().join('\n').length > POINTER_BUDGET_CHARS;
+
+  for (const cut of OPEN_BUDGET_CUTS) {
+    if (!overBudget()) break;
+    titleMax = cut;
+  }
+  if (overBudget() && kept.length > 1) {
+    kept = kept.slice(0, 1);
+    tail = THREAD_LIST_TAIL;
+  }
+  if (overBudget()) tail = '';
+  return renderAll();
+}
+
+/**
+ * The per-session fired memory (`pulse/state/recall-fired/<session-id>`):
+ * newline-separated subject keys, entry ids and thread ids, blank lines
+ * skipped. An absent or unreadable file is the empty set — never a throw.
+ * Written by `hooks.search-annotate` Rule 9 and `hooks.prompt-route` Rule 8,
+ * read by both, so a thread pointed at by either is pointed at by neither again.
+ */
+export function readFiredKeys(memPath: string): Set<string> {
+  try {
+    return new Set(fs.readFileSync(memPath, 'utf-8').split('\n').filter((l) => l.length > 0));
+  } catch {
+    return new Set();
+  }
+}

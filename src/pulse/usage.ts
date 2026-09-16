@@ -57,6 +57,12 @@ const DOCUMENT_FILES = new Set(['cortex-schema.md', 'RULES.md', 'CLAUDE.md']);
 /** Tool calls after a pointer line within which a matching Read/search counts as followed (Rule 11). */
 const POINTER_WINDOW = 10;
 
+/** Tool calls after a `Deferred:` line within which a Read of the deferred path is `proceeded` (Rule 13; fixed). */
+export const DEFER_RETRY_WINDOW = 3;
+
+/** Rule 11 (3.4 third revision): the thread verbs that count as acting on an `Open:` line's thread. */
+const THREAD_ACT_VERBS = new Set(['close', 'drop', 'promote']);
+
 export interface UsageCounts {
   /** Sessions the report was computed over — the denominator for every figure (Rule 4). */
   sessions: number;
@@ -87,10 +93,18 @@ export interface UsageCounts {
   cortexGreps: number;
   /** Searches by target bucket (Rule 8). */
   searchesByTarget: Record<SearchTarget, number>;
-  /** Hook-injected `Recall:` / `Decided:` pointer lines seen (Rule 11). */
+  /** Hook-injected `Recall:` / `Decided:` / `Evidence:` / `Open:` pointer lines seen (Rule 11). */
   pointersFired: number;
   /** Pointers whose path was read or searched within the next 10 tool calls (Rule 11). */
   pointersFollowed: number;
+  /** `Deferred:` lines seen — every one lands in exactly one of the three below (Rule 13). */
+  deferralsDeferred: number;
+  /** Deferrals whose path was Read within the next DEFER_RETRY_WINDOW tool calls (Rule 13). */
+  deferralsProceeded: number;
+  /** Deferrals whose first Read of the path came after that window (Rule 13). */
+  deferralsLater: number;
+  /** Deferrals no Read of the path ever followed in the session (Rule 13). */
+  deferralsAbandoned: number;
   /** Sessions where the assistant asked before any orientation read (Rule 4). */
   questionSessionsWithoutConsult: number;
 }
@@ -117,6 +131,10 @@ function emptyCounts(): UsageCounts {
     searchesByTarget: { knowledge: 0, machinery: 0, document: 0, other: 0 },
     pointersFired: 0,
     pointersFollowed: 0,
+    deferralsDeferred: 0,
+    deferralsProceeded: 0,
+    deferralsLater: 0,
+    deferralsAbandoned: 0,
     questionSessionsWithoutConsult: 0,
   };
 }
@@ -244,10 +262,27 @@ export interface PointerTarget {
   path: string;
   /** The `<ref>` of a trailing ` · more: cortex why <ref>`, when present. */
   whyRef?: string;
+  /** Which command the `more:` tail named, when the line carries one (3.4 third revision). */
+  moreCommand?: 'why' | 'thread list';
+  /** An `Open:` line's own thread id — a `cortex thread close|drop|promote <id>` follows it (3.4 third revision). */
+  threadId?: string;
 }
 
-/** Rule 11's `more:` tail — parsed off the line before the target is looked for, so its ref never becomes the target. */
-const MORE_TAIL_RE = /\s*·\s*more:\s*cortex why (\S+)\s*$/;
+/**
+ * Rule 11's `more:` tail — ` · more: cortex why <ref>` or (3.4 third revision)
+ * ` · more: cortex thread list` — parsed off the line before the target is
+ * looked for, so its ref never becomes the target.
+ */
+const MORE_TAIL_RE = /\s*·\s*more:\s*cortex (why (\S+)|thread list)\s*$/;
+
+/** Rule 11: the pointer prefixes counted as fired (3.4 third revision adds `Evidence:` and `Open:`). */
+const POINTER_PREFIX_RE = /^(Recall|Decided|Evidence|Open):/;
+
+/** The `(<path>)` a `Recall:` or `Open:` line ends with — preferred over a `/` inside the title or key text. */
+const TRAILING_PATH_RE = /\((\S*\/\S*)\)\s*$/;
+
+/** The id shape of an `Open:` line's thread. */
+const THREAD_ID_RE = /^T-\d{3,}$/;
 
 /** Rule 11 (3.4 second revision): the id shapes a pointer line may carry instead of a path, and the path each stands for. */
 const ID_SHAPES: [RegExp, (id: string) => string][] = [
@@ -257,22 +292,27 @@ const ID_SHAPES: [RegExp, (id: string) => string][] = [
 ];
 
 /**
- * Rule 11: the pointed target of every `Recall:` / `Decided:` line in a block
- * of hook-injected text — the first `/`-bearing token of each such line
- * (trailing punctuation stripped) or, when the line carries no such token, its
- * first id-shaped token mapped to the path it stands for (3.4 second revision:
- * the `Decided:` grammar names ids, not paths). A ` · more: cortex why <ref>`
- * tail is split off first and kept as `whyRef`. Lines with neither point
- * nowhere and are not counted as fired.
+ * Rule 11: the pointed target of every `Recall:` / `Decided:` / `Evidence:` /
+ * `Open:` line in a block of hook-injected text — the parenthesised `(<path>)`
+ * the line ends with when it has one (the `Recall:` and `Open:` grammars put
+ * the path there, and an `Open:` key text may itself carry a `/`, as in
+ * `state/`), else the first `/`-bearing token (trailing punctuation stripped)
+ * or, when the line carries no such token, its first id-shaped token mapped to
+ * the path it stands for (3.4 second revision: the `Decided:` grammar names
+ * ids, not paths). A ` · more: cortex why <ref>` or ` · more: cortex thread
+ * list` tail is split off first and kept as `whyRef` / `moreCommand`; an
+ * `Open:` line's first `T-NNN` token is kept as `threadId`. Lines with neither
+ * a path nor an id point nowhere and are not counted as fired.
  */
 export function pointerTargetsIn(text: string): PointerTarget[] {
   const targets: PointerTarget[] = [];
   for (const rawLine of text.split('\n')) {
-    if (!/^(Recall|Decided):/.test(rawLine)) continue;
+    if (!POINTER_PREFIX_RE.test(rawLine)) continue;
     const tail = MORE_TAIL_RE.exec(rawLine);
     const line = tail === null ? rawLine : rawLine.slice(0, tail.index);
     const tokens = line.split(/\s+/).map((t) => t.replace(/^[`'"(\[]+|[`'"),.:;\]]+$/g, ''));
-    const pathToken = tokens.find((t) => t.includes('/'));
+    const trailing = TRAILING_PATH_RE.exec(line)?.[1];
+    const pathToken = trailing ?? tokens.find((t) => t.includes('/'));
     let pointed: string | undefined;
     if (pathToken !== undefined) pointed = normalisePath(pathToken);
     else {
@@ -285,9 +325,37 @@ export function pointerTargetsIn(text: string): PointerTarget[] {
       }
     }
     if (pointed === undefined) continue;
-    targets.push(tail?.[1] === undefined ? { path: pointed } : { path: pointed, whyRef: tail[1] });
+    const target: PointerTarget = { path: pointed };
+    if (tail !== null) {
+      if (tail[2] !== undefined) {
+        target.whyRef = tail[2];
+        target.moreCommand = 'why';
+      } else target.moreCommand = 'thread list';
+    }
+    if (rawLine.startsWith('Open:')) {
+      const threadId = tokens.find((t) => THREAD_ID_RE.test(t));
+      if (threadId !== undefined) target.threadId = threadId;
+    }
+    targets.push(target);
   }
   return targets;
+}
+
+/**
+ * Rule 13: the deferred path of every `Deferred: <path> …` line in a block of
+ * text — the line's first token after the prefix, trailing punctuation
+ * stripped, normalised as Rule 11 normalises. The line is matched by its fixed
+ * prefix and never interpreted (Rule 2).
+ */
+export function deferredPathsIn(text: string): string[] {
+  const paths: string[] = [];
+  for (const line of text.split('\n')) {
+    const hit = /^Deferred: (\S+)/.exec(line);
+    if (hit?.[1] === undefined) continue;
+    const token = hit[1].replace(/^[`'"(\[]+|[`'"),.:;\]]+$/g, '');
+    if (token.length > 0) paths.push(normalisePath(token));
+  }
+  return paths;
 }
 
 /** The pre-3.4-second-revision name: the pointed paths only. */
@@ -344,12 +412,68 @@ function follows(pointed: string, target: string, kind: 'read' | 'search'): bool
   return kind === 'search' && (pointed.startsWith(`${t}/`) || pointed.includes(`/${t}/`));
 }
 
-/** Rule 11: does a quote-stripped Bash command invoke `cortex why <ref>` in any of its segments? */
-function invokesWhy(unquotedCommand: string, ref: string): boolean {
+/**
+ * Rule 11: does any segment of a quote-stripped Bash command invoke `cortex`
+ * with arguments the predicate accepts? Segments split on `|| && | ; \n`; the
+ * predicate sees the tokens after the leading `cortex`.
+ */
+function invokesCortexVerb(unquotedCommand: string, predicate: (args: string[]) => boolean): boolean {
   return unquotedCommand.split(/\|\||&&|[|;\n]/).some((segment) => {
     const tokens = segment.trim().split(/\s+/);
-    return tokens[0] === 'cortex' && tokens[1] === 'why' && tokens[2] === ref;
+    return tokens[0] === 'cortex' && predicate(tokens.slice(1));
   });
+}
+
+/** Rule 11: `cortex why <ref>` with exactly that ref. */
+function invokesWhy(unquotedCommand: string, ref: string): boolean {
+  return invokesCortexVerb(unquotedCommand, (args) => args[0] === 'why' && args[1] === ref);
+}
+
+/** Rule 11 (3.4 third revision): `cortex thread list` — the `Open:` tail's pull side. */
+function invokesThreadList(unquotedCommand: string): boolean {
+  return invokesCortexVerb(unquotedCommand, (args) => args[0] === 'thread' && args[1] === 'list');
+}
+
+/** Rule 11 (3.4 third revision): `cortex thread close|drop|promote <id>` — acting on the thread is following. */
+function invokesThreadAct(unquotedCommand: string, threadId: string): boolean {
+  return invokesCortexVerb(unquotedCommand, (args) => args[0] === 'thread' && THREAD_ACT_VERBS.has(args[1] ?? '') && args[2] === threadId);
+}
+
+/** Rule 11: a pending pointer is followed by this Bash command when its `more:` tail's command runs, or its thread is acted on. */
+function bashFollows(pointer: { whyRef?: string; moreCommand?: 'why' | 'thread list'; threadId?: string }, unquotedCommand: string): boolean {
+  if (pointer.whyRef !== undefined && invokesWhy(unquotedCommand, pointer.whyRef)) return true;
+  if (pointer.moreCommand === 'thread list' && invokesThreadList(unquotedCommand)) return true;
+  return pointer.threadId !== undefined && invokesThreadAct(unquotedCommand, pointer.threadId);
+}
+
+/**
+ * Rule 13: the text of every `tool_result` content block a user entry carries
+ * — string content, or its `text` blocks. A denied Read's
+ * `permissionDecisionReason` lands here (externally owned shape; a change
+ * shows as `deferred` dropping to zero, never as a crash).
+ */
+function resultText(entry: SessionEntry): string[] {
+  const texts: string[] = [];
+  if (entry.type !== 'user') return texts;
+  const message = entry['message'];
+  if (typeof message !== 'object' || message === null) return texts;
+  const content = (message as Record<string, unknown>)['content'];
+  if (!Array.isArray(content)) return texts;
+  for (const block of content) {
+    if (typeof block !== 'object' || block === null) continue;
+    const b = block as Record<string, unknown>;
+    if (b['type'] !== 'tool_result') continue;
+    const inner = b['content'];
+    if (typeof inner === 'string') texts.push(inner);
+    else if (Array.isArray(inner)) {
+      for (const part of inner) {
+        if (typeof part !== 'object' || part === null) continue;
+        const p = part as Record<string, unknown>;
+        if (p['type'] === 'text' && typeof p['text'] === 'string') texts.push(p['text']);
+      }
+    }
+  }
+  return texts;
 }
 
 /**
@@ -382,7 +506,10 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
     let consulted = false;
     let askedBeforeConsulting = false;
     // Rule 11: pointers still inside their follow-through window, per session.
-    let pending: { path: string; whyRef?: string; remaining: number }[] = [];
+    let pending: (PointerTarget & { remaining: number })[] = [];
+    // Rule 13: deferrals awaiting their Read, per session — never expire, so an
+    // unmatched one is `abandoned` at the session's end.
+    let pendingDeferrals: { path: string; remaining: number }[] = [];
 
     const search = (target: string): void => {
       const bucket = searchTargetOf(target);
@@ -396,15 +523,23 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
     };
 
     for (const entry of entries) {
-      for (const pointer of injectedText(entry).flatMap(pointerTargetsIn)) {
+      const injected = injectedText(entry);
+      for (const pointer of injected.flatMap(pointerTargetsIn)) {
         counts.pointersFired += 1;
         pending.push({ ...pointer, remaining: POINTER_WINDOW });
+      }
+      // Rule 13: a `Deferred:` line in hook context or in a tool_result block.
+      for (const deferredPath of [...injected, ...resultText(entry)].flatMap(deferredPathsIn)) {
+        counts.deferralsDeferred += 1;
+        pendingDeferrals.push({ path: deferredPath, remaining: DEFER_RETRY_WINDOW });
       }
 
       for (const use of toolUses(entry)) {
         // Rule 11: every tool call spends one unit of every pending pointer's window.
         pending = pending.filter((p) => p.remaining > 0);
         for (const p of pending) p.remaining -= 1;
+        // Rule 13: and one unit of every pending deferral's retry window (which may go negative: `later`).
+        for (const d of pendingDeferrals) d.remaining -= 1;
 
         if (use.name === 'Bash') {
           // Rule 2: the command string is the ONLY population for verb counts,
@@ -417,9 +552,10 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
           if (recall?.[1]) counts.recallVerbs[recall[1]] = (counts.recallVerbs[recall[1]] ?? 0) + 1;
           // Rule 8: only a segment that is itself a search with a path operand counts.
           for (const target of searchTargetsIn(unquoted)) search(target);
-          // Rule 11: `cortex why <ref>` with the ref a pending pointer's `more:` tail named is following.
+          // Rule 11: the command a pending pointer's `more:` tail named (`cortex why <ref>`,
+          // `cortex thread list`), or a thread verb on an `Open:` line's own id, is following.
           pending = pending.filter((p) => {
-            if (p.whyRef === undefined || !invokesWhy(unquoted, p.whyRef)) return true;
+            if (!bashFollows(p, unquoted)) return true;
             counts.pointersFollowed += 1;
             return false;
           });
@@ -437,6 +573,13 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
           pending = pending.filter((p) => {
             if (!follows(p.path, filePath, 'read')) return true;
             counts.pointersFollowed += 1;
+            return false;
+          });
+          // Rule 13: the retry the gate promised — inside the window it is `proceeded`, after it `later`.
+          pendingDeferrals = pendingDeferrals.filter((d) => {
+            if (!follows(d.path, filePath, 'read')) return true;
+            if (d.remaining >= 0) counts.deferralsProceeded += 1;
+            else counts.deferralsLater += 1;
             return false;
           });
           const cortexPath = cortexRelative(filePath);
@@ -466,9 +609,16 @@ export function collectUsage(root: string, opts: CollectOptions = {}): UsageCoun
     }
 
     if (askedBeforeConsulting) counts.questionSessionsWithoutConsult += 1;
+    // Rule 13: a deferral no Read ever answered in this session.
+    counts.deferralsAbandoned += pendingDeferrals.length;
   }
 
   return counts;
+}
+
+/** Rule 13: `proceeded / deferred` to two decimals, or `-` when nothing was deferred. */
+function proceedRate(counts: UsageCounts): string {
+  return counts.deferralsDeferred === 0 ? '-' : (counts.deferralsProceeded / counts.deferralsDeferred).toFixed(2);
 }
 
 function verbLines(counts: UsageCounts): string[] {
@@ -513,6 +663,7 @@ export function renderUsageBody(counts: UsageCounts): string {
       '- Searches targeting `.cortex/`: not measurable',
       '- Searches by target: not measurable',
       '- Pointer follow-through: not measurable',
+      '- Read deferrals: not measurable',
       '- Questions asked before any consult: not measurable',
     ].join('\n');
   }
@@ -577,9 +728,19 @@ export function renderUsageBody(counts: UsageCounts): string {
     '',
     '## Pointer follow-through',
     '',
-    `Hook-injected \`Recall:\` / \`Decided:\` lines: fired ${counts.pointersFired}, followed ${counts.pointersFollowed}`,
-    `across ${counts.sessions} sessions. Followed means a Read or search of the pointed path within the`,
+    `Hook-injected \`Recall:\` / \`Decided:\` / \`Evidence:\` / \`Open:\` lines: fired ${counts.pointersFired}, followed ${counts.pointersFollowed}`,
+    `across ${counts.sessions} sessions. Followed means a Read or search of the pointed path, the command`,
+    `the line's \`more:\` tail named, or a thread verb on an \`Open:\` line's thread, within the`,
     `next ${POINTER_WINDOW} tool calls of the same session.`,
+    '',
+    '## Read deferrals',
+    '',
+    `\`Deferred:\` lines (the read-deferral gate, \`hooks.readDefer\`): deferred ${counts.deferralsDeferred}, proceeded ${counts.deferralsProceeded}, later ${counts.deferralsLater}, abandoned ${counts.deferralsAbandoned}`,
+    `across ${counts.sessions} sessions. Proceeded means a Read of the deferred path within the next`,
+    `${DEFER_RETRY_WINDOW} tool calls of the same session; later means the first Read came after that window;`,
+    'abandoned means no Read of it followed in the session. A zero row is the baseline while the flag is off.',
+    '',
+    `proceed-rate: ${proceedRate(counts)}`,
     '',
     '## Questions asked before any consult',
     '',
@@ -620,6 +781,11 @@ export function usageFindings(counts: UsageCounts): EvidenceFinding[] {
   findings.push(
     { metric: 'pointers.fired', value: counts.pointersFired },
     { metric: 'pointers.followed', value: counts.pointersFollowed },
+    // 3.4 third revision (Rule 13; atlas.evidence Rule 5): the four deferral counts, in this order.
+    { metric: 'deferrals.deferred', value: counts.deferralsDeferred },
+    { metric: 'deferrals.proceeded', value: counts.deferralsProceeded },
+    { metric: 'deferrals.later', value: counts.deferralsLater },
+    { metric: 'deferrals.abandoned', value: counts.deferralsAbandoned },
     { metric: 'questions.before-consult', value: counts.questionSessionsWithoutConsult },
   );
   return findings;

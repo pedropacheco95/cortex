@@ -1,6 +1,6 @@
 ---
 id: hooks.prompt-route
-status: draft
+status: implemented
 depends_on:
   - core-cli.init
   - pulse.threads
