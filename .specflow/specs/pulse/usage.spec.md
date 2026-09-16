@@ -121,7 +121,10 @@ falsifiable rather than asserted.
     exist yet. A `pulse/threads/` read is an orientation read under Rule 3 (it is not
     `pulse/state/` or `pulse/reports/`), so it lands in both the module bucket and this figure.
 
-11. **Pointer follow-through.** A pointer line is any text line beginning `Recall:` or `Decided:`
+11. **Pointer follow-through.** A pointer line is any text line beginning `Recall:`, `Decided:`,
+    `Evidence:` or `Open:` (3.4 third revision — `Open:` is the `hooks.prompt-route` line;
+    `Evidence:` and a leading `Open:` are what the `hooks.pre-read-writeback` Rule 6 marker begins
+    with when its `Decided:` part is empty, a gap in the earlier two-prefix rule closed here)
     found in hook-injected context — a `hook_additional_context` attachment entry's content, or a
     user entry's text — and its pointed target is the first token in that line containing `/`
     (trailing punctuation stripped) or, when the line carries no such token, its first
@@ -132,11 +135,16 @@ falsifiable rather than asserted.
     and is not fired. The report counts pointers `fired` and, of those, `followed`: a pointer is
     followed when, within the next 10 `tool_use` calls of the same session, a Read targets the
     pointed path, a Rule 8 search targets the pointed path or a directory above it, or a Bash
-    command invokes `cortex why <ref>` with the `<ref>` the line's `more:` tail named (the pointer
-    told the session where to pull; pulling is following). The 10-call window is fixed and the
-    matching is exact on normalised paths and ids — no fuzziness, so two runs over the same
-    transcripts agree. The figure reported 0 fired, 0 followed before the hooks landed, so the
-    number to beat is recorded.
+    command invokes the command the line's `more:` tail named — `cortex why <ref>` with that
+    exact `<ref>`, or (3.4 third revision) `cortex thread list` — (the pointer told the session
+    where to pull; pulling is following); and, for an `Open:` line, when a Bash command invokes
+    `cortex thread close|drop|promote <T-NNN>` with the line's own id (acting on the thread is
+    following). The 10-call window is fixed and the matching is exact on normalised paths and ids
+    — no fuzziness, so two runs over the same transcripts agree. **Not counted:** a resumed
+    question that `pulse.threads` Rule 9c marks `answered` at the session's end is a ledger-side
+    fact (`resolved_by` on the thread file), invisible to this transcript-only rule (Rule 2); it
+    is recoverable by hand from `pulse/threads/` and is deliberately not joined here. The figure
+    reported 0 fired, 0 followed before the hooks landed, so the number to beat is recorded.
 
 12. **`--record` writes the figures as evidence (3.4).** `cortex usage --record` does everything
     `cortex usage` does, then writes one gated evidence file `atlas/evidence/<today>-usage.md`
@@ -149,6 +157,32 @@ falsifiable rather than asserted.
     same standing as `pulse-accept` and `thread promote` — and it adds no instrumentation: Rule 1
     is intact. The payload, the exact `findings` order, and the acceptance criteria are owned by
     `atlas.evidence` Rule 5; this rule records only that the verb has the flag.
+
+13. **Read deferrals (3.4 third revision; recall work, step 4).** The measurement behind
+    `hooks.pre-read-writeback` Rule 7 — the default-off `deny` gate that RULES.md rule 6 carves
+    out for exactly one purpose: to learn whether the map's summary ever replaces a read. A
+    **deferral** is any text line beginning `Deferred: <path>` found in a `tool_result` content
+    block (the blocked Read's result — error or not) **or** in a `hook_additional_context`
+    attachment (the shape Claude Code uses to record a `permissionDecisionReason` is externally
+    owned; both are scanned so a shape change surfaces as a drop, not a crash); `<path>` is the
+    line's first `/`-bearing token, normalised as Rule 11 normalises. Per deferral, scanning the
+    same session's later `tool_use` calls in order: **`proceeded`** when a Read of that path
+    occurs within the next **3** `tool_use` calls (`DEFER_RETRY_WINDOW`, fixed — the retry the
+    gate promises); **`later`** when the first Read of it comes after that window; **`abandoned`**
+    when no Read of it follows in the session. Every deferral lands in exactly one of the three;
+    `deferred = proceeded + later + abandoned`. The deferral line is the one figure this spec reads
+    from a `tool_result` block — Rule 2 admits it the way Rule 11 admitted hook-injected text:
+    matched by a fixed prefix, never interpreted — and the retries are `tool_use` blocks as ever;
+    nothing is counted from the `pulse/state/read-deferred/` ledgers, which hygiene deletes and
+    which no analysis reads. The report carries a **`## Read deferrals`** section on every run,
+    including at zero (the flag is off in every session until the experiment starts — a zero row
+    is the baseline, not a "not measurable"): the four counts and the **proceed-rate**
+    (`proceeded / deferred`, rendered `-` when `deferred` is 0). `--record` (Rule 12) adds the
+    four counts to the evidence `findings` after `pointers.followed`, in the order
+    `deferrals.deferred`, `deferrals.proceeded`, `deferrals.later`, `deferrals.abandoned`
+    (`atlas.evidence` Rule 5 amended in the same change). This rule is why the gate may exist:
+    a gate without its measurement is policy, and policy is what the Fable 5.1 audit said to
+    remove.
 
 ## Acceptance Criteria
 
@@ -265,6 +299,49 @@ falsifiable rather than asserted.
   session carrying the same line followed by a Bash call `cortex why R-003` within the window
 - **When** `cortex usage` runs
 - **Then** the report shows 2 pointers fired and 2 followed
+
+### An Open pointer is fired and followed by a thread verb
+
+- **Given** a fixture whose session carries the hook-injected line
+  `Open: T-006 (2026-09-15) Do you want the counter in state/ or at the pulse root? (.cortex/pulse/threads/T-006-do-you-want-the-counter.md) · more: cortex thread list`
+  followed two calls later by a Bash call `cortex thread close T-006 --by .cortex/atlas/decisions/x.md`;
+  a second session carrying the same line followed by a Bash call `cortex thread list` within the
+  window; and a third carrying it followed by a Read of `.cortex/pulse/threads/T-006-do-you-want-the-counter.md`
+- **When** `cortex usage` runs
+- **Then** the report shows 3 pointers fired and 3 followed
+
+### A marker beginning Evidence: or Open: is fired
+
+- **Given** a fixture whose session carries the hook-injected line
+  `Evidence: evidence.2026-09-15-usage · Open: T-004` with no later Read, and another carrying
+  `Open: T-004` alone
+- **When** `cortex usage` runs
+- **Then** the report shows 2 pointers fired and 0 followed
+
+### A deferral retried within three calls is proceeded
+
+- **Given** a fixture whose session carries a `tool_result` block whose text begins
+  `Deferred: src/hooks/pre-read.ts (~2532 tok, 235 lines).`, followed by one unrelated tool call
+  and then a Read of `src/hooks/pre-read.ts`
+- **When** `cortex usage` runs
+- **Then** the `## Read deferrals` section shows deferred 1, proceeded 1, later 0, abandoned 0,
+  proceed-rate `1.00`
+
+### A late retry is later, a missing one is abandoned
+
+- **Given** a fixture with two sessions: one whose `Deferred: src/a.ts …` line is followed by
+  four unrelated tool calls and then a Read of `src/a.ts`; one whose `Deferred: src/b.ts …` line
+  (carried in a `hook_additional_context` attachment) is followed by no Read of `src/b.ts`
+- **When** `cortex usage` runs
+- **Then** the section shows deferred 2, proceeded 0, later 1, abandoned 1
+
+### Read deferrals are reported even at zero and recorded in order
+
+- **Given** a fixture with no deferral lines
+- **When** `cortex usage --record` runs
+- **Then** the report's `## Read deferrals` section shows four zeros and proceed-rate `-`, and the
+  evidence file's `findings` carry `deferrals.deferred`, `deferrals.proceeded`, `deferrals.later`,
+  `deferrals.abandoned` (all `0`) immediately after `pointers.followed`
 
 ### The report is a valid pulse report
 

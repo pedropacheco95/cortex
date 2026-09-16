@@ -32,11 +32,11 @@ Don't add Linux or Windows code paths.
 
 **Why:** the scheduling backend constraint keeps v1 scope shippable.
 
-## 6. Hooks warn-never-block, are pure Node.js file I/O, and make no network calls.
+## 6. Hooks warn-never-block, are pure Node.js file I/O, and make no network calls — with one measured exception.
 
-A hook may surface a warning but must never fail, block, or stall a session.
+A hook may surface a warning but must never fail, block, or stall a session. **The one exception:** the Read-deferral gate of `hooks.pre-read-writeback` Rule 7 — `hooks.readDefer`, default **off**, one `deny` per session per file (the second Read of that file always proceeds), never for a spec, rule, decision, evidence file, the schema or scaffolding, never in a scheduled session, capped at 25 deferrals per session, fail-open on every path (any failure inside the rule falls through to the ordinary payload), and shipped for **measurement** (`pulse.usage` Rule 13, "Read deferrals"), not as policy. No other hook, and no other decision of that hook, may deny, ask, or exit non-zero.
 
-**Why:** a hook must never break or slow the user's session.
+**Why:** a hook must never break or slow the user's session. The exception exists to measure, once and reversibly, whether a summary can stand in for a read; if the proceed-rate says it cannot, the exception is removed, not widened.
 
 ## 7. Loops and pulse write ONLY to `.cortex/pulse/` and propose changes for human approval.
 

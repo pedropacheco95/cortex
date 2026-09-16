@@ -52,3 +52,4 @@ Developers whose assistant works in the codebase daily — the more reading happ
 ## Notes
 
 - This is the fourth tier of the map's freshness mechanism: refine-during-use, alongside mark-dirty-fast, bulk-fill-on-schedule, and inline-on-init.
+- **Read deferral (added 2026-09-16; `pre-read-writeback.spec.md` Rule 7) is not part of this promise.** That spec also carries a default-off, measured gate that holds a source file's first read for one turn and offers the map's summary in its place; it serves the *reaching-for-Cortex* outcome (`../scaffolding/assistant-reaches-for-cortex-instead-of-guessing.business.md`, business rule 6 and the deferral proceed-rate metric), which owns the exception and its measurement. Business rule 2 here ("capture is silent and never interrupts the work") is about the capture half and holds unchanged: nothing in the correction loop is held.

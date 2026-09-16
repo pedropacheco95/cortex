@@ -101,8 +101,9 @@ producers; no hook reads evidence yet (step 3).
    sessions }`, `findings` in this fixed order — `searches.knowledge`, `searches.machinery`,
    `searches.document`, `searches.other`, one `insight.<verb>` per verb seen (sorted; `unit:
    invocations`), `recall.recall`, `recall.why`, `reads.atlas-decisions`, `reads.pulse-threads`,
-   `pointers.fired`, `pointers.followed`, `questions.before-consult` (integers; `unit` omitted
-   where the metric name says it) — `bears_on: [schema:§5, pulse.usage]`, and `supersedes:
+   `pointers.fired`, `pointers.followed`, then (3.4 third revision, `pulse.usage` Rule 13)
+   `deferrals.deferred`, `deferrals.proceeded`, `deferrals.later`, `deferrals.abandoned`, then
+   `questions.before-consult` (integers; `unit` omitted where the metric name says it) — `bears_on: [schema:§5, pulse.usage]`, and `supersedes:
    [<relative path of the previous *-usage.md>]` when `latestEvidenceMatching(root, 'usage')`
    finds one (else the key is omitted). Body: `renderUsageBody(counts)` verbatim. Refusals, exit
    1 and nothing written under `atlas/`: the counts are not `readable` ("nothing measurable —

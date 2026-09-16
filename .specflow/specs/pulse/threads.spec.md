@@ -182,7 +182,11 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
 
 14. **Nothing is injected in this step.** No hook reads the ledger; no SessionStart or PreRead line
     names a thread. `pulse.usage` Rule 10 already reports reads of `pulse/threads/` so the
-    before-figure is on record. Consumers arrive in step 3 of the recall work.
+    before-figure is on record. Consumers arrive in step 3 of the recall work. **(Step 4 note,
+    2026-09-16.)** The ledger now has one direct, read-only consumer: `hooks.prompt-route` lists
+    `pulse/threads/` on `UserPromptSubmit` and surfaces open `question | offer | approval` threads
+    as `Open:` pointer lines; it never changes a thread's status. Step 3's index consumers reach
+    open threads through `recall-index.json`, not through this directory.
 
 ## Acceptance Criteria
 

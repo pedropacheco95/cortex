@@ -290,7 +290,9 @@ The measurement is `pulse.usage` Rule 11 (pointers fired and followed), which al
 - **Latency is a target, not a validator concern.** No check measures it; the atomic tests
   assert one `fs.readFileSync` of the index per fire and no directory reads, which is what
   keeps the target true.
-- **Not done here:** no routing for scheduled sessions (step 4, prompt hook); no read-deferral
-  `deny` (moot, per the proposal); no per-turn relevance guessing — the hook matches what the
-  session is already searching, and only that.
+- **Not done here:** no prompt-time routing (step 4, `hooks.prompt-route` — open threads only,
+  sharing this hook's Rule 9 fired memory so a thread is pointed at once per session by either
+  hook); no read-deferral `deny` (step 4, `hooks.pre-read-writeback` Rule 7 — default off, for
+  measurement); no per-turn relevance guessing — the hook matches what the session is already
+  searching, and only that.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention).

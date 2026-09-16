@@ -69,6 +69,8 @@ Current edges (`A → depends on B`):
 - `hooks.pre-read-writeback` (Rule 6) → additionally `recall.recall-index`, `hooks.search-annotate`
 - `recall.why` → `recall.recall-index`, `schema.bears-on`, `hooks.search-annotate`
 - `recall.index-blocks` → `recall.recall-index`, `core-cli.init`, `core-cli.sync`, `hooks.search-annotate`
+- `hooks.prompt-route` → `core-cli.init`, `pulse.threads`, `hooks.session-end`, `hooks.search-annotate`, `pulse.usage`
+- `hooks.pre-read-writeback` (Rule 7) → no new edge; `pulse.usage` Rule 13 measures it, `atlas.evidence` Rule 5 records it
 
 v3 edges (`build-order-v3.md`):
 
@@ -124,4 +126,4 @@ Following the design doc's §16.2 implementation order:
 2. Step 1 — `pulse.threads` (ledger, counter, verbs, promote) and `hooks.session-end` (the session record), plus `pulse.hygiene` Rule 8 (expiry and retention) — implemented
 3. Step 2 — schema MINOR 3.4 (approved 2026-09-15; `plans/2026-09-15-recall-step2.md`): `schema.schema-clauses`, `schema.bears-on`, `atlas.evidence`, `recall.recall-index` — specified, draft; amended in place: `pulse.threads` Rules 4/12, `pulse.usage` Rule 12, `insight.session-observe` Rule 6, `constellation.compiler` Rule 10, `core-cli.init` Rule 2, `insight.refresh-loops` Rule 9, `schema.version-2` Rules 2/8
 4. Step 3 — the consumers (approved 2026-09-15; schema 3.4 second revision in place; `plans/2026-09-15-recall-step3.md`): `hooks.search-annotate`, `recall.why`, `recall.index-blocks` — specified, draft; amended in place: `hooks.pre-read-writeback` Rule 6 (the PreRead marker), `recall.recall-index` Rule 12, `pulse.usage` Rule 11 (id-shaped pointers), `core-cli.init` Rules 2 and 18 (B-018 invocation gate, fixed in the same batch as the verbs), `core-cli.sync` Rule 4
-5. Step 4 — open-thread prompt routing and the read-deferral flag — not yet specified
+5. Step 4 — open-thread prompt routing and the read-deferral flag (approved 2026-09-16; schema 3.4 third revision in place; `plans/2026-09-16-recall-step4.md`): `hooks.prompt-route` — specified, draft; amended in place: `hooks.pre-read-writeback` Rule 7 (the `hooks.readDefer` deny gate, default off — RULES.md rule 6's one measured exception), `pulse.usage` Rules 11 and 13 (`Open:`/`Evidence:` prefixes, thread-verb follow, Read deferrals), `atlas.evidence` Rule 5 (findings order), `pulse.threads` Rule 14, `hooks.search-annotate` Notes

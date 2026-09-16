@@ -12,6 +12,7 @@ implemented_by:
   - ../../specs/hooks/search-annotate.spec.md
   - ../../specs/recall/why.spec.md
   - ../../specs/recall/index-blocks.spec.md
+  - ../../specs/hooks/prompt-route.spec.md
 ---
 
 # The assistant reaches for Cortex instead of guessing
@@ -36,7 +37,9 @@ the assistant itself, which has no way today to tell whether asking is worth the
 1. A session begins, and works. At the moment it searches for something or opens a file the
    project has knowledge about — a rule, a spec, a source file, the contract document — it
    learns, without asking and only then, which subjects the project holds knowledge about *for
-   that thing*: what has been decided, what was measured, what question is still open.
+   that thing*: what has been decided, what was measured, what question is still open. And when
+   the developer's first words pick up where the last session stopped, or name a question that
+   session left hanging, the assistant is told which open question that is — by id, in one line.
 2. Working a task, it hits a question the code cannot answer — why something is the way it is,
    what was decided, what the gotcha is, which tool or account this project uses.
 3. It recognises the question as one the project has covered, because the coverage arrived with
@@ -48,9 +51,10 @@ the assistant itself, which has no way today to tell whether asking is worth the
 
 ## Business Rules
 
-1. Knowing what Cortex covers is delivered without being asked for — at the moment of the search
-   or the read that makes it relevant, not as a standing list at session start. Everything
-   *below* the coverage level stays pull — the assistant asks for the content when it wants it.
+1. Knowing what Cortex covers is delivered without being asked for — at the moment of the search,
+   the read, or the developer's prompt that makes it relevant, not as a standing list at session
+   start. Everything *below* the coverage level stays pull — the assistant asks for the content
+   when it wants it.
 2. What is delivered is coverage, not content: the subjects the project has knowledge about,
    never the knowledge itself. A table of contents, not the book.
 3. Guidance about consulting Cortex must anticipate and answer the specific reasons for
@@ -61,7 +65,15 @@ the assistant itself, which has no way today to tell whether asking is worth the
 5. Whether this outcome is being met is measured from evidence the project already produces,
    never by adding instrumentation that costs something at runtime.
 6. Nothing here blocks, gates, or slows the assistant's work. This outcome is delivered by
-   giving it better information, never by putting an obstacle in front of the alternatives.
+   giving it better information, never by putting an obstacle in front of the alternatives —
+   with **one exception, off by default and run only to measure**: the read-deferral gate
+   (`../../specs/hooks/pre-read-writeback.spec.md` Rule 7), which may hold the *first* read of a
+   source file for one turn and offer the map's summary in its place, lets the second read
+   through unconditionally, never touches a rule, a spec, a decision or the contract, gives up
+   after 25 holds in a session, and is switched on for a bounded experiment only. It exists to
+   answer one question — does better information ever replace the read? — and the answer
+   (the deferral proceed-rate below) decides whether it stays or is removed. While it is off,
+   this rule reads exactly as it did before.
 
 ## Success Metrics
 
@@ -75,6 +87,11 @@ the assistant itself, which has no way today to tell whether asking is worth the
 - When the project points the assistant at a decision, a measurement or an open question, the
   assistant follows the pointer more often than not; the follow rate is read from the sessions
   the project already records, and the first measured value is the number to beat.
+- **Deferral proceed-rate.** When the read-deferral gate is on, the share of held reads the
+  assistant repeats within three tool calls. A rate near one says the summary did not replace
+  the read and the gate costs a turn for nothing — it stays off for good. Only a markedly lower
+  rate with no loss in the work's quality is a case for it. Read from the same session records
+  as the follow rate; the gate ships with its measurement or not at all.
 
 ## Out of Scope
 
@@ -87,9 +104,10 @@ the assistant itself, which has no way today to tell whether asking is worth the
   — inferring from the conversation what the assistant might want next — costs something every
   turn and is wrong invisibly. What this outcome does instead is exact: it matches the subject
   the assistant is *already* searching for or reading against what the project has recorded
-  about that subject, costs nothing when nothing matches, and is wrong visibly, because the
-  pointer names the subject it matched. The assistant still does the matching for everything
-  else.
+  about that subject — or the developer's own words against the questions still open, and the
+  first words of a session against the question the previous session left hanging — costs
+  nothing when nothing matches, and is wrong visibly, because the pointer names the subject it
+  matched. The assistant still does the matching for everything else.
 
 ## Notes
 
@@ -128,6 +146,22 @@ the assistant itself, which has no way today to tell whether asking is worth the
   names, ids and paths, never bodies or instructions; every pointer is compiled from files that
   exist at the moment it fires; the follow rate is read from transcripts the project already has
   (`pulse/usage.spec.md` Rule 11); and nothing blocks — a hook that finds nothing says nothing.
+- Step 4 of the recall work (added 2026-09-16; schema 3.4, third revision in place) closes the
+  two gaps the search-and-read pointers cannot reach. `hooks/prompt-route.spec.md` routes the
+  developer's prompt against **open threads only** — the first prompt of a session surfaces the
+  previous session's hanging question or offer; any prompt that names a thread or shares two
+  words with one surfaces it — as at most two `Open:` lines, never the general index (the
+  proposal's evidence: the general form would not have fired for the case that motivated all of
+  this, and lowering the bar buys wrong pointers). Journey step 1, business rule 1 and the third
+  out-of-scope bullet gained the prompt moment. And `hooks/pre-read-writeback.spec.md` Rule 7
+  carries the read-deferral gate — the one place this outcome allows anything to hold the
+  assistant's work — **default off**, one hold per file per session, never for gated files,
+  fail-open, shipped as an instrument (that spec keeps its own business parent; this outcome
+  owns the exception, business rule 6 amended, and its measurement, the deferral proceed-rate
+  metric, read by `pulse/usage.spec.md` Rule 13). Rules 2, 4 and 5 hold unchanged: `Open:` lines
+  carry an id, a date, the question's own words and a path — a name for a gap, not knowledge;
+  every line is compiled from a ledger file that exists when it fires; both measurements come
+  from transcripts the project already has.
 - Adjacent but distinct: `../insight/assistant-has-project-knowledge-when-working.business.md`
   covers the *insight* layer answering when asked. This outcome covers the whole knowledge
   layer being reached for at all. That spec's business rule 3 ("never injected as ambient noise
