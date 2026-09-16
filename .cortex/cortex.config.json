@@ -2,7 +2,8 @@
   "schemaVersion": "3.4",
   "profile": "specflow",
   "hooks": {
-    "preRead": true
+    "preRead": true,
+    "readDefer": true
   },
   "pulse": {
     "distilThresholdN": 3,
