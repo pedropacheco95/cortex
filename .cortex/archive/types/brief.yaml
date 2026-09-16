@@ -1,0 +1,19 @@
+id: brief
+label: Stakeholder brief
+classification:
+  extensions: [.md, .txt, .docx, .pdf]
+  hints: ["brief", "suggested", "recommendation", "observation", "for:", "from:"]
+  explicit: true
+extraction:
+  strategy: generic
+  outputs:
+    - kind: summary
+      path: extracted/summary.md
+    - kind: claims
+      path: extracted/claims.md
+    - kind: asks
+      path: extracted/asks.md
+    - kind: evidence
+      path: extracted/evidence.md
+    - kind: contradictions
+      path: extracted/contradictions.md
