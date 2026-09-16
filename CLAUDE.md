@@ -89,7 +89,7 @@ pnpm test:scenario        # scenario layer (full sandbox)
 - Never let the dev and business trees drift — update the business spec in the same change when a dev change invalidates the promise.
 - Never make LLM calls from Cortex Core — Core is deterministic. Agentic behaviour belongs in Skills.
 - Never let a Cortex loop or pulse mutate cerebrum/anatomy/atlas/specs directly — they write proposals to `.cortex/pulse/` only (the sole exception is the test-runner, which uses a writer/verifier split). Propose, don't mutate.
-- Never let a hook block — hooks warn-never-block, are pure Node file I/O, and make no network calls.
+- Never let a hook block — hooks warn-never-block, are pure Node file I/O, and make no network calls (the sole, default-off, measured exception is RULES.md rule 6's read-deferral gate; nothing else may deny).
 - Never break the `implements:`/`implemented_by:` links or delete an `_overview.md`.
 - Never skip tests — every acceptance criterion becomes a test case.
 - Never modify specs or the schema without user approval — they are the contract.
