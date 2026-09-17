@@ -457,7 +457,8 @@ describe('AC: the imperative-free grammar', () => {
   // The two Rule 7 shapes. The title spans (group `title`) are index-sourced
   // text — the spec's own Decided: example carries "you" inside a thread key —
   // so the instruction-word check runs over the hook's grammar around them.
-  const RECALL_SHAPE = /^Recall: (?<kind>decision|evidence|thread|observation) (?<date>\d{4}-\d{2}-\d{2}) (?<title>.+?) \((?<path>\S+)\)(?<tail> · more: cortex why \S+)?$/;
+  // Fifth revision: the date is optional (empty for a rule or a compass document) and rule/bug lines carry the id before the title.
+  const RECALL_SHAPE = /^Recall: (?<kind>decision|evidence|thread|observation|rule|compass-doc|bug)(?<date> \d{4}-\d{2}-\d{2})?(?<id> (?:R|B)-\d{3,})? (?<title>.+?) \((?<path>\S+)\)(?<tail> · more: cortex why \S+)?$/;
   const DECIDED_SHAPE = /^Decided: (?<id>decision\.\S+) · Open: (?<thread>T-\d{3,}) (?<title>.+?)(?<tail> · more: cortex why \S+)?$/;
   const IMPERATIVES = /\b(read|consult|check|should|you)\b/i;
 
@@ -472,5 +473,44 @@ describe('AC: the imperative-free grammar', () => {
         expect(grammar).not.toMatch(IMPERATIVES);
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.4 fifth revision — the compass kinds through the hook (Rules 7–8)
+// ---------------------------------------------------------------------------
+describe('AC (fifth revision): a keyword search lands on a compass document', () => {
+  it('`grep -rn "scheduled jobs" src/` → `Recall: compass-doc Environment (.cortex/compass/environment.md)`, no date, under 60 tokens', async () => {
+    const index = recallIndexFixture(
+      {},
+      { 'compass.environment': recallEntry('compass-doc', 'Environment', '.cortex/compass/environment.md', '', ['environment', 'jobs', 'scheduled']) },
+    );
+    const root = project('ac-compass-doc', index);
+    const { lines, stdout } = await fire(bashStdin(root, 'grep -rn "scheduled jobs" src/'));
+    expect(lines).toEqual(['Recall: compass-doc Environment (.cortex/compass/environment.md)']);
+    expect(parseEnvelope(stdout).additionalContext.length / 4).toBeLessThan(60);
+  });
+});
+
+describe('AC (fifth revision): a grep into a governed directory points at the rule, and an open bug outranks it', () => {
+  const R014 = recallEntry('rule', 'No camelCase database columns', '.cortex/compass/rules/R-014-no-camelcase-database-columns.md', '', ['src/db']);
+  const B031 = recallEntry('bug', 'camelCase column slipped into migrations', '.cortex/compass/bugs/B-031-camelcase-column.md', '2026-06-28', ['src/db']);
+
+  it('Grep path src/db pattern column with rules [R-014] alone → the one rule line', async () => {
+    const root = project('ac-rule-line', recallIndexFixture({ 'src/db': recallSubject({ rules: ['R-014'] }) }, { 'R-014': R014 }));
+    const { lines } = await fire(grepStdin(root, 'column', 'src/db'));
+    expect(lines).toEqual(['Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)']);
+  });
+
+  it('with bugs [B-031] too → the bug line first, the rule line second', async () => {
+    const root = project('ac-bug-first', recallIndexFixture({ 'src/db': recallSubject({ rules: ['R-014'], bugs: ['B-031'] }) }, { 'R-014': R014, 'B-031': B031 }));
+    const { lines } = await fire(grepStdin(root, 'column', 'src/db'));
+    expect(lines).toEqual([
+      'Recall: bug 2026-06-28 B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)',
+      'Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)',
+    ]);
+    const memory = fs.readFileSync(recallFiredPath(root, 's1'), 'utf-8');
+    expect(memory).toContain('B-031\n');
+    expect(memory).toContain('R-014\n');
   });
 });

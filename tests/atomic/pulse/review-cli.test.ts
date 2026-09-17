@@ -750,3 +750,83 @@ describe('An evidence-candidate is gated like a decision-candidate (accept)', ()
     expect(snapshotTree(root)).toEqual(before);
   });
 });
+
+// ---------------------------------------------------------------------------
+// schema.id-registry Rule 4 / pulse.review-cli Rule 7b (3.4 fifth revision):
+// accept registers a NEW rule file's id in compass/registry.md, and refuses a
+// taken id before writing anything.
+// ---------------------------------------------------------------------------
+import { REGISTRY_FILE, REGISTRY_HEADER } from '../../../src/compass/registry.js';
+
+function ruleFileEntry(id: string, target: string, ruleId: string): string {
+  return `## ${id}: A new rule
+
+**Type:** rule-candidate
+**Target:** ${target}
+
+**Proposed file:**
+
+\`\`\`
+---
+id: ${ruleId}
+title: X
+source:
+  - ../../pulse/reports/session-observe.md
+governs:
+  - "src/**/*.ts"
+---
+
+# ${ruleId} — X
+
+Body.
+\`\`\`
+
+`;
+}
+
+describe('Accept registers a new rule file, and refuses a taken id (Rule 7b)', () => {
+  it('S-031 landing a new R-004-x.md appends `R-004 x` to a registry ending R-003', async () => {
+    const root = makeProject('register-rule', {
+      suggestions: SUGGESTIONS_HEADER + ruleFileEntry('S-031', '.cortex/compass/rules/R-004-x.md', 'R-004'),
+      extra: { [REGISTRY_FILE]: `${REGISTRY_HEADER}\nR-001 a\nR-002 b\nR-003 c\nB-001 z\n` },
+    });
+    expect(await pulseCli('pulse-accept', ['S-031'], root)).toBe(0);
+    expect(fs.existsSync(path.join(root, '.cortex', 'compass', 'rules', 'R-004-x.md'))).toBe(true);
+    expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(`${REGISTRY_HEADER}\nR-001 a\nR-002 b\nR-003 c\nR-004 x\nB-001 z\n`);
+    expect(fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8')).toContain('**Status:** accepted');
+  });
+
+  it('a registry already carrying `R-004 other` → exit 1 naming that line and cortex id next rule; proposal pending, no file, registry untouched', async () => {
+    const registry = `${REGISTRY_HEADER}\nR-001 a\nR-004 other\n`;
+    const root = makeProject('refuse-taken', {
+      suggestions: SUGGESTIONS_HEADER + ruleFileEntry('S-031', '.cortex/compass/rules/R-004-x.md', 'R-004'),
+      extra: { [REGISTRY_FILE]: registry },
+    });
+    const before = snapshotTree(root);
+    expect(await pulseCli('pulse-accept', ['S-031'], root)).toBe(1);
+    expect(stderr()).toContain('R-004 other');
+    expect(stderr()).toContain('cortex id next rule');
+    expect(snapshotTree(root)).toEqual(before);
+    expect(fs.existsSync(path.join(root, '.cortex', 'compass', 'rules', 'R-004-x.md'))).toBe(false);
+    expect(fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8')).not.toContain('**Status:**');
+  });
+
+  it('with no registry at all, accept creates it from disk first and then registers the new file (Rule 2 there)', async () => {
+    const root = makeProject('create-then-register', {
+      suggestions: SUGGESTIONS_HEADER + ruleFileEntry('S-031', '.cortex/compass/rules/R-002-x.md', 'R-002'),
+      extra: { '.cortex/compass/rules/R-001-existing.md': '# existing\n' },
+    });
+    expect(await pulseCli('pulse-accept', ['S-031'], root)).toBe(0);
+    expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(`${REGISTRY_HEADER}\nR-001 existing\nR-002 x\n`);
+  });
+
+  it('an addition to an EXISTING rule file never touches the registry', async () => {
+    const registry = `${REGISTRY_HEADER}\nR-001 a\n`;
+    const root = makeProject('existing-untouched', {
+      suggestions: SUGGESTIONS_HEADER + entry('S-032', 'Append', '.cortex/compass/rules/R-001-a.md', 'more text'),
+      extra: { [REGISTRY_FILE]: registry, '.cortex/compass/rules/R-001-a.md': '# R-001\n' },
+    });
+    expect(await pulseCli('pulse-accept', ['S-032'], root)).toBe(0);
+    expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(registry);
+  });
+});

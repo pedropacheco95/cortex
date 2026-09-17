@@ -22,9 +22,15 @@
  * index holds a subject for it, ONE marker line (`Decided: … · Evidence: … ·
  * Open: …`, schema §5 row (c)) rides after the payload above, or stands alone
  * when the target has no insight entry (the usual case for those kinds).
- * Source files are deliberately not marked (spec Notes). No index, a
- * malformed index or no subject → the payload is byte-identical to before,
- * and nothing is logged.
+ * Source files are deliberately not marked (spec Notes) — with ONE narrow
+ * widening at the 3.4 fifth revision (brief §3.2): the marker gains a last
+ * part ` · Bugs: <B-ids, max 2>` (the subject's open/triaged bugs, newest
+ * `opened` first, cut last), and a source file whose own path subject has a
+ * non-empty `bugs` list gets that part ALONE (`Bugs: B-019`, plus the tail
+ * when cut) after the summary and invitation — its decisions, evidence and
+ * threads stay unshown, so the everyday `src/` read still costs nothing. No
+ * index, a malformed index or no subject → the payload is byte-identical to
+ * before, and nothing is logged.
  *
  * Rule 7 (3.4 third revision; recall work, step 4): the read-deferral mode
  * behind `hooks.readDefer` (default off) — the ONE measured exception to
@@ -210,26 +216,30 @@ export function isMarkedTarget(relPath: string): boolean {
 
 /** Every list of `subjects` merged into one — the schema document's aggregate over its clause subjects. */
 function mergeSubjects(subjects: RecallSubject[]): RecallSubject {
-  const merged: RecallSubject = { decided: [], evidence: [], threads: [], observations: [] };
+  const merged: RecallSubject = { decided: [], evidence: [], threads: [], observations: [], rules: [], bugs: [] };
   for (const s of subjects) {
     merged.decided.push(...s.decided);
     merged.evidence.push(...s.evidence);
     merged.threads.push(...s.threads);
     merged.observations.push(...s.observations);
+    merged.rules.push(...s.rules);
+    merged.bugs.push(...s.bugs);
   }
   return merged;
 }
 
 /**
  * Rule 6's ≤50-token fit for the marker: drop the ` · more:` tail, then cut
- * `Open:` to one id, then `Decided:` to one. Ids are never truncated — the
- * line is rebuilt from its parts (`<Label>: <id>, <id>` joined by ` · `).
+ * `Open:` to one id, then `Decided:` to one, then (fifth revision) `Bugs:` to
+ * one — the bug part is cut last because it is the part most likely to be
+ * acted on. Ids are never truncated — the line is rebuilt from its parts
+ * (`<Label>: <id>, <id>` joined by ` · `).
  */
 function fitMarker(line: string, key: string): string {
   if (line.length <= MARKER_MAX_CHARS) return line;
   const tail = moreTail(key);
   let fitted = line.endsWith(tail) ? line.slice(0, -tail.length) : line;
-  for (const label of ['Open', 'Decided']) {
+  for (const label of ['Open', 'Decided', 'Bugs']) {
     if (fitted.length <= MARKER_MAX_CHARS) break;
     fitted = fitted
       .split(' · ')
@@ -261,6 +271,27 @@ function recallMarker(root: string, relPath: string): string | null {
     const subject = index.subjects[key];
     if (subject === undefined) continue;
     const line = markerLine(subject, key, index);
+    if (line !== null) return fitMarker(line, key);
+  }
+  return null;
+}
+
+/**
+ * Rule 6, the Bugs part's source-file widening (3.4 fifth revision): for a
+ * target that is NOT a marked kind, the `Bugs:` part alone — built from a copy
+ * of the target's own path subject with every other list emptied, so the
+ * line is `Bugs: <B-ids, max 2>` plus the tail when cut. A parent directory's
+ * subject never marks a file read (same rule as `recallMarker`); no subject,
+ * an empty `bugs` list, no index → `null`, exactly as before.
+ */
+function bugsOnlyMarker(root: string, relPath: string): string | null {
+  const index = loadRecallIndex(root);
+  if (index === null) return null;
+  const keys = candidateKeys(root, relPath, index).filter((key) => !relPath.startsWith(`${key}/`));
+  for (const key of keys) {
+    const subject = index.subjects[key];
+    if (subject === undefined || subject.bugs.length === 0) continue;
+    const line = markerLine({ decided: [], evidence: [], threads: [], observations: [], rules: [], bugs: subject.bugs }, key, index);
     if (line !== null) return fitMarker(line, key);
   }
   return null;
@@ -409,13 +440,13 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     // Rule 6: the recall marker for a spec / rule / decision / evidence /
     // schema-document read. Absent index or subject → null, unlogged; only an
     // unexpected throw reaches hook-errors.md (and the read still proceeds).
+    // Fifth revision: any other target (a source file) gets the `Bugs:` part
+    // alone when its own subject carries an open or triaged bug — nothing else.
     let marker: string | null = null;
-    if (isMarkedTarget(relPath)) {
-      try {
-        marker = recallMarker(root, relPath);
-      } catch (err) {
-        appendHookError(root, { hook: HOOK_NAME, file: relPath, failure: `recall marker: ${(err as Error).message}` }, now);
-      }
+    try {
+      marker = isMarkedTarget(relPath) ? recallMarker(root, relPath) : bugsOnlyMarker(root, relPath);
+    } catch (err) {
+      appendHookError(root, { hook: HOOK_NAME, file: relPath, failure: `recall marker: ${(err as Error).message}` }, now);
     }
     // With no insight entry the marker stands alone; with neither, silence.
     const markerAlone = (): HookRunResult => (marker === null ? SILENT : envelope(marker));

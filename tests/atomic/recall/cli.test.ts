@@ -119,7 +119,7 @@ describe('recall.why — why lists all four sections in order', () => {
     expect(code).toBe(0);
     expect(err).toBe('');
     const lines = out.split('\n');
-    expect(lines[0]).toBe('R-001 (rule) — 1 decided · 1 evidence · 1 open · 1 observation themes');
+    expect(lines[0]).toBe('R-001 (rule) — 1 decided · 1 evidence · 1 open · 1 observation themes · 0 bugs · 0 rules');
     const order = ['Decided:', 'Evidence:', 'Open:', 'Observations: working-style'].map((h) => lines.indexOf(h));
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -172,7 +172,7 @@ describe('recall.why — why lists all four sections in order', () => {
     writeRecallIndexFixture(root, sampleRecallIndex());
     const { out } = await cortex(root, ['why', 'pulse.usage']);
     const lines = out.split('\n');
-    expect(lines[0]).toBe('pulse.usage (id) — 0 decided · 1 evidence · 0 open · 0 observation themes');
+    expect(lines[0]).toBe('pulse.usage (id) — 0 decided · 1 evidence · 0 open · 0 observation themes · 0 bugs · 0 rules');
     expect(lines).not.toContain('Decided:');
     expect(lines).not.toContain('Open:');
     expect(lines.some((l) => l.startsWith('Observations:'))).toBe(false);
@@ -224,7 +224,7 @@ describe('recall.why — the schema document aggregates its clauses', () => {
     const { code, out } = await cortex(root, ['why', 'cortex-schema.md']);
     expect(code).toBe(0);
     const lines = out.split('\n');
-    expect(lines[0]).toBe('cortex-schema.md (all clauses) — 2 decided · 1 evidence · 0 open · 0 observation themes');
+    expect(lines[0]).toBe('cortex-schema.md (all clauses) — 2 decided · 1 evidence · 0 open · 0 observation themes · 0 bugs · 0 rules');
     expect(lines.filter((l) => l.includes('evidence.2026-09-15-usage')).length).toBe(1);
     expect(lines.filter((l) => l.includes('decision.2026-08-05-insight-pull-only-stance-reversed')).length).toBe(1);
     expect(lines.filter((l) => l.includes('decision.2026-07-10-x')).length).toBe(1);
@@ -281,7 +281,7 @@ describe('recall.why — --json is the subject block plus its entries', () => {
       'observation.working-style',
     ]);
     expect(parsed.findings['evidence.2026-09-15-usage']).toHaveLength(3);
-    expect(Object.keys(parsed)).toEqual(['entries', 'findings', 'key', 'ref', 'subject']);
+    expect(Object.keys(parsed)).toEqual(['bugs', 'entries', 'findings', 'key', 'ref', 'subject']);
     expect(out).toBe(JSON.stringify(parsed, null, 2));
   });
 
@@ -302,7 +302,8 @@ describe('recall.why — --json is the subject block plus its entries', () => {
       findings: {},
       key: null,
       ref: 'R-999',
-      subject: { decided: [], evidence: [], observations: [], threads: [] },
+      bugs: {},
+      subject: { bugs: [], decided: [], evidence: [], observations: [], rules: [], threads: [] },
     });
   });
 });
@@ -418,5 +419,122 @@ describe('recall.why — bad grammar is exit 2', () => {
     const { code, err } = await cortex(root, ['why', 'R-001', 'R-002']);
     expect(code).toBe(2);
     expect(err).toMatch(/usage: cortex why/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.4 fifth revision — Bugs: and Rules: sections, the bug sub-line, --json
+// bugs, and the three compass kinds in --kind (recall.why Rules 1, 4, 5)
+// ---------------------------------------------------------------------------
+const XREF = 'src/schema/checks/xref.ts';
+const B019_ENTRY = recallEntry('bug', 'Duplicate ids pass validate', '.cortex/compass/bugs/B-019-x.md', '2026-09-15');
+const B020_ENTRY = recallEntry('bug', 'Promotion refused', '.cortex/compass/bugs/B-020-x.md', '2026-09-16');
+const R001_ENTRY = recallEntry('rule', 'Core makes no LLM calls', '.cortex/compass/rules/R-001-core.md', '');
+const R002_ENTRY = recallEntry('rule', 'Bugs seven-type taxonomy', '.cortex/compass/rules/R-002-bugs.md', '');
+
+function bugFile(fields: string[]): string {
+  return ['---', 'id: B-019', 'title: Duplicate ids pass validate', 'type: incomplete-rule', 'severity: high', ...fields, 'affects: [src/schema/checks/xref.ts]', 'opened: 2026-09-15T17:00:00Z', '---', '', '# B-019', ''].join('\n');
+}
+
+function bugProject(label: string, fields: string[] | null = ['status: triaged', 'owner: pedro', 'fix_in_flight: fix/xref-unique']): string {
+  const root = tmp(label);
+  writeRecallIndexFixture(root, recallIndexFixture(
+    { [XREF]: recallSubject({ rules: ['R-001'], bugs: ['B-019'] }) },
+    { 'B-019': B019_ENTRY, 'R-001': R001_ENTRY },
+  ));
+  if (fields !== null) write(root, '.cortex/compass/bugs/B-019-x.md', bugFile(fields));
+  return root;
+}
+
+describe('recall.why — why lists the rule and the open bug on a source file, with the bug\'s currency fields', () => {
+  it('AC: the heading gains · 1 bugs · 1 rules; Bugs: then its sub-line; Rules: with R-001; --json bugs.found_at_commit is null', async () => {
+    const root = bugProject('bugs-ac');
+    const { code, out } = await cortex(root, ['why', XREF]);
+    expect(code).toBe(0);
+    expect(out.split('\n')).toEqual([
+      `${XREF} (path) — 0 decided · 0 evidence · 0 open · 0 observation themes · 1 bugs · 1 rules`,
+      'Bugs:',
+      '  B-019  triaged — Duplicate ids pass validate  (.cortex/compass/bugs/B-019-x.md)',
+      '    owner=pedro  fix=fix/xref-unique  found_at=-',
+      'Rules:',
+      '  R-001  Core makes no LLM calls  (.cortex/compass/rules/R-001-core.md)',
+    ]);
+    const json = await cortex(root, ['why', XREF, '--json']);
+    const parsed = JSON.parse(json.out) as { subject: Record<string, string[]>; bugs: Record<string, Record<string, string | null>>; entries: Record<string, unknown> };
+    expect(parsed.bugs['B-019']).toEqual({ status: 'triaged', owner: 'pedro', fix_in_flight: 'fix/xref-unique', found_at_commit: null });
+    expect(parsed.subject).toEqual({ decided: [], evidence: [], threads: [], observations: [], rules: ['R-001'], bugs: ['B-019'] });
+    expect(Object.keys(parsed.entries).sort()).toEqual(['B-019', 'R-001']);
+    expect(Object.keys(parsed)).toEqual(['bugs', 'entries', 'findings', 'key', 'ref', 'subject']);
+  });
+
+  it('the sub-line is omitted when all three fields are absent; found_at renders when present; an unreadable file renders (fields unreadable)', async () => {
+    const bare = bugProject('bugs-bare', ['status: open']);
+    const bareOut = (await cortex(bare, ['why', XREF])).out.split('\n');
+    expect(bareOut[2]).toBe('  B-019  open — Duplicate ids pass validate  (.cortex/compass/bugs/B-019-x.md)');
+    expect(bareOut[3]).toBe('Rules:');
+
+    const stamped = bugProject('bugs-stamped', ['status: open', 'found_at_commit: 1a0174c']);
+    expect((await cortex(stamped, ['why', XREF])).out.split('\n')[3]).toBe('    owner=-  fix=-  found_at=1a0174c');
+    const parsed = JSON.parse((await cortex(stamped, ['why', XREF, '--json'])).out) as { bugs: Record<string, Record<string, string | null>> };
+    expect(parsed.bugs['B-019']).toEqual({ status: 'open', owner: null, fix_in_flight: null, found_at_commit: '1a0174c' });
+
+    const missing = bugProject('bugs-missing', null);
+    const missingOut = (await cortex(missing, ['why', XREF])).out.split('\n');
+    expect(missingOut[2]).toBe('  B-019  - — Duplicate ids pass validate  (.cortex/compass/bugs/B-019-x.md)');
+    expect(missingOut[3]).toBe('    (fields unreadable)');
+    const missingJson = JSON.parse((await cortex(missing, ['why', XREF, '--json'])).out) as { bugs: Record<string, Record<string, string | null>> };
+    expect(missingJson.bugs['B-019']).toEqual({ status: null, owner: null, fix_in_flight: null, found_at_commit: null });
+  });
+
+  it('bugs list newest opened first; rules in id order with no file read; the sections sit after Open: and before Observations:', async () => {
+    const root = tmp('bugs-order');
+    const base = sampleRecallIndex();
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'R-001': recallSubject({ threads: ['T-004'], observations: ['working-style'], rules: ['R-002', 'R-001'], bugs: ['B-019', 'B-020'] }) },
+      { ...base.entries, 'B-019': B019_ENTRY, 'B-020': B020_ENTRY, 'R-001': R001_ENTRY, 'R-002': R002_ENTRY },
+    ));
+    write(root, '.cortex/compass/bugs/B-019-x.md', bugFile(['status: open']));
+    write(root, '.cortex/compass/bugs/B-020-x.md', bugFile(['status: triaged']).replace('B-019', 'B-020'));
+    const { out } = await cortex(root, ['why', 'R-001']);
+    const lines = out.split('\n');
+    expect(lines[0]).toBe('R-001 (rule) — 0 decided · 0 evidence · 1 open · 1 observation themes · 2 bugs · 2 rules');
+    const order = ['Open:', 'Bugs:', 'Rules:', 'Observations: working-style'].map((h) => lines.indexOf(h));
+    expect(order.every((i) => i > 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(lines.indexOf('  B-020  triaged — Promotion refused  (.cortex/compass/bugs/B-020-x.md)')).toBeLessThan(lines.indexOf('  B-019  open — Duplicate ids pass validate  (.cortex/compass/bugs/B-019-x.md)'));
+    expect(lines.slice(lines.indexOf('Rules:') + 1, lines.indexOf('Rules:') + 3)).toEqual([
+      '  R-001  Core makes no LLM calls  (.cortex/compass/rules/R-001-core.md)',
+      '  R-002  Bugs seven-type taxonomy  (.cortex/compass/rules/R-002-bugs.md)',
+    ]);
+  });
+});
+
+describe('recall.why — recall filters by a compass kind', () => {
+  it('AC: `recall scheduled tasks --kind compass-doc` prints the one compass-doc line with no date', async () => {
+    const root = tmp('kind-compass');
+    writeRecallIndexFixture(root, recallIndexFixture(
+      {},
+      {
+        'compass.environment': recallEntry('compass-doc', 'Environment', '.cortex/compass/environment.md', '', ['scheduled', 'tasks', 'environment']),
+        'R-001': recallEntry('rule', 'Scheduled tasks are macOS only', '.cortex/compass/rules/R-001-x.md', '', ['scheduled', 'tasks', 'macos', 'only']),
+      },
+    ));
+    const { code, out } = await cortex(root, ['recall', 'scheduled', 'tasks', '--kind', 'compass-doc']);
+    expect(code).toBe(0);
+    expect(out).toBe('compass-doc  compass.environment — Environment (.cortex/compass/environment.md)');
+    const rule = await cortex(root, ['recall', 'scheduled', 'tasks', '--kind', 'rule']);
+    expect(rule.out).toBe('rule  R-001 — Scheduled tasks are macOS only (.cortex/compass/rules/R-001-x.md)');
+    const both = await cortex(root, ['recall', 'scheduled', 'tasks']);
+    expect(both.out.split('\n')).toHaveLength(2);
+    const bug = await cortex(root, ['recall', 'scheduled', 'tasks', '--kind', 'bug']);
+    expect(bug.out).toBe('No matches.');
+  });
+
+  it('the --kind enum is the seven kinds; the usage line names them', async () => {
+    const root = tmp('kind-enum');
+    writeRecallIndexFixture(root, sampleRecallIndex());
+    const { code, err } = await cortex(root, ['recall', 'x', '--kind', 'rumour']);
+    expect(code).toBe(2);
+    expect(err).toContain('decision|evidence|thread|observation|rule|compass-doc|bug');
   });
 });

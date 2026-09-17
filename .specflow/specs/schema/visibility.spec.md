@@ -1,6 +1,6 @@
 ---
 id: schema.visibility
-status: draft
+status: implemented
 depends_on:
   - schema.validator
   - core-cli.init
@@ -74,7 +74,10 @@ fifth revision in place (§10.1 `visibility`, Appendix A `check.visibility`, RUL
      `example.org`, `localhost`, `anthropic.com`, `claude.ai`) never match — a remote name is
      a pointer, not a target;
    - `port` — `/\b(?:(?:\d{1,3}\.){3}\d{1,3}|[a-z0-9.-]+\.[a-z]{2,}):\d{2,5}\b/i` — a host or
-     address with a port; `localhost:PORT` and `schema:§` never match;
+     address with a port; `localhost:PORT` and `schema:§` never match; a match whose host label
+     ends in a source-file extension from `VISIBILITY_CODE_REFERENCE_EXTENSIONS` (`.ts`, `.tsx`,
+     `.js`, `.mjs`, `.cjs`, `.json`, `.md`, `.yaml`, `.yml`, `.py`, `.sh`) is a code reference
+     (`file.ts:74`, the bug ledger's evidence lines), not a port, and never warns;
    - `ssh` — `/\bssh\s+(?:-\S+\s+)*[A-Za-z0-9._-]+@[A-Za-z0-9.-]+/`;
    - `account` — any of `/\b\d{12}\b/` (a cloud account number), `/\barn:aws:\S+/`,
      `/\b[a-z][a-z0-9-]{4,28}@[a-z0-9-]+\.iam\.gserviceaccount\.com\b/`,
@@ -124,6 +127,15 @@ fifth revision in place (§10.1 `visibility`, Appendix A `check.visibility`, RUL
   3.4.0.1 shipped`, and `Bind 0.0.0.0`
 - **When** `cortex validate` runs
 - **Then** no `check.visibility` warning is emitted
+
+### A code reference is not a port
+
+- **Given** `visibility.repo: "public"` and a compass bug whose lines carry
+  `src/hooks/post-read.ts:74`, `B-019 … the check at validate.ts:119`, and
+  `app-prod.internal.acme.cloud:8443`
+- **When** `cortex validate` runs
+- **Then** exactly one `check.visibility` warning is emitted, for the `.cloud:8443` line, and
+  none names a `.ts` reference
 
 ### Ignored files are out of scope, re-included ones are in
 

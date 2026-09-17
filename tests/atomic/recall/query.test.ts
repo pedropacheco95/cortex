@@ -732,3 +732,158 @@ describe('readFiredKeys — the per-session recall-fired memory, shared by both 
     cleanTmp(dir);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3.4 fifth revision — the compass kinds in the pointer grammar
+// (`hooks.search-annotate` Rules 7–8; `hooks.pre-read-writeback` Rule 6 Bugs part)
+// ---------------------------------------------------------------------------
+describe('recallLine — the no-date form and id-before-title for rule and bug (Rule 7, fifth revision)', () => {
+  const R014 = recallEntry('rule', 'No camelCase database columns', '.cortex/compass/rules/R-014-no-camelcase-database-columns.md', '', ['src/db']);
+  const B031 = recallEntry('bug', 'camelCase column slipped into migrations', '.cortex/compass/bugs/B-031-camelcase-column.md', '2026-06-28', ['src/db']);
+  const ENV = recallEntry('compass-doc', 'Environment', '.cortex/compass/environment.md', '', ['scheduled', 'jobs']);
+
+  it('a rule: `Recall: rule R-014 <title> (<path>)` — no date field, the id before the title', () => {
+    expect(recallLine(R014, 60, 'R-014')).toBe('Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)');
+  });
+
+  it('a bug with an opened date: `Recall: bug 2026-06-28 B-031 <title> (<path>)`; without one the date is omitted', () => {
+    expect(recallLine(B031, 60, 'B-031')).toBe('Recall: bug 2026-06-28 B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)');
+    expect(recallLine({ ...B031, date: '' }, 60, 'B-031')).toBe('Recall: bug B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)');
+  });
+
+  it('a compass document: `Recall: compass-doc Environment (<path>)` — no date, no id', () => {
+    expect(recallLine(ENV, 60, 'compass.environment')).toBe('Recall: compass-doc Environment (.cortex/compass/environment.md)');
+  });
+
+  it('the title cut still applies after the id, and a dated decision is unchanged', () => {
+    const long = recallEntry('rule', 'word '.repeat(30).trim(), '.cortex/compass/rules/R-015-x.md', '');
+    const line = recallLine(long, 20, 'R-015');
+    expect(line.startsWith('Recall: rule R-015 word word')).toBe(true);
+    expect(line).toContain('… (.cortex/compass/rules/R-015-x.md)');
+    const index = sampleRecallIndex();
+    expect(recallLine(index.entries['decision.2026-07-07-five-module-architecture'] as RecallEntry, 60, 'decision.2026-07-07-five-module-architecture')).toBe(
+      'Recall: decision 2026-07-07 Five-module architecture (.cortex/atlas/decisions/2026-07-07-five-module-architecture.md)',
+    );
+  });
+});
+
+describe('selectPointers — strength order thread > bug > decision > rule > evidence > observation (Rule 8, fifth revision)', () => {
+  const none = () => new Set<string>();
+  const entries = {
+    'R-014': recallEntry('rule', 'No camelCase database columns', '.cortex/compass/rules/R-014-no-camelcase-database-columns.md', ''),
+    'B-031': recallEntry('bug', 'camelCase column slipped into migrations', '.cortex/compass/bugs/B-031-camelcase-column.md', '2026-06-28'),
+    'decision.2026-05-01-d': recallEntry('decision', 'Columns are snake_case', '.cortex/atlas/decisions/2026-05-01-d.md', '2026-05-01'),
+    'evidence.2026-09-01-e': recallEntry('evidence', 'Column audit', '.cortex/atlas/evidence/2026-09-01-e.md', '2026-09-01'),
+    'observation.style': recallEntry('observation', 'style', '.cortex/insight/observations/style.md', '2026-09-20'),
+    'T-050': recallEntry('thread', 'Rename the columns?', '.cortex/pulse/threads/T-050-rename.md', '2026-09-10'),
+  };
+
+  it('AC: a grep into a governed directory points at the rule, and an open bug outranks it', () => {
+    const ruleOnly = recallIndexFixture({ 'src/db': recallSubject({ rules: ['R-014'] }) }, entries);
+    expect(selectPointers(ruleOnly, ['src/db'], [], none()).lines).toEqual([
+      'Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)',
+    ]);
+    const withBug = recallIndexFixture({ 'src/db': recallSubject({ rules: ['R-014'], bugs: ['B-031'] }) }, entries);
+    const { lines, fired } = selectPointers(withBug, ['src/db'], [], none());
+    expect(lines).toEqual([
+      'Recall: bug 2026-06-28 B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)',
+      'Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)',
+    ]);
+    expect(fired).toEqual(['src/db', 'B-031', 'R-014']);
+  });
+
+  it('a bug outranks a current decision; a rule outranks evidence; a thread with a decision still yields the Decided: line', () => {
+    const all = recallIndexFixture(
+      { 'src/db': recallSubject({ rules: ['R-014'], bugs: ['B-031'], decided: ['decision.2026-05-01-d'], evidence: ['evidence.2026-09-01-e'], observations: ['style'] }) },
+      entries,
+    );
+    const kinds = selectPointers(all, ['src/db'], [], none()).lines.map((l) => l.split(' ')[1]);
+    expect(kinds).toEqual(['bug', 'decision']);
+    const afterBug = selectPointers(all, ['src/db'], [], new Set(['B-031', 'decision.2026-05-01-d'])).lines.map((l) => l.split(' ')[1]);
+    expect(afterBug).toEqual(['rule', 'evidence']);
+    const withThread = recallIndexFixture(
+      { 'src/db': recallSubject({ threads: ['T-050'], bugs: ['B-031'], decided: ['decision.2026-05-01-d'] }) },
+      entries,
+    );
+    const { lines } = selectPointers(withThread, ['src/db'], [], none());
+    expect(lines[0]).toBe('Decided: decision.2026-05-01-d · Open: T-050 Rename the columns?');
+    expect(lines[1]).toMatch(/^Recall: bug 2026-06-28 B-031 /);
+  });
+
+  it('newest first within a kind: an empty date sorts last, then id ascending', () => {
+    const bugs = {
+      'B-010': recallEntry('bug', 'undated ten', '.cortex/compass/bugs/B-010-x.md', ''),
+      'B-011': recallEntry('bug', 'older', '.cortex/compass/bugs/B-011-x.md', '2026-06-01'),
+      'B-012': recallEntry('bug', 'newer', '.cortex/compass/bugs/B-012-x.md', '2026-07-01'),
+      'B-009': recallEntry('bug', 'undated nine', '.cortex/compass/bugs/B-009-x.md', ''),
+    };
+    const index = recallIndexFixture({ 'src/db': recallSubject({ bugs: Object.keys(bugs) }) }, bugs);
+    const first = selectPointers(index, ['src/db'], [], none());
+    expect(first.lines[0]).toMatch(/^Recall: bug 2026-07-01 B-012 /);
+    expect(first.lines[1]).toMatch(/^Recall: bug 2026-06-01 B-011 /);
+    const undated = selectPointers(index, ['src/db'], [], new Set(['B-012', 'B-011']));
+    expect(undated.lines[0]).toMatch(/^Recall: bug B-009 undated nine /);
+    expect(undated.lines[1]).toMatch(/^Recall: bug B-010 undated ten /);
+  });
+
+  it('AC: a keyword search lands on a compass document — no date field, under 60 tokens', () => {
+    const index = recallIndexFixture(
+      {},
+      { 'compass.environment': recallEntry('compass-doc', 'Environment', '.cortex/compass/environment.md', '', ['scheduled', 'jobs', 'environment']) },
+    );
+    const hits = keywordMatches(index, tokenise('scheduled jobs').tokens, []);
+    expect(hits.map((h) => h.id)).toEqual(['compass.environment']);
+    const { lines } = selectPointers(index, [], hits, none());
+    expect(lines).toEqual(['Recall: compass-doc Environment (.cortex/compass/environment.md)']);
+    expect(lines[0]!.length / 4).toBeLessThan(60);
+    expect(lines[0]).not.toMatch(IMPERATIVES);
+  });
+});
+
+describe('markerLine — the Bugs: part rides last (hooks.pre-read-writeback Rule 6, fifth revision)', () => {
+  const entries = {
+    'decision.2026-07-07-a': recallEntry('decision', 'a', '.cortex/atlas/decisions/2026-07-07-a.md', '2026-07-07'),
+    'B-019': recallEntry('bug', 'nineteen', '.cortex/compass/bugs/B-019-x.md', '2026-09-15'),
+    'B-020': recallEntry('bug', 'twenty', '.cortex/compass/bugs/B-020-x.md', '2026-09-16'),
+    'B-003': recallEntry('bug', 'three undated', '.cortex/compass/bugs/B-003-x.md', ''),
+    'R-001': recallEntry('rule', 'core', '.cortex/compass/rules/R-001-x.md', ''),
+  };
+
+  it('`Decided: … · Bugs: <ids, max 2>` newest opened first, empty last; the tail when cut; rules never appear', () => {
+    const index = recallIndexFixture({}, entries);
+    expect(markerLine(recallSubject({ decided: ['decision.2026-07-07-a'], bugs: ['B-019'], rules: ['R-001'] }), 'schema.validator', index)).toBe(
+      'Decided: decision.2026-07-07-a · Bugs: B-019',
+    );
+    expect(markerLine(recallSubject({ bugs: ['B-003', 'B-019', 'B-020'] }), 'src/x.ts', index)).toBe('Bugs: B-020, B-019 · more: cortex why src/x.ts');
+    expect(markerLine(recallSubject({ bugs: ['B-019'] }), 'src/x.ts', index)).toBe('Bugs: B-019');
+  });
+
+  it('a subject with only rules yields no marker (the marker carries no Rules: part)', () => {
+    const index = recallIndexFixture({}, entries);
+    expect(markerLine(recallSubject({ rules: ['R-001'] }), 'src/x.ts', index)).toBeNull();
+  });
+});
+
+describe('loadRecallIndex — a four-list index (pre-revision) loads with rules and bugs defaulted to empty', () => {
+  it('fills the two lists so consumers never see undefined; a mis-shaped present list still fails the probe', () => {
+    const root = tmp('four-lists');
+    writeRecallIndexFixture(root, JSON.stringify({
+      schemaVersion: '3.4',
+      generated: 'x',
+      subjects: { 'R-001': { decided: [], evidence: [], threads: [], observations: [] } },
+      entries: {},
+      counters: { subjects: 1, entries: 0, droppedRefs: 0 },
+    }));
+    const index = loadRecallIndex(root);
+    expect(index?.subjects['R-001']).toEqual({ decided: [], evidence: [], threads: [], observations: [], rules: [], bugs: [] });
+
+    const bad = tmp('bad-bugs');
+    writeRecallIndexFixture(bad, JSON.stringify({
+      schemaVersion: '3.4',
+      generated: 'x',
+      subjects: { 'R-001': { decided: [], evidence: [], threads: [], observations: [], bugs: 'B-019' } },
+      entries: {},
+    }));
+    expect(loadRecallIndex(bad)).toBeNull();
+  });
+});

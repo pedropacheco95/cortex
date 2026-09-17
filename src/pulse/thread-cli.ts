@@ -24,6 +24,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { decisionFilePayload, decisionSlug, provenanceUser } from '../insight/session-observe.js';
 import { ensureEvidenceDir, evidenceFilePayload, type EvidenceFinding } from '../atlas/evidence.js';
+import { allocateId } from '../compass/registry.js';
+import { readHeadCommit } from '../compass/git-head.js';
 import {
   THREAD_STATUSES,
   type Thread,
@@ -251,23 +253,6 @@ function decisionDraft(t: Thread, now: Date, user: string): { targetRel: string;
   return { targetRel, payload: payload.replace(/^(date: [^\n]*\n)/m, '$1confidence: INFERRED\n') };
 }
 
-/** Next unused `B-NNN` after the highest `B-\d+` filename on disk (mirrors `nextRuleId`). */
-function nextBugId(root: string): string {
-  const bugsDir = path.join(root, '.cortex', 'compass', 'bugs');
-  let existing: string[] = [];
-  try {
-    existing = fs.readdirSync(bugsDir);
-  } catch {
-    existing = [];
-  }
-  let max = 0;
-  for (const name of existing) {
-    const m = /^B-(\d{3,})(?:-|\.md$)/.exec(name);
-    if (m?.[1]) max = Math.max(max, parseInt(m[1], 10));
-  }
-  return `B-${String(max + 1).padStart(3, '0')}`;
-}
-
 /** A YAML scalar: plain when safe as such, else JSON-quoted (mirrors the ledger writer). */
 function yamlScalar(v: string): string {
   const plainSafe = /^[A-Za-z0-9_.\/@+][A-Za-z0-9_.\/@:+-]*$/.test(v) && !/: |^-|\s$/.test(v);
@@ -284,11 +269,19 @@ function resolvesOnDisk(root: string, entry: string): boolean {
   }
 }
 
-/** The §4.2 bug draft: next id, required type, medium/open, `affects`, DRAFT body. */
+/**
+ * The §4.2 bug draft: the id allocated through the registry (`schema.id-registry`
+ * Rule 2 — one appended line, never reused; 3.4 fifth revision), required
+ * type, medium/open, `affects`, `found_at_commit` from `.git/HEAD` when the
+ * reader resolves one (`compass.bug-currency` Rule 5 — no key otherwise),
+ * DRAFT body. The slug is computed first so the registry line carries it.
+ */
 function bugDraft(root: string, t: Thread, now: Date, type: string, affects: string[]): { targetRel: string; payload: string } {
-  const id = nextBugId(root);
   const title = keyText(t).slice(0, TITLE_CHARS);
-  const targetRel = `.cortex/compass/bugs/${id}-${threadSlug(title)}.md`;
+  const slug = threadSlug(title);
+  const id = allocateId(root, 'bug', slug);
+  const targetRel = `.cortex/compass/bugs/${id}-${slug}.md`;
+  const foundAt = readHeadCommit(root);
   const payload = [
     '---',
     `id: ${id}`,
@@ -299,6 +292,7 @@ function bugDraft(root: string, t: Thread, now: Date, type: string, affects: str
     'affects:',
     ...affects.map((a) => `  - ${yamlScalar(a)}`),
     `opened: ${now.toISOString()}`,
+    ...(foundAt !== null ? [`found_at_commit: ${foundAt}`] : []),
     '---',
     '',
     draftBody(t),

@@ -9,6 +9,11 @@
  * `decided` / `evidence` / `threads` is a key of `entries` (observation themes
  * are checked against `observation.<theme>` keys); every entry's `kind` is in
  * the enum and its `path` a non-empty string. Severity: error. Read-only.
+ *
+ * 3.4 fifth revision: `rules` and `bugs` are checked when present (arrays of
+ * strings whose ids are keys of `entries`) and tolerated when absent — an
+ * index written before the revision stays valid until the next `cortex scan`
+ * rewrites it; the `kind` enum gains `rule | compass-doc | bug`.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,7 +23,9 @@ const CHECK = 'check.recall-index';
 const CLAUSE = '§4.11';
 const REQUIRED_KEYS = ['schemaVersion', 'generated', 'subjects', 'entries', 'counters'] as const;
 const SUBJECT_LISTS = ['decided', 'evidence', 'threads', 'observations'] as const;
-const KIND_ENUM = ['decision', 'evidence', 'thread', 'observation'];
+/** The fifth revision's two lists — required of the compiler, optional for the check. */
+const OPTIONAL_SUBJECT_LISTS = ['rules', 'bugs'] as const;
+const KIND_ENUM = ['decision', 'evidence', 'thread', 'observation', 'rule', 'compass-doc', 'bug'];
 const VERSION_RE = /^\d+\.\d+$/;
 const OBSERVATION_ID_PREFIX = 'observation.';
 
@@ -96,7 +103,8 @@ export function checkRecallIndex(root: string): Violation[] {
           fail(`subject "${subject}" must be an object with the four lists`, 'subjects');
           continue;
         }
-        for (const list of SUBJECT_LISTS) {
+        const present = OPTIONAL_SUBJECT_LISTS.filter((list) => list in value);
+        for (const list of [...SUBJECT_LISTS, ...present]) {
           const items = value[list];
           if (!Array.isArray(items) || !items.every((i) => typeof i === 'string')) {
             fail(`subject "${subject}" ${list} must be an array of strings`, 'subjects');

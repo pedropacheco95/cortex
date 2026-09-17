@@ -156,3 +156,78 @@ describe('hooks.search-annotate — check.hook-config demands the row from a Cor
     expect(about[0]!.message).toContain('cortex sync');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 3.4 fifth revision — the compass carriers through the real compiler and the
+// real dispatcher: a rule governing src/db, an open bug on src/db/schema.ts,
+// environment.md with a "Scheduled QA jobs" heading.
+// ---------------------------------------------------------------------------
+describe('hooks.search-annotate — compass carriers end to end (Rules 7–8, fifth revision)', () => {
+  let root: string;
+  let home: string;
+
+  beforeAll(async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    root = makeTmpDir('search-annotate-spec-compass');
+    home = makeTmpDir('search-annotate-spec-compass-home');
+    expect((await init(root, { home, ...DARWIN })).exitCode).toBe(0);
+    write(root, 'src/db/schema.ts', 'export {};\n');
+    write(root, '.cortex/compass/rules/R-014-no-camelcase-database-columns.md', [
+      '---',
+      'id: R-014',
+      'title: No camelCase database columns',
+      'governs:',
+      '  - "src/db/**/*.ts"',
+      'confidence: STATED',
+      '---',
+      '',
+      '# R-014 — No camelCase database columns',
+      '',
+    ].join('\n'));
+    write(root, '.cortex/compass/bugs/B-031-camelcase-column.md', [
+      '---',
+      'id: B-031',
+      'title: camelCase column slipped into migrations',
+      'type: incomplete-rule',
+      'severity: medium',
+      'status: open',
+      'affects: [src/db/schema.ts]',
+      'opened: 2026-06-28T09:00:00Z',
+      '---',
+      '',
+      '# B-031',
+      '',
+    ].join('\n'));
+    write(root, '.cortex/compass/environment.md', '# Environment\n\n## Scheduled QA jobs\n\nthe nightly job runs against staging\n');
+    clearRecallIndexCache();
+    await writeRecallIndex(root);
+  }, TEST_TIMEOUT);
+  afterAll(() => {
+    vi.restoreAllMocks();
+    clearRecallIndexCache();
+    cleanTmp(root);
+    cleanTmp(home);
+  });
+  afterEach(() => clearRecallIndexCache());
+
+  it('a Grep into src/db points at the rule (no date, id before title); a Grep on schema.ts leads with the bug and follows with the rule', async () => {
+    const dir = await runHook('search-annotate', stdin(root, { tool_name: 'Grep', tool_input: { pattern: 'column', path: 'src/db' } }, 'compass-a'));
+    expect(dir.exitCode).toBe(0);
+    expect(parseEnvelope(dir.stdout).additionalContext).toBe(
+      'Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)',
+    );
+    const file = await runHook('search-annotate', stdin(root, { tool_name: 'Grep', tool_input: { pattern: 'column', path: 'src/db/schema.ts' } }, 'compass-b'));
+    expect(parseEnvelope(file.stdout).additionalContext.split('\n')).toEqual([
+      'Recall: bug 2026-06-28 B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)',
+      'Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)',
+    ]);
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('a keyword search for "scheduled jobs" lands on environment.md by its heading tokens, never by its body', async () => {
+    const hit = await runHook('search-annotate', stdin(root, { tool_name: 'Bash', tool_input: { command: 'grep -rn "scheduled jobs" src/' } }, 'compass-c'));
+    expect(parseEnvelope(hit.stdout).additionalContext).toBe('Recall: compass-doc Environment (.cortex/compass/environment.md)');
+    const miss = await runHook('search-annotate', stdin(root, { tool_name: 'Bash', tool_input: { command: 'grep -rn "nightly staging" src/' } }, 'compass-d'));
+    expect(miss).toEqual({ exitCode: 0, stdout: '' });
+  });
+});

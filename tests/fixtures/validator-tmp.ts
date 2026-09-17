@@ -7,6 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { registerId } from '../../src/compass/registry.js';
 
 export const VALID_FIXTURE = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex/tests/fixtures/valid');
 export const REPO_ROOT = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex');
@@ -40,11 +41,25 @@ export function bugsDir(root: string): string {
 }
 
 /**
+ * Register a planted file's id in the fixture copy's `compass/registry.md`
+ * (schema.id-registry Rule 5: a file whose id is on no line is an error), so
+ * a test that plants files to exercise OTHER checks stays conformant. A second
+ * file with the same id (the B-019 duplicate scenario) is a registry conflict
+ * and is simply not registered again — the id is already on a line.
+ */
+function registerPlanted(root: string, filename: string, id: string): void {
+  const slug = filename.replace(/^[RB]-\d{3,}-?/, '').replace(/\.md$/, '');
+  registerId(root, id, slug || 'reserved');
+}
+
+/**
  * A compass rule that is individually valid under check.rule: a resolving
  * `source:` (the fixture's atlas decision) and a `governs:` glob that matches
- * the fixture's one dev spec. `h1` defaults to `# <id> — <title>`.
+ * the fixture's one dev spec. `h1` defaults to `# <id> — <title>`. The id is
+ * registered in the registry unless `register: false` (to plant a file the
+ * registry does not know about).
  */
-export function writeRule(root: string, filename: string, id: string, opts: { title?: string; h1?: string | null } = {}): string {
+export function writeRule(root: string, filename: string, id: string, opts: { title?: string; h1?: string | null; register?: boolean } = {}): string {
   const title = opts.title ?? `Rule ${id}`;
   const h1 = opts.h1 === undefined ? `# ${id} — ${title}` : opts.h1;
   const filePath = path.join(rulesDir(root), filename);
@@ -53,11 +68,12 @@ export function writeRule(root: string, filename: string, id: string, opts: { ti
     filePath,
     `---\nid: ${id}\ntitle: ${title}\nsource:\n  - ../../atlas/decisions/2026-07-01-sample-decision.md\ngoverns:\n  - ".specflow/specs/**/*.spec.md"\n---\n\n${h1 === null ? '' : `${h1}\n\n`}Body of ${id}.\n`,
   );
+  if (opts.register !== false) registerPlanted(root, filename, id);
   return filePath;
 }
 
-/** A compass bug that is individually valid under check.bug. `h1` defaults to `# <id> — <title>`. */
-export function writeBug(root: string, filename: string, id: string, opts: { title?: string; h1?: string | null } = {}): string {
+/** A compass bug that is individually valid under check.bug. `h1` defaults to `# <id> — <title>`; registered unless `register: false`. */
+export function writeBug(root: string, filename: string, id: string, opts: { title?: string; h1?: string | null; register?: boolean } = {}): string {
   const title = opts.title ?? `Bug ${id}`;
   const h1 = opts.h1 === undefined ? `# ${id} — ${title}` : opts.h1;
   const filePath = path.join(bugsDir(root), filename);
@@ -66,6 +82,7 @@ export function writeBug(root: string, filename: string, id: string, opts: { tit
     filePath,
     `---\nid: ${id}\ntitle: ${title}\ntype: incomplete-rule\nseverity: low\nstatus: open\naffects:\n  - schema.validator\n---\n\n${h1 === null ? '' : `${h1}\n\n`}Body of ${id}.\n`,
   );
+  if (opts.register !== false) registerPlanted(root, filename, id);
   return filePath;
 }
 

@@ -18,6 +18,7 @@ import { RECALL_BLOCK_START, RECALL_BLOCK_END, writeRecallIndexBlocks } from '..
 import { runInsightRefreshFast } from '../../../src/insight/refresh-fast.js';
 import { CORTEX_INDEXES, SCHEMA_VERSION } from '../../../src/cli/templates.js';
 import { makeTmpDir, cleanTmp, gitInit } from '../../fixtures/init-harness.js';
+import { registerId } from '../../../src/compass/registry.js';
 
 const TEST_TIMEOUT = 60_000;
 const DARWIN_INIT = { platform: 'darwin' as const, noLlm: true };
@@ -48,6 +49,8 @@ function rule(root: string): void {
     '# R-001 — Spec files carry schema-checked frontmatter',
     '',
   ].join('\n'));
+  // schema.id-registry Rule 5: a hand-planted rule file must be registered, or sync's self-validation errors.
+  registerId(root, 'R-001', 'sample-rule');
 }
 
 function decision(root: string, stem: string, title: string, bearsOn: string): void {

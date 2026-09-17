@@ -276,10 +276,12 @@ changed line
 });
 
 // ---------------------------------------------------------------------------
-// AC: a promotion lands the gated write, the lineage, and the promoted marker
+// AC: an insight-sourced promotion lands the gated write, the lineage, and the
+// promoted marker (B-020, 2026-09-17: the source is a per-file anatomy entry —
+// `insight/map/` is the retired 2.0 layout)
 // ---------------------------------------------------------------------------
-describe('A promotion lands the gated write, the lineage, and the promoted marker', () => {
-  it('S-055 creates the atlas decision with a source: back-ref and marks deploy.md promoted (not deleted)', async () => {
+describe('An insight-sourced promotion lands the gated write, the lineage, and the promoted marker', () => {
+  it('S-055 creates the atlas decision with a source: back-ref and marks deploy.ts.md promoted (not deleted)', async () => {
     const DEPLOY = INSIGHT_PROSE(
       'deploy',
       '## Deploy\n\nDeploys run via the runbook script. _(observed 2026-06-01, signal 2, sessions: s1, s2)_',
@@ -291,7 +293,7 @@ describe('A promotion lands the gated write, the lineage, and the promoted marke
         `## S-055: promote the deploy runbook
 
 **Type:** promotion
-**Source:** insight-gaps; promoting .cortex/insight/map/deploy.md; sessions s1, s2
+**Source:** distil; promoting .cortex/insight/anatomy/src/deploy.ts.md; sessions s1, s2
 **Target:** ${TARGET_REL}
 
 **Proposed file:**
@@ -306,21 +308,22 @@ date: 2026-07-06T00:00:00Z
 On 2026-07-06 we captured the deploy runbook as a durable decision.
 \`\`\`
 `,
-      extra: { '.cortex/insight/map/deploy.md': DEPLOY },
+      extra: { '.cortex/insight/anatomy/src/deploy.ts.md': DEPLOY },
     });
 
     expect(await pulseCli('pulse-accept', ['S-055'], root)).toBe(0);
+    expect(stdout()).toContain('marked the insight original');
 
-    // (a) the atlas decision is created carrying a source: back-ref to insight/map/deploy.md
+    // (a) the atlas decision is created carrying a source: back-ref to insight/anatomy/src/deploy.ts.md
     const atlasAbs = path.join(root, TARGET_REL);
     expect(fs.existsSync(atlasAbs)).toBe(true);
     const atlas = fs.readFileSync(atlasAbs, 'utf-8');
     expect(atlas).toContain('source:');
-    expect(atlas).toContain('insight/map/deploy.md');
+    expect(atlas).toContain('insight/anatomy/src/deploy.ts.md');
     expect(atlas).toContain('On 2026-07-06 we captured the deploy runbook');
 
-    // (b) deploy.md gains the promoted trailer naming the target + S-055
-    const deployAbs = path.join(root, '.cortex', 'insight', 'map', 'deploy.md');
+    // (b) deploy.ts.md gains the promoted trailer naming the target + S-055
+    const deployAbs = path.join(root, '.cortex', 'insight', 'anatomy', 'src', 'deploy.ts.md');
     expect(fs.existsSync(deployAbs)).toBe(true); // (c) NOT deleted
     const deploy = fs.readFileSync(deployAbs, 'utf-8');
     expect(deploy).toContain('Deploys run via the runbook script.'); // original preserved
@@ -335,21 +338,94 @@ On 2026-07-06 we captured the deploy runbook as a durable decision.
 });
 
 // ---------------------------------------------------------------------------
-// AC: a promotion with a missing insight source refuses transactionally
+// AC: an archive-sourced promotion lands the gated write and the lineage, and
+// touches no insight file (B-020 — the cortex-archive-ingest producer's output
+// is acceptable by the gate it targets; schema §4.5.1 wins over the 2.0 clause)
 // ---------------------------------------------------------------------------
-describe('A promotion with a missing insight source refuses transactionally', () => {
-  it('S-056 exits 1, lands no gated write, stamps no marker, stays pending', async () => {
-    const TARGET_REL = '.cortex/atlas/decisions/2026-07-06-orphan.md';
-    const root = makeProject('s056', {
-      suggestions:
-        HEADER +
-        `## S-056: promote a nonexistent insight file
+describe('An archive-sourced promotion lands the gated write and the lineage, and touches no insight file', () => {
+  const ARCHIVE_REL = 'archive/documents/brief/extracted/summary.md';
+  const SUMMARY = '---\nkind: extraction\n---\n\n# Summary\n\nThe brief in one page.\n';
+  const STAKEHOLDER_PAYLOAD = `---
+id: stakeholder.coordinator
+name: External wave coordinator
+role: Author of the brief
+provenance:
+  - derives_from: ${ARCHIVE_REL}
+---
+
+# External wave coordinator
+
+Speaks for the first external multi-session workload.`;
+
+  function section(target: string, payloadLabel: 'file' | 'addition'): string {
+    return `## S-060: record the coordinator as a stakeholder
 
 **Type:** promotion
-**Source:** insight-gaps; promoting .cortex/insight/map/nonexistent.md; sessions s9
-**Target:** ${TARGET_REL}
+**Source:** cortex-archive-ingest — ${ARCHIVE_REL}
+**Target:** ${target}
 
-**Proposed file:**
+**Proposed ${payloadLabel}:**
+
+\`\`\`
+${STAKEHOLDER_PAYLOAD}
+\`\`\`
+`;
+  }
+
+  it('S-060 exits 0, creates the stakeholder with source: to the extracted file, modifies nothing under insight/ or archive/, and reads accepted', async () => {
+    const TARGET_REL = '.cortex/atlas/stakeholders/coordinator.md';
+    const root = makeProject('s060', {
+      suggestions: HEADER + section(TARGET_REL, 'file'),
+      extra: {
+        [`.cortex/${ARCHIVE_REL}`]: SUMMARY,
+        '.cortex/insight/anatomy/src/a.ts.md': '# a\n',
+      },
+    });
+    const before = snapshotTree(root);
+
+    expect(await pulseCli('pulse-accept', ['S-060'], root)).toBe(0);
+    expect(stdout()).toContain(`promoted to ${TARGET_REL}`);
+    expect(stdout()).not.toContain('marked the insight original');
+
+    const landed = fs.readFileSync(path.join(root, TARGET_REL), 'utf-8');
+    expect(landed).toContain(`\nsource: ${ARCHIVE_REL}\n`);
+    expect(landed).toContain(`derives_from: ${ARCHIVE_REL}`);
+    expect(landed).toContain('# External wave coordinator');
+
+    const after = snapshotTree(root);
+    const changed = [...new Set([...before.keys(), ...after.keys()])].filter((k) => before.get(k) !== after.get(k)).sort();
+    expect(changed).toEqual([path.join('.cortex', 'atlas', 'stakeholders', 'coordinator.md'), path.join('.cortex', 'pulse', 'suggestions.md')]);
+    expect(changed.some((k) => k.includes(`${path.sep}insight${path.sep}`) || k.includes(`${path.sep}archive${path.sep}`))).toBe(false);
+
+    const sugg = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
+    expect(sugg).toContain('**Status:** accepted');
+  });
+
+  it('S-060 targeting RULES.md exits 1 naming compass/atlas as the archive-sourced roots, writes nothing, stays pending', async () => {
+    const root = makeProject('s060-rules', {
+      suggestions: HEADER + section('RULES.md', 'addition'),
+      extra: {
+        [`.cortex/${ARCHIVE_REL}`]: SUMMARY,
+        'RULES.md': '# Rules\n\n1. Existing.\n',
+      },
+    });
+    const before = snapshotTree(root);
+
+    expect(await pulseCli('pulse-accept', ['S-060'], root)).toBe(1);
+    expect(stderr()).toContain('S-060');
+    expect(stderr()).toContain('.cortex/compass/');
+    expect(stderr()).toContain('.cortex/atlas/');
+    expect(snapshotTree(root)).toEqual(before);
+    const sugg = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
+    expect(sugg).not.toContain('**Status:**');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC: a promotion with a missing or unrecognised source refuses transactionally
+// ---------------------------------------------------------------------------
+describe('A promotion with a missing or unrecognised source refuses transactionally', () => {
+  const ORPHAN_FILE = `**Proposed file:**
 
 \`\`\`
 ---
@@ -360,13 +436,56 @@ date: 2026-07-06T00:00:00Z
 
 Body.
 \`\`\`
-`,
+`;
+
+  it('S-056 (an insight/anatomy/ entry that does not exist) exits 1, lands no gated write, stamps no marker, stays pending', async () => {
+    const TARGET_REL = '.cortex/atlas/decisions/2026-07-06-orphan.md';
+    const root = makeProject('s056', {
+      suggestions:
+        HEADER +
+        `## S-056: promote a nonexistent insight file
+
+**Type:** promotion
+**Source:** distil; promoting .cortex/insight/anatomy/src/nonexistent.ts.md; sessions s9
+**Target:** ${TARGET_REL}
+
+` +
+        ORPHAN_FILE,
     });
 
     const before = snapshotTree(root);
     expect(await pulseCli('pulse-accept', ['S-056'], root)).toBe(1);
+    expect(stderr()).toContain('.cortex/insight/anatomy/src/nonexistent.ts.md');
+    expect(stderr()).not.toContain('insight/map/');
     expect(fs.existsSync(path.join(root, TARGET_REL))).toBe(false);
     expect(snapshotTree(root)).toEqual(before);
+  });
+
+  it('S-061 (a Source naming neither kind) exits 1 naming both accepted shapes and not insight/map/, writes nothing, stays pending', async () => {
+    const TARGET_REL = '.cortex/atlas/decisions/2026-07-06-orphan.md';
+    const root = makeProject('s061', {
+      suggestions:
+        HEADER +
+        `## S-061: promote from a pulse report
+
+**Type:** promotion
+**Source:** cortex-loop — pulse/reports/session-observe.md
+**Target:** ${TARGET_REL}
+
+` +
+        ORPHAN_FILE,
+      extra: { '.cortex/pulse/reports/session-observe.md': '---\nkind: pulse-session-observe\n---\n' },
+    });
+
+    const before = snapshotTree(root);
+    expect(await pulseCli('pulse-accept', ['S-061'], root)).toBe(1);
+    expect(stderr()).toContain('.cortex/insight/anatomy/**');
+    expect(stderr()).toContain('.cortex/archive/documents/<id>/extracted/**');
+    expect(stderr()).not.toContain('insight/map/');
+    expect(fs.existsSync(path.join(root, TARGET_REL))).toBe(false);
+    expect(snapshotTree(root)).toEqual(before);
+    const sugg = fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8');
+    expect(sugg).not.toContain('**Status:**');
   });
 });
 
@@ -484,10 +603,10 @@ describe('pulse-list surfaces the Type for typed suggestions', () => {
     const root = makeProject('list-type', {
       suggestions:
         HEADER +
-        `## S-060: promote something
+        `## S-062: promote something
 
 **Type:** promotion
-**Source:** insight-gaps; promoting .cortex/insight/map/deploy.md
+**Source:** distil; promoting .cortex/insight/anatomy/src/deploy.ts.md
 **Target:** .cortex/atlas/decisions/2026-07-06-x.md
 
 **Proposed file:**
@@ -498,7 +617,7 @@ body
 `,
     });
     expect(await pulseCli('pulse-list', [], root)).toBe(0);
-    expect(stdout()).toContain('S-060');
+    expect(stdout()).toContain('S-062');
     expect(stdout()).toContain('Type: promotion');
   });
 });

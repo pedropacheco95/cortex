@@ -123,13 +123,17 @@ describe('AC: the emitted file passes its own check', () => {
     seedCarriers(root);
     const index = await writeRecallIndex(root);
     expect(fs.existsSync(path.join(root, INDEX_REL))).toBe(true);
-    expect(index.counters.entries).toBe(9); // the AC seven plus the fixture's sample decision and scale observation
+    expect(index.counters.entries).toBe(10); // the AC seven plus the fixture's sample decision, scale observation and R-001 rule (fifth revision)
     expect(index.subjects['R-001']).toEqual({
       decided: ['decision.2026-09-15-b'],
       evidence: ['evidence.2026-09-15-usage'],
       threads: ['T-001'],
       observations: ['working-style'],
+      rules: [],
+      bugs: [],
     });
+    // The fixture rule governs `.specflow/specs/**/*.spec.md`: its directory prefix is a derived subject (Rule 15a).
+    expect(index.subjects['.specflow/specs']?.rules).toEqual(['R-001']);
     expect(index.subjects['schema.validator']?.evidence).toEqual(['evidence.2026-09-15-usage']);
     expect(index.subjects['concept:authentication']?.observations).toEqual(['working-style']);
 
@@ -170,7 +174,7 @@ describe('AC: scan, init and the post-commit tier all build it; validate does no
     expect(fs.existsSync(path.join(root, '.cortex', 'constellation.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, INDEX_REL))).toBe(true);
     const first = JSON.parse(fs.readFileSync(path.join(root, INDEX_REL), 'utf-8')) as RecallIndex;
-    expect(first.counters.entries).toBe(9);
+    expect(first.counters.entries).toBe(10);
 
     const logged = vi.mocked(console.log).mock.calls.map((c) => String(c[0])).join('\n');
     expect(logged).toMatch(/recall index: \d+ subject\(s\), \d+ entr(y|ies)/);
@@ -209,5 +213,47 @@ describe('AC: a malformed index is an error, an absent one is nothing', () => {
     fs.rmSync(path.join(root, INDEX_REL));
     const second = await validate(root);
     expect(second.violations.filter((v) => v.check === 'check.recall-index')).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.4 fifth revision — the compass carriers end to end (Rules 15–17): a rule
+// governing src/db, an open bug affecting src/db/schema.ts, environment.md.
+// ---------------------------------------------------------------------------
+describe('AC: the compass carriers land in the written index and it still passes its own check (fifth revision)', () => {
+  it('R-001 governs src/db/**/*.ts, B-019 affects src/db/schema.ts, environment.md has a heading → the six lists and the compass-doc entry, zero check.recall-index errors', async () => {
+    const root = project('compass-carriers');
+    write(root, 'src/db/schema.ts', 'export {};\n');
+    write(root, 'src/db/migrate.ts', 'export {};\n');
+    // The fixture rule R-001 governs the spec tree; re-point it at src/db for the criterion.
+    write(root, '.cortex/compass/rules/R-001-sample-rule.md', fs.readFileSync(path.join(root, '.cortex/compass/rules/R-001-sample-rule.md'), 'utf-8').replace('".specflow/specs/**/*.spec.md"', '"src/db/**/*.ts"'));
+    write(root, '.cortex/compass/bugs/B-019-schema-drift.md', [
+      '---',
+      'id: B-019',
+      'title: Schema drift between migrate and schema',
+      'type: incomplete-rule',
+      'severity: high',
+      'status: open',
+      'affects: [src/db/schema.ts]',
+      'opened: 2026-09-15T17:00:00Z',
+      '---',
+      '',
+      '# B-019',
+      '',
+    ].join('\n'));
+    write(root, '.cortex/compass/environment.md', '# Environment\n\n## Scheduled QA jobs\n\nthe nightly job runs against staging\n');
+    const index = await writeRecallIndex(root);
+    expect(index.subjects['src/db']?.rules).toEqual(['R-001']);
+    expect(index.subjects['src/db/schema.ts']?.rules).toEqual(['R-001']);
+    expect(index.subjects['src/db/schema.ts']?.bugs).toEqual(['B-019']);
+    expect(index.entries['compass.environment']?.kind).toBe('compass-doc');
+    expect(index.entries['compass.environment']?.keywords).toContain('scheduled');
+    expect(index.entries['compass.environment']?.keywords).not.toContain('nightly');
+    expect(index.entries['B-019']?.kind).toBe('bug');
+    expect(index.entries['R-001']?.kind).toBe('rule');
+    const written = JSON.parse(fs.readFileSync(path.join(root, INDEX_REL), 'utf-8')) as RecallIndex;
+    expect(Object.keys(written.subjects['src/db/schema.ts'] ?? {})).toEqual(['decided', 'evidence', 'threads', 'observations', 'rules', 'bugs']);
+    const report = await validate(root);
+    expect(report.violations.filter((v) => v.check === 'check.recall-index')).toEqual([]);
   });
 });

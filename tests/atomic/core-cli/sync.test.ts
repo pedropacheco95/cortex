@@ -498,3 +498,42 @@ describe('Rule 13: optional progress sink', () => {
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 });
+
+// ---------------------------------------------------------------------------
+// Rule 15 (3.4 fifth revision): the id registry migration — created once
+// from disk, never touched when present (schema.id-registry Rule 6).
+// ---------------------------------------------------------------------------
+import { REGISTRY_FILE, REGISTRY_HEADER } from '../../../src/compass/registry.js';
+
+describe('Rule 15: id registry migration', () => {
+  it('absent registry → created from the R-*/B-* files with the summary line `registry created (n rules, m bugs)`; Rule 14\'s progress list is unchanged', async () => {
+    const { root, home } = await bootstrap('r15-create');
+    try {
+      fs.rmSync(path.join(root, REGISTRY_FILE));
+      fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-002-two.md'), '# R-002\n', 'utf-8');
+      fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-001-one.md'), '# R-001\n', 'utf-8');
+      fs.writeFileSync(path.join(root, '.cortex', 'compass', 'bugs', 'B-001-first.md'), '# B-001\n', 'utf-8');
+      const progress: string[] = [];
+      const result = await sync(root, { home, ...DARWIN_SYNC, onProgress: (m) => progress.push(m) });
+      expect(result.summary).toContain('registry created (2 rules, 1 bugs)');
+      expect(progress).toHaveLength(7);
+      expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(`${REGISTRY_HEADER}\nR-001 one\nR-002 two\nB-001 first\n`);
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+
+  it('present registry → no write (a hand-edited, even unsorted, file is byte-identical) and the summary reads `registry present`', async () => {
+    const { root, home } = await bootstrap('r15-present');
+    try {
+      const edited = `${REGISTRY_HEADER}\nR-002 b\nR-001 a\n# note\n`;
+      fs.writeFileSync(path.join(root, REGISTRY_FILE), edited, 'utf-8');
+      const result = await sync(root, { home, ...DARWIN_SYNC });
+      expect(result.summary).toContain('registry present');
+      expect(result.summary).not.toContain('registry created');
+      expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(edited);
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+});

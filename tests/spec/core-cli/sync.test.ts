@@ -93,6 +93,30 @@ describe('AC1: missing CLAUDE.md block is repaired, rest of the file untouched',
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(content.startsWith(preamble)).toBe(true);
   });
+
+  // 3.4 fifth revision (Rule 3): the block is rendered from the config as it
+  // stands — a public repo's placement paragraph ends with the rule-20 tail,
+  // and a later config edit + sync refreshes it.
+  it('with visibility.repo: "public" the repaired block carries the rule-20 placement tail; flipping to private refreshes it', async () => {
+    writeConfig(root, { ...readConfig(root), visibility: { repo: 'public', allow: [] } });
+    fs.writeFileSync(path.join(root, 'CLAUDE.md'), preamble);
+    const repaired = await sync(root, { home, ...DARWIN_SYNC });
+    expect(repaired.exitCode).toBe(0);
+    const raw = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+    expect(raw.startsWith(preamble)).toBe(true);
+    let content = raw.replace(/\n(?!\n)/g, ' ');
+    expect(content).toContain('**Placement:** durable knowledge lives in `.cortex/` (tracked, except `atlas/sources/`, `pulse/` and archived raw sources). This repository is public: compass and atlas carry pointers, never hosts, ports or account ids (RULES.md rule 20).');
+    expect(content).toContain('This applies more, not less, to sessions that dispatch, review or plan rather than edit');
+    expect(content).not.toContain('This is not optional');
+
+    writeConfig(root, { ...readConfig(root), visibility: { repo: 'private', allow: [] } });
+    await sync(root, { home, ...DARWIN_SYNC });
+    content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+    // private: the placement paragraph ends at the head — no tail at all
+    expect(content.split('\n')).toContain('`pulse/` and archived raw sources).');
+    expect(content).not.toContain('RULES.md rule 20');
+    expect(content).not.toContain('Repository visibility is unknown');
+  }, TEST_TIMEOUT);
 });
 
 // ---------------------------------------------------------------------------
@@ -408,6 +432,7 @@ describe('AC10: schemaVersion is rewritten to the installed package version, no 
     // distinguishable same-MAJOR version string so the rewrite path runs for
     // real, and assert every OTHER key is untouched.
     originalConfig = { ...config, schemaVersion: '3.0-priorfixture' };
+    delete originalConfig['visibility']; // a pre-fifth-revision config never carried the key
     writeConfig(root, originalConfig);
     await sync(root, { home, ...DARWIN_SYNC });
   }, TEST_TIMEOUT);
@@ -424,6 +449,13 @@ describe('AC10: schemaVersion is rewritten to the installed package version, no 
       expect(after[key]).toEqual(originalConfig[key]);
     }
     expect(Object.keys(after).sort()).toEqual(Object.keys(originalConfig).sort());
+  });
+
+  // 3.4 fifth revision (schema.visibility Rule 1): a config that predates the
+  // key does not gain it on sync — absent means unknown.
+  it('a config that lacked `visibility` before the upgrade still lacks it after', () => {
+    expect('visibility' in originalConfig).toBe(false);
+    expect('visibility' in readConfig(root)).toBe(false);
   });
 });
 
@@ -470,4 +502,53 @@ describe('Cross-cutting: a synced project stays schema-valid', () => {
     expect(data['name']).toBe(scoped);
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
+});
+
+// ---------------------------------------------------------------------------
+// AC (3.4 fifth revision): a missing id registry is created once from the
+// files on disk — Rule 15 / schema.id-registry Rule 6.
+// ---------------------------------------------------------------------------
+import { REGISTRY_FILE, REGISTRY_HEADER } from '../../../src/compass/registry.js';
+
+describe('AC10: a missing id registry is created once from the files on disk', () => {
+  let root: string;
+  let home: string;
+  let first: Awaited<ReturnType<typeof sync>>;
+  let second: Awaited<ReturnType<typeof sync>>;
+  let afterFirst: string;
+
+  const pad = (n: number): string => String(n).padStart(3, '0');
+  const expected = (): string => {
+    const lines: string[] = [];
+    for (let i = 1; i <= 3; i++) lines.push(`R-${pad(i)} rule-${i}`);
+    for (let i = 1; i <= 19; i++) lines.push(`B-${pad(i)} bug-${i}`);
+    return `${REGISTRY_HEADER}\n${lines.join('\n')}\n`;
+  };
+
+  beforeAll(async () => {
+    ({ root, home } = await bootstrap('ac10'));
+    fs.rmSync(path.join(root, REGISTRY_FILE));
+    // Plain files: this AC is about the ids the filenames carry, not about
+    // rule/bug conformance (self-validation may report them; the registry
+    // step runs before it and is asserted directly).
+    for (let i = 19; i >= 1; i--) fs.writeFileSync(path.join(root, '.cortex', 'compass', 'bugs', `B-${pad(i)}-bug-${i}.md`), `# B-${pad(i)}\n`, 'utf-8');
+    for (let i = 3; i >= 1; i--) fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', `R-${pad(i)}-rule-${i}.md`), `# R-${pad(i)}\n`, 'utf-8');
+    first = await sync(root, { home, ...DARWIN_SYNC });
+    afterFirst = fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8');
+    second = await sync(root, { home, ...DARWIN_SYNC });
+  }, TEST_TIMEOUT);
+  afterAll(() => { cleanTmp(root); cleanTmp(home); });
+
+  it('after the first run the registry carries the header, three R- lines then nineteen B- lines ascending, slugs from the filenames', () => {
+    expect(afterFirst).toBe(expected());
+  });
+
+  it('the first summary reads `registry created (3 rules, 19 bugs)`', () => {
+    expect(first.summary).toContain('registry created (3 rules, 19 bugs)');
+  });
+
+  it('after the second run the file is byte-identical and the summary reads `registry present`', () => {
+    expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(afterFirst);
+    expect(second.summary).toContain('registry present');
+  });
 });

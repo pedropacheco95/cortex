@@ -123,7 +123,7 @@ describe('check.recall-index: shape errors (Rule 13; clause §4.11; severity err
   it('an entry with a kind outside the enum or an empty path is an error at key entries', () => {
     const root = tmp('entry-shape');
     const doc = valid();
-    (doc['entries'] as Record<string, unknown>)['x'] = { kind: 'rule', title: 'x', path: '.cortex/x.md', date: '', keywords: [] };
+    (doc['entries'] as Record<string, unknown>)['x'] = { kind: 'rumour', title: 'x', path: '.cortex/x.md', date: '', keywords: [] };
     (doc['entries'] as Record<string, unknown>)['y'] = { kind: 'decision', title: 'y', path: '', date: '', keywords: [] };
     const violations = run(root, doc);
     expect(violations).toHaveLength(2);
@@ -136,5 +136,43 @@ describe('check.recall-index: shape errors (Rule 13; clause §4.11; severity err
     const root = tmp('non-object');
     expect(run(root, { ...valid(), subjects: [] })).toHaveLength(1);
     expect(run(root, { ...valid(), entries: 'nope' })).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3.4 fifth revision — the optional `rules` / `bugs` lists and the seven kinds
+// (`recall.recall-index` Rule 13, plan wave B Task 1.2)
+// ---------------------------------------------------------------------------
+describe('check.recall-index: rules and bugs are checked when present, tolerated when absent (fifth revision)', () => {
+  it('an index written before the revision (four lists only) is valid; the three compass kinds are in the enum', () => {
+    const root = tmp('five-absent');
+    const doc = valid();
+    (doc['entries'] as Record<string, unknown>)['R-001'] = { kind: 'rule', title: 'r', path: '.cortex/compass/rules/R-001-r.md', date: '', keywords: [] };
+    (doc['entries'] as Record<string, unknown>)['B-019'] = { kind: 'bug', title: 'b', path: '.cortex/compass/bugs/B-019-b.md', date: '', keywords: [] };
+    (doc['entries'] as Record<string, unknown>)['compass.environment'] = { kind: 'compass-doc', title: 'Environment', path: '.cortex/compass/environment.md', date: '', keywords: ['scheduled'] };
+    expect(run(root, doc)).toEqual([]);
+  });
+
+  it('a rules or bugs id absent from entries is one error naming it', () => {
+    const root = tmp('five-dangling');
+    const doc = valid();
+    (doc['subjects'] as Record<string, Record<string, string[]>>)['R-001']!['rules'] = ['R-001'];
+    (doc['subjects'] as Record<string, Record<string, string[]>>)['R-001']!['bugs'] = ['B-019'];
+    (doc['entries'] as Record<string, unknown>)['R-001'] = { kind: 'rule', title: 'r', path: '.cortex/compass/rules/R-001-r.md', date: '', keywords: [] };
+    const violations = run(root, doc);
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.message).toContain('B-019');
+    expect(violations[0]?.location.key).toBe('subjects');
+  });
+
+  it('a present rules or bugs value that is not an array of strings is one error each', () => {
+    const root = tmp('five-shape');
+    const doc = valid();
+    (doc['subjects'] as Record<string, Record<string, unknown>>)['R-001']!['rules'] = 'R-001';
+    (doc['subjects'] as Record<string, Record<string, unknown>>)['R-001']!['bugs'] = [1];
+    const violations = run(root, doc);
+    expect(violations).toHaveLength(2);
+    expect(violations.map((v) => v.message).join('\n')).toMatch(/rules must be an array of strings/);
+    expect(violations.map((v) => v.message).join('\n')).toMatch(/bugs must be an array of strings/);
   });
 });

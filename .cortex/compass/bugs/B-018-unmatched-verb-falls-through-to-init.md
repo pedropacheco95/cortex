@@ -26,6 +26,7 @@ proposed_fix: >-
   no arguments also lands in init today; decide whether it stays an init alias or
   prints usage. The README documents only `cortex init`.
 opened: 2026-09-15T17:17:00Z
+resolved: 2026-09-16T12:00:00Z
 ---
 
 # B-018 — an unmatched verb falls through the dispatcher into `cortex init`
@@ -205,4 +206,6 @@ both up afterwards — init does not. Same with `cortex nonsense`, `cortex -v`;
 
 ### Resolution
 
-(open)
+Resolved 2026-09-16 (recall step 3 commit). `cortex --help`, `cortex -h` and any unmatched verb
+print the usage table and exit 2; bare `cortex` is no longer an alias for `init`. Covered by the
+core-cli dispatch tests.

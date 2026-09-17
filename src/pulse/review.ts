@@ -22,6 +22,10 @@ import {
 } from './types.js';
 import { planPromotion } from './promote.js';
 import { ensureEvidenceDir } from '../atlas/evidence.js';
+import { findRegistered, registerId } from '../compass/registry.js';
+
+/** A project-relative target that is a compass rule file (pulse.review-cli Rule 7b). */
+const NEW_RULE_FILE_RE = /^\.cortex\/compass\/rules\/(R-\d{3,})-([a-z0-9-]+)\.md$/;
 
 const DEFAULT_DISMISSED_WINDOW_DAYS = 90;
 
@@ -578,6 +582,22 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
     const exists = fs.existsSync(targetAbs);
     const existing = exists ? fs.readFileSync(targetAbs, 'utf-8') : '';
 
+    // Rule 7b (3.4 fifth revision; schema.id-registry Rule 4): a NEW
+    // `.cortex/compass/rules/R-NNN-<slug>.md` target is registered in
+    // compass/registry.md in the same run — after the file lands, below. If
+    // the id is already on a line under a different slug, refuse now, before
+    // any write. Existing targets never touch the registry.
+    const newRuleFile = exists ? null : NEW_RULE_FILE_RE.exec(target);
+    if (newRuleFile) {
+      const taken = findRegistered(root, newRuleFile[1]!);
+      if (taken && taken.slug !== newRuleFile[2] && taken.slug !== 'reserved') {
+        console.error(
+          `Refusing ${id}: ${newRuleFile[1]} is already registered in .cortex/compass/registry.md as "${taken.id} ${taken.slug}" (line ${taken.line}). Allocate a fresh id with \`cortex id next rule\` and re-propose. Nothing changed.`,
+        );
+        return 1;
+      }
+    }
+
     // Clobber / existence gates per payload shape (§4.5.2).
     if (suggestion.payloadKind === 'file') {
       if (exists) {
@@ -630,10 +650,14 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
       opWord = suggestion.payloadKind === 'file' ? 'created' : 'appended to';
     }
 
-    // Promotion side-effects (§4.10.4): the gated write carries a `source:`
-    // back-reference; the insight original is marked promoted (never deleted).
-    // A missing insight source is a transactional refusal (nothing written).
+    // Promotion side-effects (§4.5 Source clause, §4.10.4; B-020): the gated
+    // write carries a `source:` back-reference to the named artefact; an
+    // insight original is marked promoted (never deleted); an archive source
+    // is never written to. A source naming neither kind, a missing source
+    // file, or an archive source targeting outside compass/atlas is a
+    // transactional refusal (nothing written).
     let insightWrite: { abs: string; content: string } | null = null;
+    let promoted = false;
     if (suggestion.type === 'promotion') {
       const plan = planPromotion({
         root,
@@ -649,7 +673,10 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
         return 1;
       }
       nextTarget = plan.landedContent;
-      insightWrite = { abs: plan.insightAbs, content: plan.nextInsight };
+      promoted = true;
+      if (plan.insightAbs !== null && plan.nextInsight !== null) {
+        insightWrite = { abs: plan.insightAbs, content: plan.nextInsight };
+      }
     }
 
     const nextSource = annotateStatus(sourceLines, suggestion, 'accepted').join('\n');
@@ -662,10 +689,15 @@ export async function pulseCli(command: string, argv: string[], root = '.'): Pro
     fs.writeFileSync(targetAbs, nextTarget, 'utf-8');
     if (insightWrite !== null) fs.writeFileSync(insightWrite.abs, insightWrite.content, 'utf-8');
     fs.writeFileSync(suggestion.file, nextSource, 'utf-8');
+    // Rule 7b: register the new rule file's id (registry created from disk
+    // first when absent — which then already lists the file just landed).
+    if (newRuleFile) registerId(root, newRuleFile[1]!, newRuleFile[2]!);
     console.log(
       insightWrite !== null
         ? `Accepted ${id}: promoted to ${target}, marked the insight original.`
-        : `Accepted ${id}: ${opWord} ${target}.`,
+        : promoted
+          ? `Accepted ${id}: promoted to ${target}.`
+          : `Accepted ${id}: ${opWord} ${target}.`,
     );
     return 0;
   }

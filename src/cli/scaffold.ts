@@ -367,8 +367,21 @@ export async function installSkills(root: string, yes: boolean): Promise<{ insta
 // CLAUDE.md managed block (init Rule 10 / sync Rule 3)
 // ---------------------------------------------------------------------------
 
-export function upsertClaudeMd(root: string): 'created' | 'inserted' | 'updated' | 'unchanged' {
+export function upsertClaudeMd(root: string, config?: Record<string, unknown>): 'created' | 'inserted' | 'updated' | 'unchanged' {
   const claudeMdPath = path.join(root, 'CLAUDE.md');
+  // 3.4 fifth revision (init Rule 10, sync Rule 3): the block is rendered from
+  // `cortex.config.json` as it stands — read here when the caller passes none,
+  // so both init (after it writes the config) and sync share one path. A
+  // missing or unparseable config renders `unknown` and no notes directory.
+  let blockConfig: Record<string, unknown> = config ?? {};
+  if (config === undefined) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8')) as unknown;
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) blockConfig = parsed as Record<string, unknown>;
+    } catch {
+      /* absent or unparseable: defaults */
+    }
+  }
   let projectName = path.basename(root);
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')) as Record<string, unknown>;
@@ -381,7 +394,7 @@ export function upsertClaudeMd(root: string): 'created' | 'inserted' | 'updated'
   } catch {
     /* fall back to directory name */
   }
-  const block = claudeMdBlock(projectName);
+  const block = claudeMdBlock(projectName, blockConfig);
 
   if (!fs.existsSync(claudeMdPath)) {
     fs.writeFileSync(claudeMdPath, block + '\n', 'utf-8');

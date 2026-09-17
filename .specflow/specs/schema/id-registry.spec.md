@@ -1,6 +1,6 @@
 ---
 id: schema.id-registry
-status: draft
+status: implemented
 depends_on:
   - schema.validator
   - core-cli.sync

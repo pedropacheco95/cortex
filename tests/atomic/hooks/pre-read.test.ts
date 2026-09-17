@@ -1033,3 +1033,106 @@ describe('Rule 8: stale marker — the criteria', () => {
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 6, Bugs part (3.4 fifth revision; brief §3.2): the marker's fourth part,
+// cut last, and the one narrow widening — a source file whose subject has a
+// non-empty `bugs` list gets the `Bugs:` part alone.
+// ---------------------------------------------------------------------------
+describe('Rule 6 (fifth revision): an open bug rides the marker last, and alone on a source file', () => {
+  afterEach(() => clearRecallIndexCache());
+
+  const XREF = 'src/schema/checks/xref.ts';
+  const VALIDATOR_SPEC = '.specflow/specs/schema/validator.spec.md';
+  const DEC_A = recallEntry('decision', 'a', '.cortex/atlas/decisions/2026-07-07-a.md', '2026-07-07');
+  const B019 = recallEntry('bug', 'duplicate ids pass validate', '.cortex/compass/bugs/B-019-x.md', '2026-09-15');
+  const B020 = recallEntry('bug', 'promotion refused', '.cortex/compass/bugs/B-020-x.md', '2026-09-16');
+  const R001 = recallEntry('rule', 'core', '.cortex/compass/rules/R-001-x.md', '');
+  const XREF_INVITE = `If this purpose is wrong or stale after reading, emit: <cortex:purpose file="${XREF}">corrected one-line purpose</cortex:purpose>`;
+
+  function bugProject(label: string, opts: { bugs?: string[]; entry?: boolean } = {}): string {
+    const root = makeProject(label);
+    if (opts.entry !== false) writeInsightEntry(root, XREF, { purpose: 'Checks cross-references.', tokens: 300 });
+    const bugs = opts.bugs ?? ['B-019'];
+    writeRecallIndexFixture(root, recallIndexFixture(
+      {
+        'schema.validator': recallSubject({ decided: ['decision.2026-07-07-a'], bugs }),
+        [XREF]: recallSubject({ decided: ['decision.2026-07-07-a'], bugs, rules: ['R-001'] }),
+      },
+      { 'decision.2026-07-07-a': DEC_A, 'B-019': B019, 'B-020': B020, 'R-001': R001 },
+    ));
+    return root;
+  }
+
+  it('AC: the spec read carries `Decided: … · Bugs: B-019`; the source read is summary, invitation, then `Bugs: B-019` alone, under 100 tokens', async () => {
+    const root = bugProject('bugs-ac');
+    const spec = parseEnvelope((await run(stdinFor(root, path.join(root, VALIDATOR_SPEC)))).stdout).additionalContext;
+    expect(spec).toBe('Decided: decision.2026-07-07-a · Bugs: B-019');
+    const source = parseEnvelope((await run(stdinFor(root, path.join(root, XREF)))).stdout).additionalContext;
+    expect(source.split('\n')).toEqual([`${XREF}: Checks cross-references. (~300 tok). Rules: -.`, XREF_INVITE, 'Bugs: B-019']);
+    expect(source).not.toContain('Decided:');
+    expect(source).not.toContain('Rules: R-001');
+    expect(Math.ceil(source.length / 4)).toBeLessThanOrEqual(100);
+  });
+
+  it('AC (and): with the bug resolved — the index recompiled without it — the source read carries no marker at all', async () => {
+    const root = bugProject('bugs-resolved', { bugs: [] });
+    const source = parseEnvelope((await run(stdinFor(root, path.join(root, XREF)))).stdout).additionalContext;
+    expect(source.split('\n')).toEqual([`${XREF}: Checks cross-references. (~300 tok). Rules: -.`, XREF_INVITE]);
+    const spec = parseEnvelope((await run(stdinFor(root, path.join(root, VALIDATOR_SPEC)))).stdout).additionalContext;
+    expect(spec).toBe('Decided: decision.2026-07-07-a');
+  });
+
+  it('a source file with no insight entry and an open bug gets the Bugs: part alone; with only rules it stays silent', async () => {
+    const root = bugProject('bugs-no-entry', { entry: false });
+    expect(parseEnvelope((await run(stdinFor(root, path.join(root, XREF)))).stdout).additionalContext).toBe('Bugs: B-019');
+    const rulesOnly = makeProject('rules-only');
+    writeRecallIndexFixture(rulesOnly, recallIndexFixture({ [XREF]: recallSubject({ rules: ['R-001'], decided: ['decision.2026-07-07-a'] }) }, { 'R-001': R001, 'decision.2026-07-07-a': DEC_A }));
+    expect(await run(stdinFor(rulesOnly, path.join(rulesOnly, XREF)))).toEqual({ exitCode: 0, stdout: '' });
+  });
+
+  it('newest opened first, max 2, then the more: tail — on a source file the tail names the path', async () => {
+    const root = bugProject('bugs-cut', { bugs: ['B-019', 'B-020', 'B-003'] });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { [XREF]: recallSubject({ bugs: ['B-019', 'B-020', 'B-003'] }) },
+      { 'B-019': B019, 'B-020': B020, 'B-003': recallEntry('bug', 'undated', '.cortex/compass/bugs/B-003-x.md', '') },
+    ));
+    const source = parseEnvelope((await run(stdinFor(root, path.join(root, XREF)))).stdout).additionalContext;
+    expect(source.split('\n')[2]).toBe(`Bugs: B-020, B-019 · more: cortex why ${XREF}`);
+  });
+
+  it('a subject on the parent directory alone does not mark a source read; a subject with empty bugs is today\'s payload exactly', async () => {
+    const root = makeProject('bugs-parent');
+    writeInsightEntry(root, XREF, { purpose: 'Checks cross-references.', tokens: 300 });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'src/schema/checks': recallSubject({ bugs: ['B-019'] }), 'src/schema': recallSubject({ bugs: ['B-019'] }) },
+      { 'B-019': B019 },
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, XREF)))).stdout).additionalContext;
+    expect(ctx).toBe(`${XREF}: Checks cross-references. (~300 tok). Rules: -.\n${XREF_INVITE}`);
+  });
+
+  it('marker budget: Bugs: is cut last — after the tail, Open: and Decided:', async () => {
+    const root = makeProject('bugs-budget');
+    const long = (kind: string, n: number): string => `${kind}.2026-09-0${n}-` + 'z'.repeat(40);
+    const entries: Record<string, ReturnType<typeof recallEntry>> = {};
+    const decided = [1, 2, 3].map((n) => long('decision', n));
+    for (const id of decided) entries[id] = recallEntry('decision', id, `.cortex/atlas/decisions/${id}.md`, id.slice(9, 19));
+    entries['T-004'] = recallEntry('thread', 'four', '.cortex/pulse/threads/T-004-four.md', '2026-09-14');
+    entries['T-005'] = recallEntry('thread', 'five', '.cortex/pulse/threads/T-005-five.md', '2026-09-15');
+    entries['B-019'] = B019;
+    entries['B-020'] = B020;
+    writeRecallIndexFixture(root, recallIndexFixture({ 'R-003': recallSubject({ decided, threads: ['T-004', 'T-005'], bugs: ['B-019', 'B-020'] }) }, entries));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, '.cortex/compass/rules/R-003-x.md')))).stdout).additionalContext;
+    // 3 × 65-char ids overflow 200 even alone: the tail goes, Open: to one, Decided: to one — and Bugs: keeps both ids.
+    expect(ctx).toBe(`Decided: ${long('decision', 3)} · Open: T-005 · Bugs: B-020, B-019`);
+    expect(ctx.length).toBeLessThanOrEqual(200);
+    // With two 90-char bug ids the Bugs: part is the last cut, to one id.
+    const wide = { ...entries, ['B-' + '9'.repeat(88)]: recallEntry('bug', 'w', '.cortex/compass/bugs/B-w.md', '2026-09-20'), ['B-' + '8'.repeat(88)]: recallEntry('bug', 'v', '.cortex/compass/bugs/B-v.md', '2026-09-19') };
+    writeRecallIndexFixture(root, recallIndexFixture({ 'R-003': recallSubject({ decided, bugs: ['B-' + '9'.repeat(88), 'B-' + '8'.repeat(88)] }) }, wide));
+    clearRecallIndexCache();
+    const cut = parseEnvelope((await run(stdinFor(root, path.join(root, '.cortex/compass/rules/R-003-x.md')))).stdout).additionalContext;
+    expect(cut).toBe(`Decided: ${long('decision', 3)} · Bugs: B-${'9'.repeat(88)}`);
+    expect(cut.length).toBeLessThanOrEqual(200);
+  });
+});

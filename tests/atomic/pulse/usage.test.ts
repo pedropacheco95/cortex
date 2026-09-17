@@ -885,3 +885,50 @@ describe('pulse.usage — Rule 13: read deferrals', () => {
     expect(body).not.toMatch(/deferred 0/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 11 (3.4 fifth revision) — the `Bugs:` prefix and the `R-NNN` / `B-NNN`
+// id shapes, standing for the compass file whose basename starts with the id
+// ---------------------------------------------------------------------------
+describe('pulse.usage — Rule 11 (fifth revision): Bugs: markers and the compass id shapes', () => {
+  it('a `Bugs: B-019` marker is fired and followed by a Read of .cortex/compass/bugs/B-019-x.md', () => {
+    const root = project('r11-bugs');
+    const home = tmp('r11-bugs-home');
+    writeSessionTranscript(home, root, 's1', [hookContext('Bugs: B-019'), toolTurn(glob('src/**'), read('/abs/project/.cortex/compass/bugs/B-019-duplicate-ids.md'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext('Bugs: B-019 · more: cortex why src/schema/checks/xref.ts'), toolTurn(read('.cortex/compass/bugs/B-0190-other.md'))]);
+    writeSessionTranscript(home, root, 's3', [hookContext('Bugs: B-019 · more: cortex why src/schema/checks/xref.ts'), toolTurn(bash('cortex why src/schema/checks/xref.ts'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(3);
+    expect(counts.pointersFollowed).toBe(2);
+  });
+
+  it('a `Recall: rule R-001 …` line points at its parenthesised path and is followed by a Read of the rule file', () => {
+    const root = project('r11-rule');
+    const home = tmp('r11-rule-home');
+    const line = 'Recall: rule R-001 Core makes no LLM calls (.cortex/compass/rules/R-001-core-no-llm-calls.md)';
+    writeSessionTranscript(home, root, 's1', [hookContext(line), toolTurn(glob('src/**'), read('/abs/project/.cortex/compass/rules/R-001-core-no-llm-calls.md'))]);
+    writeSessionTranscript(home, root, 's2', [hookContext('Decided: decision.x · Bugs: B-019'), toolTurn(read('.cortex/atlas/decisions/x.md'))]);
+
+    const counts = collectUsage(root, { home });
+
+    expect(counts.pointersFired).toBe(2);
+    expect(counts.pointersFollowed).toBe(2);
+  });
+
+  it('pointerTargetsIn maps R-NNN and B-NNN to the compass prefixes and keeps the trailing path when the line has one', () => {
+    expect(targetsIn('Bugs: B-019')).toEqual([{ path: '.cortex/compass/bugs/B-019-' }]);
+    expect(targetsIn('Bugs: B-020, B-019 · more: cortex why src/x.ts')).toEqual([{ path: '.cortex/compass/bugs/B-020-', whyRef: 'src/x.ts', moreCommand: 'why' }]);
+    expect(targetsIn('Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)')).toEqual([
+      { path: '.cortex/compass/rules/R-014-no-camelcase-database-columns.md' },
+    ]);
+    expect(targetsIn('Recall: bug 2026-06-28 B-031 camelCase column slipped (.cortex/compass/bugs/B-031-camelcase-column.md)')).toEqual([
+      { path: '.cortex/compass/bugs/B-031-camelcase-column.md' },
+    ]);
+    expect(targetsIn('Recall: compass-doc Environment (.cortex/compass/environment.md)')).toEqual([{ path: '.cortex/compass/environment.md' }]);
+    // A decision id still wins over a later bug id on a Decided: line; a lone Rules: line is not a pointer.
+    expect(targetsIn('Decided: decision.x · Bugs: B-019')).toEqual([{ path: '.cortex/atlas/decisions/x.md' }]);
+    expect(targetsIn('Rules: R-001')).toEqual([]);
+  });
+});

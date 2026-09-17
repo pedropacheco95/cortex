@@ -83,3 +83,78 @@ describe('check.config: hooks.readDefer (§10.1)', () => {
     expect(readDeferViolations(rootWith('hooks-string', 'nope' as unknown as Record<string, unknown>))).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// schema.visibility Rule 1 / AC "The config shape is checked" (§10.1, 3.4 fifth
+// revision): `visibility` and `placement` are optional; present-but-malformed
+// is an ERROR at the offending key; absent is nothing; both are known keys.
+// ---------------------------------------------------------------------------
+function rootWithConfig(label: string, extra: Record<string, unknown>): string {
+  const root = tmp(label);
+  makeCortexProject(root, { config: { schemaVersion: '3.4', loop: { enabled: false }, ...extra } });
+  return root;
+}
+
+function keyViolations(root: string, key: string) {
+  return checkConfig(root).violations.filter((v) => v.location.key === key);
+}
+
+describe('check.config: visibility and placement (§10.1, schema.visibility Rule 1)', () => {
+  it('both keys absent → no violation at all', () => {
+    expect(checkConfig(rootWithConfig('vis-absent', {})).violations).toEqual([]);
+  });
+
+  it('visibility and placement are KNOWN keys — no unknown-key warning', () => {
+    const root = rootWithConfig('vis-known', {
+      visibility: { repo: 'unknown', allow: [] },
+      placement: { localNotesDir: 'docs/notes' },
+    });
+    expect(checkConfig(root).violations).toEqual([]);
+  });
+
+  it('visibility.repo in the enum (public | private | unknown) → no violation', () => {
+    for (const repo of ['public', 'private', 'unknown']) {
+      expect(checkConfig(rootWithConfig(`vis-${repo}`, { visibility: { repo } })).violations).toEqual([]);
+    }
+  });
+
+  it('visibility: { repo: "open" } → exactly one error at visibility.repo, clause §10.1', () => {
+    const root = rootWithConfig('vis-open', { visibility: { repo: 'open' } });
+    const v = keyViolations(root, 'visibility.repo');
+    expect(v).toHaveLength(1);
+    expect(v[0]).toMatchObject({ severity: 'error', check: 'check.config', clause: '§10.1' });
+    expect(v[0]?.message).toContain('"open"');
+    expect(checkConfig(root).violations).toHaveLength(1);
+    expect(checkConfig(root).majorOk).toBe(true);
+  });
+
+  it('visibility: { repo: "public", allow: "compass/*" } → exactly one error at visibility.allow', () => {
+    const root = rootWithConfig('vis-allow-str', { visibility: { repo: 'public', allow: 'compass/*' } });
+    const v = keyViolations(root, 'visibility.allow');
+    expect(v).toHaveLength(1);
+    expect(v[0]).toMatchObject({ severity: 'error', check: 'check.config', clause: '§10.1' });
+    expect(checkConfig(root).violations).toHaveLength(1);
+  });
+
+  it('visibility.allow with a non-string element → error at visibility.allow', () => {
+    const root = rootWithConfig('vis-allow-mixed', { visibility: { repo: 'public', allow: ['a/*', 3] } });
+    expect(keyViolations(root, 'visibility.allow')).toHaveLength(1);
+  });
+
+  it('visibility that is not an object (a string, an array) → one error at visibility', () => {
+    expect(keyViolations(rootWithConfig('vis-string', { visibility: 'public' }), 'visibility')).toHaveLength(1);
+    expect(keyViolations(rootWithConfig('vis-array', { visibility: ['public'] }), 'visibility')).toHaveLength(1);
+  });
+
+  it('placement.localNotesDir a string → no violation; a number → one error at placement.localNotesDir', () => {
+    expect(checkConfig(rootWithConfig('pl-ok', { placement: { localNotesDir: 'notes' } })).violations).toEqual([]);
+    const v = keyViolations(rootWithConfig('pl-num', { placement: { localNotesDir: 7 } }), 'placement.localNotesDir');
+    expect(v).toHaveLength(1);
+    expect(v[0]).toMatchObject({ severity: 'error', check: 'check.config', clause: '§10.1' });
+  });
+
+  it('placement present without localNotesDir → no violation; placement not an object → one error at placement', () => {
+    expect(checkConfig(rootWithConfig('pl-empty', { placement: {} })).violations).toEqual([]);
+    expect(keyViolations(rootWithConfig('pl-string', { placement: 'docs' }), 'placement')).toHaveLength(1);
+  });
+});

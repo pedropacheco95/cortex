@@ -22,13 +22,18 @@ export const PRESENT_MODULES = 'compass, atlas, archive, insight, pulse';
  *  measured exception). It registers no hook and changes nothing while false;
  *  init writes it explicitly as false on fresh projects for the same
  *  self-documenting reason (`cortex sync` does not add it to an existing
- *  config; absent means false). */
+ *  config; absent means false). 3.4 fifth revision: `visibility`
+ *  ({ repo: unknown, allow: [] }) is written explicitly so the repository's
+ *  visibility — which Core cannot detect — is a visible question
+ *  (schema.visibility Rule 1; RULES.md rule 20); sync never adds it. No
+ *  `placement` default: the key is optional with no default (§10.1). */
 export const CONFIG_DEFAULTS: Record<string, unknown> = {
   schemaVersion: SCHEMA_VERSION,
   hooks: { preRead: true, readDefer: false },
   pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
   harness: { maxIterations: 3 },
   loop: { enabled: false },
+  visibility: { repo: 'unknown', allow: [] },
 };
 
 /** Gitignore paths per schema Decision 1 (v3.0: `.cortex/anatomy/` no longer
@@ -79,6 +84,7 @@ propose a write that touches governed files, or when triaging a bug.
 **What's here:**
 - \`rules/\` — one file per rule (R-NNN). Match a write's path against each rule's \`governs\`.
 - \`bugs/\` — the bug ledger (B-NNN), classified by the seven-type taxonomy.
+- \`registry.md\` — every issued R-NNN and B-NNN, one line each; allocate with \`cortex id next\`.
 - \`preferences.md\`, \`environment.md\` — project conventions and operational pointers.
 - \`do-not-repeat.md\` — index of recurring-mistake rules.
 
@@ -344,7 +350,46 @@ reading implementation detail.
  * pinned the old wording, and the schema document itself is the load-bearing
  * contract here, not this file.)
  */
-export function claudeMdBlock(projectName: string): string {
+/**
+ * Schema §8 `{{PLACEMENT_TAIL}}` (3.4 fifth revision; core-cli.init Rule 10b,
+ * core-cli.sync Rule 3): generated from the project's config as it stands.
+ * The notes-directory sentence when `placement.localNotesDir` is a non-empty
+ * string, then the visibility sentence — rule 20's when `visibility.repo` is
+ * `public`, the "set it" nudge when it is `unknown` or absent (or anything
+ * else: check.config reports the value; the block never throws), nothing
+ * when `private`. Grammar is pinned by the init spec's tests.
+ */
+export function placementTail(config: Record<string, unknown> = {}): string {
+  const placement = config['placement'];
+  const localNotesDir =
+    typeof placement === 'object' && placement !== null && !Array.isArray(placement)
+      ? (placement as Record<string, unknown>)['localNotesDir']
+      : undefined;
+  const visibility = config['visibility'];
+  const repo =
+    typeof visibility === 'object' && visibility !== null && !Array.isArray(visibility)
+      ? (visibility as Record<string, unknown>)['repo']
+      : undefined;
+  let tail = '';
+  if (typeof localNotesDir === 'string' && localNotesDir.length > 0) {
+    tail += ` \`${localNotesDir}\` is local and untracked: notes there do not travel — promote them into \`.cortex/\` instead of tracking the directory.`;
+  }
+  if (repo === 'public') {
+    tail += ' This repository is public: compass and atlas carry pointers, never hosts, ports or account ids (RULES.md rule 20).';
+  } else if (repo !== 'private') {
+    tail += ' Repository visibility is unknown — set \`visibility.repo\` in \`cortex.config.json\`.';
+  }
+  return tail;
+}
+
+/**
+ * The §8 managed block. 3.4 fifth revision (core-cli.init Rule 10): the
+ * protocol paragraph names the non-implementer roles, one generated
+ * placement paragraph follows it (`placementTail`), and the two-sentence
+ * insight mandate is gone — the 3.3 second-revision note recorded its removal
+ * on measured non-compliance and the template never followed.
+ */
+export function claudeMdBlock(projectName: string, config: Record<string, unknown> = {}): string {
   return `<!-- cortex:start v${SCHEMA_VERSION} -->
 ## Cortex
 
@@ -356,9 +401,14 @@ Cortex is active on **${projectName}**. The knowledge layer lives in \`.cortex/\
 - \`insight/\` — inferred understanding of the codebase itself. See "Cortex Insight" below.
 
 **Protocol:** before working a task, read the relevant \`_index.md\` first — they are
-prompts that tell you what to read and when. For "why" questions, grep \`compass/\` and
+prompts that tell you what to read and when. This applies more, not less, to sessions
+that dispatch, review or plan rather than edit: everything reaches them as a claim, and
+\`compass/\` is where claims are checked. For "why" questions, grep \`compass/\` and
 \`atlas/\`. For unfamiliar terms, check \`atlas/domain/\`. Follow frontmatter
 cross-references (the citation graph) to trace any claim to its source.
+
+**Placement:** durable knowledge lives in \`.cortex/\` (tracked, except \`atlas/sources/\`,
+\`pulse/\` and archived raw sources).${placementTail(config)}
 
 Specs are the source of truth: \`.specflow/specs-business/\` (outcomes) and
 \`.specflow/specs/\` (implementation), linked by \`implements:\`/\`implemented_by:\`. Don't
@@ -379,10 +429,6 @@ instead when you're trying to understand what a file does, whether
 it's relevant, how it relates, or what its main pieces are — a
 richer resume than reading 500 lines and remembering fragments.
 Consult insight first; read the file when you need exactness.
-
-Before substantive work on any file, query its insight entry.
-Before changes touching multiple files or a concept, query the
-concept. This is not optional.
 
 - cortex insight file <path>      — rich per-file understanding
 - cortex insight concept <name>   — how a concept lives in the code

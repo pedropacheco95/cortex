@@ -1,6 +1,6 @@
 ---
 id: compass.bug-currency
-status: draft
+status: implemented
 depends_on:
   - schema.validator
   - pulse.threads

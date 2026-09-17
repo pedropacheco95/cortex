@@ -9,11 +9,14 @@
  *
  * Index-only (Rule 2): every fact printed is already a name, a date or a path
  * in `.cortex/recall-index.json`, read through the shared loader in
- * `query.ts`. The ONE exception is Rule 4's evidence sub-line: the first three
- * `findings` of each evidence file the listing names, read from that file's
- * frontmatter — bounded by the entries listed, never a directory scan, and
- * `(findings unreadable)` on any failure. No rule body, decision narrative or
- * thread body is ever opened.
+ * `query.ts`. The TWO exceptions are Rule 4's sub-lines: the first three
+ * `findings` of each evidence file the listing names, and — 3.4 fifth
+ * revision — the `status`, `owner`, `fix_in_flight` and `found_at_commit` of
+ * each bug file it names (`compass.bug-currency` Rule 1), both read from that
+ * file's frontmatter — bounded by the entries listed, never a directory scan,
+ * and `(findings unreadable)` / `(fields unreadable)` on any failure. No rule
+ * body, decision narrative, bug body or thread body is ever opened. The
+ * `Rules:` section reads nothing.
  *
  * Exit codes: 0 listed (or "Nothing bears on" / "No matches."), 1 no or
  * malformed index (stderr names the file and `cortex scan`), 2 grammar
@@ -116,7 +119,7 @@ interface Resolved {
   subject: RecallSubject;
 }
 
-const EMPTY_SUBJECT: RecallSubject = { decided: [], evidence: [], threads: [], observations: [] };
+const EMPTY_SUBJECT: RecallSubject = { decided: [], evidence: [], threads: [], observations: [], rules: [], bugs: [] };
 
 function sortedUnique(values: string[]): string[] {
   return [...new Set(values)].sort();
@@ -126,19 +129,23 @@ function sortedUnique(values: string[]): string[] {
 function aggregateClauses(index: RecallIndex): RecallSubject | null {
   const keys = Object.keys(index.subjects).filter((k) => CLAUSE_REF_RE.test(k) || k === SCHEMA_DOC_FILENAME);
   if (keys.length === 0) return null;
-  const merged: RecallSubject = { decided: [], evidence: [], threads: [], observations: [] };
+  const merged: RecallSubject = { decided: [], evidence: [], threads: [], observations: [], rules: [], bugs: [] };
   for (const key of keys) {
     const s = index.subjects[key] as RecallSubject;
     merged.decided.push(...s.decided);
     merged.evidence.push(...s.evidence);
     merged.threads.push(...s.threads);
     merged.observations.push(...s.observations);
+    merged.rules.push(...s.rules);
+    merged.bugs.push(...s.bugs);
   }
   return {
     decided: sortedUnique(merged.decided),
     evidence: sortedUnique(merged.evidence),
     threads: sortedUnique(merged.threads),
     observations: sortedUnique(merged.observations),
+    rules: sortedUnique(merged.rules),
+    bugs: sortedUnique(merged.bugs),
   };
 }
 
@@ -221,8 +228,39 @@ function findingsLine(findings: Finding[] | null): string | null {
   return '    ' + findings.map((f) => `${f.metric}=${String(f.value)}${f.unit === undefined ? '' : ` ${f.unit}`}`).join('  ');
 }
 
+/** Rule 4 (fifth revision): a bug's currency fields (`compass.bug-currency` Rule 1) plus its status — `null` for each absent one. */
+export interface BugFields {
+  status: string | null;
+  owner: string | null;
+  fix_in_flight: string | null;
+  found_at_commit: string | null;
+}
+
+/** The second bounded read outside the index: one bug file's frontmatter; `null` when the file is missing or unparseable. */
+function readBugFields(root: string, entryPath: string): BugFields | null {
+  try {
+    const data = matter(fs.readFileSync(path.join(root, entryPath), 'utf-8'), {}).data as Record<string, unknown>;
+    const str = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? v : null);
+    return { status: str(data['status']), owner: str(data['owner']), fix_in_flight: str(data['fix_in_flight']), found_at_commit: str(data['found_at_commit']) };
+  } catch {
+    return null;
+  }
+}
+
+/** `    owner=<v>  fix=<v>  found_at=<v>` with `-` for an absent field; `null` when all three are absent; the unreadable marker for a missing file. */
+function bugFieldsLine(fields: BugFields | null): string | null {
+  if (fields === null) return '    (fields unreadable)';
+  if (fields.owner === null && fields.fix_in_flight === null && fields.found_at_commit === null) return null;
+  return `    owner=${fields.owner ?? '-'}  fix=${fields.fix_in_flight ?? '-'}  found_at=${fields.found_at_commit ?? '-'}`;
+}
+
 function entryLine(id: string, entry: RecallEntry): string {
   return `  ${entry.date.slice(0, 10)}  ${id} — ${entry.title}  (${entry.path})`;
+}
+
+/** The present rule entries of a list in id order (Rule 4: `Rules:` lists by id, not by date — every rule's date is empty). */
+function rulesListed(index: RecallIndex, ids: string[]): [id: string, entry: RecallEntry][] {
+  return listed(index, ids).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 function renderListing(root: string, ref: string, resolved: Resolved, index: RecallIndex): string[] {
@@ -231,10 +269,12 @@ function renderListing(root: string, ref: string, resolved: Resolved, index: Rec
   const evidence = listed(index, subject.evidence);
   const threads = listed(index, subject.threads);
   const observations = listed(index, subject.observations);
+  const bugs = listed(index, subject.bugs);
+  const rules = rulesListed(index, subject.rules);
   const shown = key === ref ? `${key} (${kindLabel})` : `${key} (${kindLabel}, for ${ref})`;
   const heading = key === SCHEMA_DOC_FILENAME ? `${SCHEMA_DOC_FILENAME} (all clauses)` : shown;
   const lines = [
-    `${heading} — ${decided.length} decided · ${evidence.length} evidence · ${threads.length} open · ${observations.length} observation themes`,
+    `${heading} — ${decided.length} decided · ${evidence.length} evidence · ${threads.length} open · ${observations.length} observation themes · ${bugs.length} bugs · ${rules.length} rules`,
   ];
   if (decided.length > 0) lines.push('Decided:', ...decided.map(([id, e]) => entryLine(id, e)));
   if (evidence.length > 0) {
@@ -246,6 +286,16 @@ function renderListing(root: string, ref: string, resolved: Resolved, index: Rec
     }
   }
   if (threads.length > 0) lines.push('Open:', ...threads.map(([id, e]) => `  ${id}  ${e.kind} — ${e.title}  (${e.path})`));
+  if (bugs.length > 0) {
+    lines.push('Bugs:');
+    for (const [id, e] of bugs) {
+      const fields = readBugFields(root, e.path);
+      lines.push(`  ${id}  ${fields?.status ?? '-'} — ${e.title}  (${e.path})`);
+      const sub = bugFieldsLine(fields);
+      if (sub !== null) lines.push(sub);
+    }
+  }
+  if (rules.length > 0) lines.push('Rules:', ...rules.map(([id, e]) => `  ${id}  ${e.title}  (${e.path})`));
   if (observations.length > 0) lines.push(`Observations: ${observations.map(([id]) => id.replace(/^observation\./, '')).join(', ')}`);
   return lines;
 }
@@ -269,13 +319,17 @@ function renderJson(root: string, ref: string, resolved: Resolved, index: Recall
   const { key, subject } = resolved;
   const entries: Record<string, RecallEntry> = {};
   const findings: Record<string, Finding[]> = {};
-  for (const list of [subject.decided, subject.evidence, subject.threads, subject.observations]) {
+  const bugs: Record<string, BugFields> = {};
+  for (const list of [subject.decided, subject.evidence, subject.threads, subject.observations, subject.rules, subject.bugs]) {
     for (const [id, entry] of listed(index, list)) entries[id] = entry;
   }
   for (const [id, entry] of listed(index, subject.evidence)) findings[id] = readFindings(root, entry.path) ?? [];
+  for (const [id, entry] of listed(index, subject.bugs)) {
+    bugs[id] = readBugFields(root, entry.path) ?? { status: null, owner: null, fix_in_flight: null, found_at_commit: null };
+  }
   const subjectOut: RecallSubject = key === null ? EMPTY_SUBJECT : subject;
   // The sink terminates the document — Rule 5's trailing newline.
-  return JSON.stringify(sortKeys({ ref, key, subject: subjectOut, entries, findings }), null, 2);
+  return JSON.stringify(sortKeys({ ref, key, subject: subjectOut, entries, findings, bugs }), null, 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +381,8 @@ function recallVerb(argv: string[], root: string, stdout: (l: string) => void, s
   }
   for (const { id } of hits) {
     const entry = index.entries[id] as RecallEntry;
-    stdout(`${entry.kind} ${entry.date.slice(0, 10)} ${id} — ${entry.title} (${entry.path})`);
+    // Rule 6: `<kind> <YYYY-MM-DD> <id> — <title> (<path>)`; an empty date drops the date field (`compass-doc  compass.environment — …`).
+    stdout(`${entry.kind} ${entry.date === '' ? '' : entry.date.slice(0, 10)} ${id} — ${entry.title} (${entry.path})`);
   }
   return 0;
 }

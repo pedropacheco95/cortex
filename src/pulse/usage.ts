@@ -275,8 +275,8 @@ export interface PointerTarget {
  */
 const MORE_TAIL_RE = /\s*·\s*more:\s*cortex (why (\S+)|thread list)\s*$/;
 
-/** Rule 11: the pointer prefixes counted as fired (3.4 third revision adds `Evidence:` and `Open:`). */
-const POINTER_PREFIX_RE = /^(Recall|Decided|Evidence|Open):/;
+/** Rule 11: the pointer prefixes counted as fired (3.4 third revision adds `Evidence:` and `Open:`; the fifth revision `Bugs:`, the PreRead marker's source-file form). */
+const POINTER_PREFIX_RE = /^(Recall|Decided|Evidence|Open|Bugs):/;
 
 /** The `(<path>)` a `Recall:` or `Open:` line ends with — preferred over a `/` inside the title or key text. */
 const TRAILING_PATH_RE = /\((\S*\/\S*)\)\s*$/;
@@ -284,16 +284,24 @@ const TRAILING_PATH_RE = /\((\S*\/\S*)\)\s*$/;
 /** The id shape of an `Open:` line's thread. */
 const THREAD_ID_RE = /^T-\d{3,}$/;
 
-/** Rule 11 (3.4 second revision): the id shapes a pointer line may carry instead of a path, and the path each stands for. */
+/**
+ * Rule 11 (3.4 second revision): the id shapes a pointer line may carry
+ * instead of a path, and the path each stands for. A trailing `-` marks a
+ * basename prefix (`follows` matches any file in that directory whose
+ * basename starts with it). The fifth revision adds `R-NNN` / `B-NNN`, standing
+ * for the compass rule / bug file whose basename starts with the id.
+ */
 const ID_SHAPES: [RegExp, (id: string) => string][] = [
   [/^decision\.[^\s·]+$/, (id) => `.cortex/atlas/decisions/${id.slice('decision.'.length)}.md`],
   [/^evidence\.[^\s·]+$/, (id) => `.cortex/atlas/evidence/${id.slice('evidence.'.length)}.md`],
   [/^T-\d{3,}$/, (id) => `.cortex/pulse/threads/${id}-`],
+  [/^R-\d{3,}$/, (id) => `.cortex/compass/rules/${id}-`],
+  [/^B-\d{3,}$/, (id) => `.cortex/compass/bugs/${id}-`],
 ];
 
 /**
  * Rule 11: the pointed target of every `Recall:` / `Decided:` / `Evidence:` /
- * `Open:` line in a block of hook-injected text — the parenthesised `(<path>)`
+ * `Open:` / `Bugs:` line in a block of hook-injected text — the parenthesised `(<path>)`
  * the line ends with when it has one (the `Recall:` and `Open:` grammars put
  * the path there, and an `Open:` key text may itself carry a `/`, as in
  * `state/`), else the first `/`-bearing token (trailing punctuation stripped)

@@ -26,17 +26,23 @@
  *   Recall: <kind> <YYYY-MM-DD> <title cut to 60> (<path>)
  *   Decided: <decision id> · Open: <T-id> <thread key text cut to 40>
  *
- * plus the PreRead marker form `Decided: <ids ≤3> · Evidence: <ids ≤2> · Open:
- * <T-ids ≤2>`, and the optional ` · more: cortex why <ref>` tail. No imperative,
- * no second person, no body text — `pulse.usage` Rule 11 counts fired and
- * followed pointers by these prefixes, so the wording is pinned.
+ * — where, since the 3.4 fifth revision, an entry with an empty `date` (a
+ * rule, a compass document, a bug without `opened`) omits the date field and
+ * a `rule` / `bug` entry puts its id before the title (`Recall: rule R-014
+ * <title> (<path>)`) — plus the PreRead marker form `Decided: <ids ≤3> ·
+ * Evidence: <ids ≤2> · Open: <T-ids ≤2> · Bugs: <B-ids ≤2>`, and the optional
+ * ` · more: cortex why <ref>` tail. Strength order within a subject: open
+ * thread > open/triaged bug > current decision > rule > evidence >
+ * observation. No imperative, no second person, no body text — `pulse.usage`
+ * Rule 11 counts fired and followed pointers by these prefixes, so the wording
+ * is pinned.
  *
  * Deterministic Core (R-001, Rule 13): string matching, set operations, one
  * JSON read. No LLM, no network, no subprocess.
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { recallIndexPath, RECALL_ENTRY_KINDS, type RecallEntry, type RecallEntryKind, type RecallIndex, type RecallSubject } from './index.js';
+import { recallIndexPath, RECALL_ENTRY_KINDS, STOP_TOKENS, type RecallEntry, type RecallEntryKind, type RecallIndex, type RecallSubject } from './index.js';
 import { CLAUSE_REF_RE, clauseNumber, loadClauseHeadings, SCHEMA_DOC_FILENAME } from '../schema/clauses.js';
 import { BUG_RE, CONCEPT_RE, DOMAIN_RE, RULE_RE, normalisePathRef } from '../schema/refs.js';
 
@@ -47,6 +53,8 @@ import { BUG_RE, CONCEPT_RE, DOMAIN_RE, RULE_RE, normalisePathRef } from '../sch
 const cache = new Map<string, RecallIndex | null>();
 
 const SUBJECT_LISTS = ['decided', 'evidence', 'threads', 'observations'] as const;
+/** The fifth revision's lists: optional on load (a pre-revision index), defaulted to empty so no consumer sees `undefined`. */
+const OPTIONAL_SUBJECT_LISTS = ['rules', 'bugs'] as const;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -56,7 +64,7 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === 'string');
 }
 
-/** The §4.11 shape probe: `subjects` and `entries` are plain objects, every subject has four string lists, every entry its five fields. */
+/** The §4.11 shape probe: `subjects` and `entries` are plain objects, every subject has the four string lists (and, when present, the two optional ones), every entry its five fields. */
 function probeShape(value: unknown): value is RecallIndex {
   if (!isPlainObject(value)) return false;
   const { subjects, entries } = value;
@@ -64,6 +72,7 @@ function probeShape(value: unknown): value is RecallIndex {
   for (const subject of Object.values(subjects)) {
     if (!isPlainObject(subject)) return false;
     for (const list of SUBJECT_LISTS) if (!isStringArray(subject[list])) return false;
+    for (const list of OPTIONAL_SUBJECT_LISTS) if (list in subject && !isStringArray(subject[list])) return false;
   }
   for (const entry of Object.values(entries)) {
     if (!isPlainObject(entry)) return false;
@@ -87,6 +96,11 @@ export function loadRecallIndex(root: string): RecallIndex | null {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(recallIndexPath(key), 'utf-8'));
     loaded = probeShape(parsed) ? parsed : null;
+    if (loaded !== null) {
+      for (const subject of Object.values(loaded.subjects)) {
+        for (const list of OPTIONAL_SUBJECT_LISTS) if (!(list in subject)) subject[list] = [];
+      }
+    }
   } catch {
     loaded = null;
   }
@@ -103,10 +117,8 @@ export function clearRecallIndexCache(): void {
 // Rule 4 — tokens and ref-shaped spans
 // ---------------------------------------------------------------------------
 
-/** Rule 4's fixed stop-list, quoted in the spec so tests pin it. Widening it is a spec edit. */
-export const STOP_TOKENS: ReadonlySet<string> = new Set([
-  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'not', 'are', 'was', 'but',
-]);
+/** Rule 4's fixed stop-list, quoted in the spec so tests pin it — defined in `index.ts` (the compiler's Rule 16 shares it) and re-exported here. */
+export { STOP_TOKENS };
 
 /** Rule 4: tokens shorter than this are dropped. */
 const TOKEN_MIN_CHARS = 3;
@@ -331,9 +343,18 @@ export function cutTitle(title: string, max: number): string {
   return head.trimEnd() + ELLIPSIS;
 }
 
-/** `Recall: <kind> <YYYY-MM-DD> <title cut to 60> (<path>)`. */
-export function recallLine(entry: RecallEntry, titleMax = RECALL_TITLE_MAX): string {
-  return `Recall: ${entry.kind} ${entry.date.slice(0, 10)} ${cutTitle(entry.title, titleMax)} (${entry.path})`;
+/** Rule 7 (fifth revision): the kinds whose id precedes the title, so the line names the thing a session can cite. */
+const ID_BEFORE_TITLE_KINDS: ReadonlySet<string> = new Set(['rule', 'bug']);
+
+/**
+ * `Recall: <kind> <YYYY-MM-DD> <title cut to 60> (<path>)`. An empty `date`
+ * omits the date field and its space; for a `rule` or `bug` entry the id
+ * (`R-014`, `B-031`) precedes the title when the caller supplies it.
+ */
+export function recallLine(entry: RecallEntry, titleMax = RECALL_TITLE_MAX, id?: string): string {
+  const date = entry.date === '' ? '' : `${entry.date.slice(0, 10)} `;
+  const named = id !== undefined && ID_BEFORE_TITLE_KINDS.has(entry.kind) ? `${id} ` : '';
+  return `Recall: ${entry.kind} ${date}${named}${cutTitle(entry.title, titleMax)} (${entry.path})`;
 }
 
 /** `Decided: <decision id> · Open: <T-id> <thread key text cut to 40>`. */
@@ -346,8 +367,8 @@ export function moreTail(ref: string): string {
   return ` · more: cortex why ${ref}`;
 }
 
-/** The PreRead marker's per-part caps (schema §5 row (c)). */
-const MARKER_CAPS = { decided: 3, evidence: 2, threads: 2 } as const;
+/** The PreRead marker's per-part caps (schema §5 row (c); the `Bugs:` part is the fifth revision's). */
+const MARKER_CAPS = { decided: 3, evidence: 2, threads: 2, bugs: 2 } as const;
 
 /** The entry an id in a subject list names — observations are listed by theme but keyed `observation.<theme>`. */
 function entryFor(index: RecallIndex, id: string): [key: string, entry: RecallEntry] | null {
@@ -366,9 +387,11 @@ function newestFirst(index: RecallIndex, ids: string[]): string[] {
 
 /**
  * The PreRead marker (schema §5 row (c), `hooks.pre-read-writeback` Rule 6):
- * `Decided: <ids ≤3> · Evidence: <ids ≤2> · Open: <T-ids ≤2>`, newest first,
- * empty parts omitted, ` · more: cortex why <key>` when any part was cut;
- * `null` when the subject has no decision, evidence or open thread.
+ * `Decided: <ids ≤3> · Evidence: <ids ≤2> · Open: <T-ids ≤2> · Bugs: <B-ids ≤2>`,
+ * newest first (a bug by its `opened`, empty last), empty parts omitted,
+ * ` · more: cortex why <key>` when any part was cut; `null` when the subject
+ * has no decision, evidence, open thread or current bug. Rules never ride the
+ * marker — the PreRead summary line already names the governing rules.
  */
 export function markerLine(subject: RecallSubject, key: string, index: RecallIndex): string | null {
   const parts: string[] = [];
@@ -382,6 +405,7 @@ export function markerLine(subject: RecallSubject, key: string, index: RecallInd
   part('Decided', subject.decided, MARKER_CAPS.decided);
   part('Evidence', subject.evidence, MARKER_CAPS.evidence);
   part('Open', subject.threads, MARKER_CAPS.threads);
+  part('Bugs', subject.bugs, MARKER_CAPS.bugs);
   if (parts.length === 0) return null;
   return parts.join(' · ') + (cut ? moreTail(key) : '');
 }
@@ -402,10 +426,10 @@ type PlannedLine =
   | { shape: 'recall'; id: string; entry: RecallEntry }
   | { shape: 'decided'; decisionId: string; threadId: string; threadTitle: string; ids: string[] };
 
-/** Rule 8's strength order: open thread > current decision > evidence > observation, newest first within a kind. */
+/** Rule 8's strength order: open thread > open/triaged bug > current decision > rule > evidence > observation, newest first within a kind (empty dates last, then id). */
 function membersByStrength(index: RecallIndex, subject: RecallSubject): [key: string, entry: RecallEntry][] {
   const ordered: [string, RecallEntry][] = [];
-  for (const list of [subject.threads, subject.decided, subject.evidence, subject.observations]) {
+  for (const list of [subject.threads, subject.bugs, subject.decided, subject.rules, subject.evidence, subject.observations]) {
     for (const id of newestFirst(index, list)) {
       const found = entryFor(index, id);
       if (found !== null) ordered.push(found);
@@ -416,7 +440,7 @@ function membersByStrength(index: RecallIndex, subject: RecallSubject): [key: st
 
 function render(planned: PlannedLine, titleMax: { recall: number; thread: number }): string {
   return planned.shape === 'recall'
-    ? recallLine(planned.entry, titleMax.recall)
+    ? recallLine(planned.entry, titleMax.recall, planned.id)
     : decidedLine(planned.decisionId, planned.threadId, planned.threadTitle, titleMax.thread);
 }
 

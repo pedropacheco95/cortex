@@ -45,6 +45,7 @@ import {
   refreshCorpus,
 } from '../pulse/distil.js';
 import { allocateSuggestionIds } from '../pulse/suggestion-ids.js';
+import { readRegistry } from '../compass/registry.js';
 import { chooseOuterFence } from '../pulse/fences.js';
 import { writePulseReport } from '../loops/report.js';
 import { parseEntry } from './entry.js';
@@ -672,6 +673,16 @@ function nextRuleId(absRoot: string, allocatedInBatch: Set<string>): string {
   for (const id of allocatedInBatch) {
     const m = /^R-(\d{3,})$/.exec(id);
     if (m?.[1]) max = Math.max(max, parseInt(m[1], 10));
+  }
+  // schema.id-registry Rule 4 (3.4 fifth revision): the registry floor —
+  // "next unused" is "next after the highest of registry and disk". Read
+  // only; the line is written when the proposal is accepted (RULES.md rule 7).
+  const registry = readRegistry(absRoot);
+  if (registry) {
+    for (const line of registry.lines) {
+      const m = /^R-(\d{3,})$/.exec(line.id);
+      if (m?.[1]) max = Math.max(max, parseInt(m[1], 10));
+    }
   }
   const id = `R-${String(max + 1).padStart(3, '0')}`;
   allocatedInBatch.add(id);

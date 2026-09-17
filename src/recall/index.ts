@@ -19,12 +19,23 @@
  *      evidence another evidence file's `supersedes` resolves to is dropped
  *      from every `evidence` list in favour of its superseder.
  *
- * Observations contribute their theme with no currency condition. Transitive
- * `depends_on` is deliberately NOT closed over (Rule 7).
+ *   4. open and triaged bugs only (3.4 fifth revision, Rule 17) — a bug's
+ *      `affects` entries resolve by shape into `subjects[X].bugs` iff its
+ *      `status` is `open` or `triaged`; a `resolved` bug keeps its row and
+ *      reaches no subject (the list is the "currently broken" surface).
+ *
+ * Observations contribute their theme with no currency condition. Rules
+ * (Rule 15) have no `bears_on`: their subjects are DERIVED from each `governs`
+ * glob's literal directory prefix, the first `RULE_GOVERNS_SUBJECT_CAP` files
+ * the globs match, and their resolving `related_specs`; a `retired` rule is
+ * skipped entirely. The four compass documents (Rule 16) are keyword-only
+ * entries — headings and bold spans, never body prose — and no subject.
+ * Transitive `depends_on` is deliberately NOT closed over (Rule 7).
  *
  * Inputs (each optional; absent → nothing, never an error): `atlas/decisions`,
- * `atlas/evidence`, `pulse/threads`, `insight/observations`; the project index
- * and the clause index for resolution. Unparseable frontmatter and a
+ * `atlas/evidence`, `pulse/threads`, `insight/observations`, and — the fifth
+ * revision — `compass/rules`, `compass/bugs`, the four compass documents; the
+ * project index and the clause index for resolution. Unparseable frontmatter and a
  * `bears_on` that is not a list of strings skip the file (Rule 10). A ref that
  * does not resolve produces no subject and is counted in `droppedRefs` —
  * complaining is `check.bears-on`'s job, not this compiler's.
@@ -38,10 +49,11 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import fg from 'fast-glob';
 import matter from 'gray-matter';
 import { buildIndex, type ProjectIndex } from '../schema/index-build.js';
 import { loadClauseIndex, type ClauseIndex } from '../schema/clauses.js';
-import { normalisePathRef, resolveRef } from '../schema/refs.js';
+import { classifyRef, normalisePathRef, resolveRef } from '../schema/refs.js';
 import { SUPPORTED_VERSION } from '../schema/version.js';
 import { keyText, listThreads, THREADS_DIR } from '../pulse/threads.js';
 
@@ -49,7 +61,8 @@ import { keyText, listThreads, THREADS_DIR } from '../pulse/threads.js';
 // shape (spec Rule 1, schema §4.11)
 // ---------------------------------------------------------------------------
 
-export const RECALL_ENTRY_KINDS = ['decision', 'evidence', 'thread', 'observation'] as const;
+/** The §4.11 `kind` enum — the four conclusion carriers, then the 3.4 fifth revision's three compass kinds. */
+export const RECALL_ENTRY_KINDS = ['decision', 'evidence', 'thread', 'observation', 'rule', 'compass-doc', 'bug'] as const;
 export type RecallEntryKind = (typeof RECALL_ENTRY_KINDS)[number];
 
 export interface RecallSubject {
@@ -61,7 +74,31 @@ export interface RecallSubject {
   threads: string[];
   /** Observation themes (the entry file's stem). */
   observations: string[];
+  /** Rule ids whose derived subjects name this key (Rule 15; 3.4 fifth revision). */
+  rules: string[];
+  /** Bug ids — open and triaged bugs only (entailment 4, Rule 17; 3.4 fifth revision). */
+  bugs: string[];
 }
+
+/** The six subject lists in the order the index writes them. */
+export const RECALL_SUBJECT_LISTS = ['decided', 'evidence', 'threads', 'observations', 'rules', 'bugs'] as const;
+
+/**
+ * `hooks.search-annotate` Rule 4's fixed stop-list — also Rule 16's, for the
+ * compass documents' heading tokens. Defined here (the compiler and the query
+ * module both need it; the query module re-exports it) and quoted in the spec
+ * so tests pin it. Widening it is a spec edit.
+ */
+export const STOP_TOKENS: ReadonlySet<string> = new Set([
+  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'not', 'are', 'was', 'but',
+]);
+
+/** Rule 15: a rule contributes at most this many matched-file subjects across all its `governs` globs. */
+export const RULE_GOVERNS_SUBJECT_CAP = 20;
+/** Rule 16: the four compass documents that are keyword-only carriers — no other compass file qualifies. */
+export const COMPASS_DOC_FILES = ['environment.md', 'preferences.md', 'do-not-repeat.md', 'standing-authorities.md'] as const;
+/** Rule 8: a compass document's keywords are its first this-many distinct heading / bold tokens in document order. */
+export const COMPASS_DOC_KEYWORD_CAP = 40;
 
 export interface RecallEntry {
   kind: RecallEntryKind;
@@ -96,10 +133,12 @@ export interface Carrier {
   supersedes: string[];
   /** Absolute paths this artefact's `sources` entries resolve to (relative to the file). */
   sources: string[];
-  /** Thread status — only threads carry one. */
+  /** Thread status, or a bug's `status` (entailment 4) — only those carry one. */
   status?: string;
   /** Observation theme — only observations carry one. */
   theme?: string;
+  /** Compass-document keywords (Rule 16) — headings and bold spans only; replaces the title-derived keywords in `entryOf`. */
+  docKeywords?: string[];
 }
 
 export const RECALL_INDEX_FILE = 'recall-index.json';
@@ -112,7 +151,18 @@ export function recallIndexPath(root: string): string {
 const DECISIONS_DIR = ['.cortex', 'atlas', 'decisions'];
 const EVIDENCE_DIR = ['.cortex', 'atlas', 'evidence'];
 const OBSERVATIONS_DIR = ['.cortex', 'insight', 'observations'];
+const COMPASS_DIR = ['.cortex', 'compass'];
+const RULES_DIR = [...COMPASS_DIR, 'rules'];
+const BUGS_DIR = [...COMPASS_DIR, 'bugs'];
 const OBSERVATION_ID_PREFIX = 'observation.';
+const COMPASS_DOC_ID_PREFIX = 'compass.';
+/** Rule 17: the bug statuses that reach a subject. */
+const CURRENT_BUG_STATUSES: ReadonlySet<string> = new Set(['open', 'triaged']);
+/** Rule 15: the compass rule / bug filename shapes. */
+const RULE_FILE_RE = /^R-\d{3,}.*\.md$/;
+const BUG_FILE_RE = /^B-\d{3,}.*\.md$/;
+/** Rule 15: `fast-glob` options for expanding a `governs` glob on disk (plan assumption 1). */
+const GOVERNS_GLOB_OPTS = { onlyFiles: true, dot: false, ignore: ['node_modules/**', '.git/**'] };
 /** Rule 8: a thread's key text is cut to this many characters. */
 const THREAD_TITLE_MAX = 80;
 /** Rule 8: title tokens shorter than this are dropped. */
@@ -261,7 +311,199 @@ function scanObservations(root: string): Carrier[] {
   return out;
 }
 
-/** Every scannable artefact of the four kinds, in kind order then path order. Absent directories contribute nothing. */
+// ---------------------------------------------------------------------------
+// the compass carriers (Rules 15–17; 3.4 fifth revision)
+// ---------------------------------------------------------------------------
+
+/** Frontmatter of one compass file, or `null` when it does not parse (Rule 10). */
+function readFrontmatter(filePath: string): Record<string, unknown> | null {
+  try {
+    const data = matter(fs.readFileSync(filePath, 'utf-8'), NO_CACHE).data as unknown;
+    return typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The string members of a scalar-or-list field; anything else contributes nothing. */
+function stringsOf(v: unknown): string[] {
+  if (typeof v === 'string') return v === '' ? [] : [v];
+  if (!Array.isArray(v)) return [];
+  return v.filter((e): e is string => typeof e === 'string' && e !== '');
+}
+
+/**
+ * Rule 15(a): a glob's literal directory prefix — the part before the first
+ * glob metacharacter, trailing `/` stripped; `null` when there is none
+ * (`**\/*.ts`). `src/db/**\/*.ts` → `src/db`; `src/**` → `src`.
+ */
+export function globPrefix(glob: string): string | null {
+  const normalised = normalisePathRef(glob);
+  const meta = normalised.search(/[*?[{]/);
+  const literal = meta === -1 ? normalised : normalised.slice(0, meta);
+  const prefix = literal.replace(/\/+$/, '');
+  return prefix === '' ? null : prefix;
+}
+
+function isDirectory(abs: string): boolean {
+  try {
+    return fs.statSync(abs).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Rule 15: a rule's derived subject refs — each governs glob's directory
+ * prefix when it exists, the first `RULE_GOVERNS_SUBJECT_CAP` files the globs
+ * match (sorted, deduplicated, across all globs), and every `related_specs`
+ * id as written. Prefix refs come first so a keyword listing reads naturally;
+ * the compiler sorts everything anyway.
+ */
+function derivedRuleRefs(root: string, governs: string[], relatedSpecs: string[]): string[] {
+  const prefixes: string[] = [];
+  const files: string[] = [];
+  for (const glob of governs) {
+    const prefix = globPrefix(glob);
+    if (prefix !== null && !prefix.split('/').includes('..') && isDirectory(path.join(root, ...prefix.split('/'))) && !prefixes.includes(prefix)) {
+      prefixes.push(prefix);
+    }
+    let matched: string[];
+    try {
+      matched = fg.sync(normalisePathRef(glob), { cwd: root, ...GOVERNS_GLOB_OPTS });
+    } catch {
+      matched = [];
+    }
+    for (const file of matched) if (!files.includes(file)) files.push(file);
+  }
+  files.sort();
+  return [...prefixes, ...files.slice(0, RULE_GOVERNS_SUBJECT_CAP), ...relatedSpecs];
+}
+
+/** Rule 15: every `compass/rules/R-*.md` whose frontmatter parses and whose `status` is not `retired`. */
+function scanRules(root: string): Carrier[] {
+  const out: Carrier[] = [];
+  for (const filePath of entryFiles(path.join(root, ...RULES_DIR))) {
+    if (!RULE_FILE_RE.test(path.basename(filePath))) continue;
+    const data = readFrontmatter(filePath);
+    if (data === null) continue;
+    if (data['status'] === 'retired') continue;
+    const id = typeof data['id'] === 'string' && data['id'] !== '' ? data['id'] : (/^(R-\d{3,})/.exec(path.basename(filePath))?.[1] ?? '');
+    if (id === '') continue;
+    const stem = path.basename(filePath, '.md');
+    out.push({
+      kind: 'rule',
+      id,
+      path: toPosixRelative(root, filePath),
+      absPath: filePath,
+      date: '',
+      title: typeof data['title'] === 'string' ? data['title'] : stem,
+      bearsOn: derivedRuleRefs(root, stringsOf(data['governs']), stringsOf(data['related_specs'])),
+      supersedes: [],
+      sources: [],
+    });
+  }
+  return out;
+}
+
+/** Rule 17: every `compass/bugs/B-*.md` whose frontmatter parses; `affects` strings are the refs, `status` rides on the carrier. */
+function scanBugs(root: string): Carrier[] {
+  const out: Carrier[] = [];
+  for (const filePath of entryFiles(path.join(root, ...BUGS_DIR))) {
+    if (!BUG_FILE_RE.test(path.basename(filePath))) continue;
+    const data = readFrontmatter(filePath);
+    if (data === null) continue;
+    const id = typeof data['id'] === 'string' && data['id'] !== '' ? data['id'] : (/^(B-\d{3,})/.exec(path.basename(filePath))?.[1] ?? '');
+    if (id === '') continue;
+    const stem = path.basename(filePath, '.md');
+    out.push({
+      kind: 'bug',
+      id,
+      path: toPosixRelative(root, filePath),
+      absPath: filePath,
+      date: isoOf(data['opened']),
+      title: typeof data['title'] === 'string' ? data['title'] : stem,
+      bearsOn: stringsOf(data['affects']),
+      supersedes: [],
+      sources: [],
+      status: typeof data['status'] === 'string' ? data['status'] : '',
+    });
+  }
+  return out;
+}
+
+const BOLD_SPAN_RE = /\*\*([^*\n]+)\*\*|__([^_\n]+)__/g;
+
+/**
+ * Rule 16 / Rule 8: a compass document's keywords — the lowercase tokens
+ * (three or more characters, the stop-list removed) of every `#` heading line
+ * and every `**…**` / `__…__` span, in document order, the first
+ * `COMPASS_DOC_KEYWORD_CAP` distinct ones, then sorted. Fenced blocks are
+ * skipped (a `#` comment inside one is not a heading). Never body prose.
+ */
+export function docKeywords(body: string): string[] {
+  const spans: string[] = [];
+  let fenced = false;
+  for (const raw of body.split('\n')) {
+    const line = raw.trimEnd();
+    if (/^\s*(```|~~~)/.test(line)) {
+      fenced = !fenced;
+      continue;
+    }
+    if (fenced) continue;
+    if (/^\s{0,3}#{1,6}\s/.test(line)) {
+      spans.push(line.replace(/^\s{0,3}#{1,6}\s+/, ''));
+      continue;
+    }
+    for (const m of line.matchAll(BOLD_SPAN_RE)) spans.push(m[1] ?? m[2] ?? '');
+  }
+  const seen: string[] = [];
+  for (const span of spans) {
+    for (const token of span.toLowerCase().split(/[^a-z0-9]+/)) {
+      if (token.length < KEYWORD_MIN_CHARS || STOP_TOKENS.has(token) || seen.includes(token)) continue;
+      seen.push(token);
+      if (seen.length >= COMPASS_DOC_KEYWORD_CAP) return seen.sort();
+    }
+  }
+  return seen.sort();
+}
+
+/** Rule 16: the four compass documents, each when present — id `compass.<stem>`, title the first H1 or the stem, no subject. */
+function scanCompassDocs(root: string): Carrier[] {
+  const out: Carrier[] = [];
+  for (const name of COMPASS_DOC_FILES) {
+    const filePath = path.join(root, ...COMPASS_DIR, name);
+    let raw: string;
+    try {
+      raw = fs.readFileSync(filePath, 'utf-8');
+    } catch {
+      continue;
+    }
+    let body: string;
+    try {
+      body = matter(raw, NO_CACHE).content;
+    } catch {
+      continue; // unparseable frontmatter → skipped (Rule 10)
+    }
+    const stem = name.slice(0, -'.md'.length);
+    const h1 = /^\s{0,3}#\s+(.+?)\s*$/m.exec(body)?.[1];
+    out.push({
+      kind: 'compass-doc',
+      id: `${COMPASS_DOC_ID_PREFIX}${stem}`,
+      path: toPosixRelative(root, filePath),
+      absPath: filePath,
+      date: '',
+      title: h1 !== undefined && h1 !== '' ? h1 : stem,
+      bearsOn: [],
+      supersedes: [],
+      sources: [],
+      docKeywords: docKeywords(body),
+    });
+  }
+  return out;
+}
+
+/** Every scannable artefact of the seven kinds, in kind order then path order. Absent directories contribute nothing. */
 export function scanCarriers(root: string): Carrier[] {
   const absRoot = path.resolve(root);
   return [
@@ -269,6 +511,9 @@ export function scanCarriers(root: string): Carrier[] {
     ...scanAtlasKind(absRoot, 'evidence', EVIDENCE_DIR),
     ...scanThreads(absRoot),
     ...scanObservations(absRoot),
+    ...scanRules(absRoot),
+    ...scanCompassDocs(absRoot),
+    ...scanBugs(absRoot),
   ];
 }
 
@@ -282,14 +527,14 @@ export function keywordsOf(title: string, bearsOn: string[]): string[] {
   return sortedUnique([...tokens, ...bearsOn]);
 }
 
-/** One `entries` row (Rule 8). */
+/** One `entries` row (Rule 8). A compass document's keywords are its heading / bold tokens, not its title's. */
 export function entryOf(carrier: Carrier): RecallEntry {
   return {
     kind: carrier.kind,
     title: carrier.title,
     path: carrier.path,
     date: carrier.date,
-    keywords: keywordsOf(carrier.title, carrier.bearsOn),
+    keywords: carrier.docKeywords ?? keywordsOf(carrier.title, carrier.bearsOn),
   };
 }
 
@@ -308,16 +553,26 @@ function readSchemaVersion(root: string): string {
 }
 
 function emptySubject(): RecallSubject {
-  return { decided: [], evidence: [], threads: [], observations: [] };
+  return { decided: [], evidence: [], threads: [], observations: [], rules: [], bugs: [] };
 }
 
-/** Rule 2: the subject keys a carrier's refs resolve to (path refs normalised), and how many did not resolve. */
+/**
+ * Rule 2: the subject keys a carrier's refs resolve to (path refs
+ * normalised), and how many did not resolve. A rule's derived directory
+ * prefix may be a single segment (`src`, from `src/**`), which §6 classifies
+ * as a bare id; for a rule carrier an existing directory of that name is the
+ * path subject Rule 15(a) describes.
+ */
 function subjectsOf(root: string, index: ProjectIndex, clauses: ClauseIndex, carrier: Carrier): { keys: string[]; dropped: number } {
   const keys: string[] = [];
   let dropped = 0;
   for (const ref of carrier.bearsOn) {
     if (ref === '') {
       dropped++;
+      continue;
+    }
+    if (carrier.kind === 'rule' && classifyRef(ref) === 'id' && isDirectory(path.join(root, ref))) {
+      keys.push(ref);
       continue;
     }
     const { kind, resolved } = resolveRef(root, index, clauses, ref);
@@ -335,7 +590,7 @@ export interface CompileRecallOptions {
   now?: Date;
 }
 
-/** Pure assembly (Rule 11): reads the four carriers and the two resolvers, writes nothing. */
+/** Pure assembly (Rule 11): reads the seven carriers and the two resolvers, writes nothing. */
 export async function compileRecallIndex(root: string, opts: CompileRecallOptions = {}): Promise<RecallIndex> {
   const absRoot = path.resolve(root);
   const index = await buildIndex(absRoot);
@@ -384,6 +639,14 @@ export async function compileRecallIndex(root: string, opts: CompileRecallOption
         case 'observation':
           if (carrier.theme !== undefined) subject.observations.push(carrier.theme);
           break;
+        case 'rule':
+          subject.rules.push(carrier.id); // no currency condition beyond `retired`, which never reaches here
+          break;
+        case 'bug':
+          if (CURRENT_BUG_STATUSES.has(carrier.status ?? '')) subject.bugs.push(carrier.id); // entailment 4
+          break;
+        case 'compass-doc':
+          break; // keyword-only (Rule 16) — never bears on anything, so never reaches here
       }
     }
   }
@@ -409,6 +672,8 @@ export async function compileRecallIndex(root: string, opts: CompileRecallOption
       evidence: sortedUnique(s.evidence),
       threads: sortedUnique(s.threads),
       observations: sortedUnique(s.observations),
+      rules: sortedUnique(s.rules),
+      bugs: sortedUnique(s.bugs),
     };
   }
   const sortedEntries: Record<string, RecallEntry> = {};

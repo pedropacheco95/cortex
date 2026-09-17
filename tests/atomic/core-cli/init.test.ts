@@ -225,6 +225,10 @@ describe('Rule 3: skeleton', () => {
       pulse: { distilThresholdN: 3, dismissedWindowDays: 90, hygieneFreshnessHours: 48 },
       harness: { maxIterations: 3 },
       loop: { enabled: false },
+      // 3.4 fifth revision (schema.visibility Rule 1): the repository's
+      // visibility is written explicitly as unknown so the question is
+      // visible; sync never adds it to an existing config.
+      visibility: { repo: 'unknown', allow: [] },
     });
   });
 
@@ -1012,6 +1016,45 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
       expect(s).not.toContain('run cortex-register-tasks');
     } finally {
       cleanTmp(root); cleanTmp(home); cleanTmp(appSupportDir);
+    }
+  }, TEST_TIMEOUT);
+});
+
+// ---------------------------------------------------------------------------
+// Rule 3 (3.4 fifth revision): the header-only id registry in compass/
+// (schema.id-registry Rules 1 and 6).
+// ---------------------------------------------------------------------------
+import { REGISTRY_HEADER } from '../../../src/compass/registry.js';
+
+describe('Rule 3: the id registry skeleton (schema.id-registry)', () => {
+  it('a fresh init writes compass/registry.md equal to REGISTRY_HEADER plus one blank line', async () => {
+    const root = makeTmpDir('registry-proj');
+    const home = makeTmpDir('registry-home');
+    try {
+      await init(root, { noLlm: true, home, ...DARWIN });
+      expect(fs.readFileSync(path.join(root, '.cortex', 'compass', 'registry.md'), 'utf-8')).toBe(`${REGISTRY_HEADER}\n`);
+    } finally {
+      cleanTmp(root); cleanTmp(home);
+    }
+  }, TEST_TIMEOUT);
+
+  it('a forced re-init never rewrites an existing registry, and a project with rule files but no registry gets one built from disk (not header-only)', async () => {
+    const root = makeTmpDir('registry-force-proj');
+    const home = makeTmpDir('registry-force-home');
+    try {
+      await init(root, { noLlm: true, home, ...DARWIN });
+      const registryPath = path.join(root, '.cortex', 'compass', 'registry.md');
+      const edited = `${REGISTRY_HEADER}\nR-001 kept\n`;
+      fs.writeFileSync(registryPath, edited, 'utf-8');
+      await init(root, { noLlm: true, force: true, home, ...DARWIN });
+      expect(fs.readFileSync(registryPath, 'utf-8')).toBe(edited);
+
+      fs.rmSync(registryPath);
+      fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-001-kept.md'), '# R-001\n', 'utf-8');
+      await init(root, { noLlm: true, force: true, home, ...DARWIN });
+      expect(fs.readFileSync(registryPath, 'utf-8')).toBe(`${REGISTRY_HEADER}\nR-001 kept\n`);
+    } finally {
+      cleanTmp(root); cleanTmp(home);
     }
   }, TEST_TIMEOUT);
 });

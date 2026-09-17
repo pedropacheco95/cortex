@@ -107,9 +107,14 @@ Cortex is active on **cortex**. The knowledge layer lives in `.cortex/`:
 - `insight/` — inferred understanding of the codebase itself. See "Cortex Insight" below.
 
 **Protocol:** before working a task, read the relevant `_index.md` first — they are
-prompts that tell you what to read and when. For "why" questions, grep `compass/` and
+prompts that tell you what to read and when. This applies more, not less, to sessions
+that dispatch, review or plan rather than edit: everything reaches them as a claim, and
+`compass/` is where claims are checked. For "why" questions, grep `compass/` and
 `atlas/`. For unfamiliar terms, check `atlas/domain/`. Follow frontmatter
 cross-references (the citation graph) to trace any claim to its source.
+
+**Placement:** durable knowledge lives in `.cortex/` (tracked, except `atlas/sources/`,
+`pulse/` and archived raw sources). This repository is public: compass and atlas carry pointers, never hosts, ports or account ids (RULES.md rule 20).
 
 Specs are the source of truth: `.specflow/specs-business/` (outcomes) and
 `.specflow/specs/` (implementation), linked by `implements:`/`implemented_by:`. Don't
@@ -130,10 +135,6 @@ instead when you're trying to understand what a file does, whether
 it's relevant, how it relates, or what its main pieces are — a
 richer resume than reading 500 lines and remembering fragments.
 Consult insight first; read the file when you need exactness.
-
-Before substantive work on any file, query its insight entry.
-Before changes touching multiple files or a concept, query the
-concept. This is not optional.
 
 - cortex insight file <path>      — rich per-file understanding
 - cortex insight concept <name>   — how a concept lives in the code

@@ -37,7 +37,9 @@
  * bundle entries in the Desktop app's scheduled-tasks.json registry
  * (core-cli.tasks-register, B-009 option 1), and the pull side of recall
  * `cortex why <ref> [--json]` / `cortex recall <word…> [--kind k]` (spec
- * recall.why, Rule 1).
+ * recall.why, Rule 1), and `cortex id next rule|bug [--slug <slug>]` — the
+ * human allocator over the append-only id registry (spec schema.id-registry,
+ * Rule 3).
  *
  * Invocation gate (core-cli.init Rule 18, B-018): `init` runs only on the
  * literal verb `init`; every other unmatched first argument, `--help`, `-h`
@@ -46,7 +48,7 @@
  * line after this paragraph is its mirror, asserted equal by
  * tests/atomic/core-cli/dispatch.test.ts so the two cannot drift.
  *
- * Verbs: init, sync, validate, scan, insight, why, recall, usage, thread, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
+ * Verbs: init, sync, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
  */
 import { init } from './init.js';
 import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
@@ -68,6 +70,7 @@ const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['recall', 'recall <word…> [--kind decision|evidence|thread|observation]'],
   ['usage', 'usage [--record]'],
   ['thread', 'thread list|drop|close|promote …'],
+  ['id', 'id next rule|bug [--slug <slug>]'],
   ['hook', 'hook <name>'],
   ['constellation', 'constellation [--port <n>]'],
   ['tasks', 'tasks rename|plan|register|verify'],
@@ -522,6 +525,46 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'thread') {
     const { threadCli } = await import('../pulse/thread-cli.js');
     return threadCli(argv.slice(1));
+  }
+
+  // `cortex id next rule|bug [--slug <slug>]` — allocate the next R-NNN/B-NNN
+  // by appending one line to `.cortex/compass/registry.md` and print the id
+  // alone on stdout so a skill or shell can capture it (schema.id-registry
+  // Rule 3). Bad grammar → one usage line on stderr, exit 2, nothing written;
+  // no `.cortex/` → exit 1 naming `cortex init`.
+  if (argv[0] === 'id') {
+    const usage = 'Usage: cortex id next rule|bug [--slug <slug>]';
+    const rest = argv.slice(1);
+    const kind = rest[1];
+    if (rest[0] !== 'next' || (kind !== 'rule' && kind !== 'bug')) {
+      console.error(usage);
+      return USAGE_EXIT;
+    }
+    let slug: string | undefined;
+    for (let i = 2; i < rest.length; i++) {
+      const value = rest[i + 1];
+      if (rest[i] === '--slug' && slug === undefined && value !== undefined && !value.startsWith('-')) {
+        slug = value;
+        i++;
+        continue;
+      }
+      console.error(usage);
+      return USAGE_EXIT;
+    }
+    const fs = await import('fs');
+    const path = await import('path');
+    if (!fs.existsSync(path.join(process.cwd(), '.cortex', 'cortex.config.json'))) {
+      console.error('cortex id: no .cortex/ found in the current directory — run `cortex init` first.');
+      return 1;
+    }
+    try {
+      const { allocateId } = await import('../compass/registry.js');
+      console.log(allocateId('.', kind, slug));
+      return 0;
+    } catch (err) {
+      console.error(`cortex id: ${(err as Error).message}`);
+      return 1;
+    }
   }
 
   // `cortex why <ref> [--json]` / `cortex recall <word…> [--kind k]` — the

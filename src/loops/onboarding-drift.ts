@@ -141,7 +141,7 @@ const HEURISTIC_DIRS = [
 
 /** Files `cortex init` itself creates — their presence is not "gained artefacts". */
 const INIT_SKELETON_FILES: Record<string, Set<string>> = {
-  compass: new Set(['preferences.md', 'environment.md', 'do-not-repeat.md', 'standing-authorities.md']),
+  compass: new Set(['preferences.md', 'environment.md', 'do-not-repeat.md', 'standing-authorities.md', 'registry.md']), // registry.md: schema.id-registry (3.4 fifth revision), created by init and sync
 };
 
 export function checkTemplateIdentical(root: string): DriftFinding[] {

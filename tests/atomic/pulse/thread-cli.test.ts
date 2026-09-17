@@ -14,6 +14,7 @@ import { makeTmpDir, cleanTmp, snapshotTree } from '../../fixtures/init-harness.
 import { makeThread, threadCitation, readThreadRaw } from '../../fixtures/threads.js';
 import { seedThreads, readThread } from '../../fixtures/thread-cli.js';
 import { threadCli } from '../../../src/pulse/thread-cli.js';
+import { REGISTRY_HEADER } from '../../../src/compass/registry.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -393,5 +394,54 @@ describe('Promote to evidence drafts from the flags and the trail', () => {
     const [file2] = fs.readdirSync(path.join(root2, '.cortex', 'atlas', 'evidence')).filter((f) => f !== '_index.md');
     const data2 = matter(fs.readFileSync(path.join(root2, '.cortex', 'atlas', 'evidence', file2 as string), 'utf-8')).data as Record<string, unknown>;
     expect(data2['window']).toEqual({ from: new Date('2026-09-15T10:00:00.000Z'), to: new Date('2026-09-14T20:00:00.000Z'), sessions: 2 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// compass.bug-currency Rule 5 / pulse.threads Rule 12 (3.4 fifth revision) —
+// the `--to compass/bugs` draft is stamped from `.git/HEAD` by file I/O and
+// its id comes from the registry. Additive — wave follow-up B, batch 2.
+// ---------------------------------------------------------------------------
+
+describe('Promote stamps the draft (atomic)', () => {
+  function seedBugThread(root: string): void {
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'a.ts'), '', 'utf-8');
+    seedThreads(root, [makeThread({ id: 'T-010', kind: 'finding', bears_on: ['src/a.ts'], body: 'Layer drift in a\n**Kind:** conclusion\n**Source:** a session' })]);
+  }
+  function bugFile(root: string): string {
+    const dir = path.join(root, '.cortex', 'compass', 'bugs');
+    const name = fs.readdirSync(dir).find((f) => /^B-\d{3,}-/.test(f)) as string;
+    return fs.readFileSync(path.join(dir, name), 'utf-8');
+  }
+
+  it('a detached HEAD (bare sha) stamps its first seven characters; the thread-cli module spawns no git', async () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../../src/pulse/thread-cli.ts'), 'utf-8');
+    expect(src).not.toMatch(/child_process|execSync|spawnSync/);
+    const root = tmp('stamp-detached');
+    fs.mkdirSync(path.join(root, '.git'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.git', 'HEAD'), 'ABCDEF0123456789abcdef0123456789abcdef01\n', 'utf-8');
+    seedBugThread(root);
+    expect(await threadCli(['promote', 'T-010', '--to', 'compass/bugs', '--type', 'layer-drift'], root, { now: NOW })).toBe(0);
+    expect(bugFile(root)).toContain('\nfound_at_commit: abcdef0\n');
+  });
+
+  it('a HEAD the reader cannot resolve (garbage) drafts without the key rather than failing the promote', async () => {
+    const root = tmp('stamp-garbage');
+    fs.mkdirSync(path.join(root, '.git'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.git', 'HEAD'), 'garbage\n', 'utf-8');
+    seedBugThread(root);
+    expect(await threadCli(['promote', 'T-010', '--to', 'compass/bugs', '--type', 'layer-drift'], root, { now: NOW })).toBe(0);
+    expect(bugFile(root)).not.toContain('found_at_commit');
+  });
+
+  it('the id is the registry\'s: a registry line `B-041 reserved` with no bug files on disk drafts B-042 and appends `B-042 <slug>`', async () => {
+    const root = tmp('stamp-registry');
+    seedBugThread(root);
+    fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'registry.md'), `${REGISTRY_HEADER}\nB-041 reserved\n`, 'utf-8');
+    expect(await threadCli(['promote', 'T-010', '--to', 'compass/bugs', '--type', 'layer-drift'], root, { now: NOW })).toBe(0);
+    expect(bugFile(root)).toContain('\nid: B-042\n');
+    expect(fs.readFileSync(path.join(root, '.cortex', 'compass', 'registry.md'), 'utf-8').endsWith('\nB-041 reserved\nB-042 layer-drift-in-a\n')).toBe(true);
   });
 });

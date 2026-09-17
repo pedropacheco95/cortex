@@ -23,6 +23,8 @@ import { checkBugs } from '../../../src/schema/checks/compass.js';
 import { checkProvenance } from '../../../src/schema/checks/provenance.js';
 import { checkBearsOn } from '../../../src/schema/checks/bears-on.js';
 import { checkEvidence } from '../../../src/schema/checks/evidence.js';
+import { checkIdRegistry } from '../../../src/schema/checks/registry.js';
+import { REGISTRY_FILE, REGISTRY_HEADER } from '../../../src/compass/registry.js';
 
 const dirs: string[] = [];
 function tmp(label: string): string {
@@ -446,5 +448,127 @@ describe('Promote to evidence drafts a schema-valid file from a measurement find
     }
     for (const id of ['T-008', 'T-009', 'T-010']) expect(readThread(root, id)?.status).toBe('open');
     expect(fs.existsSync(path.join(root, '.cortex', 'atlas'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rule 12 (3.4 fifth revision) — promote --to compass/bugs allocates through
+// the id registry (`schema.id-registry` "Promote allocates through the
+// registry") and stamps `found_at_commit` (`compass.bug-currency` "Promote
+// stamps the draft"). Additive — wave follow-up B, batch 2.
+// ---------------------------------------------------------------------------
+
+const SHA_MAIN = '2b217dfa9c3e4f5061728394a5b6c7d8e9f01234';
+
+/** A fake `.git` whose HEAD resolves to `sha` by file I/O (no git subprocess). */
+function fakeGit(root: string, sha: string): void {
+  fs.mkdirSync(path.join(root, '.git', 'refs', 'heads'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.git', 'HEAD'), 'ref: refs/heads/main\n', 'utf-8');
+  fs.writeFileSync(path.join(root, '.git', 'refs', 'heads', 'main'), `${sha}\n`, 'utf-8');
+}
+
+function registryText(root: string): string {
+  return fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8');
+}
+
+describe('Promote allocates through the registry', () => {
+  it('a registry ending `B-019 x` and T-008 → B-020-<slug>.md, the registry\'s last line is `B-020 <slug>`, and check.id-registry is clean', async () => {
+    const root = tmp('registry-alloc');
+    seedBug(root, 'B-019', 'x'); // the registry's last line has its file (an initialised project)
+    touchProjectFile(root, 'src/a.ts');
+    seedThreads(root, [makeThread({ id: 'T-008', kind: 'finding', bears_on: ['src/a.ts'], body: 'Flaky tier ordering\n**Kind:** conclusion\n**Source:** a session' })]);
+    fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
+    fs.writeFileSync(path.join(root, REGISTRY_FILE), `${REGISTRY_HEADER}\nB-019 x\n`, 'utf-8');
+
+    expect(await threadCli(['promote', 'T-008', '--to', 'compass/bugs', '--type', 'test-defect', '--affects', 'src/a.ts'], root, { now: NOW })).toBe(0);
+
+    const created = gatedFiles(root, 'compass/bugs').find((f) => f.startsWith('B-020-')) as string;
+    expect(created).toBe('B-020-flaky-tier-ordering.md');
+    const text = registryText(root);
+    expect(text.endsWith('\nB-019 x\nB-020 flaky-tier-ordering\n')).toBe(true);
+    expect(checkIdRegistry(root)).toEqual([]);
+    expect(await gatedErrors(root)).toEqual([]);
+  });
+
+  it('the registry wins over the files on disk: B-003 and B-1002 on disk plus a registry line B-2000 → B-2001', async () => {
+    const root = tmp('registry-max');
+    seedBug(root, 'B-003', 'a');
+    seedBug(root, 'B-1002', 'b');
+    touchProjectFile(root, 'src/a.ts');
+    seedThreads(root, [makeThread({ id: 'T-001', bears_on: ['src/a.ts'] })]);
+    fs.writeFileSync(path.join(root, REGISTRY_FILE), `${REGISTRY_HEADER}\nB-003 a\nB-1002 b\nB-2000 reserved\n`, 'utf-8');
+    expect(await threadCli(['promote', 'T-001', '--to', 'compass/bugs', '--type', 'test-defect'], root, { now: NOW })).toBe(0);
+    expect(gatedFiles(root, 'compass/bugs').some((f) => f.startsWith('B-2001-'))).toBe(true);
+    expect(registryText(root).endsWith('\nB-2000 reserved\nB-2001 do-you-want-the-counter-in-state-or-at-the-pulse-root\n')).toBe(true);
+  });
+
+  it('with no registry, promote creates it from the files on disk first and then appends (a pre-registry project never falls back to the old scheme)', async () => {
+    const root = tmp('registry-absent');
+    seedBug(root, 'B-017', 'x');
+    touchProjectFile(root, 'src/a.ts');
+    seedThreads(root, [makeThread({ id: 'T-001', bears_on: ['src/a.ts'] })]);
+    expect(fs.existsSync(path.join(root, REGISTRY_FILE))).toBe(false);
+    expect(await threadCli(['promote', 'T-001', '--to', 'compass/bugs', '--type', 'test-defect'], root, { now: NOW })).toBe(0);
+    expect(registryText(root)).toBe(`${REGISTRY_HEADER}\nB-017 x\nB-018 do-you-want-the-counter-in-state-or-at-the-pulse-root\n`);
+    expect(checkIdRegistry(root)).toEqual([]);
+  });
+
+  it('a bug promote writes exactly the bug file, the thread and the registry (Rule 13 plus the registry append)', async () => {
+    const root = tmp('bug-diff');
+    touchProjectFile(root, 'src/a.ts');
+    seedThreads(root, [makeThread({ id: 'T-001', bears_on: ['src/a.ts'] }), makeThread({ id: 'T-002', kind: 'offer', body: 'Wire it?' })]);
+    fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
+    fs.writeFileSync(path.join(root, REGISTRY_FILE), `${REGISTRY_HEADER}\n`, 'utf-8');
+    const before = snapshotTree(root);
+    expect(await threadCli(['promote', 'T-001', '--to', 'compass/bugs', '--type', 'test-defect'], root, { now: NOW })).toBe(0);
+    const after = snapshotTree(root);
+    const changed = [...new Set([...before.keys(), ...after.keys()])].filter((k) => before.get(k) !== after.get(k)).sort();
+    expect(changed).toEqual([
+      path.join('.cortex', 'compass', 'bugs', 'B-001-do-you-want-the-counter-in-state-or-at-the-pulse-root.md'),
+      path.join('.cortex', 'compass', 'registry.md'),
+      path.join('.cortex', 'pulse', 'threads', 'T-001-do-you-want-the-counter-in-state-or-at-the-pulse-root.md'),
+    ]);
+  });
+});
+
+describe('Promote stamps the draft', () => {
+  it('in a repo whose head is 2b217df… the drafted frontmatter carries found_at_commit: 2b217df, and check.bug accepts it', async () => {
+    const root = tmp('stamp');
+    fakeGit(root, SHA_MAIN);
+    touchProjectFile(root, 'src/a.ts');
+    seedThreads(root, [makeThread({ id: 'T-010', kind: 'finding', bears_on: ['src/a.ts'], body: 'Layer drift in a\n**Kind:** conclusion\n**Source:** a session' })]);
+    expect(await threadCli(['promote', 'T-010', '--to', 'compass/bugs', '--type', 'layer-drift', '--affects', 'src/a.ts'], root, { now: NOW })).toBe(0);
+    const created = gatedFiles(root, 'compass/bugs').find((f) => f.startsWith('B-001-')) as string;
+    const raw = fs.readFileSync(path.join(root, '.cortex', 'compass', 'bugs', created), 'utf-8');
+    expect(raw).toContain('\nfound_at_commit: 2b217df\n');
+    const data = matter(raw).data;
+    expect(data['found_at_commit']).toBe('2b217df');
+    expect(data['owner']).toBeUndefined();
+    expect(data['fix_in_flight']).toBeUndefined();
+    // Key order: after `opened`, before the closing fence (§4.2 optional field, drafted last).
+    expect(raw.indexOf('\nopened: ')).toBeLessThan(raw.indexOf('\nfound_at_commit: '));
+    expect(await gatedErrors(root)).toEqual([]);
+  });
+
+  it('in a non-git directory the draft has no found_at_commit key and still passes check.bug', async () => {
+    const root = tmp('no-stamp');
+    touchProjectFile(root, 'src/a.ts');
+    seedThreads(root, [makeThread({ id: 'T-010', kind: 'finding', bears_on: ['src/a.ts'], body: 'Layer drift in a\n**Kind:** conclusion\n**Source:** a session' })]);
+    expect(fs.existsSync(path.join(root, '.git'))).toBe(false);
+    expect(await threadCli(['promote', 'T-010', '--to', 'compass/bugs', '--type', 'layer-drift', '--affects', 'src/a.ts'], root, { now: NOW })).toBe(0);
+    const created = gatedFiles(root, 'compass/bugs').find((f) => f.startsWith('B-001-')) as string;
+    const raw = fs.readFileSync(path.join(root, '.cortex', 'compass', 'bugs', created), 'utf-8');
+    expect(raw).not.toContain('found_at_commit');
+    expect(matter(raw).data['found_at_commit']).toBeUndefined();
+    expect(await gatedErrors(root)).toEqual([]);
+  });
+
+  it('a decision promote is not stamped (the field is a bug-ledger field)', async () => {
+    const root = tmp('stamp-decision');
+    fakeGit(root, SHA_MAIN);
+    seedThreads(root, [makeThread({ id: 'T-002', kind: 'offer', body: 'Wire it?' })]);
+    expect(await threadCli(['promote', 'T-002', '--to', 'atlas/decisions'], root, { now: NOW })).toBe(0);
+    const raw = fs.readFileSync(path.join(decisionsDir(root), '2026-09-15-wire-it.md'), 'utf-8');
+    expect(raw).not.toContain('found_at_commit');
   });
 });

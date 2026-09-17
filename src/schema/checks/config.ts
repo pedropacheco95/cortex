@@ -142,7 +142,71 @@ export function checkConfig(root: string): ConfigResult {
     }
   }
 
-  const knownKeys = ['schemaVersion', 'profile', 'anatomy', 'hooks', 'pulse', 'insight', 'harness', 'loop'];
+  // §10.1 3.4 fifth revision (schema.visibility Rule 1, RULES.md rule 20):
+  // `visibility` { repo: public|private|unknown, allow: string[] } and
+  // `placement` { localNotesDir: string } are optional objects. Absent is the
+  // default and never a violation; present-but-malformed is an ERROR at the
+  // offending key — a typo'd `repo` would silently leave check.visibility off.
+  const VISIBILITY_REPOS = ['public', 'private', 'unknown'];
+  const visibility = config['visibility'];
+  if (visibility !== undefined) {
+    if (typeof visibility !== 'object' || visibility === null || Array.isArray(visibility)) {
+      violations.push({
+        severity: 'error',
+        check: 'check.config',
+        clause: '§10.1',
+        location: { path: configPath, key: 'visibility' },
+        message: `cortex.config.json "visibility" must be an object { repo, allow }, got ${JSON.stringify(visibility)}`,
+      });
+    } else {
+      const block = visibility as Record<string, unknown>;
+      const repo = block['repo'];
+      if (repo !== undefined && (typeof repo !== 'string' || !VISIBILITY_REPOS.includes(repo))) {
+        violations.push({
+          severity: 'error',
+          check: 'check.config',
+          clause: '§10.1',
+          location: { path: configPath, key: 'visibility.repo' },
+          message: `cortex.config.json "visibility.repo" must be one of [${VISIBILITY_REPOS.join(', ')}], got ${JSON.stringify(repo)}`,
+        });
+      }
+      const allow = block['allow'];
+      if (allow !== undefined && (!Array.isArray(allow) || !allow.every((g) => typeof g === 'string'))) {
+        violations.push({
+          severity: 'error',
+          check: 'check.config',
+          clause: '§10.1',
+          location: { path: configPath, key: 'visibility.allow' },
+          message: `cortex.config.json "visibility.allow" must be a list of glob strings, got ${JSON.stringify(allow)}`,
+        });
+      }
+    }
+  }
+  const placement = config['placement'];
+  if (placement !== undefined) {
+    if (typeof placement !== 'object' || placement === null || Array.isArray(placement)) {
+      violations.push({
+        severity: 'error',
+        check: 'check.config',
+        clause: '§10.1',
+        location: { path: configPath, key: 'placement' },
+        message: `cortex.config.json "placement" must be an object { localNotesDir }, got ${JSON.stringify(placement)}`,
+      });
+    } else {
+      const localNotesDir = (placement as Record<string, unknown>)['localNotesDir'];
+      if (localNotesDir !== undefined && typeof localNotesDir !== 'string') {
+        violations.push({
+          severity: 'error',
+          check: 'check.config',
+          clause: '§10.1',
+          location: { path: configPath, key: 'placement.localNotesDir' },
+          message: `cortex.config.json "placement.localNotesDir" must be a string, got ${JSON.stringify(localNotesDir)}`,
+        });
+      }
+    }
+  }
+
+  const knownKeys = ['schemaVersion', 'profile', 'anatomy', 'hooks', 'pulse', 'insight', 'harness', 'loop', 'visibility', 'placement'];
   for (const key of Object.keys(config)) {
     if (!knownKeys.includes(key)) {
       violations.push({

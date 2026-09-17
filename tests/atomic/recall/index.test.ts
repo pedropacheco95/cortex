@@ -109,7 +109,8 @@ describe('AC: empty inputs compile (Rule 10)', () => {
     decision(root, '2026-09-02-scalar', ['bears_on: R-001']);
     decision(root, '2026-09-03-good', ['bears_on: [R-001]']);
     const index = await compileRecallIndex(root);
-    expect(Object.keys(index.entries)).toEqual(['decision.2026-09-03-good']);
+    // The seed's two rules are entries too since the fifth revision (Rule 15); the broken decision still is not.
+    expect(Object.keys(index.entries)).toEqual(['R-001', 'R-003', 'decision.2026-09-03-good']);
     expect(index.subjects['R-001']?.decided).toEqual(['decision.2026-09-03-good']);
   });
 });
@@ -204,7 +205,7 @@ describe('Rule 8: one entries row per scanned artefact', () => {
       date: '2026-09-10T09:00:00Z',
       keywords: ['style', 'working'],
     });
-    expect(index.counters.entries).toBe(4);
+    expect(index.counters.entries).toBe(6); // the four carriers above plus the seed's two rules (Rule 15)
   });
 });
 
@@ -219,7 +220,7 @@ describe('AC: a superseded decision keeps its entry and loses its subjects', () 
     decision(root, '2026-08-01-b', ['bears_on: [R-001]', 'supersedes: [2026-07-01-a.md]']);
     const index = await compileRecallIndex(root);
     expect(index.subjects['R-001']?.decided).toEqual(['decision.2026-08-01-b']);
-    expect(Object.keys(index.entries).sort()).toEqual(['decision.2026-07-01-a', 'decision.2026-08-01-b']);
+    expect(Object.keys(index.entries).sort()).toEqual(['R-001', 'R-003', 'decision.2026-07-01-a', 'decision.2026-08-01-b']);
   });
 
   it('supersession is one hop: a superseded superseder still removes its own target', async () => {
@@ -246,7 +247,7 @@ describe('AC: only open threads reach a subject', () => {
     thread(root, 'T-003', 'expired', [ref]);
     const index = await compileRecallIndex(root);
     expect(index.subjects[ref]?.threads).toEqual(['T-001']);
-    expect(Object.keys(index.entries).sort()).toEqual(['T-001', 'T-002', 'T-003']);
+    expect(Object.keys(index.entries).sort()).toEqual(['R-001', 'R-003', 'T-001', 'T-002', 'T-003']);
   });
 });
 
@@ -356,6 +357,8 @@ describe('AC: path spellings collapse to one subject', () => {
       evidence: [],
       threads: ['T-001'],
       observations: [],
+      rules: [],
+      bugs: [],
     });
     expect(index.counters.subjects).toBe(1);
   });
@@ -402,8 +405,10 @@ describe('AC: deterministic modulo timestamp (Rule 9)', () => {
       evidence: [],
       threads: ['T-001', 'T-002'],
       observations: ['audience', 'working-style'],
+      rules: [],
+      bugs: [],
     });
-    expect(first.counters).toEqual({ subjects: 4, entries: 6, droppedRefs: 0 });
+    expect(first.counters).toEqual({ subjects: 4, entries: 8, droppedRefs: 0 }); // six carriers plus the seed's two rules
   });
 });
 

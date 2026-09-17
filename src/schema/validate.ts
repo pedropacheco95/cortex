@@ -9,6 +9,8 @@ import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout
 import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatchesPath } from './checks/specs.js';
 import { checkRules, checkBugs, checkCompassHeading } from './checks/compass.js';
 import { checkIndexCompleteness } from './checks/index-completeness.js';
+import { checkIdRegistry } from './checks/registry.js';
+import { checkVisibility } from './checks/visibility.js';
 import { checkAtlas } from './checks/atlas.js';
 import { checkPulse } from './checks/pulse.js';
 import { checkThreads } from './checks/threads.js';
@@ -92,6 +94,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
 
   // 3. Run all checks
   const allViolations: Violation[] = [...configResult.violations];
+  const notes: string[] = []; // report side channel (ValidationReport.notes) — check.visibility's allowed-file lines
 
   // Layout checks
   allViolations.push(...checkLayout(root));
@@ -113,6 +116,8 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...checkRules(root, index));
   allViolations.push(...checkBugs(root, index));
   allViolations.push(...checkCompassHeading(root)); // §4.1/§4.2 H1 token agrees with id: (validator Rule 13, wave A 2026-09-17)
+  allViolations.push(...checkIdRegistry(root)); // §4.1/§4.2/§10.4 compass/registry.md against the rule and bug files (schema.id-registry Rule 5, wave B 2026-09-17)
+  allViolations.push(...checkVisibility(root, notes)); // §10.1 operational specifics in tracked compass/atlas files, public repos only (schema.visibility, wave B 2026-09-17)
 
   // Atlas checks
   allViolations.push(...await checkAtlas(root, index));
@@ -192,5 +197,6 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
     conformant: counts.error === 0,
     violations: filteredViolations,
     counts,
+    ...(notes.length > 0 ? { notes } : {}),
   };
 }

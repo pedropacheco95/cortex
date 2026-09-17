@@ -3,7 +3,7 @@ id: B-020
 title: Every archive-ingestion `promotion` is refused at `pulse-accept` — the accept path still enforces the v2.0 "Source must name an insight file" rule that schema 3.0 retired for this type
 type: wrong-rule
 severity: high
-status: open
+status: resolved
 affects:
   - insight.promotion-mechanism
   - archive.ingest-skill
@@ -41,6 +41,7 @@ proposed_fix: >-
   condition, and any check.pulse change if the validator gains a Source-shape check.
 found_at_commit: 2b217df
 opened: 2026-09-17T11:30:00Z
+resolved: 2026-09-17T15:30:00Z
 ---
 
 # B-020 — archive-ingestion promotions are refused by the v2.0 insight-source rule
@@ -284,4 +285,27 @@ caught by `cortex validate` rather than at accept.
 
 ### Resolution
 
-(open)
+Resolved 2026-09-17 in wave follow-up B (plan `plans/2026-09-17-wave-b.md`, Task 2.5), under
+reading (a): schema §4.5.1 wins. Pedro approved the contract change in the same wave.
+
+- **Schema:** §4.5's Source clause now names the artefact being promoted — an archive
+  `extracted/` file or an insight anatomy entry (3.4 fifth revision, commit `85b7eb0`).
+- **Spec:** `insight.promotion-mechanism` Rules 5–6 corrected; the single promotion AC split
+  into insight-sourced (S-055, trailer stamped) and archive-sourced (S-060, no insight file
+  touched); missing-source and neither-kind refusals kept (S-056, S-061). `archive.ingest-skill`
+  gained the end-to-end criterion "an emitted promotion is acceptable by the gate it targets".
+- **Code:** `src/pulse/promote.ts` — `extractInsightSource` replaced by
+  `extractPromotionSource` returning `{ kind: 'insight' | 'archive', rel }`; `planPromotion`
+  yields `insightAbs`/`nextInsight` as `null` for the archive kind and refuses an archive-sourced
+  promotion whose target is outside `compass/` or `atlas/`; the refusal text no longer mentions
+  `insight/map/`; `injectSourceFrontmatter` leaves a payload that already declares a top-level
+  `source:` byte-identical (the skill's rule template carries one — the old injection produced a
+  duplicate YAML key). `src/pulse/review.ts` writes the insight trailer only when present and
+  prints `promoted to <target>` for the archive kind.
+- **Tests:** `tests/atomic/pulse/promote.test.ts` (18), the promotion-mechanism spec slice
+  (S-060 watched red with exactly the refusal above, then green), and
+  `tests/spec/archive/ingest-skill.spec.test.ts` (the skill's step 4 template accepts end to end,
+  registry gains the rule id, validate clean).
+- **Not done here:** the business re-home of `insight.promotion-mechanism` (its parent still
+  promises 2.0 insight-prose graduation) stays open for Pedro; `check.pulse` gained no
+  Source-shape check (adjacent item above, unfiled).

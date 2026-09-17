@@ -27,6 +27,7 @@ import { validate } from '../schema/validate.js';
 import { SUPPORTED_MAJOR } from '../schema/version.js';
 import { readProfile } from './profile.js';
 import { stripRecallBlock } from '../recall/index-blocks.js';
+import { ensureRegistry } from '../compass/registry.js';
 import {
   SCHEMA_VERSION,
   CORTEX_INDEXES,
@@ -539,6 +540,15 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   opts.onProgress?.('Refreshing _index.md templates…');
   const indexResult = refreshIndexes(absRoot);
 
+  // Rule 15 — id registry migration (schema §10.4, 3.4 fifth revision;
+  // schema.id-registry Rule 6). Absent → created once from the R-*/B-* files
+  // on disk; present → an existence check only, never regenerated or
+  // re-sorted (Rule 10's one carve-out: a machine-derived ledger of ids the
+  // files already carry, not knowledge). Fires under every profile. No
+  // progress message: Rule 14 pins its step list to the slow steps, and this
+  // one is a directory listing and one write.
+  const registryResult = ensureRegistry(absRoot);
+
   // Cheap bundle count for the Rule 5 progress message below — a directory
   // listing, not the hashing syncSkillBundles itself does.
   const skillsSrcDir = path.join(packageRoot(), 'skills');
@@ -601,6 +611,11 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   lines.push(`_index.md: ${indexResult.current.length} current, ${indexResult.localised.length} left as localised.`);
   if (indexResult.current.length > 0) lines.push(`  Current: ${indexResult.current.join(', ')}.`);
   if (indexResult.localised.length > 0) lines.push(`  Localised (left alone): ${indexResult.localised.join(', ')}.`);
+  lines.push(
+    registryResult.created
+      ? `Id registry: registry created (${registryResult.rules} rules, ${registryResult.bugs} bugs) at .cortex/compass/registry.md.`
+      : 'Id registry: registry present (left untouched).',
+  );
   lines.push(
     `Skill bundles: ${skillResult.installed.length} installed, ${skillResult.upgraded.length} upgraded, ` +
       `${skillResult.alreadyCurrent.length} already current, ${skillResult.skippedUserModified.length} skipped (user-modified), ` +

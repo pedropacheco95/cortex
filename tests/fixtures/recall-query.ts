@@ -17,6 +17,8 @@ export function recallSubject(partial: Partial<RecallSubject> = {}): RecallSubje
     evidence: partial.evidence ?? [],
     threads: partial.threads ?? [],
     observations: partial.observations ?? [],
+    rules: partial.rules ?? [],
+    bugs: partial.bugs ?? [],
   };
 }
 

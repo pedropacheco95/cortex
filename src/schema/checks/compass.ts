@@ -161,9 +161,29 @@ export function checkBugs(root: string, index: ProjectIndex): Violation[] {
     if (!data['affects'] || !Array.isArray(data['affects'])) {
       violations.push({ severity: 'error', check: 'check.bug', clause: '§4.3', location: { path: filePath, key: 'affects' }, message: 'Bug missing required field "affects" (list)' });
     }
+
+    // Schema §4.2 (3.4 fifth revision, compass.bug-currency Rule 3): the three
+    // optional currency fields, shape only — absent means unknown, never a
+    // finding; no cross-field rule (a bare `triaged` is the triage loop's line).
+    if (data['owner'] !== undefined && typeof data['owner'] !== 'string') {
+      violations.push({ severity: 'error', check: 'check.bug', clause: '§4.2', location: { path: filePath, key: 'owner' }, message: `Bug "owner" must be a string (got ${describeType(data['owner'])})` });
+    }
+    if (data['fix_in_flight'] !== undefined && typeof data['fix_in_flight'] !== 'string') {
+      violations.push({ severity: 'error', check: 'check.bug', clause: '§4.2', location: { path: filePath, key: 'fix_in_flight' }, message: `Bug "fix_in_flight" must be a string (a branch, PR URL or commit; got ${describeType(data['fix_in_flight'])})` });
+    }
+    if (data['found_at_commit'] !== undefined && (typeof data['found_at_commit'] !== 'string' || !FOUND_AT_COMMIT_PATTERN.test(data['found_at_commit']))) {
+      violations.push({ severity: 'error', check: 'check.bug', clause: '§4.2', location: { path: filePath, key: 'found_at_commit' }, message: `Bug "found_at_commit" must match ${FOUND_AT_COMMIT_PATTERN} (a 7–40 character lowercase hex sha; got ${JSON.stringify(data['found_at_commit'])})` });
+    }
   }
 
   return violations;
+}
+
+/** Schema §4.2's `found_at_commit` shape (compass.bug-currency Rule 1). */
+const FOUND_AT_COMMIT_PATTERN = /^[0-9a-f]{7,40}$/;
+
+function describeType(v: unknown): string {
+  return v === null ? 'null' : Array.isArray(v) ? 'a list' : typeof v;
 }
 
 const RULE_FILE_PATTERN = /^R-\d{3,}(-[A-Za-z0-9-]+)?\.md$/;

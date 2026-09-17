@@ -6,6 +6,7 @@ propose a write that touches governed files, or when triaging a bug.
 **What's here:**
 - `rules/` — one file per rule (R-NNN). Match a write's path against each rule's `governs`.
 - `bugs/` — the bug ledger (B-NNN), classified by the seven-type taxonomy.
+- `registry.md` — every issued R-NNN and B-NNN, one line each; allocate with `cortex id next`.
 - `preferences.md`, `environment.md` — project conventions and operational pointers.
 - `do-not-repeat.md` — index of recurring-mistake rules.
 

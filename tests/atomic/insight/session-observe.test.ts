@@ -1078,3 +1078,42 @@ describe('the cortex-loop-session-observe skill bundle', () => {
     expect(skill).toContain('cortex-pulse-distil');
   });
 });
+
+// ---------------------------------------------------------------------------
+// schema.id-registry Rule 4 (3.4 fifth revision): the drafted rule id reads
+// the registry floor — read-only; the loop never writes the registry
+// (RULES.md rule 7).
+// ---------------------------------------------------------------------------
+import { REGISTRY_FILE, REGISTRY_HEADER } from '../../../src/compass/registry.js';
+
+describe('ruleFilePayload reads the id registry floor (schema.id-registry Rule 4)', () => {
+  it('a registry listing R-009 reserved with no R-009 file makes the next drafted target R-010, and the registry is not written', () => {
+    const root = tmp('rule-payload-registry');
+    fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-001-existing.md'), '# existing\n', 'utf-8');
+    const registry = `${REGISTRY_HEADER}\nR-001 existing\nR-009 reserved\n`;
+    fs.writeFileSync(path.join(root, REGISTRY_FILE), registry, 'utf-8');
+    const { targetRel } = ruleFilePayload(
+      { type: 'rule-candidate', pattern: 'next', proposedText: 'a', sessionIds: ['s'] },
+      root,
+      'pedro',
+      new Set<string>(),
+    );
+    expect(targetRel).toBe('.cortex/compass/rules/R-010-next.md');
+    expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(registry);
+  });
+
+  it('the disk floor still wins when a file outnumbers the registry', () => {
+    const root = tmp('rule-payload-disk-wins');
+    fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-012-late.md'), '# late\n', 'utf-8');
+    fs.writeFileSync(path.join(root, REGISTRY_FILE), `${REGISTRY_HEADER}\nR-003 c\n`, 'utf-8');
+    const { targetRel } = ruleFilePayload(
+      { type: 'rule-candidate', pattern: 'next', proposedText: 'a', sessionIds: ['s'] },
+      root,
+      'pedro',
+      new Set<string>(),
+    );
+    expect(targetRel).toBe('.cortex/compass/rules/R-013-next.md');
+  });
+});

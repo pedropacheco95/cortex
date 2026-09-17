@@ -216,6 +216,78 @@ describe('AC5: CLAUDE.md content outside the managed block is preserved across t
 });
 
 // ---------------------------------------------------------------------------
+// AC5b (3.4 fifth revision, Rule 10): the block names the non-implementer
+// roles, states placement once, and drops the mandate
+// ---------------------------------------------------------------------------
+describe('AC5b: the block names the non-implementer roles, states placement once, and drops the mandate', () => {
+  let freshRoot: string;
+  let publicRoot: string;
+  let home: string;
+  let freshBlock: string;
+  let publicBlock: string;
+  const unwrap = (s: string) => s.replace(/\n(?!\n)/g, ' ');
+  const blockOf = (root: string) => {
+    const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+    return content.slice(content.indexOf('<!-- cortex:start'), content.indexOf('<!-- cortex:end -->'));
+  };
+
+  beforeAll(async () => {
+    freshRoot = makeTmpDir('ac5b-fresh');
+    publicRoot = makeTmpDir('ac5b-public');
+    home = makeTmpDir('ac5b-home');
+    await init(freshRoot, { noLlm: true, yes: true, home, ...DARWIN });
+    // A project whose config already carries the two keys: init --force merges
+    // the existing config (Rule 16) and renders the block from it.
+    fs.mkdirSync(path.join(publicRoot, '.cortex'), { recursive: true });
+    fs.writeFileSync(
+      path.join(publicRoot, '.cortex', 'cortex.config.json'),
+      JSON.stringify({ schemaVersion: SCHEMA_VERSION, visibility: { repo: 'public', allow: [] }, placement: { localNotesDir: 'docs/notes' } }, null, 2) + '\n',
+    );
+    await init(publicRoot, { noLlm: true, yes: true, force: true, home, ...DARWIN });
+    freshBlock = blockOf(freshRoot);
+    publicBlock = blockOf(publicRoot);
+  }, TEST_TIMEOUT);
+  afterAll(() => { cleanTmp(freshRoot); cleanTmp(publicRoot); cleanTmp(home); });
+
+  it('both blocks carry the pinned role sentence', () => {
+    for (const block of [freshBlock, publicBlock]) {
+      expect(unwrap(block)).toContain('This applies more, not less, to sessions that dispatch, review or plan rather than edit');
+    }
+  });
+
+  it('exactly one line starts **Placement:** durable knowledge lives in `.cortex/`', () => {
+    for (const block of [freshBlock, publicBlock]) {
+      expect(block.split('\n').filter((l) => l.startsWith('**Placement:** durable knowledge lives in `.cortex/`'))).toHaveLength(1);
+    }
+  });
+
+  it("the fresh block's placement line ends with the unknown tail", () => {
+    const para = unwrap(freshBlock.split('\n\n').find((p) => p.startsWith('**Placement:**')) ?? '');
+    expect(para.endsWith('Repository visibility is unknown — set `visibility.repo` in `cortex.config.json`.')).toBe(true);
+  });
+
+  it("the public block's placement line names docs/notes as local and untracked and ends (RULES.md rule 20).", () => {
+    const para = unwrap(publicBlock.split('\n\n').find((p) => p.startsWith('**Placement:**')) ?? '');
+    expect(para).toContain('`docs/notes` is local and untracked: notes there do not travel — promote them into `.cortex/` instead of tracking the directory.');
+    expect(para.endsWith('(RULES.md rule 20).')).toBe(true);
+  });
+
+  it('neither block contains the insight mandate', () => {
+    for (const block of [freshBlock, publicBlock]) {
+      expect(block).not.toContain('This is not optional');
+      expect(block).not.toContain('Before substantive work on any file');
+    }
+  });
+
+  it('both projects still validate clean on check.claude-md', async () => {
+    for (const root of [freshRoot, publicRoot]) {
+      const report = await validate(root);
+      expect(report.violations.filter((v) => v.check === 'check.claude-md')).toEqual([]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // AC6: settings.json merge preserves unrelated keys
 // ---------------------------------------------------------------------------
 describe('AC6: settings.json merge preserves unrelated keys', () => {

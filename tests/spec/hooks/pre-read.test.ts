@@ -508,3 +508,49 @@ describe('Rule 8: the stale marker rides on the deny reason and on the summary l
     expect(first.permissionDecisionReason).not.toContain('stale');
   }, TEST_TIMEOUT);
 });
+
+// ---------------------------------------------------------------------------
+// Rule 6, Bugs part (3.4 fifth revision): through the real compiler and the
+// hook CLI — an open bug on the fixture's source file rides the marker alone.
+// ---------------------------------------------------------------------------
+import { writeRecallIndex as compileRecall } from '../../../src/recall/index.js';
+
+describe('Rule 6 (fifth revision): an open bug on a source file rides the marker alone through `cortex hook pre-read`', () => {
+  afterEach(() => clearRecallIndexCache());
+
+  it('a compiled index with B-019 affecting src/auth/session.ts → summary, invitation, then `Bugs: B-019`; resolved → no marker', async () => {
+    const root = tmp('rule6-bugs');
+    copyDir(VALID_FIXTURE, root);
+    fs.writeFileSync(
+      path.join(root, '.cortex', 'cortex.config.json'),
+      JSON.stringify({ schemaVersion: '3.4', hooks: { preRead: true }, loop: { enabled: false } }),
+    );
+    writeFile(root, 'src/auth/session.ts', 'export const session = 1;\n');
+    const bugFile = '.cortex/compass/bugs/B-019-session-leak.md';
+    const bug = (status: string): string =>
+      ['---', 'id: B-019', 'title: Session leaks across requests', 'type: incomplete-rule', 'severity: high', `status: ${status}`, 'affects: [src/auth/session.ts, schema.validator]', 'opened: 2026-09-15T17:00:00Z', '---', '', '# B-019', ''].join('\n');
+    writeFile(root, bugFile, bug('open'));
+    await compileRecall(root);
+
+    const read = async (rel: string, session: string) => runHook('pre-read', JSON.stringify(stdinFor(root, path.join(root, rel), session)));
+    const source = await read('src/auth/session.ts', 'sess-bugs');
+    expect(source.exitCode).toBe(0);
+    const lines = parseEnvelope(source.stdout).additionalContext.split('\n');
+    expect(lines[0]?.startsWith('src/auth/session.ts: ')).toBe(true);
+    expect(lines[1]?.startsWith('If this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/auth/session.ts">')).toBe(true);
+    expect(lines[2]).toBe('Bugs: B-019');
+    expect(lines).toHaveLength(3);
+    expect(Math.ceil(lines.join('\n').length / 4)).toBeLessThanOrEqual(125);
+
+    const spec = await read('.specflow/specs/schema/validator.spec.md', 'sess-bugs');
+    expect(parseEnvelope(spec.stdout).additionalContext).toBe('Bugs: B-019');
+
+    writeFile(root, bugFile, bug('resolved'));
+    clearRecallIndexCache();
+    await compileRecall(root);
+    const again = await read('src/auth/session.ts', 'sess-bugs-2');
+    expect(parseEnvelope(again.stdout).additionalContext.split('\n')).toHaveLength(2);
+    expect(parseEnvelope(again.stdout).additionalContext).not.toContain('Bugs:');
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  }, TEST_TIMEOUT);
+});

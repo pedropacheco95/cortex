@@ -94,7 +94,7 @@ describe('recall.why — the listing over a compiled index (Rules 2–4, end-to-
     expect(code).toBe(0);
     expect(err).toBe('');
     expect(out.split('\n')).toEqual([
-      'R-001 (rule) — 1 decided · 0 evidence · 0 open · 0 observation themes',
+      'R-001 (rule) — 1 decided · 0 evidence · 0 open · 0 observation themes · 0 bugs · 0 rules',
       'Decided:',
       '  2026-09-15  decision.2026-09-15-recall-verbs — Recall verbs are pull-only  (.cortex/atlas/decisions/2026-09-15-recall-verbs.md)',
     ]);
@@ -103,7 +103,7 @@ describe('recall.why — the listing over a compiled index (Rules 2–4, end-to-
   it('the dispatcher routes why and recall to the module — and never into init', async () => {
     const why = await viaCli(['why', 'R-001']);
     expect(why.code).toBe(0);
-    expect(why.raw[0]).toBe('R-001 (rule) — 1 decided · 0 evidence · 0 open · 0 observation themes');
+    expect(why.raw[0]).toBe('R-001 (rule) — 1 decided · 0 evidence · 0 open · 0 observation themes · 0 bugs · 0 rules');
 
     const recall = await viaCli(['recall', 'recall', 'verbs']);
     expect(recall.code).toBe(0);
@@ -119,12 +119,13 @@ describe('recall.why — the listing over a compiled index (Rules 2–4, end-to-
     const parsed = JSON.parse(raw[0] as string) as { key: string; entries: Record<string, unknown> };
     expect(parsed.key).toBe('R-001');
     expect(Object.keys(parsed.entries)).toEqual(['decision.2026-09-15-recall-verbs']);
+    expect((JSON.parse(raw[0] as string) as { bugs: Record<string, unknown> }).bugs).toEqual({});
   });
 
   it('a path ref to the rule file resolves through its compass id', async () => {
     const { code, out } = await viaModule(['why', '.cortex/compass/rules/R-001-index-first.md']);
     expect(code).toBe(0);
-    expect(out.split('\n')[0]).toBe('R-001 (rule, for .cortex/compass/rules/R-001-index-first.md) — 1 decided · 0 evidence · 0 open · 0 observation themes');
+    expect(out.split('\n')[0]).toBe('R-001 (rule, for .cortex/compass/rules/R-001-index-first.md) — 1 decided · 0 evidence · 0 open · 0 observation themes · 0 bugs · 0 rules');
   });
 });
 
@@ -165,4 +166,46 @@ describe('recall.why — the verbs are counted the day they ship (pulse.usage Ru
       cleanTmp(usageHome);
     }
   });
+});
+
+// ---------------------------------------------------------------------------
+// 3.4 fifth revision — the compass carriers through the real compiler and the
+// dispatcher: R-001 governs src/**/*.ts, a triaged bug affects src/x.ts.
+// ---------------------------------------------------------------------------
+describe('recall.why — the rule and the open bug on a source file, compiled (Rules 1, 4, 5, fifth revision)', () => {
+  it('cortex why src/x.ts lists Bugs: with the currency sub-line and Rules: with R-001; resolved → the bug drops out; --kind rule filters', async () => {
+    write('src/x.ts', 'export {};\n');
+    write(
+      '.cortex/compass/bugs/B-019-x.md',
+      ['---', 'id: B-019', 'title: x leaks', 'type: incomplete-rule', 'severity: high', 'status: triaged', 'owner: pedro', 'fix_in_flight: fix/x-leak', 'affects: [src/x.ts]', 'opened: 2026-09-15T17:00:00Z', '---', '', '# B-019', ''].join('\n'),
+    );
+    clearRecallIndexCache();
+    await writeRecallIndex(root);
+    try {
+      const { code, out } = await viaCli(['why', 'src/x.ts']);
+      expect(code).toBe(0);
+      expect(out.split('\n')).toEqual([
+        'src/x.ts (path) — 0 decided · 0 evidence · 0 open · 0 observation themes · 1 bugs · 1 rules',
+        'Bugs:',
+        '  B-019  triaged — x leaks  (.cortex/compass/bugs/B-019-x.md)',
+        '    owner=pedro  fix=fix/x-leak  found_at=-',
+        'Rules:',
+        '  R-001  Read the index first  (.cortex/compass/rules/R-001-index-first.md)',
+      ]);
+      const rules = await viaCli(['recall', 'index', 'first', '--kind', 'rule']);
+      expect(rules.out).toBe('rule  R-001 — Read the index first (.cortex/compass/rules/R-001-index-first.md)');
+
+      fs.writeFileSync(path.join(root, '.cortex/compass/bugs/B-019-x.md'), fs.readFileSync(path.join(root, '.cortex/compass/bugs/B-019-x.md'), 'utf-8').replace('status: triaged', 'status: resolved'));
+      clearRecallIndexCache();
+      await writeRecallIndex(root);
+      const after = await viaCli(['why', 'src/x.ts']);
+      expect(after.out.split('\n')[0]).toBe('src/x.ts (path) — 0 decided · 0 evidence · 0 open · 0 observation themes · 0 bugs · 1 rules');
+      expect(after.out).not.toContain('Bugs:');
+    } finally {
+      fs.rmSync(path.join(root, '.cortex/compass/bugs/B-019-x.md'), { force: true });
+      fs.rmSync(path.join(root, 'src'), { recursive: true, force: true });
+      clearRecallIndexCache();
+      await writeRecallIndex(root);
+    }
+  }, TEST_TIMEOUT);
 });

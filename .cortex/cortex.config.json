@@ -15,5 +15,8 @@
   },
   "loop": {
     "enabled": false
+  },
+  "visibility": {
+    "repo": "public"
   }
 }

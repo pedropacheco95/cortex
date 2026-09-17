@@ -27,6 +27,7 @@ proposed_fix: >-
   checked anywhere); (b) an index-completeness warning when compass/rules/_index.md
   or compass/bugs/_index.md omits a rule or bug present on disk.
 opened: 2026-09-16T16:55:00Z
+resolved: 2026-09-17T12:00:00Z
 ---
 
 # B-019 — duplicate rule and bug ids pass `cortex validate`
@@ -202,7 +203,13 @@ Same with two `B-001-*.md` files. Clean up `/tmp/x` and `/tmp/xhome` afterwards.
 
 ### Resolution
 
-(open)
+Resolved 2026-09-17 in wave follow-up A (commit `1a0174c`). `schema.validator` gained the
+id-uniqueness rule in the spec's own words; `check.xref-unique` now errors on a duplicate id of
+any indexed kind (specs, compass rules, bugs, atlas artefacts, scenario specs) naming every file
+that carries it, warns when a rule or bug H1 disagrees with its `id`, and warns when an
+`_index.md` omits a sibling file. Wave B (`85b7eb0` and the following commit) added the id
+registry (`compass/registry.md`, `cortex id next`, `check.id-registry`) so parallel branches
+conflict in git instead of colliding silently.
 
 ### External evidence
 

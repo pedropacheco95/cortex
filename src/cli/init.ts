@@ -13,6 +13,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { scaffoldInsight } from '../insight/scaffold.js';
 import { scaffoldArchive } from '../archive/scaffold.js';
+import { ensureRegistry } from '../compass/registry.js';
 import { DEFAULT_PROFILE, type ProcessProfile } from './profile.js';
 import { validate } from '../schema/validate.js';
 import {
@@ -178,6 +179,11 @@ function writeSkeleton(root: string, force: boolean, nowIso: string, profile: Pr
   const compass = path.join(cortexDir, 'compass');
   writeIfAbsent(path.join(compass, 'environment.md'), COMPASS_ENVIRONMENT_TEMPLATE, false);
   writeIfAbsent(path.join(compass, 'do-not-repeat.md'), COMPASS_DO_NOT_REPEAT_TEMPLATE, false);
+  // The id registry (schema.id-registry Rules 1 and 6; 3.4 fifth revision):
+  // header-only on a fresh project, built from any R-*/B-* files already on
+  // disk under --force, never rewritten when present — an issued id is never
+  // re-derived (RULES.md rule 13 of sync's no-silent-destruction, applied here).
+  ensureRegistry(root);
 
   // Pulse rejection memory (persists; preserved if present).
   writeIfAbsent(path.join(cortexDir, 'pulse', 'dismissed.md'), pulseDismissedTemplate(nowIso), false);
