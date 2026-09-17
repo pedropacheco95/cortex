@@ -339,6 +339,25 @@ describe('AC — table rows, code fences and tagged text never feed the lexicon 
   });
 });
 
+describe('AC — status-ladder lines never feed the lexicon fallback', () => {
+  it('records exactly the prose sentence and nothing from the three ladder lines', async () => {
+    const root = project('status-ladder');
+    const text = [
+      'Goal ladder:',
+      '0% ░░░░░░░░░░  done when a grep into the schema returns a Decided/Open pointer, measured',
+      'Rollout 40% — median 12 ms over 30 sessions',
+      'Done when the proceed-rate is measured over 20 sessions.',
+      '',
+      'The whole pass measured 3.1x faster.',
+    ].join('\n');
+    const transcript = writeTranscriptFile(root, [turnAt('user', 'brief', T0), turnAt('assistant', text, T1)]);
+    await run(sessionEndStdin(root, transcript), { now: NOW });
+    expect(readSessionRecord(root, 'sess-end')?.findings).toEqual([
+      { kind: 'measurement', text: 'The whole pass measured 3.1x faster.', timestamp: T1, source: 'lexicon' },
+    ]);
+  });
+});
+
 describe('AC — untagged measurements fall back to the lexicon in interactive sessions only', () => {
   const SENTENCE = 'The line-filtered pass measured 3.1x faster than a full parse.';
 

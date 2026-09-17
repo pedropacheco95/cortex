@@ -34,6 +34,9 @@ The validator operates on files, not database records. It reads artefacts and pr
 9. A directory that the schema requires to carry an `_index.md` (under `.cortex/`) or an `_overview.md` (in either spec tree) but does not is a violation.
 10. The validator can be scoped to the whole project, a single tree (e.g. `specs/` only), a subtree, or a single file. When scoped, cross-reference resolution still resolves against the full project so links into out-of-scope files are not falsely reported as broken.
 11. Conformance verdict: a target is **non-conformant** if it has any `error`-severity violation, and **conformant** (optionally with warnings) otherwise. When invoked via the CLI, a non-conformant result exits non-zero.
+12. **Global id uniqueness across all kinds (schema §6 global rule 1; B-019).** Every `id` is unique within its kind across everything the project index scans in its single pass — dev and business specs (combined, across both trees), compass rules, compass bugs, atlas artefacts (decisions, evidence, domain terms, stakeholders, sources) and scenario specs. A duplicate is an `error` from `check.xref-unique`, one per duplicated id, located at the first file and naming every file that carries the id. Uniqueness is derived from the index's own scan — `buildIndex` keeps every file per id (`id → files[]`), never a second, narrower glob — and the index never silently discards a duplicate: resolving a duplicated id yields **no** file, so a `governed_by`, `affects`, `bears_on`, `compass_rules` or `related_specs` reference to it is reported as unresolved by the referring check alongside the uniqueness error, never satisfied by whichever file the scan listed last.
+13. **Rule and bug self-agreement.** A compass rule's or bug's number must agree in three places: the filename prefix (`R-NNN-<slug>.md` / `B-NNN-<slug>.md`), the `id:` field, and the H1 heading (`# R-NNN — …` / `# B-NNN — …`). Filename versus `id:` disagreement is an `error` from `check.rule` / `check.bug` — already enforced in `src/schema/checks/compass.ts`, restated here so the rule is complete. The H1 is prose the schema does not shape (§4.1, §4.2), so its disagreement is a `warning` from `check.compass-heading`, raised only when the body's first H1 begins with an `R-NNN` / `B-NNN` token that differs from `id:`; a file with no H1, or an H1 with no such token, is not a finding.
+14. **Index completeness.** `compass/rules/_index.md` should reference every `R-NNN` file in `compass/rules/`, and `compass/bugs/_index.md` every `B-NNN` file in `compass/bugs/`. An id counts as referenced when its literal token appears anywhere in the index, or when it lies inside a same-prefix range written `R-001–R-003` (en dash, em dash or hyphen between two ids) — the collapsed forms the indexes already use. An index that carries a `… and N more` line (the §7.1 generated-block tail) or a generated block (`<!-- cortex:recall:start`) counts as **complete** without a scan: it collapsed to fit the <300-token budget by design, and completeness cannot be read off it. Otherwise the missing ids produce, per index, exactly one `warning` from `check.index-completeness` (clause §7.1) at the index file, whose message reads `index lists N of M rules` / `… bugs` and names up to five missing ids. The check never asks an index to grow past its budget — an over-budget index is `check.index-shape`'s warning, and the remedy for both at once is a range or the `… and N more` line, not more rows. An absent directory or index is not this check's finding (`check.index-present` owns absence).
 
 ## Acceptance Criteria
 
@@ -92,6 +95,51 @@ The validator operates on files, not database records. It reads artefacts and pr
 - **Then** it reports violations local to that file
 - **And** its `implements:` target in `specs-business/` is resolved against the full project rather than reported as out-of-scope
 
+### Two compass rules with one id are rejected
+
+- **Given** a conformant tree plus `.cortex/compass/rules/R-026-first.md` and `R-026-second.md`, both `id: R-026`, each individually valid under `check.rule` (a resolving `source:`, a matching `governs:` glob)
+- **When** the validator runs
+- **Then** the report contains exactly one `error` from `check.xref-unique` citing `§6`, located at `R-026-first.md`, whose message names both files
+- **And** the tree is non-conformant
+
+### Two bugs with one id are rejected
+
+- **Given** the same tree plus `.cortex/compass/bugs/B-001-first.md` and `B-001-second.md`, both `id: B-001`, each individually valid under `check.bug`
+- **When** the validator runs
+- **Then** the report contains exactly one `error` from `check.xref-unique` whose message names both bug files
+
+### Two specs with one id are rejected
+
+- **Given** two dev specs in different directories both declaring `id: schema.validator`
+- **When** the validator runs
+- **Then** the report contains an `error` from `check.xref-unique` naming both files (this criterion adopts the pre-existing test `check.xref-unique: two specs with same ID → fires` in `tests/atomic/schema/validator.test.ts`)
+
+### A duplicated id never resolves to an arbitrary file
+
+- **Given** the two `R-026` files above and a dev spec whose `governed_by:` lists `R-026`
+- **When** the validator runs
+- **Then** the index holds both files under `R-026` (`idToFiles.get('R-026')` has two entries) and `resolveId` returns nothing for it
+- **And** the report carries the `check.xref-unique` error and an unresolved-reference `error` at the dev spec's `governed_by` key — never a silent resolution to either file
+
+### An H1 that disagrees with the id is warned, a filename that disagrees stays an error
+
+- **Given** `R-026-first.md` with `id: R-026` and the H1 `# R-027 — Second rule`, and `B-004-x.md` with `id: B-005`
+- **When** the validator runs
+- **Then** the report contains one `warning` from `check.compass-heading` at `R-026-first.md` naming `R-027` and `R-026`, and one `error` from `check.bug` at the `id` key of `B-004-x.md` (the filename rule)
+- **And** a rule whose H1 is `# Core makes no LLM calls` (no id token) produces no `check.compass-heading` finding
+
+### An index that omits a bug is warned with the count
+
+- **Given** `compass/bugs/` holding `B-001` … `B-005` and a `compass/bugs/_index.md` whose body mentions `B-001–B-003` and `B-005` only
+- **When** the validator runs
+- **Then** the report contains exactly one `warning` from `check.index-completeness` at `compass/bugs/_index.md` whose message is `index lists 4 of 5 bugs (missing: B-004)`, and the tree stays conformant
+
+### A collapsed index counts as complete
+
+- **Given** the same five bugs and an index whose body mentions `B-005` and the line `- … and 4 more (\`cortex …\`)`, and a rules index carrying a `<!-- cortex:recall:start v3.4 -->` … `<!-- cortex:recall:end -->` block that names no rule
+- **When** the validator runs
+- **Then** neither index produces a `check.index-completeness` finding
+
 ## Notes
 
 - The contract is `cortex-schema.md` (schema v1.0). Rules 5-11 of this spec map onto its mechanical check catalogue (Appendix A); the per-facet definitions live in `cortex-schema.md` §1 (layout), §2-§3 (tree/test conventions), §4 (frontmatter), §5 (hooks), §6 (cross-references), §7-§9 (index/overview/CLAUDE/loop templates), §10 (versioning). If the schema adds or renames a facet, revise this spec in the same change.
@@ -99,3 +147,5 @@ The validator operates on files, not database records. It reads artefacts and pr
 - **Resolved (was OPEN): `ValidationReport` format** is fixed in `cortex-schema.md` §6.1; see the Entities section above.
 - Also supports: the `core-cli` outcome (the validator is invoked by `cortex scan` / `cortex init`) and the `specflow` lineage (the scheduled `specflow-lint` loop overlaps with these structural checks). Primary parent remains `schema.contributor-trusts-project-knowledge`.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).
+- **Rules 12–14 (2026-09-17, wave follow-up A; B-019).** Rule 12 is schema §6 global rule 1 restated in this spec's words — it was absent here until B-019 showed `check.xref-unique` (`src/schema/checks/xref.ts`) re-globbing the two spec trees while `buildIndex` (`src/schema/index-build.ts`) overwrote the second file of a duplicated id. Rules 13 and 14 are the two adjacent asks of the 2026-09-14 parallel-wave brief (`.cortex/archive/documents/parallel-wave-brief-2026-09-14/extracted/asks.md`, A-02 and A-03): four sessions re-allocated a colliding `R-026` in one night because each read the index, not the directory. Plan: `plans/2026-09-17-wave-a.md`.
+- **OPEN: clause labels in `compass.ts` are one section behind the schema.** `check.rule` cites `§4.2` and `check.bug` `§4.3`, while `cortex-schema.md` numbers those sections §4.1 and §4.2. Pre-existing, not corrected in the Rule 12–14 round (tests may pin the strings); `check.compass-heading` cites the schema's numbering (§4.1 for a rule, §4.2 for a bug).

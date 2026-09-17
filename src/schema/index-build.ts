@@ -5,8 +5,12 @@ import * as path from 'path';
 import { SPECS_GLOB, BUSINESS_GLOB } from '../paths.js';
 
 export interface ProjectIndex {
-  // id -> absolute file path
+  // id -> absolute file path (only ids carried by exactly one file; a
+  // duplicated id is absent here so resolveId finds nothing — Rule 12, B-019)
   idToPath: Map<string, string>;
+  // id -> every absolute file path that carries it, in glob order (§6 global
+  // rule 1: check.xref-unique reads this; length > 1 is a duplicate)
+  idToFiles: Map<string, string[]>;
   // absolute path -> frontmatter data
   pathToData: Map<string, Record<string, unknown>>;
   // absolute path -> file content
@@ -16,6 +20,7 @@ export interface ProjectIndex {
 
 export async function buildIndex(root: string): Promise<ProjectIndex> {
   const idToPath = new Map<string, string>();
+  const idToFiles = new Map<string, string[]>();
   const pathToData = new Map<string, Record<string, unknown>>();
   const pathToContent = new Map<string, string>();
 
@@ -38,14 +43,22 @@ export async function buildIndex(root: string): Promise<ProjectIndex> {
       pathToData.set(file, data);
       pathToContent.set(file, raw);
       if (typeof data['id'] === 'string' && data['id']) {
-        idToPath.set(data['id'], file);
+        const id = data['id'];
+        const files = idToFiles.get(id);
+        if (files === undefined) {
+          idToFiles.set(id, [file]);
+          idToPath.set(id, file);
+        } else {
+          files.push(file);
+          idToPath.delete(id); // never resolve a duplicated id to an arbitrary file
+        }
       }
     } catch {
       // skip unreadable files
     }
   }
 
-  return { idToPath, pathToData, pathToContent, root };
+  return { idToPath, idToFiles, pathToData, pathToContent, root };
 }
 
 export function resolveId(index: ProjectIndex, id: string): string | undefined {

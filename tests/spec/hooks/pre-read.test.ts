@@ -415,3 +415,96 @@ describe('Rule 7: one deny per file per session, the retry always proceeds, gate
     expect(fs.readFileSync(readsMemoryPath(root, 'sess-r7'), 'utf-8')).toBe('src/pulse/usage.ts\n');
   }, TEST_TIMEOUT);
 });
+
+// ---------------------------------------------------------------------------
+// Rule 8: the stale marker (2026-09-17) — the integrated slice through
+// `cortex hook pre-read`: the Rule 7 seed with the source on disk and an entry
+// whose hash no longer matches it. Deny reason line one and the allow summary
+// line both end with ` (stale: built at <7-char commit>)`; a fresh entry is
+// byte-identical to the Rule 7 runs above.
+// ---------------------------------------------------------------------------
+import { sha256Of } from '../../../src/insight/refresh-fast.js';
+
+describe('Rule 8: the stale marker rides on the deny reason and on the summary line, never on a fresh entry', () => {
+  const PURPOSE = 'Counts Cortex usage from session transcripts.';
+  const CONNECTIONS = [
+    'Uses:',
+    '- src/sessions/read.ts: `listSessions`, `readSessionFile` — the read-only transcript layer',
+    '',
+    'Used by:',
+    '- src/cli/cli.ts: dynamic import — `cortex usage` dispatches here',
+  ].join('\n');
+  const BODY = 'export async function runUsage(): Promise<number> {\n  return 0;\n}\n';
+  const INVITE = 'If this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/pulse/usage.ts">corrected one-line purpose</cortex:purpose>';
+
+  function seed(root: string, readDefer: boolean, sha256: string): string {
+    makeCortexProject(root, {
+      config: { schemaVersion: '3.4', hooks: { preRead: true, readDefer }, loop: { enabled: false } },
+    });
+    fs.mkdirSync(path.join(root, 'src', 'pulse'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'pulse', 'usage.ts'), BODY);
+    writeInsightEntry(root, 'src/pulse/usage.ts', {
+      purpose: PURPOSE,
+      tokens: 3320,
+      lines: 302,
+      connections: CONNECTIONS,
+      sha256,
+      builtAtCommit: 'c2de5f6a1b2c3d4e',
+    });
+    writeRule(root, 'R-001-core.md', `id: R-001\ntitle: Core\nsource:\n  - ../bugs/B-001.md\ngoverns:\n  - "src/**/*.ts"`);
+    return writeTranscriptFile(root, [textTurn('user', 'why is usage low?'), textTurn('assistant', 'let me look')]);
+  }
+
+  const readVia = (root: string, transcript: string, rel: string) =>
+    runHook('pre-read', JSON.stringify({ ...stdinFor(root, path.join(root, rel), 'sess-r8'), transcript_path: transcript }));
+
+  it('readDefer on, a stale entry: the deny reason\'s first line ends with the marker; the other three lines are unchanged; ≤1,000 chars; nothing logged', async () => {
+    const root = tmp('rule8-deny');
+    const transcript = seed(root, true, 'f'.repeat(64));
+    const first = await readVia(root, transcript, 'src/pulse/usage.ts');
+    expect(first.exitCode).toBe(0);
+    const env = parseEnvelope(first.stdout);
+    expect(env.permissionDecision).toBe('deny');
+    const reason = env.permissionDecisionReason as string;
+    expect(reason.split('\n')).toEqual([
+      `Deferred: src/pulse/usage.ts (~3320 tok, 302 lines). ${PURPOSE} (stale: built at c2de5f6)`,
+      'Connections: src/sessions/read.ts: `listSessions`, `readSessionFile`; src/cli/cli.ts: dynamic import',
+      'Rules: R-001.',
+      'Reading this path again proceeds without this notice.',
+    ]);
+    expect(reason.length).toBeLessThanOrEqual(1000);
+
+    // The retry: the ordinary payload, its summary line marked the same way.
+    const second = await readVia(root, transcript, 'src/pulse/usage.ts');
+    const secondEnv = parseEnvelope(second.stdout);
+    expect(secondEnv.permissionDecision).toBe('allow');
+    expect(secondEnv.additionalContext).toBe(
+      `src/pulse/usage.ts: ${PURPOSE} (~3320 tok). Rules: R-001. (stale: built at c2de5f6)\n${INVITE}`,
+    );
+    expect(Math.ceil(secondEnv.additionalContext.length / 4)).toBeLessThanOrEqual(75);
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  }, TEST_TIMEOUT);
+
+  it('readDefer off, a stale entry: the summary line ends with the marker, the invitation follows unchanged', async () => {
+    const root = tmp('rule8-allow');
+    const transcript = seed(root, false, 'f'.repeat(64));
+    const result = await readVia(root, transcript, 'src/pulse/usage.ts');
+    const env = parseEnvelope(result.stdout);
+    expect(env.permissionDecision).toBe('allow');
+    expect(env.additionalContext).toBe(
+      `src/pulse/usage.ts: ${PURPOSE} (~3320 tok). Rules: R-001. (stale: built at c2de5f6)\n${INVITE}`,
+    );
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  }, TEST_TIMEOUT);
+
+  it('a fresh entry (source_sha256 hashes the body) is byte-identical to the Rule 7 payloads — no marker anywhere', async () => {
+    const root = tmp('rule8-fresh');
+    const transcript = seed(root, true, sha256Of(BODY));
+    const first = parseEnvelope((await readVia(root, transcript, 'src/pulse/usage.ts')).stdout);
+    expect(first.permissionDecision).toBe('deny');
+    expect((first.permissionDecisionReason as string).split('\n')[0]).toBe(`Deferred: src/pulse/usage.ts (~3320 tok, 302 lines). ${PURPOSE}`);
+    const second = parseEnvelope((await readVia(root, transcript, 'src/pulse/usage.ts')).stdout);
+    expect(second.additionalContext).toBe(`src/pulse/usage.ts: ${PURPOSE} (~3320 tok). Rules: R-001.\n${INVITE}`);
+    expect(first.permissionDecisionReason).not.toContain('stale');
+  }, TEST_TIMEOUT);
+});

@@ -162,8 +162,12 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
    Stored as `{ kind, text, bears_on: string[], timestamp, source: "tag" }`, `bears_on` split on
    commas and trimmed. Plus a **lexicon fallback** for untagged measurements in the tail: the
    assistant text is first reduced to its prose — every `<cortex:finding>` tag is stripped (a
-   tagged sentence is never counted twice), fenced code blocks (``` … ```) are removed, and
-   markdown table rows (lines whose trimmed text starts with `|`) are dropped — then any
+   tagged sentence is never counted twice), fenced code blocks (``` … ```) are removed,
+   markdown table rows (lines whose trimmed text starts with `|`) are dropped, and
+   **status-ladder lines** are dropped — any line matching
+   `STATUS_LADDER_RE = /[█░]|\bdone when\b|\d{1,3}%/i` (a progress-bar glyph, the token
+   `done when`, or a percentage figure; the hook captured the assistant's own goal-ladder
+   status lines as measurements on 2026-09-16, threads T-001 and T-002) — then any
    remaining sentence (split on `. `, `! `, `? ` and newlines) that contains a digit **and** matches
    `/\bover \d+ sessions\b|\d+(\.\d+)?[x×] (cheaper|faster)|\bmedian\b|\bmeasured\b/i` becomes
    `{ kind: "measurement", text, timestamp, source: "lexicon" }`, text capped at 300 characters.
@@ -315,6 +319,17 @@ question or offer is never lost to the lag. No LLM, no network, nothing injected
 - **When** the hook fires
 - **Then** `findings` has exactly two entries: the tag (`source: tag`) and the prose sentence
   (`source: lexicon`) — nothing from the table row, the code block, or the tag's own text
+
+### Status-ladder lines never feed the lexicon fallback
+
+- **Given** an interactive transcript whose assistant text contains the lines
+  `0% ░░░░░░░░░░  done when a grep into the schema returns a Decided/Open pointer, measured`,
+  `Rollout 40% — median 12 ms over 30 sessions` and
+  `Done when the proceed-rate is measured over 20 sessions.`, plus the prose sentence
+  `The whole pass measured 3.1x faster.`
+- **When** the hook fires
+- **Then** `findings` has exactly one entry — the prose sentence, `source: lexicon` — and nothing
+  from the three ladder lines
 
 ### Untagged measurements fall back to the lexicon in interactive sessions only
 

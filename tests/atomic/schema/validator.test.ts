@@ -534,6 +534,9 @@ implements: ../../../specs-business/schema/contributor-trusts-project-knowledge.
     const report = await validate(tmpDir);
     const v = report.violations.find((v) => v.check === 'check.xref-unique');
     expect(v).toBeDefined();
+    // Rule 12 (wave A, 2026-09-17): the message names both files
+    expect(v!.message).toContain('.specflow/specs/schema/validator.spec.md');
+    expect(v!.message).toContain('.specflow/specs/schema2/validator.spec.md');
   });
 });
 

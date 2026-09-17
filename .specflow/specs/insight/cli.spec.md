@@ -19,7 +19,7 @@ This spec defines the `cortex insight` query surface for v3 — implements adden
 
 ## Entities
 
-- **READS:** the shapes owned by `insight.storage-format` — per-file entries under `anatomy/` or `scopes/<scope>/anatomy/`; `concepts/` files (scope-local and global); `graph.json`/`tags.json`/`clusters.json` (scope-local and cross-scope); `scope-registry.yaml` when present.
+- **READS:** the shapes owned by `insight.storage-format` — per-file entries under `anatomy/` or `scopes/<scope>/anatomy/`; `concepts/` files (scope-local and global); `graph.json`/`tags.json`/`clusters.json` (scope-local and cross-scope); `scope-registry.yaml` when present. Rule 9 only: the body of the source file at the queried path, read to hash it — never parsed, never printed.
 - **WRITES:** nothing — this is a read-only query surface.
 - **CREATES:** nothing on disk; each subcommand's only output is its returned payload (human-readable text, or structured JSON under `--json`).
 
@@ -33,6 +33,7 @@ This spec defines the `cortex insight` query surface for v3 — implements adden
 6. **Deterministic Core, no LLM at query time (RULES 3, addendum §A5.1).** Every subcommand is pure file I/O over the shapes `insight.storage-format` defines plus deterministic matching/lookup logic — no subcommand imports or calls an LLM SDK. The reasoning over what a query result *means* happens in the calling Claude Code session, not inside the CLI.
 7. **Supersedes v2 verbs (design §5.6, addendum §A5.1).** `cortex insight query|get|neighbors|list` (schema §4.10.5) are retired in v3 and MUST NOT be exposed; `file`, `concept`, `element` are the complete v3 verb set. There is no `cortex insight ask` — an attempt to invoke it should fail as an unknown subcommand, not silently degrade to a different verb.
 8. **Absent module returns an explicit miss, not an error crash (build-order-v3 spine convention).** When `.cortex/insight/` does not exist at all (extraction never ran), each subcommand returns an explicit "no insight data for this project" result rather than throwing.
+9. **Staleness stamp on `file` (parallel-wave brief §3.1, ask A-05; 2026-09-17).** The human rendering of `cortex insight file <path>` carries, as its **second line** — after the `<path> — L<n> entry (…)` title line, before the `entry: …` line — the header `built at <built_at_commit> · <extracted_at as YYYY-MM-DD> · <fresh | STALE: source changed since | STALE: source missing>`. `fresh` versus `STALE` is decided by comparing the entry's own `source_sha256` (schema §4.10.2) with the sha256 of the source file's current body at `<root>/<path>` — the comparison the post-commit fast tier makes against `ledger.json` (`insight.refresh-loops`; `sha256Of` in `src/insight/refresh-fast.ts`), made in-process, **never by git** and never by reading the ledger: the entry is authoritative for itself, so a scoped entry answers exactly as a flat one does. A source that cannot be read (missing, a directory, a permission error) is `STALE: source missing`; a hashing failure is reported as stale, never as a crash. `--json` gains three top-level fields beside `found` — `built_at_commit` (string), `extracted_at` (string) and `stale` (boolean) — from the same computation; the `frontmatter` block keeps its existing copies. An absent entry (a miss) and an absent module (Rule 8) are unchanged: no stamp, the explicit miss as before. `concept` and `element` carry no stamp. The comparison is exported (`entryStaleness(root, result)` in `src/insight/query.ts`) so `hooks.pre-read-writeback` Rule 8 reuses it rather than re-deriving it.
 
 ## Acceptance Criteria
 
@@ -109,8 +110,40 @@ This spec defines the `cortex insight` query surface for v3 — implements adden
 - **When** `cortex insight file src/auth/session.ts` runs
 - **Then** the output explicitly states there is no insight data for this project, rather than throwing an unhandled error
 
+### `file` prints a fresh stamp when the source matches its entry
+
+- **Given** a flat-layout module whose entry for `src/auth/session.ts` has `built_at_commit: 9f2c1ab`, `extracted_at: 2026-07-07T14:00:00Z` and a `source_sha256` equal to the sha256 of the current `src/auth/session.ts` body
+- **When** `cortex insight file src/auth/session.ts` runs
+- **Then** the second output line is exactly `built at 9f2c1ab · 2026-07-07 · fresh`
+
+### `file` prints a STALE stamp when the source body changed
+
+- **Given** the same entry and a `src/auth/session.ts` whose body differs from the hashed one by a single appended line
+- **When** `cortex insight file src/auth/session.ts` runs
+- **Then** the second output line is exactly `built at 9f2c1ab · 2026-07-07 · STALE: source changed since`, the sections still render, and the exit code is 0
+
+### A missing source is stale, not a crash
+
+- **Given** the same entry and no file at `src/auth/session.ts`
+- **When** `cortex insight file src/auth/session.ts` runs
+- **Then** the second line ends `STALE: source missing`, the command exits 0, and no `git` process is spawned
+
+### `--json` carries the stamp fields
+
+- **Given** the fresh and the changed fixtures above
+- **When** `cortex insight file src/auth/session.ts --json` runs against each
+- **Then** each payload has top-level `built_at_commit: "9f2c1ab"` and `extracted_at: "2026-07-07T14:00:00Z"`, `stale` is `false` for the first and `true` for the second, and `frontmatter.source_sha256` is unchanged in both
+
+### An absent entry carries no stamp
+
+- **Given** a module with no entry for `src/utils/orphan.ts`
+- **When** `cortex insight file src/utils/orphan.ts` runs, with and without `--json`
+- **Then** the output is the explicit miss as before, with no `built at` line and no `stale` field
+
 ## Notes
 
 - The exact text/formatting of each subcommand's human-readable payload is asserted by this spec's own tests, not by `insight.storage-format`'s validator (carried convention from schema §4.10.5) — the validator checks the shapes on disk; this spec checks what the CLI does with them.
 - Merge behaviour for `concept`/`element` queries that span a scoped module's scope-local and cross-scope graphs (Rule 4) is asserted here at the acceptance-criteria level only for the single-scope case above; a criterion covering a concept split across two sibling scopes is deferred to the implementation pass as an open item, since exercising it needs a populated two-scope fixture this draft doesn't construct.
 - Journey-layer tests are deferred pending the test-runner loop, per the project-wide convention established for the v2 insight specs.
+- **Why a stamp, and why here (Rule 9, 2026-09-17).** The 2026-09-14 parallel-wave brief (`.cortex/archive/documents/parallel-wave-brief-2026-09-14/extracted/asks.md`, A-05) asked that inferred knowledge say "as of when"; the data was already stored (schema §4.10.2 `built_at_commit` / `source_sha256`) and only unprinted. Measured in this repo on 2026-09-16 by the Rule 9 comparison: **24 of 83 entries stale**, and **19 of 102 `src/**/*.ts` files without an entry** (insight covers `src/` only). The stamp is the pull-time answer; the push-time twin is `hooks.pre-read-writeback` Rule 8's `(stale: built at <commit>)` marker. Plan: `plans/2026-09-17-wave-a.md`.
+- **Not git.** The fast tier may call `git show` to classify a change's significance; the query surface never does — it must answer identically in a non-repo, a detached checkout and a fixture directory, and inside the hook budget when `pre-read` reuses the comparison.

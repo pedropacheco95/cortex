@@ -20,7 +20,9 @@ import {
   fileQuery,
   conceptQuery,
   elementQuery,
+  entryStaleness,
   InsightArtefactError,
+  type EntryStaleness,
   type FileQueryResult,
   type ConceptQueryResult,
   type ElementQueryResult,
@@ -39,10 +41,19 @@ function firstPositional(argv: string[]): string | undefined {
 // Human-readable renderers.
 // ---------------------------------------------------------------------------
 
-function renderFile(r: FileQueryResult): string {
+/** Rule 9's stamp — `built at <commit> · <YYYY-MM-DD> · fresh|STALE: …` — the grammar is pinned by the spec. */
+function stalenessLine(s: EntryStaleness): string {
+  const verdict =
+    s.reason === 'fresh' ? 'fresh' : s.reason === 'changed' ? 'STALE: source changed since' : 'STALE: source missing';
+  return `built at ${s.built_at_commit} · ${s.extracted_at.slice(0, 10)} · ${verdict}`;
+}
+
+function renderFile(r: FileQueryResult, root: string): string {
   const fm = r.entry!.frontmatter;
   const lines: string[] = [];
   lines.push(`${r.path} — L${fm.extraction_level} entry (centrality ${fm.centrality}, ${fm.size_lines} lines)`);
+  const staleness = entryStaleness(root, r);
+  if (staleness !== null) lines.push(stalenessLine(staleness)); // Rule 9: the second line, before `entry:`
   lines.push(`entry: ${r.entryFile}${r.scope ? ` (scope ${r.scope})` : ''}`);
   lines.push('');
   for (const [title, content] of Object.entries(r.sections ?? {})) {
@@ -106,13 +117,20 @@ function renderElement(r: ElementQueryResult): string {
 // JSON payloads — stable field order, engine-sorted arrays (§4.10.8 `--json`).
 // ---------------------------------------------------------------------------
 
-function fileJson(r: FileQueryResult): unknown {
+function fileJson(r: FileQueryResult, root: string): unknown {
+  // Rule 9: three top-level stamp fields beside `found`, after `scope` and
+  // before `frontmatter` (which keeps its own copies). A found result always
+  // has a staleness; the guard only narrows the type.
+  const staleness = entryStaleness(root, r);
   return {
     command: 'file',
     found: true,
     path: r.path,
     entry_file: r.entryFile,
     scope: r.scope ?? null,
+    ...(staleness !== null
+      ? { built_at_commit: staleness.built_at_commit, extracted_at: staleness.extracted_at, stale: staleness.stale }
+      : {}),
     frontmatter: {
       path: r.entry!.frontmatter.path,
       extracted_at: r.entry!.frontmatter.extracted_at,
@@ -185,8 +203,8 @@ export async function insightCli(subcommand: string | undefined, argv: string[],
         }
         const result = fileQuery(root, sourcePath);
         if (!result.found) return miss('file', 'path', result.path, result.error ?? 'not found');
-        if (json) console.log(JSON.stringify(fileJson(result), null, 2));
-        else console.log(renderFile(result));
+        if (json) console.log(JSON.stringify(fileJson(result, root), null, 2));
+        else console.log(renderFile(result, root));
         return 0;
       }
 

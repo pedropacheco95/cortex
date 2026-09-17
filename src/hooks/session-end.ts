@@ -75,6 +75,8 @@ export const OFFER_RE = /\b(want me to|shall i|on request|if you want|i can\b[^.
 export const APPROVAL_RE = /\b(approved|go ahead|let'?s go with|yes,? do it|ship it|proceed)\b/i;
 /** Rule 7c: an untagged sentence that states a measurement. */
 export const MEASUREMENT_RE = /\bover \d+ sessions\b|\d+(\.\d+)?[x×] (cheaper|faster)|\bmedian\b|\bmeasured\b/i;
+/** Rule 7c: a status-ladder line (progress-bar glyph, `done when`, or a percentage) — dropped before the lexicon. */
+export const STATUS_LADDER_RE = /[█░]|\bdone when\b|\d{1,3}%/i;
 /** Rule 7c: the `<cortex:finding>` tag — single line, 1–300 characters. */
 export const FINDING_TAG_RE =
   /<cortex:finding\s+kind="(measurement|conclusion)"(?:\s+bears_on="([^"]*)")?\s*>([^\n<]{1,300})<\/cortex:finding>/g;
@@ -269,7 +271,8 @@ export function extractApprovals(tailMessages: ExtractedMessage[]): SessionRecor
 /**
  * Rule 7c: the prose of an assistant text — `<cortex:finding>` tags stripped
  * (never counted twice), fenced code blocks removed, markdown table rows
- * (trimmed lines starting with `|`) dropped.
+ * (trimmed lines starting with `|`) dropped, status-ladder lines
+ * (STATUS_LADDER_RE) dropped.
  */
 function proseOf(text: string): string {
   return text
@@ -277,6 +280,7 @@ function proseOf(text: string): string {
     .replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1\s*$/gm, '')
     .split('\n')
     .filter((line) => !line.trimStart().startsWith('|'))
+    .filter((line) => !STATUS_LADDER_RE.test(line))
     .join('\n');
 }
 

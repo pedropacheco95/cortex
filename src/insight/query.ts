@@ -26,6 +26,7 @@ import {
   type ScopeRegistry,
 } from './storage.js';
 import { parseEntry, ENTRY_SECTIONS, type InsightEntry } from './entry.js';
+import { sha256Of } from './refresh-fast.js';
 
 /**
  * Raised when a present insight artefact is malformed (invalid JSON/YAML or a
@@ -232,6 +233,45 @@ export function fileQuery(root: string, sourcePath: string): FileQueryResult {
     };
   }
   return { found: false, path: queried, error: `no insight entry for ${queried}` };
+}
+
+// ---------------------------------------------------------------------------
+// Staleness (insight.cli Rule 9; hooks.pre-read-writeback Rule 8; schema §5
+// PreRead row (e), 2026-09-17). The entry is authoritative for itself: its
+// `source_sha256` (§4.10.2) is compared with the sha256 of the source body at
+// `<root>/<path>` — the post-commit fast tier's comparison (refresh-fast.ts),
+// made in-process. Never git, never `ledger.json`, never a subprocess; a
+// source that cannot be read or hashed is stale, never a crash.
+// ---------------------------------------------------------------------------
+
+export interface EntryStaleness {
+  /** The entry's `built_at_commit`, as stored. */
+  built_at_commit: string;
+  /** The entry's `extracted_at`, as stored. */
+  extracted_at: string;
+  /** True unless the source body on disk hashes to the entry's `source_sha256`. */
+  stale: boolean;
+  /** `fresh`: hashes agree; `changed`: the body differs; `missing`: the source cannot be read. */
+  reason: 'fresh' | 'changed' | 'missing';
+}
+
+/**
+ * The staleness of a found `file` result, or `null` for a miss / an absent
+ * module (nothing to be stale). A scoped entry answers exactly as a flat one:
+ * only the entry's own frontmatter and the source body are consulted.
+ */
+export function entryStaleness(root: string, r: FileQueryResult): EntryStaleness | null {
+  if (!r.found || !r.entry) return null;
+  const fm = r.entry.frontmatter;
+  let reason: EntryStaleness['reason'];
+  try {
+    const body = fs.readFileSync(path.join(root, r.path), 'utf-8');
+    reason = sha256Of(body) === fm.source_sha256 ? 'fresh' : 'changed';
+  } catch {
+    // Missing, a directory, a permission error, a hashing failure: unreadable → stale.
+    reason = 'missing';
+  }
+  return { built_at_commit: fm.built_at_commit, extracted_at: fm.extracted_at, stale: reason !== 'fresh', reason };
 }
 
 // ---------------------------------------------------------------------------

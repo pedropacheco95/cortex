@@ -38,6 +38,15 @@
  * with the ordinary payload. Every failure inside Rule 7 falls through to the
  * ordinary payload — never to a deny. Measured by `pulse.usage` Rule 13.
  *
+ * Rule 8 (2026-09-17; parallel-wave brief §3.1): the stale marker. When the
+ * entry's `source_sha256` no longer hashes the target's current body —
+ * insight.cli Rule 9's comparison, `entryStaleness`, shared and in-process,
+ * never git — the summary line and the Rule 7 reason's first line end with
+ * ` (stale: built at <commit, 7 chars>)`. It rides inside the existing
+ * ceilings (the purpose is trimmed, the marker never is) and never changes a
+ * decision (RULES.md rule 6). A target that cannot be read or hashed means
+ * no marker and no log entry — fail-open, the payload exactly as Rules 2–7.
+ *
  * Warn-never-block: always exit 0; silence is the common case (no entry, no
  * `.cortex/`, flag off); internal errors degrade to silence + hook-errors.md.
  */
@@ -45,7 +54,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import picomatch from 'picomatch';
-import { fileQuery } from '../insight/query.js';
+import { fileQuery, entryStaleness } from '../insight/query.js';
 import { READ_TIME_MARKER } from './post-read.js';
 import { appendHookError } from './errors.js';
 import { renameIfLegacy } from '../pulse/migrate.js';
@@ -257,6 +266,18 @@ function recallMarker(root: string, relPath: string): string | null {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Rule 8 — the stale marker (2026-09-17). Grammar pinned by the spec.
+// ---------------------------------------------------------------------------
+
+/** Rule 8: `<commit>` is the entry's `built_at_commit` cut to this many characters (a shorter one is used whole). */
+export const STALE_MARKER_COMMIT_CHARS = 7;
+
+/** Rule 8's parenthetical — ` (stale: built at <commit>)`, at most 31 characters (about 8 tokens). Never trimmed. */
+export function staleMarker(built: string): string {
+  return ` (stale: built at ${built.slice(0, STALE_MARKER_COMMIT_CHARS)})`;
+}
+
 /** Rule 7's closing sentence — the retry contract, never trimmed. */
 const DEFER_RETRY_SENTENCE = 'Reading this path again proceeds without this notice.';
 
@@ -301,8 +322,9 @@ export function connectionItems(section: string): string[] {
 /**
  * Rule 7's reason, pinned line by line and fitted to DEFER_REASON_MAX_CHARS:
  * Connections items are dropped from the end first, then the purpose is
- * trimmed with `…` — never the first line's `Deferred: <path>` and never the
- * closing sentence.
+ * trimmed with `…` — never the first line's `Deferred: <path>`, never its
+ * Rule 8 stale marker (`stale`, part of the fixed text after the purpose),
+ * and never the closing sentence.
  */
 export function deferReason(
   relPath: string,
@@ -311,11 +333,12 @@ export function deferReason(
   purpose: string,
   connections: string[],
   ruleIds: string[],
+  stale = '',
 ): string {
   const rulesLine = `Rules: ${ruleIds.length > 0 ? ruleIds.join(' ') : '-'}.`;
   const compose = (p: string, items: string[]): string =>
     [
-      `Deferred: ${relPath} (~${tokens} tok, ${lines} lines). ${p}`,
+      `Deferred: ${relPath} (~${tokens} tok, ${lines} lines). ${p}${stale}`,
       `Connections: ${items.length > 0 ? items.join('; ') : '-'}`,
       rulesLine,
       DEFER_RETRY_SENTENCE,
@@ -419,6 +442,18 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
     if (purpose === '') return markerAlone(); // an entry with no purpose has nothing worth injecting
     const tokens = entryResult.entry.frontmatter.size_tokens;
 
+    // Rule 8: the stale marker — only when the target's body was read, hashed
+    // and found to differ from the entry's `source_sha256`. An unreadable
+    // target (`missing`) or any throw is fail-open: no marker, nothing logged.
+    let marker8 = '';
+    try {
+      if (entryStaleness(root, entryResult)?.reason === 'changed') {
+        marker8 = staleMarker(entryResult.entry.frontmatter.built_at_commit);
+      }
+    } catch {
+      marker8 = '';
+    }
+
     // The writeback instruction rides along ONLY while the entry's Purpose
     // carries no read-time provenance marker (post-read writes the marker).
     const invite = !purposeSection.includes(READ_TIME_MARKER);
@@ -478,7 +513,7 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
             }
             if (appended) {
               return denyEnvelope(
-                deferReason(relPath, tokens, sizeLines, purpose, connectionItems(entryResult.sections['Connections'] ?? ''), ruleIds),
+                deferReason(relPath, tokens, sizeLines, purpose, connectionItems(entryResult.sections['Connections'] ?? ''), ruleIds, marker8),
               );
             }
           }
@@ -510,11 +545,13 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
       }
     }
 
-    // Payload per schema §5 (v3), pinned line by line; the Rule 6 marker last.
+    // Payload per schema §5 (v3), pinned line by line; the Rule 8 stale marker
+    // is the tail of the summary line (appended after `Rules: ….`, so every
+    // pin on that sentence holds); the Rule 6 marker last.
     const inviteLine = `If this purpose is wrong or stale after reading, emit: <cortex:purpose file="${relPath}">corrected one-line purpose</cortex:purpose>`;
     const noteLine = '(already read this session)';
     const composeSummary = (p: string): string =>
-      `${relPath}: ${p} (~${tokens} tok). Rules: ${ruleIds.length > 0 ? ruleIds.join(' ') : '-'}.`;
+      `${relPath}: ${p} (~${tokens} tok). Rules: ${ruleIds.length > 0 ? ruleIds.join(' ') : '-'}.${marker8}`;
     const compose = (p: string): string =>
       [
         composeSummary(p),
@@ -524,8 +561,9 @@ export async function run(stdinJson: unknown, opts?: HookRunOptions): Promise<Ho
       ].join('\n');
 
     // Budget enforcement: trim the purpose until the payload fits — the
-    // instruction line's tag and the marker are never cut. The marker extends
-    // the ceiling by its own budget (RULES 11's combined figure).
+    // instruction line's tag, the stale marker and the recall marker are never
+    // cut. The recall marker extends the ceiling by its own budget (RULES 11's
+    // combined figure); the stale marker counts inside it.
     const budget = (invite ? MAX_CHARS_WITH_INVITE : MAX_CHARS_WITHOUT_INVITE) + (marker !== null ? MARKER_MAX_CHARS : 0);
     let payload = compose(purpose);
     if (payload.length > budget) {

@@ -3,7 +3,7 @@ id: B-019
 title: Two compass rules (or two bugs) carrying the same id pass `cortex validate` as conformant — `check.xref-unique` only scans the two spec trees, and the project index silently keeps the last file
 type: incomplete-rule
 severity: high
-status: open
+status: resolved
 affects:
   - schema.validator
   - src/schema/checks/xref.ts

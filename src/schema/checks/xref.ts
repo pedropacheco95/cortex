@@ -72,28 +72,10 @@ export async function checkXrefSymmetry(root: string, index: ProjectIndex): Prom
 export async function checkXrefUnique(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
 
-  // Scan for duplicates by reading all spec files
-  const allSpecFiles = [
-    ...await fg(SPECS_GLOB, { cwd: root, absolute: true }),
-    ...await fg(BUSINESS_GLOB, { cwd: root, absolute: true }),
-  ];
-
-  const idToFiles = new Map<string, string[]>();
-  for (const filePath of allSpecFiles) {
-    try {
-      const raw = fs.readFileSync(filePath, 'utf-8');
-      const data = matter(raw).data as Record<string, unknown>;
-      const id = data['id'];
-      if (typeof id === 'string' && id) {
-        if (!idToFiles.has(id)) idToFiles.set(id, []);
-        idToFiles.get(id)!.push(filePath);
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  for (const [id, files] of idToFiles) {
+  // Schema §6 global rule 1 (validator Rule 12, B-019): uniqueness is read
+  // from the index's own single scan — both spec trees, compass rules, compass
+  // bugs, atlas artefacts and scenario specs — never a second, narrower glob.
+  for (const [id, files] of index.idToFiles) {
     if (files.length > 1) {
       violations.push({
         severity: 'error',

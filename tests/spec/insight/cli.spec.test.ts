@@ -64,6 +64,9 @@ describe('AC: file returns the rich L3 entry for a known path (flat)', () => {
     expect(out).toContain('validateToken');
     expect(out).toContain('clock-skew tolerant'); // Insights
     expect(out).toContain('src/api/middleware.ts'); // Connections
+    // Rule 9: the stamp is the second line. The flat fixture ships no src/ tree,
+    // so the entry's source cannot be read — stale for the reason "missing".
+    expect(out.split('\n')[1]).toBe('built at 9f2c1ab · 2026-07-07 · STALE: source missing');
   });
 });
 
@@ -75,6 +78,7 @@ describe('AC: file returns the lighter L2 entry when that is all that exists', (
     expect(out).toContain('src/auth/session.ts'); // Connections (Used by)
     expect(out).not.toContain('Main players');
     expect(out).toContain('L2');
+    expect(out.split('\n')[1]).toBe('built at 9f2c1ab · 2026-07-07 · STALE: source missing');
   });
 });
 
@@ -84,10 +88,14 @@ describe('AC: file resolves transparently across scoped and flat layouts', () =>
     const scoped = await capture(() => insightCli('file', ['src/auth/session.ts', '--json'], SCOPED_ROOT));
     expect(flat.code).toBe(0);
     expect(scoped.code).toBe(0);
-    const f = JSON.parse(flat.out) as { sections: unknown; frontmatter: unknown; scope: unknown };
-    const s = JSON.parse(scoped.out) as { sections: unknown; frontmatter: unknown; scope: unknown };
+    const f = JSON.parse(flat.out) as { sections: unknown; frontmatter: unknown; scope: unknown; stale: unknown; built_at_commit: unknown };
+    const s = JSON.parse(scoped.out) as { sections: unknown; frontmatter: unknown; scope: unknown; stale: unknown; built_at_commit: unknown };
     expect(s.sections).toEqual(f.sections);
     expect(s.frontmatter).toEqual(f.frontmatter);
+    // Rule 9: both stale (flat: no source on disk; scoped: a different body), the same stamp.
+    expect(f.stale).toBe(true);
+    expect(s.stale).toBe(true);
+    expect(s.built_at_commit).toBe(f.built_at_commit);
     // The layer resolves the layout internally: flat is unscoped, scoped names its owner.
     expect(f.scope).toBeNull();
     expect(s.scope).toBe('auth');
@@ -97,6 +105,11 @@ describe('AC: file resolves transparently across scoped and flat layouts', () =>
     const { code, out } = await capture(() => insightCli('file', ['src/util/log.ts'], SCOPED_ROOT));
     expect(code).toBe(0);
     expect(out).toContain('structured-logging wrapper');
+    // Rule 9 in the scoped layout: the fixture ships a src/util/log.ts whose
+    // body is not the one the entry hashed — stale for the reason "changed",
+    // decided from the scoped entry exactly as from a flat one.
+    expect(out.split('\n')[1]).toBe('built at 9f2c1ab · 2026-07-07 · STALE: source changed since');
+    expect(out.split('\n')[2]).toBe('entry: scopes/util/anatomy/src/util/log.ts.md (scope util)');
   });
 });
 

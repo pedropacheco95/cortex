@@ -7,7 +7,8 @@ import { SUPPORTED_VERSION } from './version.js';
 import { checkConfig } from './checks/config.js';
 import { checkLayout, checkIndexPresent, checkIndexShape } from './checks/layout.js';
 import { checkSpecsIndex, checkOverviewPresent, checkOverviewShape, checkIdMatchesPath } from './checks/specs.js';
-import { checkRules, checkBugs } from './checks/compass.js';
+import { checkRules, checkBugs, checkCompassHeading } from './checks/compass.js';
+import { checkIndexCompleteness } from './checks/index-completeness.js';
 import { checkAtlas } from './checks/atlas.js';
 import { checkPulse } from './checks/pulse.js';
 import { checkThreads } from './checks/threads.js';
@@ -96,6 +97,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   allViolations.push(...checkLayout(root));
   allViolations.push(...checkIndexPresent(root));
   allViolations.push(...checkIndexShape(root));
+  allViolations.push(...checkIndexCompleteness(root)); // §7.1 compass indexes name every rule/bug on disk (validator Rule 14, wave A 2026-09-17)
 
   // Specs checks
   allViolations.push(...checkSpecsIndex(root));
@@ -110,6 +112,7 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   // Compass checks
   allViolations.push(...checkRules(root, index));
   allViolations.push(...checkBugs(root, index));
+  allViolations.push(...checkCompassHeading(root)); // §4.1/§4.2 H1 token agrees with id: (validator Rule 13, wave A 2026-09-17)
 
   // Atlas checks
   allViolations.push(...await checkAtlas(root, index));

@@ -165,3 +165,69 @@ export function checkBugs(root: string, index: ProjectIndex): Violation[] {
 
   return violations;
 }
+
+const RULE_FILE_PATTERN = /^R-\d{3,}(-[A-Za-z0-9-]+)?\.md$/;
+const BUG_FILE_PATTERN = /^B-\d{3,}(-[A-Za-z0-9-]+)?\.md$/;
+const H1_PATTERN = /^#\s+(.+)$/;
+const H1_ID_TOKEN = /^([RB]-\d{3,})\b/;
+
+/**
+ * Validator Rule 13 (wave follow-up A, 2026-09-17): the body's first H1, when
+ * it begins with an `R-NNN` / `B-NNN` token, must agree with `id:`. The H1 is
+ * prose the schema does not shape (§4.1 rules, §4.2 bugs), so disagreement is
+ * a warning; no H1, an H1 without the token, a non-string id or an unreadable
+ * file is not a finding. Filename ↔ id stays check.rule / check.bug's error.
+ */
+export function checkCompassHeading(root: string): Violation[] {
+  const violations: Violation[] = [];
+  const targets: Array<{ dir: string; filePattern: RegExp; clause: string }> = [
+    { dir: path.join(root, '.cortex', 'compass', 'rules'), filePattern: RULE_FILE_PATTERN, clause: '§4.1' },
+    { dir: path.join(root, '.cortex', 'compass', 'bugs'), filePattern: BUG_FILE_PATTERN, clause: '§4.2' },
+  ];
+
+  for (const { dir, filePattern, clause } of targets) {
+    if (!fs.existsSync(dir)) continue;
+    for (const filename of fs.readdirSync(dir).filter((f) => filePattern.test(f))) {
+      const filePath = path.join(dir, filename);
+      let raw: string;
+      let id: unknown;
+      try {
+        raw = fs.readFileSync(filePath, 'utf-8');
+        id = (matter(raw).data as Record<string, unknown>)['id'];
+      } catch {
+        continue;
+      }
+      if (typeof id !== 'string') continue;
+
+      const h1 = firstH1(raw);
+      if (!h1) continue;
+      const token = H1_ID_TOKEN.exec(h1.text)?.[1];
+      if (!token || token === id) continue;
+
+      violations.push({
+        severity: 'warning',
+        check: 'check.compass-heading',
+        clause,
+        location: { path: filePath, line: h1.line },
+        message: `H1 "${token}" disagrees with id "${id}"`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/** The first `# …` line of the body (after a leading `---` frontmatter block), with its 1-based line number. */
+function firstH1(raw: string): { text: string; line: number } | undefined {
+  const lines = raw.split(/\r?\n/);
+  let start = 0;
+  if (lines[0]?.trim() === '---') {
+    const close = lines.findIndex((l, i) => i > 0 && l.trim() === '---');
+    if (close > 0) start = close + 1;
+  }
+  for (let i = start; i < lines.length; i++) {
+    const m = H1_PATTERN.exec(lines[i]!);
+    if (m) return { text: m[1]!.trim(), line: i + 1 };
+  }
+  return undefined;
+}

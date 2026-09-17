@@ -844,3 +844,192 @@ describe('Rule 7: read deferral — the criteria', () => {
     expect(seenStdouts.filter((out) => out.includes('"permissionDecision":"deny"'))).toHaveLength(9);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Rule 8: the stale marker (parallel-wave brief §3.1; 2026-09-17) — an entry
+// whose `source_sha256` no longer hashes the target's body is marked with
+// ` (stale: built at <commit>)` on the summary line and on the deny reason's
+// first line, inside the existing ceilings, never trimmed; an unreadable
+// target is never marked and never logged. Shares insight.cli Rule 9's
+// `entryStaleness`. None of these runs go through `track` — the Rule 7
+// deny-count pin above stays at its nine.
+// ---------------------------------------------------------------------------
+import { staleMarker, STALE_MARKER_COMMIT_CHARS } from '../../../src/hooks/pre-read.js';
+import { sha256Of } from '../../../src/insight/refresh-fast.js';
+
+const A_BODY = 'export function a(): number {\n  return 1;\n}\n';
+const USAGE_SPEC_R8 = '.specflow/specs/pulse/usage.spec.md';
+const STALE_SHA = 'b'.repeat(64); // hashes nothing on disk
+const BUILT_LONG = '9f2c1ab0deadbeef';
+const STALE_MARKER = ' (stale: built at 9f2c1ab)';
+
+function writeSource(root: string, rel: string, body = A_BODY): void {
+  const p = path.join(root, rel);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, body);
+}
+
+describe('Rule 8: stale marker — grammar and constants', () => {
+  it('the commit is cut to its first seven characters; a shorter one is used whole; the marker is at most 31 characters', () => {
+    expect(STALE_MARKER_COMMIT_CHARS).toBe(7);
+    expect(staleMarker(BUILT_LONG)).toBe(STALE_MARKER);
+    expect(staleMarker('9f2c1ab')).toBe(STALE_MARKER);
+    expect(staleMarker('abc')).toBe(' (stale: built at abc)');
+    expect(staleMarker('0123456789abcdef0123456789abcdef01234567').length).toBeLessThanOrEqual(31);
+  });
+});
+
+describe('Rule 8: stale marker — the criteria', () => {
+  it('AC: a stale entry is marked on the summary line within the ceiling; the invitation follows unchanged; under 75 tokens', async () => {
+    const root = makeProject('r8-summary');
+    writeSource(root, 'src/a.ts');
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120, sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
+    const result = await run(stdinFor(root, path.join(root, 'src/a.ts')));
+    expect(result.exitCode).toBe(0);
+    const env = parseEnvelope(result.stdout);
+    expect(env.permissionDecision).toBe('allow');
+    const lines = env.additionalContext.split('\n');
+    expect(lines[0]).toBe('src/a.ts: Does A. (~120 tok). Rules: -. (stale: built at 9f2c1ab)');
+    expect(lines[1]).toBe('If this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/a.ts">corrected one-line purpose</cortex:purpose>');
+    expect(lines).toHaveLength(2);
+    expect(Math.ceil(env.additionalContext.length / 4)).toBeLessThanOrEqual(75);
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('AC (and): an entry whose source_sha256 is the hash of the body carries no marker', async () => {
+    const root = makeProject('r8-fresh');
+    writeSource(root, 'src/a.ts');
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120, sha256: sha256Of(A_BODY), builtAtCommit: BUILT_LONG });
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, 'src/a.ts')))).stdout).additionalContext;
+    expect(ctx.split('\n')[0]).toBe('src/a.ts: Does A. (~120 tok). Rules: -.');
+    expect(ctx).not.toContain('stale: built at');
+  });
+
+  it('the marker rides on the 50-token payload too (no invitation) and counts toward it', async () => {
+    const root = makeProject('r8-noinvite');
+    writeSource(root, 'src/a.ts');
+    writeInsightEntry(root, 'src/a.ts', {
+      purpose: `Does A.\n\n${READ_TIME_MARKER}alice/sess-1)*`,
+      tokens: 120,
+      sha256: STALE_SHA,
+      builtAtCommit: BUILT_LONG,
+    });
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, 'src/a.ts')))).stdout).additionalContext;
+    expect(ctx).toBe('src/a.ts: Does A. (~120 tok). Rules: -. (stale: built at 9f2c1ab)');
+    expect(Math.ceil(ctx.length / 4)).toBeLessThanOrEqual(50);
+  });
+
+  it('budget: an over-long purpose is trimmed with … to make room; the marker is never cut and stays the tail of line one', async () => {
+    const root = makeProject('r8-budget');
+    writeSource(root, 'src/a.ts');
+    writeInsightEntry(root, 'src/a.ts', {
+      purpose: 'Extremely detailed purpose. '.repeat(10).trim(),
+      sha256: STALE_SHA,
+      builtAtCommit: BUILT_LONG,
+    });
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, 'src/a.ts')))).stdout).additionalContext;
+    expect(Math.ceil(ctx.length / 4)).toBeLessThanOrEqual(75);
+    const first = ctx.split('\n')[0] as string;
+    expect(first.endsWith(`… (~120 tok). Rules: -.${STALE_MARKER}`)).toBe(true);
+    expect(ctx).toContain('</cortex:purpose>');
+  });
+
+  it('with the recall marker on a spec read, the stale marker is on the summary line and the Decided: line follows, under 100 tokens', async () => {
+    const root = makeProject('r8-recall');
+    writeSource(root, USAGE_SPEC_R8, '# usage\n');
+    writeInsightEntry(root, USAGE_SPEC_R8, {
+      purpose: `Specifies usage.\n\n${READ_TIME_MARKER}alice/sess-1)*`,
+      tokens: 900,
+      sha256: STALE_SHA,
+      builtAtCommit: BUILT_LONG,
+    });
+    writeRecallIndexFixture(root, recallIndexFixture(
+      { 'pulse.usage': recallSubject({ decided: ['decision.2026-08-05-x'] }) },
+      { 'decision.2026-08-05-x': recallEntry('decision', 'x', '.cortex/atlas/decisions/2026-08-05-x.md', '2026-08-05') },
+    ));
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, USAGE_SPEC_R8)))).stdout).additionalContext;
+    expect(ctx).toBe(`${USAGE_SPEC_R8}: Specifies usage. (~900 tok). Rules: -.${STALE_MARKER}\nDecided: decision.2026-08-05-x`);
+    expect(Math.ceil(ctx.length / 4)).toBeLessThanOrEqual(100);
+    clearRecallIndexCache();
+  });
+
+  it('AC: a stale entry is marked on the deferral reason\'s first line; the last line is the retry sentence; at most 1,000 characters', async () => {
+    const { root, transcript } = makeDeferProject('r8-deny');
+    writeSource(root, 'src/a.ts');
+    const purpose600 = 'Counts Cortex usage from session transcripts and reports it. '.repeat(10).trim().slice(0, 600);
+    expect(purpose600).toHaveLength(600);
+    const eightUses = ['Uses:', ...Array.from({ length: 8 }, (_, i) => `- src/u${i}.ts: \`sym${i}\` — tail ${i}`)].join('\n');
+    writeEligible(root, 'src/a.ts', { purpose: purpose600, connections: eightUses, sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
+    const result = await run(deferStdin(root, path.join(root, 'src/a.ts'), transcript));
+    expect(result.exitCode).toBe(0);
+    const env = parseEnvelope(result.stdout);
+    expect(env.permissionDecision).toBe('deny');
+    const reason = env.permissionDecisionReason as string;
+    const lines = reason.split('\n');
+    expect(lines[0]?.startsWith('Deferred: src/a.ts (~2532 tok, 235 lines). ')).toBe(true);
+    expect(lines[0]?.endsWith(STALE_MARKER)).toBe(true);
+    expect(lines[0]).toBe(`Deferred: src/a.ts (~2532 tok, 235 lines). ${purpose600}${STALE_MARKER}`);
+    expect(lines[1]?.startsWith('Connections: src/u0.ts: `sym0`;')).toBe(true);
+    expect(lines[2]).toBe('Rules: R-001.');
+    expect(lines[3]).toBe(RETRY_SENTENCE);
+    expect(lines).toHaveLength(4);
+    expect(reason.length).toBeLessThanOrEqual(1000);
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('deny budget: Connections go first, then the purpose is trimmed with …; the marker and the closing sentence are never cut', async () => {
+    const { root, transcript } = makeDeferProject('r8-deny-trim');
+    writeSource(root, 'src/a.ts');
+    const purpose950 = 'Q'.repeat(950);
+    const eightUses = ['Uses:', ...Array.from({ length: 8 }, (_, i) => `- src/u${i}.ts: \`sym${i}\` — tail ${i}`)].join('\n');
+    writeEligible(root, 'src/a.ts', { purpose: purpose950, connections: eightUses, sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
+    const env = parseEnvelope((await run(deferStdin(root, path.join(root, 'src/a.ts'), transcript))).stdout);
+    expect(env.permissionDecision).toBe('deny');
+    const reason = env.permissionDecisionReason as string;
+    const lines = reason.split('\n');
+    expect(lines[0]?.startsWith('Deferred: src/a.ts (~2532 tok, 235 lines). QQQ')).toBe(true);
+    expect(lines[0]?.endsWith(`…${STALE_MARKER}`)).toBe(true);
+    expect(lines[1]).toBe('Connections: -');
+    expect(lines[3]).toBe(RETRY_SENTENCE);
+    expect(reason.length).toBeLessThanOrEqual(1000);
+  });
+
+  it('a fresh entry under deferral carries no marker on the reason\'s first line', async () => {
+    const { root, transcript } = makeDeferProject('r8-deny-fresh');
+    writeSource(root, 'src/a.ts');
+    writeEligible(root, 'src/a.ts', { sha256: sha256Of(A_BODY), builtAtCommit: BUILT_LONG });
+    const env = parseEnvelope((await run(deferStdin(root, path.join(root, 'src/a.ts'), transcript))).stdout);
+    expect(env.permissionDecision).toBe('deny');
+    expect((env.permissionDecisionReason as string).split('\n')[0]).toBe(`Deferred: src/a.ts (~2532 tok, 235 lines). ${A_PURPOSE}`);
+  });
+
+  it('AC: an unreadable target (a directory) is never marked and never logged — the payload is exactly what Rules 2–6 produce', async () => {
+    const root = makeProject('r8-dir');
+    fs.mkdirSync(path.join(root, 'src', 'a.ts'), { recursive: true });
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120, sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
+    const result = await run(stdinFor(root, path.join(root, 'src/a.ts')));
+    expect(result.exitCode).toBe(0);
+    expect(parseEnvelope(result.stdout).additionalContext).toBe(
+      'src/a.ts: Does A. (~120 tok). Rules: -.\nIf this purpose is wrong or stale after reading, emit: <cortex:purpose file="src/a.ts">corrected one-line purpose</cortex:purpose>',
+    );
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('an unreadable target under deferral: the deny reason carries no marker either, nothing logged', async () => {
+    const { root, transcript } = makeDeferProject('r8-dir-deny');
+    fs.mkdirSync(path.join(root, 'src', 'a.ts'), { recursive: true });
+    writeEligible(root, 'src/a.ts', { sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
+    const env = parseEnvelope((await run(deferStdin(root, path.join(root, 'src/a.ts'), transcript))).stdout);
+    expect(env.permissionDecision).toBe('deny');
+    expect((env.permissionDecisionReason as string).split('\n')[0]).toBe(`Deferred: src/a.ts (~2532 tok, 235 lines). ${A_PURPOSE}`);
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+
+  it('a target with no file on disk (every fixture above) is never marked — the existing pins hold by this rule', async () => {
+    const root = makeProject('r8-nofile');
+    writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120, sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
+    const ctx = parseEnvelope((await run(stdinFor(root, path.join(root, 'src/a.ts')))).stdout).additionalContext;
+    expect(ctx.split('\n')[0]).toBe('src/a.ts: Does A. (~120 tok). Rules: -.');
+    expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
+  });
+});

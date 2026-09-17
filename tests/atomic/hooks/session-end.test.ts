@@ -15,6 +15,7 @@ import {
   OFFER_RE,
   APPROVAL_RE,
   MEASUREMENT_RE,
+  STATUS_LADDER_RE,
   FINDING_TAG_RE,
   readTranscript,
   lastParagraph,
@@ -168,13 +169,15 @@ describe('AC — bulk lines are skipped without loss of small ones', () => {
 // ---------------------------------------------------------------------------
 
 describe('Rule 7 — the lexicons are pinned exactly as the spec quotes them', () => {
-  it('exports the four regexes with the quoted sources and flags', () => {
+  it('exports the five regexes with the quoted sources and flags', () => {
     expect(OFFER_RE.source).toBe('\\b(want me to|shall i|on request|if you want|i can\\b[^.]{0,80}?\\bif you|say the word)\\b');
     expect(OFFER_RE.flags).toBe('i');
     expect(APPROVAL_RE.source).toBe("\\b(approved|go ahead|let'?s go with|yes,? do it|ship it|proceed)\\b");
     expect(APPROVAL_RE.flags).toBe('i');
     expect(MEASUREMENT_RE.source).toBe('\\bover \\d+ sessions\\b|\\d+(\\.\\d+)?[x×] (cheaper|faster)|\\bmedian\\b|\\bmeasured\\b');
     expect(MEASUREMENT_RE.flags).toBe('i');
+    expect(STATUS_LADDER_RE.source).toBe('[█░]|\\bdone when\\b|\\d{1,3}%');
+    expect(STATUS_LADDER_RE.flags).toBe('i');
     expect(FINDING_TAG_RE.source).toBe(
       '<cortex:finding\\s+kind="(measurement|conclusion)"(?:\\s+bears_on="([^"]*)")?\\s*>([^\\n<]{1,300})<\\/cortex:finding>',
     );
@@ -331,6 +334,18 @@ describe('AC — untagged measurements fall back to the lexicon in interactive s
       ['tag', '2 insight invocations over 55 sessions'],
       ['lexicon', 'The whole pass measured 3.1x faster.'],
     ]);
+  });
+
+  it('status-ladder lines (bar glyph, "done when", a percentage) never feed the lexicon; prose still does', () => {
+    const text = [
+      'A  Cortex reliably reaches prior conclusions ........ 80% ████████░░  done when pointer follow-rate > 0 in `cortex usage`',
+      '0% ░░░░░░░░░░  done when a grep into the schema returns a Decided/Open pointer, measured',
+      'Rollout 40% — median 12 ms over 30 sessions',
+      'Done when the proceed-rate is measured over 20 sessions.',
+      'The whole pass measured 3.1x faster.',
+    ].join('\n');
+    const out = extractFindings([], [msg('assistant', text, T1)], 'interactive');
+    expect(out).toEqual([{ kind: 'measurement', text: 'The whole pass measured 3.1x faster.', timestamp: T1, source: 'lexicon' }]);
   });
 
   it('a lexicon hit without a digit is ignored; tags come first and the combined list caps at 20', () => {
