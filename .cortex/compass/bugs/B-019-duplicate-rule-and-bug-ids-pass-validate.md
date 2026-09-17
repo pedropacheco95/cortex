@@ -203,3 +203,14 @@ Same with two `B-001-*.md` files. Clean up `/tmp/x` and `/tmp/xhome` afterwards.
 ### Resolution
 
 (open)
+
+### External evidence
+
+First reported by an external Cortex adopter on schema 3.3, whose coordinator's 2026-09-14
+improvement brief is ingested as `archive.parallel-wave-brief-2026-09-14`. There, two
+`compass/rules/R-026-*.md` files shared one id, `cortex validate` reported 16 unrelated errors
+and none was this, and four parallel sessions rediscovered the collision independently in one
+evening — the measured cost of the defect. The brief also asks for the two adjacent follow-ups
+listed above (H1 agreement, index completeness). Claims, asks and the ingestion-day
+verification against 3.4: `.cortex/archive/documents/parallel-wave-brief-2026-09-14/extracted/`
+(`evidence.md` E-02 and V-02, `asks.md` A-01–A-03, `contradictions.md` X-02).
