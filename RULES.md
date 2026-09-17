@@ -68,7 +68,7 @@ CLAUDE.md Cortex section <400 tokens, each `_index.md` <300 (a generated recall 
 
 ## 12. `environment.md` and compass hold pointers, never secrets.
 
-Store aliases and profile names only — no credentials.
+Store aliases and profile names only — no credentials. (Rule 20 covers the aggregate of non-secret operational specifics in a public repository.)
 
 **Why:** this layer may be committed.
 
@@ -111,3 +111,9 @@ Don't introduce a second parsing stack.
 When a change — human- or agent-made — modifies validator checks, schema clauses, hook payloads, or any other contract-enforcing surface, the change report must enumerate **every** check/clause touched, not just the primary target. Reviewers verify the report against the actual diff.
 
 **Why:** silent scope creep in contract-enforcing code erodes auditability. "Reported 3, made 5" is only safe when someone catches it.
+
+## 20. Declare the repository's visibility; a public repository's knowledge layer carries no operational map.
+
+`cortex.config.json` `visibility.repo` is `public`, `private` or `unknown` (default). When it is `public`, tracked files under `.cortex/compass/` and `.cortex/atlas/` carry no hosts, addresses, ports, SSH targets or account identifiers — `check.visibility` warns on each line it finds (schema §10.1, `schema.visibility`), and a file the human has judged goes on `visibility.allow` or its contents move to an untracked note. Rule 12 covers secrets; this rule covers the aggregate.
+
+**Why:** an external team's `environment.md` accumulated a production map by reasonable increments — no secret in any line, reconnaissance in the whole — in a public repository. Nothing in Cortex knew the repository was public, so nothing could warn.

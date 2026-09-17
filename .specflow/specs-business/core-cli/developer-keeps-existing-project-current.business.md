@@ -25,7 +25,7 @@ Developers running Cortex on a project that already has a `.cortex/` — set up 
 
 1. Repair and upgrade never require redoing setup: the command works on a project that already has `.cortex/`, and never demands a from-scratch confirmation to do its job.
 2. Nothing the developer or the project's own upkeep has customized is silently overwritten — content the developer edited is left alone and named in the summary, not clobbered as part of an upgrade.
-3. The project's accumulated knowledge is never in scope: rules, project memory, ingested documents, and inferred understanding are exactly as the developer left them before and after.
+3. The project's accumulated knowledge is never in scope: rules, project memory, ingested documents, and inferred understanding are exactly as the developer left them before and after. The one file the command may add there is the identifier list, created once when missing from the identifiers the files already carry — a ledger, not knowledge — and never touched again.
 4. Everything the command does is named in the summary — no invisible changes, matching the same transparency day-1 setup gives.
 5. A version gap too wide to bridge safely is refused, not partially applied — the developer is pointed at the dedicated upgrade path instead.
 
@@ -43,4 +43,13 @@ Developers running Cortex on a project that already has a `.cortex/` — set up 
 
 ## Notes
 
+- Wave follow-up B (2026-09-17; `sync.spec.md` Rules 3, 10 and 15): the keep-current command
+  refreshes the orientation block's generated placement sentence from the project's current
+  configuration, so declaring the repository public or naming a local notes directory takes
+  effect on the next run. It also creates, exactly once and only when absent, the identifier
+  list that keeps parallel work from issuing the same rule or problem number — built from the
+  files the project already has, never edited afterwards. That list is the one thing this
+  command now adds inside the knowledge folders; business rule 3 is amended to name it: the
+  list records identifiers the files already carry, it is not knowledge, and everything else in
+  those folders is byte-identical before and after.
 - The motivating case: a project under Cortex management whose CLAUDE.md carries no managed block at all, so the assistant simply never engages with `.cortex/` — until now, the only writer of that block was day-1 setup, which refuses to run again on an existing project. This command is the safe, standing repair path day-1 setup couldn't offer.

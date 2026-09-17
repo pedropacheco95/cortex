@@ -182,9 +182,11 @@ referenceable. Go straight to step 8 (register update). Write nothing to
    derives from this document."
 
 4. **Write the suggestion section(s) yourself**, directly, into
-   `.cortex/pulse/archive-ingestion.md` (a new pulse report this skill owns,
+   `.cortex/pulse/reports/archive-ingestion.md` (a new pulse report this skill owns,
    alongside `reports/bug-triage.md`, `reports/rule-candidates.md`, etc. — schema §4.5:
-   "Proposal sections may appear in any `pulse/*.md` loop report"). There is
+   "Proposal sections may appear in any `pulse/reports/*.md` loop report"; the
+   review CLI scans only `reports/` and the root `suggestions.md`, so a file at the
+   pulse root would never be offered for acceptance). There is
    no Core CLI for this step; you perform it directly, the same way you write
    `archive/` and `register.md` directly:
    - Read `.cortex/pulse/state/suggestion-counter` (a plain integer; missing file
@@ -238,7 +240,7 @@ referenceable. Go straight to step 8 (register update). Write nothing to
    Do not invent a specs/ target root for the pulse gate. Instead, flag any
    spec-shaped item in your plan separately: "this also looks like a spec
    change — route it to `specflow-ingest`/`specflow-spec-editor` outside this
-   gate," and do not include it in the `.cortex/pulse/archive-ingestion.md`
+   gate," and do not include it in the `.cortex/pulse/reports/archive-ingestion.md`
    write. When you hand a spec-shaped item off, pass its
    `archive/documents/<slug>/extracted/<file>` reference along so the created
    spec carries the same `provenance: - derives_from:` entry (schema §4.6/§4.7
@@ -293,7 +295,7 @@ superseded pair, e.g.:
 
 Report: the document stored (path + `id` + `kind`), every `extracted/` file
 written, any clarifying questions asked and answered, the yes/no gate outcome
-(and if yes: the `S-NNN` ids written to `.cortex/pulse/archive-ingestion.md`
+(and if yes: the `S-NNN` ids written to `.cortex/pulse/reports/archive-ingestion.md`
 and their types), any spec-shaped items flagged for `specflow-ingest`/
 `specflow-spec-editor` instead, the version-update diff and superseded status
 change (if applicable, including the downstream artefacts the provenance

@@ -36,7 +36,8 @@ Neither reads a rule body, a decision narrative or a thread body — they name t
 ## Rules
 
 1. **Grammar.** `cortex why <ref> [--json]` and `cortex recall <word…> [--kind decision|evidence|
-   thread|observation]`. A missing `<ref>`, an empty `<word…>`, an unknown flag, or a `--kind`
+   thread|observation|rule|compass-doc|bug]` (the three compass kinds since the 3.4 fifth
+   revision, `recall.recall-index` Rules 15–17). A missing `<ref>`, an empty `<word…>`, an unknown flag, or a `--kind`
    outside the enum prints a one-line usage to stderr and exits **2**. Flags may precede or
    follow their operands.
 
@@ -67,6 +68,11 @@ Neither reads a rule body, a decision narrative or a thread body — they name t
        <metric>=<value>  <metric>=<value>  <metric>=<value>
    Open:
      <T-id>  <kind> — <key text>  (<path>)
+   Bugs:
+     <B-id>  <status> — <title>  (<path>)
+       owner=<owner>  fix=<fix_in_flight>  found_at=<found_at_commit>
+   Rules:
+     <R-id>  <title>  (<path>)
    Observations: <theme>, <theme>
    ```
    The evidence sub-line carries the **first three** `findings` as `metric=value` (a `unit`, when
@@ -75,11 +81,21 @@ Neither reads a rule body, a decision narrative or a thread body — they name t
    the index, bounded by the number of evidence entries listed, never a directory scan; an
    unreadable file renders the sub-line as `(findings unreadable)`. The thread `<kind>` and key
    text come from the index entry (`title`), never from the thread file. Ids are never cut.
+   **(3.4 fifth revision)** `Bugs:` lists the subject's `bugs` (open and triaged only, by
+   construction of the index) newest `opened` first; its sub-line carries `owner`,
+   `fix_in_flight` and `found_at_commit` (`compass.bug-currency` Rule 1) read from that bug
+   file's frontmatter — the second bounded frontmatter read, same standing as the evidence
+   findings — with each absent field rendered `-` and the whole sub-line omitted when all three
+   are absent; `<status>` is read in the same pass. `Rules:` lists the subject's `rules` in id
+   order with no sub-line and no file read. The heading line's counts gain ` · <n> bugs · <n>
+   rules`. `Nothing bears on <ref>.` still means no subject at all.
 
 5. **`why --json`.** Emits `{ "ref": <as typed>, "key": <matched key or null>, "subject":
-   { decided, evidence, threads, observations }, "entries": { <id>: <entry> } }` verbatim from
-   the index for the ids the subject names (observation themes map to `observation.<theme>`),
-   plus `"findings": { <evidence id>: [ … ] }` for the Rule 4 findings. Two-space indentation, a
+   { decided, evidence, threads, observations, rules, bugs }, "entries": { <id>: <entry> } }`
+   verbatim from the index for the ids the subject names (observation themes map to
+   `observation.<theme>`), plus `"findings": { <evidence id>: [ … ] }` for the Rule 4 findings
+   and, 3.4 fifth revision, `"bugs": { <bug id>: { status, owner, fix_in_flight,
+   found_at_commit } }` (absent fields `null`) for the Rule 4 bug sub-lines. Two-space indentation, a
    trailing newline, sorted keys. `Nothing bears on` in JSON is `"key": null` with empty lists,
    exit 0.
 
@@ -122,6 +138,26 @@ Neither reads a rule body, a decision narrative or a thread body — they name t
 - **When** `cortex why cortex-schema.md` runs
 - **Then** the heading is `cortex-schema.md (all clauses)` and both the evidence and the
   decision appear once
+
+### why lists the rule and the open bug on a source file, with the bug's currency fields
+
+- **Given** `subjects["src/schema/checks/xref.ts"]` with `rules: ["R-001"]` and
+  `bugs: ["B-019"]` and nothing else, and `compass/bugs/B-019-x.md` carrying `status: triaged`,
+  `owner: pedro`, `fix_in_flight: fix/xref-unique` and no `found_at_commit`
+- **When** `cortex why src/schema/checks/xref.ts` runs
+- **Then** stdout begins `src/schema/checks/xref.ts (path) — 0 decided · 0 evidence · 0 open ·
+  0 observation themes · 1 bugs · 1 rules`, carries a `Bugs:` section whose line reads
+  `B-019  triaged — <title>  (.cortex/compass/bugs/B-019-x.md)` followed by the sub-line
+  `owner=pedro  fix=fix/xref-unique  found_at=-`, then a `Rules:` section with `R-001`, and
+  `--json` yields `bugs["B-019"].found_at_commit` of `null`
+
+### recall filters by a compass kind
+
+- **Given** `entries["compass.environment"]` (kind `compass-doc`) and `entries["R-001"]` (kind
+  `rule`) both with keywords containing `scheduled` and `tasks`
+- **When** `cortex recall scheduled tasks --kind compass-doc` runs
+- **Then** the one line printed is `compass-doc  compass.environment — Environment
+  (.cortex/compass/environment.md)` — no date, since the entry's date is empty
 
 ### Nothing bears on an unknown subject
 

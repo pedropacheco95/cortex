@@ -21,7 +21,7 @@ This spec is the load-bearing archive contract (build-order-v3 step 3, sub-steps
 ## Entities
 
 - **READS:** the document handed to the skill (any supported source format); `archive/types/*.yaml` (classification hints + extraction contract, A3.3); `archive/documents/<slug>/metadata.yaml` on a version-update run (to diff against, §6.5); `archive/register.md`.
-- **WRITES:** `archive/documents/<slug>/extracted/**` (structured content, per the selected type's `extraction.outputs`, A3.3); `archive/register.md` (append/update the document's entry); on the yes-path, a change-plan proposal into `.cortex/pulse/*.md` as typed suggestion sections (`Type: rule-candidate | user-directed-capture | promotion`-shaped, per schema §4.5 — the exact type each proposed artefact takes is a plan-application detail, but every proposal is typed and gated, never a direct write).
+- **WRITES:** `archive/documents/<slug>/extracted/**` (structured content, per the selected type's `extraction.outputs`, A3.3); `archive/register.md` (append/update the document's entry); on the yes-path, a change-plan proposal into `.cortex/pulse/reports/archive-ingestion.md` — a loop report under `reports/`, where `pulse.review-cli` Rule 2 discovers proposals (a file at the pulse root other than `suggestions.md` is never scanned; corrected 2026-09-17, the skill text had said `.cortex/pulse/archive-ingestion.md`) — as typed suggestion sections (`Type: rule-candidate | user-directed-capture | promotion`-shaped, per schema §4.5 — the exact type each proposed artefact takes is a plan-application detail, but every proposal is typed and gated, never a direct write).
 - **CREATES:** `archive/documents/<slug>/` (a new document directory: `source.<ext>`, `metadata.yaml`, `extracted/`) on first ingestion of a document; a new sibling `archive/documents/<slug-vN>/` directory when a newer version supersedes an existing one (the old directory is preserved, not renamed away, A3.2 `status: superseded`).
 
 ## Rules
@@ -85,6 +85,12 @@ This spec is the load-bearing archive contract (build-order-v3 step 3, sub-steps
 - **Given** `client-spec-v2.0` is already ingested (`status: active`) and the user ingests `client-spec-v2.1.pdf` as an update
 - **When** the skill diffs `client-spec-v2.1`'s extraction against `client-spec-v2.0`'s
 - **Then** it reports new/changed/removed requirements, `client-spec-v2.0/` gains `status: superseded` in its `metadata.yaml` and is NOT deleted, `client-spec-v2.1/` becomes the new active document with `supersedes: [documents/client-spec-v2.0/]`, and the same yes/no gate offers to draft an update plan
+
+### An emitted promotion is acceptable by the gate it targets (B-020)
+
+- **Given** a `promotion` section written exactly as the skill's step 4 template — `**Source:** cortex-archive-ingest — archive/documents/<slug>/extracted/<file>` (the file exists), `**Target:**` under `.cortex/atlas/` or `.cortex/compass/`, a `**Proposed file:**` payload carrying `provenance: - derives_from:` the same extracted path — in `.cortex/pulse/reports/archive-ingestion.md`
+- **When** `cortex pulse-list` then `cortex pulse-accept <S-NNN>` run
+- **Then** the section is listed as pending, the accept exits 0, the target lands with its `source:` and `provenance:` back-references resolving under `check.provenance`, and nothing under `.cortex/insight/` is modified — the producer's output is acceptable end to end (`insight.promotion-mechanism` Rule 5)
 
 ### `register.md` reflects every ingestion
 

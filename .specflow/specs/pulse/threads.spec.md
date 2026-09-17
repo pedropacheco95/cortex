@@ -160,11 +160,15 @@ Nothing here injects anything anywhere — this step is the ledger, not the reca
       forward edge wherever it drafts), passed through `decisionFilePayload`'s optional `bearsOn`
       argument; an empty list emits no key (the drafted decision then carries `check.atlas`'s
       "bears on nothing" warning until a human adds one).
-    - `--to compass/bugs`: target `.cortex/compass/bugs/B-NNN-<slug>.md` where `B-NNN` is the
-      next id after the highest existing `B-\d+` filename in that directory (no clobber, id never
-      reused). Frontmatter per schema §4.2: `id`, `title` (as above), `type` from `--type`
+    - `--to compass/bugs`: target `.cortex/compass/bugs/B-NNN-<slug>.md` where `B-NNN` is
+      allocated through the id registry — `allocateId(root, 'bug', slug)`, `schema.id-registry`
+      Rule 2 (3.4 fifth revision; it was "next after the highest `B-\d+` filename on disk",
+      which two branches compute identically) — no clobber, id never reused. Frontmatter per
+      schema §4.2: `id`, `title` (as above), `type` from `--type`
       (**required** — one of the seven-type enum; the classification is a human judgment Core must
-      not guess, R-001), `severity: medium`, `status: open`, `opened` (now), `affects:` — the
+      not guess, R-001), `severity: medium`, `status: open`, `opened` (now),
+      `found_at_commit: <readHeadCommit(root)>` when the helper returns a sha and no key when it
+      returns `null` (`compass.bug-currency` Rules 4–5), `affects:` — the
       `--affects` values if given, else the thread's `bears_on` entries that resolve on disk as
       project-relative paths (ids are kept only when `--affects` names them explicitly); when the
       resulting list is empty the verb refuses and asks for `--affects`, because `check.bug`

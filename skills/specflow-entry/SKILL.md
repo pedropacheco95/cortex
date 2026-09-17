@@ -109,6 +109,12 @@ When the project has a `.cortex/` directory, classification includes the knowled
   authority — the gated layers (compass rules, specs) win on conflict. If
   `.cortex/insight/` is absent or a query returns nothing, classify without it —
   never block on missing insight.
+- **Coordinator-style requests read compass first.** A request that asks you to dispatch,
+  review or plan work rather than edit it (run agents in parallel, review a diff, plan a
+  wave) is routed through `.cortex/compass/_index.md` before anything else — everything
+  reaches such a session as a claim, and `compass/` (rules, the bug ledger,
+  `environment.md`) is where claims are checked; "do not read source" never means "do not
+  read the knowledge layer".
 - **Bug-shaped reports route toward the ledger flow (cortex-schema §4.3):** diagnosis
   goes through specflow-bugs, and the bug is filed as
   `.cortex/compass/bugs/B-NNN-<slug>.md` — never a root `bugs.md` — so the daily

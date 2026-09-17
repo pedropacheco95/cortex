@@ -13,6 +13,8 @@ The `cortex-schema.md` contract plus the schema validator — the load-bearing a
 - `schema.validator-insight-checks` — the insight-module checks and the typed pulse-gate extension of `check.pulse`.
 - `schema.schema-clauses` — (3.4) `schema:§N[.M[.K]]` as a reference form: the heading-scan resolver, cached per validate run, unresolved → warning.
 - `schema.bears-on` — (3.4) the citation graph's first forward edge: the mixed-ref grammar and resolver by shape shared by every carrier, `check.bears-on` on decisions and evidence, and the rule that the inverse is computed (the recall index), never stored.
+- `schema.id-registry` — (3.4 fifth revision) the append-only `compass/registry.md` every rule and bug id is issued through, `cortex id next rule|bug`, `check.id-registry`, and the `cortex sync` migration that creates it once — so parallel branches collide loudly in git instead of silently in the validator.
+- `schema.visibility` — (3.4 fifth revision) `visibility.repo` in `cortex.config.json` and `check.visibility`: when the repository is public, a line-level warning for hosts, addresses, ports, SSH targets and account ids in tracked compass and atlas files, with an `allow` list.
 
 _Planned coverage (not yet written):_
 

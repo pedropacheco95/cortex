@@ -32,7 +32,8 @@ The pulse review CLI is the human gate of the propose-don't-mutate convention (d
 4b. **Duplicate ids are a hard error.** The same `S-NNN` appearing in two pulse files → exit 1 naming both files, no action taken (§4.5).
 5. **`pulse-reject`** annotates `**Status:** rejected` and appends a `dismissed.md` section (`**Dismissed:**` now, `**Expires:**` now + `pulse.dismissedWindowDays`).
 6. **Idempotence.** Accept or reject on an already-decided id → notice + exit 0, no further change. Accept on a rejected id (or vice versa) → error exit 1 (a decision reversal is a human edit, not a CLI path).
-7. **Blast radius.** A run touches at most: the one target file, `suggestions.md`, `dismissed.md`. Malformed entries are reported (exit 1 for the addressed id; skipped-with-notice in `pulse-list`) — never half-applied.
+7. **Blast radius.** A run touches at most: the one target file, the pulse file holding the suggestion, `dismissed.md`, and — 3.4 fifth revision — `.cortex/compass/registry.md` when Rule 7b applies. Malformed entries are reported (exit 1 for the addressed id; skipped-with-notice in `pulse-list`) — never half-applied.
+7b. **A new rule file is registered on accept (`schema.id-registry` Rule 4).** When the accepted suggestion's `**Target:**` is a `.cortex/compass/rules/R-NNN-<slug>.md` file that does not yet exist, accept first reads the registry: if `R-NNN` is already on a line with a different slug, it refuses (exit 1) naming that line and `cortex id next rule`, and neither the file nor the status annotation is written; otherwise the file lands and `R-NNN <slug>` is appended to the registry in the same run (created from disk first when absent, Rule 2 there). A human act writing compass, the same standing as the accept itself; loops never touch the registry (RULES.md rule 7).
 8. **Deterministic Core.** No LLM, no network, no subprocess (governed by R-001).
 
 ## Acceptance Criteria

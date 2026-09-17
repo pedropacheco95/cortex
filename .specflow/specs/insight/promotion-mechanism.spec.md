@@ -21,8 +21,8 @@ This spec extends the pulse review CLI (`pulse.review-cli`, `src/pulse/review.ts
 
 ## Entities
 
-- **READS:** every `.cortex/pulse/*.md` suggestion section (schema §4.5 single S-namespace); `pulse/dismissed.md`; `cortex.config.json` (`pulse.dismissedWindowDays`); the `**Target:**` files for edit/promotion; the insight prose file named in a `promotion`'s `**Source:**`.
-- **WRITES:** the accepted suggestion's `**Target:**` file (append, create, or byte-range replace per payload shape); for `promotion`, the gated target (with an injected `source:` back-reference) **and** the insight original (stamping its promoted trailer, §4.10.4); the originating suggestion's `**Status:**`; `dismissed.md` on reject. Nothing else.
+- **READS:** every `.cortex/pulse/*.md` suggestion section (schema §4.5 single S-namespace); `pulse/dismissed.md`; `cortex.config.json` (`pulse.dismissedWindowDays`); the `**Target:**` files for edit/promotion; the artefact named in a `promotion`'s `**Source:**` — an insight per-file entry or an archive `extracted/` file (Rule 5).
+- **WRITES:** the accepted suggestion's `**Target:**` file (append, create, or byte-range replace per payload shape); for `promotion`, the gated target (with an injected `source:` back-reference) **and**, only when the source is an insight entry, that entry (stamping its promoted trailer, §4.10.4); the originating suggestion's `**Status:**`; `dismissed.md` on reject. Nothing else.
 - **CREATES:** `dismissed.md` if absent (its §4.5 header); a new file for `**Proposed file:**`/create-shaped accepts (no clobber).
 
 ## Rules
@@ -31,9 +31,9 @@ This spec extends the pulse review CLI (`pulse.review-cli`, `src/pulse/review.ts
 2. **Extended target roots (schema §4.5.1 table).** The permitted `**Target:**` root depends on the type: `rule-candidate` → `.cortex/cerebrum/`; `skill-proposal` → new `.claude/skills/<name>/SKILL.md`; `promotion` and `gated-layer-update` → `.cortex/cerebrum/`, `.cortex/atlas/`, or `RULES.md`; `user-directed-capture` → those three **plus** `.cortex/insight/map/`. `promotion` and `gated-layer-update` may **never** target `.cortex/insight/map/` (insight is ungated — its corrections are direct writes by the gaps loop, not proposals). A target outside its type's permitted root is refused (exit 1, naming the path).
 3. **Three payload shapes (schema §4.5.2).** Exactly one per section: `**Proposed addition:**` (append; target MUST exist), `**Proposed file:**` (create; refuse if the target exists), and the new `**Proposed edit:**` (edit). All fenced blocks obey the longer-fence grammar (byte-exact round-trip, B-003).
 4. **The edit payload (schema §4.5.2).** `**Proposed edit:**` carries a `current:` block (the exact text to replace) and a `replacement:` block. Accept locates `current:` in the target and it MUST match **byte-exact**; a `current:` resolving to zero or >1 occurrences is a hard refusal (stale or ambiguous — the target drifted since the proposal was written). Accept replaces the single located occurrence. The edit operation is what makes `gated-layer-update` (a correction to an existing rule/decision) expressible — it is the mechanism signal-4-gated requires.
-5. **Promotion accept side effects (schema §4.10.4).** On accept of a `promotion`: (a) apply the payload (append or create) to the gated target; (b) inject a `source:` reference in the landed content pointing back at the insight file it graduated from (the citation graph records the lineage, schema §6 `source` row); (c) stamp the insight original with the promoted trailer `_(promoted <iso-date> → <gated-target-path> via S-NNN)_` — **marking, never deleting** (deletion of the redundant copy is the human's call). The `**Source:**` of a `promotion` MUST name the insight file being promoted (schema §4.5).
-6. **Transactional accept (schema §4.5.2).** Any refusal — byte-mismatch on edit, clobber on create, ambiguous/stale edit, or a promotion whose insight source is missing — applies **nothing**, changes no file, and leaves the suggestion `**Status:** pending`.
-7. **Shared gate is preserved.** The S-namespace counter (`pulse/state/suggestion-counter`), `dismissed.md` suppression, duplicate-id hard error, and idempotent re-decide (all from `pulse.review-cli`) govern the typed types unchanged. Blast radius per accept: the one target file, the insight original (promotion only), the originating suggestion file, and `dismissed.md`.
+5. **Promotion accept side effects (schema §4.5, §4.5.1, §4.10.4; corrected by B-020, 2026-09-17).** A `promotion`'s `**Source:**` names the **originating artefact**, and it is one of exactly two kinds, both of which MUST resolve on disk: an **insight** per-file entry (`insight/anatomy/**` or `insight/scopes/<s>/anatomy/**` — the `pulse.distil` Rule 7 producer) or an **archive** extraction file (`.cortex/archive/documents/<id>/extracted/…`, with or without the `.cortex/` prefix — the `cortex-archive-ingest` producer). On accept: (a) apply the payload (append or create) to the gated target; (b) inject a `source:` reference in the landed content pointing back at the named artefact (the citation graph records the lineage, schema §6 `source` row; an archive-derived payload already carries `provenance:` and the injected `source:` is the same path); (c) **only when the source is an insight entry**, stamp it with the promoted trailer `_(promoted <iso-date> → <gated-target-path> via S-NNN)_` — **marking, never deleting** (deletion of the redundant copy is the human's call); an archive source is never written to. An **archive**-sourced promotion additionally requires its `**Target:**` to lie under `.cortex/compass/` or `.cortex/atlas/` (Rule 2's roots minus `RULES.md` — an ingested document proposes knowledge, not project rules). A `**Source:**` naming neither kind is a refusal whose message names both accepted shapes and never a retired path (`insight/map/` is 2.0).
+6. **Transactional accept (schema §4.5.2).** Any refusal — byte-mismatch on edit, clobber on create, ambiguous/stale edit, or a promotion whose named source file does not exist, or names neither an insight entry nor an archive extraction, or (archive kind) targets outside compass/atlas — applies **nothing**, changes no file, and leaves the suggestion `**Status:** pending`.
+7. **Shared gate is preserved.** The S-namespace counter (`pulse/state/suggestion-counter`), `dismissed.md` suppression, duplicate-id hard error, and idempotent re-decide (all from `pulse.review-cli`) govern the typed types unchanged. Blast radius per accept: the one target file, the insight original (insight-sourced promotion only), the originating suggestion file, and `dismissed.md`.
 8. **Deterministic Core** (R-001): parsing, byte-matching, and application are pure file I/O — no LLM, no network.
 
 ## Acceptance Criteria
@@ -56,19 +56,26 @@ This spec extends the pulse review CLI (`pulse.review-cli`, `src/pulse/review.ts
 - **When** it is accepted
 - **Then** exit 1 (ambiguous), nothing applied, suggestion pending
 
-### A promotion lands the gated write, the lineage, and the promoted marker
+### An insight-sourced promotion lands the gated write, the lineage, and the promoted marker
 
-- **Given** `S-055 **Type:** promotion` with `**Source:**` naming `.cortex/insight/map/deploy.md` and `**Target:** .cortex/atlas/decisions/2026-07-06-deploy-runbook.md` (create)
+- **Given** `S-055 **Type:** promotion` with `**Source:**` naming `.cortex/insight/anatomy/src/deploy.ts.md` (exists) and `**Target:** .cortex/atlas/decisions/2026-07-06-deploy-runbook.md` (create)
 - **When** `cortex pulse-accept S-055` runs
-- **Then** the atlas decision is created carrying a `source:` reference back to `insight/map/deploy.md`
-- **And** the promoted entry in `deploy.md` gains the trailer `_(promoted 2026-07-06 → .cortex/atlas/decisions/2026-07-06-deploy-runbook.md via S-055)_`
-- **And** `deploy.md` is not deleted
+- **Then** the atlas decision is created carrying a `source:` reference back to `insight/anatomy/src/deploy.ts.md`
+- **And** the entry `deploy.ts.md` gains the trailer `_(promoted 2026-07-06 → .cortex/atlas/decisions/2026-07-06-deploy-runbook.md via S-055)_`
+- **And** `deploy.ts.md` is not deleted
 
-### A promotion with a missing insight source refuses transactionally
+### An archive-sourced promotion lands the gated write and the lineage, and touches no insight file
 
-- **Given** `S-056 **Type:** promotion` whose `**Source:**` names a `map/` file that does not exist
-- **When** it is accepted
-- **Then** exit 1, no gated write lands, no marker is stamped, `S-056` stays pending
+- **Given** `S-060 **Type:** promotion` with `**Source:** cortex-archive-ingest — archive/documents/brief/extracted/summary.md` (the file exists under `.cortex/`) and `**Target:** .cortex/atlas/stakeholders/coordinator.md` (create), the payload carrying `provenance: - derives_from: archive/documents/brief/extracted/summary.md`
+- **When** `cortex pulse-accept S-060` runs
+- **Then** exit 0, the stakeholder file is created carrying a `source:` reference to that extracted file, no file under `.cortex/insight/` or `.cortex/archive/` is modified, and the section reads `**Status:** accepted`
+- **And** given instead `**Target:** RULES.md`, the accept exits 1 naming compass/atlas as the archive-sourced roots, nothing is written, and `S-060` stays pending
+
+### A promotion with a missing or unrecognised source refuses transactionally
+
+- **Given** `S-056 **Type:** promotion` whose `**Source:**` names an `insight/anatomy/` entry that does not exist, and `S-061` whose `**Source:**` is `cortex-loop — pulse/reports/session-observe.md` (neither kind)
+- **When** each is accepted
+- **Then** each exits 1 with a message naming both accepted source shapes and not `insight/map/`, no gated write lands, no marker is stamped, and both stay pending
 
 ### promotion and gated-layer-update may not target insight
 
@@ -85,6 +92,7 @@ This spec extends the pulse review CLI (`pulse.review-cli`, `src/pulse/review.ts
 ## Notes
 
 - This extends `pulse.review-cli`; it does not fork it. The v1 accept-as-is/reject/dismiss discipline, the single S-namespace, and the verbatim-payload guarantee are inherited, and this spec adds only the type dispatch, the edit shape, the extended roots, and the promotion side effects.
-- The producer of `promotion`/`gated-layer-update`/`user-directed-capture` sections is `insight.gaps-loop`; this spec owns the *accept* runtime that satisfies them, verified against `schema.validator-insight-checks`' extended `check.pulse`.
+- Producers (3.x): `promotion` sections come from `cortex-archive-ingest` (archive-sourced, `archive.ingest-skill`) and from `pulse.distil` Rule 7 (insight-sourced graduation); `gated-layer-update` and `user-directed-capture` come from the session-reading loops. This spec owns the *accept* runtime that satisfies them, verified against `schema.validator-insight-checks`' extended `check.pulse`. The 2.0 producer (`insight.gaps-loop`) is retired.
+- **B-020 (2026-09-17).** Rules 5–6 and the promotion criteria were corrected: accept enforced the 2.0 "Source must name the insight file" clause after schema 3.0's §4.5.1 had named archive ingestion as the producer, so every archive promotion was refused. Pedro chose §4.5.1; §4.5's Source clause now agrees. OPEN: this spec's `implements:` still points at `insight.corrections-and-memory-reach-persistence`, whose promotion journey (step 4, rules 4–5) is the 2.0 insight-prose graduation schema 3.0 retired; re-homing under the archive outcome is Pedro's call, not made here.
 - Build-order §4 splits this into 4a (typed parser/writer + edit payload shape) and 4b (typed accept semantics + promotion side effects); this spec is the contract for both sub-batches.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

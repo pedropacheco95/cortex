@@ -403,6 +403,7 @@ affects:
   - [spec ID, file path, or rule ID]
 proposed_fix: [one-line summary of the change plan]
 opened: [ISO datetime]
+found_at_commit: [git rev-parse --short HEAD]
 ---
 
 # B-NNN — [Short description]
@@ -449,9 +450,18 @@ the plan.
 
 ### Bug numbering
 
-Bug IDs are sequential: B-001, B-002, etc. List `.cortex/compass/bugs/` to find the
-highest existing `B-NNN` and increment. If the ledger directory doesn't exist yet,
-create it and start at B-001.
+Bug IDs are sequential: B-001, B-002, etc. Allocate the number through the id
+registry — run `cortex id next bug --slug <slug>` and use the id it prints (it appends
+`B-NNN <slug>` to `.cortex/compass/registry.md`, so two branches filing at once conflict
+loudly in git instead of both taking the same number; schema §4.2, `schema.id-registry`).
+Only if the CLI is unavailable: list `.cortex/compass/bugs/` and the registry, take the
+highest `B-NNN` of either plus one, and append the registry line by hand. If the ledger
+directory doesn't exist yet, create it and start at B-001.
+
+New bugs should carry `found_at_commit: <git rev-parse --short HEAD>` — the commit the
+observation was made against — and, once someone owns the fix, `owner:` and
+`fix_in_flight:` (a branch, PR or commit); `status: triaged` means both are set
+(schema §4.2, `compass.bug-currency`).
 
 ### Severity classification
 

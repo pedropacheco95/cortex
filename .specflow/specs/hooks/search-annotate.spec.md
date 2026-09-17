@@ -109,8 +109,13 @@ The measurement is `pulse.usage` Rule 11 (pointers fired and followed), which al
 7. **Pointer-line grammar — exactly this, recorded once in schema §5.** Two line shapes, and
    nothing else is ever emitted (`pulse.usage` Rule 11 counts lines by these prefixes):
    - `Recall: <kind> <YYYY-MM-DD> <title cut to 60> (<path>)` — one entry of any kind
-     (`decision`, `evidence`, `thread`, `observation`); `<path>` is the entry's project-relative
-     path from the index.
+     (`decision`, `evidence`, `thread`, `observation`, and — 3.4 fifth revision — `rule`,
+     `compass-doc`, `bug`); `<path>` is the entry's project-relative path from the index. For
+     an entry whose `date` is empty (a rule, a compass document, a bug without `opened`) the
+     date field and its following space are omitted: `Recall: rule R-014 No camelCase database
+     columns (.cortex/compass/rules/R-014-x.md)` — for `rule` and `bug` kinds the id precedes
+     the title so the line names the thing a session can cite. Same prefix, same budget, no
+     new shape: the smallest change that lets the pointer name the "must" layer.
    - `Decided: <decision id> · Open: <T-id> <thread key text cut to 40>` — a subject that has
      both a current decision and an open thread, newest of each.
    The last emitted line ends with ` · more: cortex why <ref>` when the leading subject has more
@@ -123,7 +128,10 @@ The measurement is `pulse.usage` Rule 11 (pointers fired and followed), which al
 8. **Selection — the fewest lines that carry the strongest match.** With subject matches, take
    the first matched subject (Rule 5 order): if it has both `decided` and `threads` → one
    `Decided:` line; otherwise one `Recall:` line for its strongest member, strength order **open
-   thread > current decision > evidence > observation**, newest first within a kind. A second
+   thread > open/triaged bug > current decision > rule > evidence > observation** (the
+   fifth revision slots the two compass lists in: a bug is the most perishable fact about a
+   subject after an open question, and a rule outranks a measurement because it binds), newest
+   first within a kind (an empty date sorts last, then id ascending). A second
    line is added only when it adds a different entry: the leading subject's next-strongest
    member, else the top Rule 6 keyword entry. Without subject matches: up to two `Recall:` lines
    from the top Rule 6 entries. An entry already named on line one is never repeated on line two.
@@ -258,6 +266,26 @@ The measurement is `pulse.usage` Rule 11 (pointers fired and followed), which al
   containing `{not json`, and an index whose `subjects` is a string
 - **When** the hook runs for each
 - **Then** every run exits 0 with empty stdout and `pulse/reports/hook-errors.md` is not created
+
+### A keyword search lands on a compass document
+
+- **Given** `entries["compass.environment"]` of kind `compass-doc` whose keywords contain
+  `scheduled` and `jobs` (from the heading `## Scheduled QA jobs`), no subject naming it, and
+  a `Bash` command `grep -rn "scheduled jobs" src/`
+- **When** the hook runs
+- **Then** one line `Recall: compass-doc Environment (.cortex/compass/environment.md)` is
+  emitted — no date field, since the entry's date is empty — and the payload is under 60 tokens
+
+### A grep into a governed directory points at the rule, and an open bug outranks it
+
+- **Given** `subjects["src/db"].rules` is `["R-014"]` with no other members, and a `Grep` with
+  `path: "src/db"` and `pattern: "column"`
+- **When** the hook runs
+- **Then** the line is `Recall: rule R-014 No camelCase database columns
+  (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)`; and given the subject also
+  carries `bugs: ["B-031"]` with `entries["B-031"].date` of `2026-06-28`, line one is instead
+  `Recall: bug 2026-06-28 B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)`
+  and the rule line follows as line two
 
 ### The imperative-free grammar
 

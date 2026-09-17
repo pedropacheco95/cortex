@@ -47,4 +47,18 @@ Developers and freelancers bringing a project — new or existing — under Cort
 
 ## Notes
 
+- Wave follow-up B (2026-09-17; `init.spec.md` Rules 3 and 10): the orientation block setup
+  writes into the assistant's instructions now says two more things and one thing fewer. It
+  names the sessions that coordinate, review or plan as the ones the read-first protocol
+  applies to *most* — an external team's coordinator never opened the knowledge layer in
+  sixteen hours because its brief said "do not read source" and nothing said the knowledge
+  layer was different. It states **once**, generated from the project's own configuration,
+  where durable knowledge lives (tracked, inside `.cortex/`) and that any local notes directory
+  is untracked on purpose — the same team had two contradictory sentences two lines apart and
+  nearly published internal notes to a public repository on the strength of the wrong one. And
+  it drops the "this is not optional" insight mandate, which the project's own measurement
+  showed was followed twice in fifty-five sessions. Setup also records that the repository's
+  visibility is unknown until the developer says otherwise, and creates the empty identifier
+  list that keeps parallel work from issuing the same rule or problem number. Business rules
+  1–5 unchanged.
 - The "one follow-up command" exists because the desktop app owns the real schedule registry and offers no supported way for setup to write it; setup prepares everything, and the summary names the register/verify pair that finishes the job (B-009 correction — the earlier "approve the schedule in the desktop app" confirmation described a flow the app never had).

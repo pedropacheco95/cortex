@@ -51,6 +51,10 @@ When the project has a `.cortex/` directory:
   `.cortex/compass/rules/R-*.md` files before modifying the spec — an edit must not
   contradict a governing rule without flagging it, and every rule reference must still
   resolve after the edit.
+- **Allocate a new compass rule's id through the registry.** When a change plan creates a
+  `.cortex/compass/rules/R-NNN-<slug>.md`, take `R-NNN` from `cortex id next rule --slug
+  <slug>` (it appends the line to `.cortex/compass/registry.md`; `schema.id-registry`) —
+  never from "the highest number on disk plus one", which two branches compute identically.
 - **Run `cortex validate` after modifications.** The validator is the mechanical
   backbone: frontmatter schema, `implements:`/`implemented_by:` resolution and
   symmetry, ID/path agreement, dependency cycles. Run it after every modification

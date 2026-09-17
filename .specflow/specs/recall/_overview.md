@@ -16,7 +16,10 @@ verbs, and the generated index blocks.
   (schema §4.11): every `bears_on` edge inverted into per-subject lists of decisions, evidence,
   open threads and observation themes, under three entailment rules (current decisions only, open
   threads only, evidence inherited through the citing decision), built by `cortex scan`,
-  `cortex init`, and the post-commit fast tier.
+  `cortex init`, and the post-commit fast tier. (3.4 fifth revision) The compass layer joins the
+  carriers: rules bear on the directories and files they govern, open and triaged bugs on what
+  they affect (a fourth entailment rule), and the four compass documents are keyword-only
+  entries found by their headings.
 - `recall.why` — `cortex why <ref>` (everything the index holds for one subject: decided,
   evidence with its first three findings, open threads, observation themes; `--json`) and
   `cortex recall <query>` (keyword search over the entries, top five, `--kind`). Pull only;

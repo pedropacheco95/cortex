@@ -6,13 +6,18 @@ The write-time enforcement layer and the unified bug ledger. It holds project co
 
 ## What it covers
 
-_No dev specs live in this folder yet — the module's enforcement surfaces are specified where they are built (the hooks, the loops, the schema checks). Coverage of the `.cortex/compass/` module:_
+**Specs written:**
+
+- `compass.bug-currency` — (3.4 fifth revision) the bug ledger as the "currently true" surface: three optional fields (`owner`, `fix_in_flight`, `found_at_commit`), `triaged` meaning owned-with-a-fix-in-flight, the pure-file-I/O `.git/HEAD` reader every Core writer stamps a new bug with, and the shape-only `check.bug` amendment.
+
+_The module's other enforcement surfaces are specified where they are built (the hooks, the loops, the schema checks — including `schema.id-registry`, which owns `compass/registry.md`). Coverage of the `.cortex/compass/` module:_
 
 - `preferences.md` — project conventions
 - `environment.md` — operational pointers (never secrets)
 - `do-not-repeat.md`
 - `rules/` — one file per rule, frontmatter plus an optional machine-checkable `check:` predicate
 - `bugs/` — one file per bug, classified against SpecFlow's seven-type taxonomy
+- `registry.md` — the append-only list of every issued `R-NNN` and `B-NNN` (`schema.id-registry`)
 
 Decisions no longer live here: at v3, `atlas/decisions/` is the sole decisions home (`migration.decisions-single-home`) and a compass rule that derives from a decision cites it via `provenance:` frontmatter instead of restating it.
 

@@ -123,9 +123,14 @@ falsifiable rather than asserted.
     `pulse/state/` or `pulse/reports/`), so it lands in both the module bucket and this figure.
 
 11. **Pointer follow-through.** A pointer line is any text line beginning `Recall:`, `Decided:`,
-    `Evidence:` or `Open:` (3.4 third revision — `Open:` is the `hooks.prompt-route` line;
+    `Evidence:`, `Open:` or `Bugs:` (3.4 third revision — `Open:` is the `hooks.prompt-route` line;
     `Evidence:` and a leading `Open:` are what the `hooks.pre-read-writeback` Rule 6 marker begins
-    with when its `Decided:` part is empty, a gap in the earlier two-prefix rule closed here)
+    with when its `Decided:` part is empty, a gap in the earlier two-prefix rule closed here;
+    3.4 fifth revision — `Bugs:` is what that marker begins with on a source-file read whose
+    only recall is an open bug, and `R-NNN`/`B-NNN` join the id-shaped tokens, standing for the
+    rule or bug file under `.cortex/compass/rules/` or `.cortex/compass/bugs/` whose basename
+    starts with the id; the `Recall: rule|compass-doc|bug` lines end in `(<path>)` like every
+    `Recall:` line, so no new prefix comes from the search hook)
     found in hook-injected context — a `hook_additional_context` attachment entry's content, or a
     user entry's text — and its pointed target is the path inside the line's trailing
     parenthesised `(<path>)` when present (the `Recall:` and `Open:` grammars end that way, and an

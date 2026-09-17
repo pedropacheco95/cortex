@@ -13,6 +13,7 @@ implemented_by:
   - ../../specs/recall/why.spec.md
   - ../../specs/recall/index-blocks.spec.md
   - ../../specs/hooks/prompt-route.spec.md
+  - ../../specs/compass/bug-currency.spec.md
 ---
 
 # The assistant reaches for Cortex instead of guessing
@@ -173,6 +174,29 @@ the assistant itself, which has no way today to tell whether asking is worth the
   rules 1 to 6 are unchanged by the retirement — rule 1 already promised coverage at the search,
   the read or the prompt, "not as a standing list at session start"; the retirement makes the
   contract match the promise.
+- **Wave follow-up B (2026-09-17; schema 3.4, fifth revision in place).** An external team's
+  brief showed the pointers stopped one layer short: a session searching a directory learned
+  what was *decided* about it but not which rule *governs* it, a read of a file said nothing
+  about the open problem filed against it, and the one compass document that answered the
+  night's most expensive question was never opened because nothing pointed at it. Three
+  changes, same rules. The project's rules, its open problems and its four hand-kept compass
+  documents now count as things the project knows about a subject (`recall/recall-index.spec.md`
+  Rules 15–17): a rule speaks for the directories and files it governs, an open or owned
+  problem speaks for what it affects, and a compass document is found by the words in its
+  headings. The search pointer and `cortex why` name them in the same shapes as before
+  (`hooks/search-annotate.spec.md`, `recall/why.spec.md`); the read marker gains a `Bugs:` part
+  and — the one widening of journey step 1 — a read of a *source file* now gets that part alone
+  when an open problem names the file, and nothing otherwise, so the everyday read still costs
+  nothing. `compass/bug-currency.spec.md` gives a filed problem the three facts the brief's team
+  kept rediscovering — who owns it, where the fix is, which commit it was seen at — so "what is
+  broken right now" is a question the ledger answers. Rules 2, 4, 5 and 6 hold: a rule's title
+  and a document's headings are names, not content; every pointer is compiled from a file that
+  exists when it fires; a resolved problem drops out of every pointer the moment the index is
+  rebuilt; nothing blocks. Business rule 3 gains its first concrete case in the generated
+  CLAUDE.md block (`../core-cli/developer-sets-up-cortex-in-one-command.business.md`): the
+  protocol now says it applies *more* to sessions that dispatch, review or plan than to ones
+  that edit, because the brief's coordinator generalised "do not read source" into "do not read
+  the knowledge layer" and no wording anticipated that.
 - Adjacent but distinct: `../insight/assistant-has-project-knowledge-when-working.business.md`
   covers the *insight* layer answering when asked. This outcome covers the whole knowledge
   layer being reached for at all. That spec's business rule 3 ("never injected as ambient noise
