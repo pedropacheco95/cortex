@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-09-06T03:11:01Z",
-  "built_at_commit": "c2de5f6",
+  "generated": "2026-09-22T10:07:30Z",
+  "built_at_commit": "a66041b",
   "vocabulary": [
     {
       "tag": "S-NNN-namespace",
@@ -268,6 +268,11 @@
     "file:src/archive/scaffold.ts": [
       "deterministic-core"
     ],
+    "file:src/atlas/evidence.ts": [
+      "provenance",
+      "report-writing",
+      "single-write-authority"
+    ],
     "file:src/cli/claude-auth.ts": [
       "writer-verifier"
     ],
@@ -303,6 +308,15 @@
     "file:src/cli/templates.ts": [
       "cli"
     ],
+    "file:src/compass/git-head.ts": [
+      "core-shared-util",
+      "git-introspection"
+    ],
+    "file:src/compass/registry.ts": [
+      "compass-rule",
+      "id-allocation",
+      "single-write-authority"
+    ],
     "file:src/constellation/compile.ts": [
       "constellation"
     ],
@@ -331,6 +345,11 @@
       "hooks",
       "warn-never-block"
     ],
+    "file:src/hooks/harness.ts": [
+      "core-shared-util",
+      "hook-safe",
+      "hooks"
+    ],
     "file:src/hooks/post-read.ts": [
       "hooks",
       "warn-never-block"
@@ -347,9 +366,34 @@
       "hooks",
       "warn-never-block"
     ],
+    "file:src/hooks/prompt-route.ts": [
+      "hook-safe",
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/search-annotate.ts": [
+      "hook-safe",
+      "hooks",
+      "query-engine"
+    ],
+    "file:src/hooks/session-end.ts": [
+      "hook-safe",
+      "hooks",
+      "session-corpus"
+    ],
     "file:src/hooks/session-start.ts": [
       "hooks",
       "warn-never-block"
+    ],
+    "file:src/hooks/stop.ts": [
+      "hook-safe",
+      "hooks",
+      "warn-never-block"
+    ],
+    "file:src/hooks/transcript-head.ts": [
+      "hook-safe",
+      "hooks",
+      "session-corpus"
     ],
     "file:src/insight/cli.ts": [
       "cli-surface",
@@ -506,6 +550,15 @@
       "id-allocation",
       "monotonic-counter"
     ],
+    "file:src/pulse/thread-cli.ts": [
+      "cli-surface",
+      "promotion",
+      "pulse-proposal"
+    ],
+    "file:src/pulse/threads.ts": [
+      "pulse-proposal",
+      "single-write-authority"
+    ],
     "file:src/pulse/types.ts": [
       "core-pulse-infra",
       "permitted-target-roots",
@@ -518,10 +571,30 @@
       "scan-and-report",
       "session-corpus"
     ],
+    "file:src/recall/cli.ts": [
+      "cli-surface",
+      "query-engine"
+    ],
+    "file:src/recall/index-blocks.ts": [
+      "managed-block",
+      "scaffolding-drift"
+    ],
+    "file:src/recall/index.ts": [
+      "cross-reference-resolution",
+      "query-engine"
+    ],
+    "file:src/recall/query.ts": [
+      "cross-reference-resolution",
+      "query-engine"
+    ],
     "file:src/schema/checks/archive.ts": [
       "validator"
     ],
     "file:src/schema/checks/atlas.ts": [
+      "cross-reference-resolution",
+      "validator"
+    ],
+    "file:src/schema/checks/bears-on.ts": [
       "cross-reference-resolution",
       "validator"
     ],
@@ -545,7 +618,15 @@
       "spec-tree",
       "validator"
     ],
+    "file:src/schema/checks/evidence.ts": [
+      "provenance",
+      "validator"
+    ],
     "file:src/schema/checks/hooks.ts": [
+      "validator"
+    ],
+    "file:src/schema/checks/index-completeness.ts": [
+      "coverage-gap",
       "validator"
     ],
     "file:src/schema/checks/insight.ts": [
@@ -564,6 +645,14 @@
     "file:src/schema/checks/pulse.ts": [
       "validator"
     ],
+    "file:src/schema/checks/recall-index.ts": [
+      "staleness",
+      "validator"
+    ],
+    "file:src/schema/checks/registry.ts": [
+      "id-allocation",
+      "validator"
+    ],
     "file:src/schema/checks/scenario.ts": [
       "spec-tree",
       "validator"
@@ -572,9 +661,21 @@
       "spec-tree",
       "validator"
     ],
+    "file:src/schema/checks/threads.ts": [
+      "pulse-proposal",
+      "validator"
+    ],
+    "file:src/schema/checks/visibility.ts": [
+      "permitted-target-roots",
+      "validator"
+    ],
     "file:src/schema/checks/xref.ts": [
       "cross-reference-resolution",
       "spec-tree",
+      "validator"
+    ],
+    "file:src/schema/clauses.ts": [
+      "cross-reference-resolution",
       "validator"
     ],
     "file:src/schema/cli.ts": [
@@ -588,6 +689,10 @@
       "cross-reference-resolution",
       "deterministic-core",
       "provenance"
+    ],
+    "file:src/schema/refs.ts": [
+      "cross-reference-resolution",
+      "validator"
     ],
     "file:src/schema/types.ts": [
       "validator"

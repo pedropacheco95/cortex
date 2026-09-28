@@ -1,6 +1,6 @@
 ---
 kind: insight-observation
-updated: 2026-09-06T01:20:00Z
+updated: 2026-09-23T01:20:41Z
 salient: false
 sessions:
   - claude-sessions/pedropacheco1/9c6cdd6d-65db-46dd-998f-2232f2b016bb
@@ -15,6 +15,7 @@ sessions:
   - claude-sessions/pedropacheco1/d868fb89-e74c-487e-ad98-0c63eae7aed9
   - claude-sessions/pedropacheco1/d97506f5-d147-4dd2-829c-1131fb83ed23
   - claude-sessions/pedropacheco1/2e498599-40da-4415-bd91-93d104ffac1b
+  - claude-sessions/pedropacheco1/38b5dd4a-aa04-427e-ae2c-4f6a575f5181
 ---
 
 Cortex's own `.cortex/insight/` layer is scoped to `src/` only —

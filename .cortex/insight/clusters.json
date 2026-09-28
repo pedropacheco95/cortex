@@ -1,7 +1,7 @@
 {
   "schemaVersion": "3.0",
-  "generated": "2026-08-20T17:08:21Z",
-  "built_at_commit": "c2de5f6",
+  "generated": "2026-09-22T10:07:30Z",
+  "built_at_commit": "a66041b",
   "clusters": [
     {
       "id": "cluster:archive",
@@ -19,11 +19,17 @@
       "members": [
         "file:src/hooks/cli.ts",
         "file:src/hooks/errors.ts",
+        "file:src/hooks/harness.ts",
         "file:src/hooks/post-read.ts",
         "file:src/hooks/post-write.ts",
         "file:src/hooks/pre-read.ts",
         "file:src/hooks/pre-write.ts",
-        "file:src/hooks/session-start.ts"
+        "file:src/hooks/prompt-route.ts",
+        "file:src/hooks/search-annotate.ts",
+        "file:src/hooks/session-end.ts",
+        "file:src/hooks/session-start.ts",
+        "file:src/hooks/stop.ts",
+        "file:src/hooks/transcript-head.ts"
       ],
       "rationale": "warn-never-block hook handlers sharing the exit-0 degradation path and hook-errors.md appender",
       "scope": "global"
@@ -43,6 +49,17 @@
         "file:src/cli/templates.ts"
       ],
       "rationale": "the cortex CLI entry with dynamic verb dispatch, init scaffolding, and scheduled-task scoping",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:compass-ledger",
+      "label": "Compass ledger",
+      "members": [
+        "file:src/atlas/evidence.ts",
+        "file:src/compass/git-head.ts",
+        "file:src/compass/registry.ts"
+      ],
+      "rationale": "the 3.4 fifth-revision ledger writers: the id registry that serialises R- and B- allocation (B-019), the dependency-free HEAD reader bug currency needs, and the shared atlas evidence writer",
       "scope": "global"
     },
     {
@@ -93,9 +110,23 @@
         "file:src/pulse/promote.ts",
         "file:src/pulse/review.ts",
         "file:src/pulse/suggestion-ids.ts",
+        "file:src/pulse/thread-cli.ts",
+        "file:src/pulse/threads.ts",
         "file:src/pulse/types.ts"
       ],
       "rationale": "the propose-don’t-mutate pipeline: distillation, suggestion ids, fence grammar, the review gate, and promotion",
+      "scope": "global"
+    },
+    {
+      "id": "cluster:recall",
+      "label": "Recall",
+      "members": [
+        "file:src/recall/cli.ts",
+        "file:src/recall/index-blocks.ts",
+        "file:src/recall/index.ts",
+        "file:src/recall/query.ts"
+      ],
+      "rationale": "the pull-side recall layer new at 3.4: the index compiler, the shared query and tokeniser module, the generated _index.md recall blocks, and the cortex why / cortex recall verbs",
       "scope": "global"
     },
     {
@@ -122,24 +153,33 @@
       "members": [
         "file:src/schema/checks/archive.ts",
         "file:src/schema/checks/atlas.ts",
+        "file:src/schema/checks/bears-on.ts",
         "file:src/schema/checks/bizspec.ts",
         "file:src/schema/checks/claude-md.ts",
         "file:src/schema/checks/compass.ts",
         "file:src/schema/checks/config.ts",
         "file:src/schema/checks/constellation.ts",
         "file:src/schema/checks/devspec.ts",
+        "file:src/schema/checks/evidence.ts",
         "file:src/schema/checks/hooks.ts",
+        "file:src/schema/checks/index-completeness.ts",
         "file:src/schema/checks/insight.ts",
         "file:src/schema/checks/layout.ts",
         "file:src/schema/checks/loop-md.ts",
         "file:src/schema/checks/provenance.ts",
         "file:src/schema/checks/pulse.ts",
+        "file:src/schema/checks/recall-index.ts",
+        "file:src/schema/checks/registry.ts",
         "file:src/schema/checks/scenario.ts",
         "file:src/schema/checks/specs.ts",
+        "file:src/schema/checks/threads.ts",
+        "file:src/schema/checks/visibility.ts",
         "file:src/schema/checks/xref.ts",
+        "file:src/schema/clauses.ts",
         "file:src/schema/cli.ts",
         "file:src/schema/index-build.ts",
         "file:src/schema/provenance-index.ts",
+        "file:src/schema/refs.ts",
         "file:src/schema/types.ts",
         "file:src/schema/validate.ts",
         "file:src/schema/version.ts"

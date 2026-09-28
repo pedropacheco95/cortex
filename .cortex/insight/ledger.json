@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "c2de5f6",
+  "built_at_commit": "a66041b",
   "entries": {
     "src/archive/formats.ts": {
       "source_sha256": "c9b7445cd6840bfba025a938ca9f790d2a7534d65eb7eed9e166508ef04bbce8",
@@ -12,20 +12,25 @@
       "built_at_commit": "8248c76",
       "extraction_level": 2
     },
+    "src/atlas/evidence.ts": {
+      "source_sha256": "9b9dbada7318c2af2b9376095bf59a2d24a288444376cbebe5d4e7db29b57ccf",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
     "src/cli/claude-auth.ts": {
       "source_sha256": "b4140ae57b6d345236c926d61b82a3ef0c687328e51da525c3e7e9719833988a",
       "built_at_commit": "8248c76",
       "extraction_level": 2
     },
     "src/cli/cli.ts": {
-      "source_sha256": "593277f54481f057d3016f9dcec1d7aa32bc13763d3991f73f073af157a7f366",
-      "built_at_commit": "0998c19",
+      "source_sha256": "ea51308b2f8de4af87918d556ce34ae43370c721d701a93b8f2115246778865c",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/cli/init.ts": {
-      "source_sha256": "059e6482c586d28a5c483d0139832114dec6e5bcfc4c99f3446e69bf81183e92",
-      "built_at_commit": "0998c19",
-      "extraction_level": 3
+      "source_sha256": "6edd25054c2be2b62d9706603fe66c0fd194546735eb1a2943f21482734c077c",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/cli/profile.ts": {
       "source_sha256": "8de6a5c0cb4804c4a5ca1516160072842a90af44ef755b57665292bddcae8315",
@@ -33,14 +38,14 @@
       "extraction_level": 2
     },
     "src/cli/scaffold.ts": {
-      "source_sha256": "bbe34fb1f5a977f7caee11b2d6ea901c474361f46c3310ca5dc719768133413f",
-      "built_at_commit": "c2de5f6",
-      "extraction_level": 3
+      "source_sha256": "ddfd5f267d6b42f82807e830b270db9bcffd05aa17ac3f02e86c49c2b4d6ba1c",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/cli/sync.ts": {
-      "source_sha256": "c5bebb407948d392423778d62ec202d1e6227e800d5ac5ceea4591edf7284a1f",
-      "built_at_commit": "0998c19",
-      "extraction_level": 3
+      "source_sha256": "cec5ca34603ee210334c7446cc7ad0e5b2d7ab98f9c109e59e211fc4caa471df",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/cli/task-scoping.ts": {
       "source_sha256": "acc60130cc686ce95a26f673ec30aa3d0d2bf33d492196743797d1c338c3f191",
@@ -53,13 +58,23 @@
       "extraction_level": 2
     },
     "src/cli/templates.ts": {
-      "source_sha256": "e695cd1f9900ad33b7cb68aa5e7bab292d15f1cfae2ff1da33c366d0477bf72a",
-      "built_at_commit": "c2de5f6",
+      "source_sha256": "4591d59e1b09eb9e17c1550c90acecd2b9e61869643cc93b67b98a53e9b5f3b6",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
+    "src/compass/git-head.ts": {
+      "source_sha256": "b6c118c7d0671ac3bc52e19cdf46d8674fff99df0c814d0d0ee6816cfe7eff4d",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/compass/registry.ts": {
+      "source_sha256": "fd8af8a4ef538480656d80cb287215e39208e4f1cf072dbd27063712fee36db9",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
     "src/constellation/compile.ts": {
-      "source_sha256": "9786e844cf7edc7440c8bab9a7983c1751e6fa8610f5cca496001f798daf3dba",
-      "built_at_commit": "8248c76",
+      "source_sha256": "30f5dc8c9e3852c4a75edf68a5df5b6ba9eaec6e51c7bf0f55c18372f224ec24",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/constellation/insight-style.ts": {
@@ -88,13 +103,18 @@
       "extraction_level": 2
     },
     "src/hooks/cli.ts": {
-      "source_sha256": "ad6f71c2424c07a5baea1550c0b15b697c56890dbe6be84bbe15773f14973521",
-      "built_at_commit": "8248c76",
-      "extraction_level": 3
+      "source_sha256": "85572388f0c1eb4f3b54943d3ee7382f3cd9635d84df4006bdb4f31e0ebbf612",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/hooks/errors.ts": {
       "source_sha256": "b612b68aefbea5b3142e1381ed3f813c6b3b538b6980b07817646744c5882c3e",
       "built_at_commit": "fd7b55b",
+      "extraction_level": 2
+    },
+    "src/hooks/harness.ts": {
+      "source_sha256": "6ff447e39b81a54d7e4f0cd2516028d739c61d1aaee82988dcebf4db6940a170",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/hooks/post-read.ts": {
@@ -108,8 +128,8 @@
       "extraction_level": 2
     },
     "src/hooks/pre-read.ts": {
-      "source_sha256": "14660ea482e28282e8f18d313f5b7b31f7a5414e7371e4585eb285120878d60a",
-      "built_at_commit": "fd7b55b",
+      "source_sha256": "006a479e189dbe4e5b3b55d9928799d0dfd29e6e59874a3df19ad6c75a82965c",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/hooks/pre-write.ts": {
@@ -117,14 +137,39 @@
       "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
+    "src/hooks/prompt-route.ts": {
+      "source_sha256": "eae20921355e7ff5ccb0e90d257f014ebeaf2fef924d920f0ad130e6f602871b",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/hooks/search-annotate.ts": {
+      "source_sha256": "dae26916e033671da861eef576b5afc2e7faa26fab9a30b8f8fc1a70e783e3d5",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/hooks/session-end.ts": {
+      "source_sha256": "c79100dcb1bb70328cd08a807e8118aa0a3538d05d8e649cedb9ea2f5ebf5566",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
     "src/hooks/session-start.ts": {
       "source_sha256": "162e7ee72878f0983e88a9ae65ee0aec5cc3da5ff6e943716b3c146e3cb01e1e",
       "built_at_commit": "0998c19",
       "extraction_level": 3
     },
+    "src/hooks/stop.ts": {
+      "source_sha256": "6b29f8d257518734e059bee22bbfb7378e14b0cd15f60103ca1a485b4e2a34bc",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/hooks/transcript-head.ts": {
+      "source_sha256": "54d6d387d94687872751a242e33414eec023f8357cf69ef795fc04134798f3e6",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
     "src/insight/cli.ts": {
-      "source_sha256": "ab641c5b05e9ee3f2bf2c595605e626cb454ae10692c33f9c01b9d18fcca2f44",
-      "built_at_commit": "8248c76",
+      "source_sha256": "736c8c281d4a27fbb26aca8e2f2867dfeea514f84b8fe2311edd8b8a2fa6eba0",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/insight/entry.ts": {
@@ -158,8 +203,8 @@
       "extraction_level": 2
     },
     "src/insight/query.ts": {
-      "source_sha256": "8ad8bdf197c318f1455f730071f38834b1d5c91bdaaf222089efad55e97bc5c4",
-      "built_at_commit": "8248c76",
+      "source_sha256": "d8fa2b954d4b84c41110c2d5bc599d485737860f4af022f5e719d33052dd2847",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/insight/refresh-daily.ts": {
@@ -168,9 +213,9 @@
       "extraction_level": 3
     },
     "src/insight/refresh-fast.ts": {
-      "source_sha256": "33db76641cac3ec49ea29957279a9dbe1e381b83d9fcb1741abfda8e287ba68e",
-      "built_at_commit": "fd7b55b",
-      "extraction_level": 3
+      "source_sha256": "397d0c65aa1c3d049b3cae714b29da889c065d3396b309bd5eade8bd0969faac",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/insight/refresh-full.ts": {
       "source_sha256": "09b0a87d110305084dbda0969cff028a07ce51364cee5c178518a83609955e7d",
@@ -183,8 +228,8 @@
       "extraction_level": 2
     },
     "src/insight/session-observe.ts": {
-      "source_sha256": "cc3e3215234c3d4efaba798435baf6b0f9c5d7ec39d1672738c58c86472e8dd0",
-      "built_at_commit": "bcbda52",
+      "source_sha256": "eaa46d8296a17054f195491a9c6eef0626fd31cc700006440edf0ff4865bbf68",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/insight/significance.ts": {
@@ -218,8 +263,8 @@
       "extraction_level": 2
     },
     "src/loops/onboarding-drift.ts": {
-      "source_sha256": "01fdcb28f9a90727732d6c190ba1667b00e0d6aa65192aed6c372f5840037017",
-      "built_at_commit": "0438f32",
+      "source_sha256": "5e306c56bb823840c93c66a887d89f5f3d85abd857b5cfab43160c76461930ef",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/loops/report.ts": {
@@ -253,8 +298,8 @@
       "extraction_level": 2
     },
     "src/pulse/distil.ts": {
-      "source_sha256": "0e6939d4bc35fa6168e9d9f0cb2dc441d6e6698f94f8bb26ac88358a759898af",
-      "built_at_commit": "5f24181",
+      "source_sha256": "28fd5ef4bf18706af95616d0071e0cd1b04336eced3f930e0f590979784910a9",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/pulse/fences.ts": {
@@ -263,8 +308,8 @@
       "extraction_level": 2
     },
     "src/pulse/hygiene.ts": {
-      "source_sha256": "fdb957ca0c2dfeba284ccc9a06280715676ebc241788a232df4e31e57ea9bde3",
-      "built_at_commit": "fd7b55b",
+      "source_sha256": "6c6e3e1ce91fc4d31c902a0bf7fd0a92f29b86e29b27ac14d844b7d12f794809",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/pulse/migrate.ts": {
@@ -273,13 +318,13 @@
       "extraction_level": 2
     },
     "src/pulse/promote.ts": {
-      "source_sha256": "74c30f819017e8a95364c8d68ff4040526d1fbc3a73a42bf2a69f1a5c3abeac0",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "ceb7b3404085ce65602cf50371f70028780a78d58d774870d0ea50c0688aa612",
+      "built_at_commit": "a66041b",
+      "extraction_level": 3
     },
     "src/pulse/review.ts": {
-      "source_sha256": "4301475bc5d86f891ff7a5d29be9e49d25459cf52450a375f12440693eecefc1",
-      "built_at_commit": "fd7b55b",
+      "source_sha256": "96b55724ec8cfee2fcaab237f01955fad385b8c38e83050c46b7cc99390839dc",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/pulse/suggestion-ids.ts": {
@@ -287,14 +332,44 @@
       "built_at_commit": "fd7b55b",
       "extraction_level": 2
     },
-    "src/pulse/types.ts": {
-      "source_sha256": "7dd6b6dd4a69a95085e56dda5e872f0574ae69f544146d5c110a69a402155e0b",
-      "built_at_commit": "8248c76",
+    "src/pulse/thread-cli.ts": {
+      "source_sha256": "3b4ce6348742ce2bbf1f94720a59f961599652f8f37f995b84baff5296a83036",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
+    "src/pulse/threads.ts": {
+      "source_sha256": "b46f3c2e2073cf5bd66647cc5a5c69c450151d928b489b9a113ccbe98257b06b",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/pulse/types.ts": {
+      "source_sha256": "fa966081c47be8c43869700aaf014e9d879f645b0cc4f0f14f9b1212e43e6944",
+      "built_at_commit": "a66041b",
+      "extraction_level": 3
+    },
     "src/pulse/usage.ts": {
-      "source_sha256": "1bfc73f50164a8f7bd17c5422b9fa772aad9d83633f37de21fb8d530389a9ddc",
-      "built_at_commit": "c2de5f6",
+      "source_sha256": "77b86ac00395aed5f61f774b3c873a8fec4a42bd9d03bc6330683c797e6e4762",
+      "built_at_commit": "a66041b",
+      "extraction_level": 3
+    },
+    "src/recall/cli.ts": {
+      "source_sha256": "7ed6cd7d79cc3ec8cdd91be52fe17cb55d9814a6884c1d6e0d6601fbbcf77b81",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/recall/index-blocks.ts": {
+      "source_sha256": "5aabcb9f47b8f3d19132c96ef2e465aa6ac58ca45e9222cf6cade56f3f8ecd33",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/recall/index.ts": {
+      "source_sha256": "c4c5945d9324c727dfb5e46d4540ccf8d3577b93031a74852a117022a06088b2",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/recall/query.ts": {
+      "source_sha256": "4aa968eb173b218f8b790a7fdf6aa238cfec3155e2fe4d516290e069754c9562",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/schema/checks/archive.ts": {
@@ -303,8 +378,13 @@
       "extraction_level": 3
     },
     "src/schema/checks/atlas.ts": {
-      "source_sha256": "0cf4a823c3ebeb8739c6944a177491203eea359daf1175030481bbe1376816a1",
-      "built_at_commit": "8248c76",
+      "source_sha256": "dd2747d0d0d9cf8d91371541c86338a31532db876206e08e56bd2913e4f7a902",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/schema/checks/bears-on.ts": {
+      "source_sha256": "07f46eafda95d3f9e51cf67a26167609a428ae2174bbc463f96b180b128124e0",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/schema/checks/bizspec.ts": {
@@ -318,14 +398,14 @@
       "extraction_level": 2
     },
     "src/schema/checks/compass.ts": {
-      "source_sha256": "d0ea4269427616b4068f4a7f91baa3d2a3f97b18ba12e6e6956372977430dc4f",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "9120ec8bdb560fb93ed385787ecc1b4c710d56e94638ed08e7e26e7a2165809e",
+      "built_at_commit": "a66041b",
+      "extraction_level": 3
     },
     "src/schema/checks/config.ts": {
-      "source_sha256": "a2115adada743b5cdd34172f1dc9d8bd5a286726a467ef2c6b43d43cb5de9e28",
-      "built_at_commit": "0998c19",
-      "extraction_level": 2
+      "source_sha256": "fd4445d4e975deb72c0e8c991c922a5ce20e4e8cdd8ba97f7f453ee980886f57",
+      "built_at_commit": "a66041b",
+      "extraction_level": 3
     },
     "src/schema/checks/constellation.ts": {
       "source_sha256": "3fbbb55c1f80c3e07492072c824483c48ee8cb7a8c6f6aa96965318b529c300d",
@@ -337,19 +417,29 @@
       "built_at_commit": "8248c76",
       "extraction_level": 2
     },
+    "src/schema/checks/evidence.ts": {
+      "source_sha256": "4c1e3bc7e75d74a4d1cc3f9066126d7e43323fb88738ea3226801c75d38e194d",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
     "src/schema/checks/hooks.ts": {
-      "source_sha256": "4b4aae360a570c971919a0ee012a5ec9230c4a4ced69b25b0dace4116f38d5cb",
-      "built_at_commit": "8248c76",
+      "source_sha256": "65f5d7e11d23dc77d644ed94442eddbb4e07d4f977342dadd2ddda7cfa1e70aa",
+      "built_at_commit": "a66041b",
+      "extraction_level": 3
+    },
+    "src/schema/checks/index-completeness.ts": {
+      "source_sha256": "bbcf98e35b19f3d558551bcd4c8488a769af094c5348cf632eecb16c5c3b2da5",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/schema/checks/insight.ts": {
-      "source_sha256": "b28a944e850bf19ac4fcb2f5b5b8ea79a4b69349f51bb4bd19989315f4cc8fa2",
-      "built_at_commit": "bcbda52",
-      "extraction_level": 3
+      "source_sha256": "4b87fb6d1d38caa6cb2ea8addc73c6b5f5c55254033da685bcd710842c697be3",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/schema/checks/layout.ts": {
-      "source_sha256": "0255c351a4b0a337d2977ff968963b325b7cffd6dfed2c80ac8de891cbfee2ff",
-      "built_at_commit": "fd7b55b",
+      "source_sha256": "65c1bc7a200b19bc9292e47d2d3d3c5efb6b1380f944f686eb6715027ded14bb",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/schema/checks/loop-md.ts": {
@@ -363,8 +453,18 @@
       "extraction_level": 2
     },
     "src/schema/checks/pulse.ts": {
-      "source_sha256": "e4cbf7506c1dd3cc86d3bd76503070348035566018091b805475b971e54ea775",
-      "built_at_commit": "8248c76",
+      "source_sha256": "0c31227e36b1d848f93907b98a16cd2017cd8c1bd1a0d31c5458a59a817f0d40",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/schema/checks/recall-index.ts": {
+      "source_sha256": "4d2978685814919f28868efbbc09b8bde51849186c91285caf95ad1330a3e028",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/schema/checks/registry.ts": {
+      "source_sha256": "ed0cfc4c64df0029f92b9f5b65559e7d2148058c44e969eac2a204ba97891698",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/schema/checks/scenario.ts": {
@@ -377,9 +477,24 @@
       "built_at_commit": "8248c76",
       "extraction_level": 2
     },
+    "src/schema/checks/threads.ts": {
+      "source_sha256": "ce99df7c75c6337c724bec78ccc1a63d9b194632ffa7d1015debd4b724415d78",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/schema/checks/visibility.ts": {
+      "source_sha256": "f60bd5eb30b36ba7e68b468714ed1e8c7939444344d89cb9fbf0df9f52938449",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
     "src/schema/checks/xref.ts": {
-      "source_sha256": "23d5579d979e9925f2df9b7903f7d482f325a55129c04caababfc7158e901935",
-      "built_at_commit": "8248c76",
+      "source_sha256": "bda7c0a40092dde9687aab88f50c3a44795dda38c4d3d82310cb6e067c2f0f7c",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
+    "src/schema/clauses.ts": {
+      "source_sha256": "a98385b6ff92ef8bb345b00299c96fdb9208f8b4e95b9ac83864006aa2313d65",
+      "built_at_commit": "a66041b",
       "extraction_level": 2
     },
     "src/schema/cli.ts": {
@@ -388,8 +503,8 @@
       "extraction_level": 2
     },
     "src/schema/index-build.ts": {
-      "source_sha256": "8bbe629e69d5f98a15218cb000eb78c847fec8f3053a1f59873657164d90624c",
-      "built_at_commit": "8248c76",
+      "source_sha256": "bac36b2f006af9bccc5c1f54e5578b636d6658b129232faefdac7b7f2afc1673",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/schema/provenance-index.ts": {
@@ -397,31 +512,36 @@
       "built_at_commit": "8248c76",
       "extraction_level": 2
     },
+    "src/schema/refs.ts": {
+      "source_sha256": "f860ba03537a0b22c5a3156c9df890103165eeed29f3028e6eb44c44712a90ca",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
+    },
     "src/schema/types.ts": {
-      "source_sha256": "689ad1cda4b50e06e631b3f3ada0c24ea4fe4e4499a61f4afc2a90477a58b331",
-      "built_at_commit": "8248c76",
-      "extraction_level": 3
+      "source_sha256": "0c0e31ff8b2e9ce6b672787d46db9f1e9e1af9294a95ccd1f924221fd56ba933",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/schema/validate.ts": {
-      "source_sha256": "b10d674ff0d2e2e9682ca71ac523cf7fd116c9511625dc0871ed320ba29dd2e6",
-      "built_at_commit": "c667a9a",
-      "extraction_level": 3
+      "source_sha256": "b241c17e0636733ec14da350e431e3f081dc3b490746ff10210ccc22ea28aa38",
+      "built_at_commit": "a66041b",
+      "extraction_level": 2
     },
     "src/schema/version.ts": {
-      "source_sha256": "74fb930503d7325b4b6e647c7404fc3430d375025026ad18a46e914957a1e942",
-      "built_at_commit": "0998c19",
+      "source_sha256": "7a3ec56afa848ec4263348630158c396809e8fa8a71aeced4f61c6102c5c78d0",
+      "built_at_commit": "a66041b",
       "extraction_level": 3
     },
     "src/sessions/read.ts": {
-      "source_sha256": "9fd1448a56ad7dd33a2813d36d36bc45ca365e84cdebbc913b0a76296aa43ea7",
-      "built_at_commit": "8248c76",
-      "extraction_level": 2
+      "source_sha256": "d05a06dbf687ee2ec3924aba40f7f5b5ca431ff09e060f36d8cc1c1e9652c6f8",
+      "built_at_commit": "a66041b",
+      "extraction_level": 3
     }
   },
   "stale": [],
   "cycle_commits": [
+    "a66041b",
     "c2de5f6",
-    "0998c19",
-    "c667a9a"
+    "0998c19"
   ]
 }

@@ -1,35 +1,25 @@
 ---
 path: src/schema/types.ts
-extracted_at: 2026-07-08T20:46:01Z
-extraction_level: 3
-size_lines: 22
-size_tokens: 101
+extracted_at: 2026-09-22T09:54:56Z
+extraction_level: 2
+size_lines: 26
+size_tokens: 164
 centrality: high
-built_at_commit: "8248c76"
-source_sha256: "689ad1cda4b50e06e631b3f3ada0c24ea4fe4e4499a61f4afc2a90477a58b331"
+built_at_commit: "a66041b"
+source_sha256: "0c0e31ff8b2e9ce6b672787d46db9f1e9e1af9294a95ccd1f924221fd56ba933"
 ---
 # src/schema/types.ts
 
 ## Purpose
-The shared type contract for the entire schema validator: `Severity` (`'error' | 'warning'`), `Violation` (the single shape every check function returns — severity, check id, schema clause, a `location` with path/optional-key/optional-line, and a human message), and `ValidationReport` (the top-level result `validate()` returns — schema version, target, conformant flag, the full violations list, and error/warning counts). This is the single narrowest file in the schema module — pure type declarations, zero logic, zero I/O — and it is imported by literally every check module plus the CLI and orchestrator.
-
-## Main players
-- `Violation` (lines 3–13) — the universal per-finding shape every one of the ~17 check modules constructs and returns. [critical]
-- `ValidationReport` (lines 15–21) — the top-level shape `validate()` in validate.ts returns to its callers (the CLI, `cortex init`, the lint-scheduled loop). [critical]
-- `Severity` (line 1) — the two-value severity enum every `Violation` carries. [critical]
-
-## Insights
-- This file has zero imports and the highest fan-in in the entire schema module (imported by all 17 check files, cli.ts, and validate.ts) — it is the true load-bearing contract of the validator; any change to `Violation`'s shape ripples into every check.
+The shared type contract for the entire schema validator: `Severity` (`'error' | 'warning'`), `Violation` (the single shape every check function returns — severity, check id, schema clause, a `location` with path/optional-key/optional-line, and a human message), and `ValidationReport` (the top-level result `validate()` returns — schema version, target, conformant flag, the full violations list, error/warning counts, and an optional `notes` side channel used today only by `check.visibility`'s "allowed by visibility.allow: <path>" lines, §10.1, 3.4 fifth revision). Pure type declarations, zero logic, zero I/O, and the highest fan-in file in the schema module.
 
 ## Connections
 Uses:
 - (none src-internal)
 
 Used by:
-- src/loops/lint-scheduled.ts: consumes `Violation`/`ValidationReport` for the scheduled lint loop's output.
-- All 17 files under src/schema/checks/*.ts: every check imports `Violation` for its return type.
+- src/schema/checks/*.ts (all ~24 check modules — archive, atlas, bears-on, bizspec, claude-md, compass, config, constellation, devspec, evidence, hooks, index-completeness, insight, layout, loop-md, provenance, pulse, recall-index, registry, scenario, specs, threads, visibility, xref): every check function constructs and returns `Violation[]` using this shape.
 - src/schema/cli.ts: imports `ValidationReport` for `formatReport`'s input.
-- src/schema/validate.ts: imports both `ValidationReport` and `Violation` — the orchestrator's core contract.
-
-## Query pointers
-If you need to change the shape of a validation finding, also read: every file under src/schema/checks/ (all 17 depend on `Violation`'s exact shape), and src/schema/validate.ts (aggregates and counts them).
+- src/schema/validate.ts: imports both `ValidationReport` and `Violation` — the orchestrator's core aggregation contract.
+- src/loops/lint-scheduled.ts: consumes `Violation`/`ValidationReport` for the scheduled lint loop's output.
+- tests/atomic/schema/*.test.ts (archive, bears-on-check, bug-currency-check, constellation, evidence-check, intent-register, provenance, registry-check) and tests/spec/*.spec.test.ts (archive/ingest-skill, compass/bug-currency, insight/storage-format, schema/id-registry, schema/validator-insight-checks): exercise checks whose return shape is this file's `Violation`.

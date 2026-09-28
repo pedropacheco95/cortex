@@ -18,6 +18,9 @@ or a decision, before assuming the codebase alone will tell you.
 - `scheduled-task-prompt-drift.md` — the deployed `~/.claude/scheduled-tasks/` prompts have drifted from the code/skills they describe; root cause identified.
 - `session-start-digest-gist-truncation.md` — the SessionStart observations digest truncates gists at the first period in a path, live on every session.
 - `edge-confirmation-sha-format.md` — edge `confirmed_at_commit` carries two sha formats; the aging check compares exactly.
+- `knowledge-layer-placement-gaps.md` — ~14 write homes for a loose fact, no placement table; only R-NNN rules are enforced, several homes are unwired or duplicative.
+- `jev-evaluation.md` — Jev (TypeSafe AI hosted model) investigated for the hooks' fuzzy judgments and rejected; RULES.md rules 3 and 6 rule it out.
+- `cortex-remember-skill-idea.md` — an under-discussion idea for a mid-session "save this fact" skill; design constraints identified, no spec yet.
 
 **How to navigate:** each file is one current-truth observation, not a log. Check
 `sessions:` for the frequency trail and `salient:` for stated-forcefully emphasis —

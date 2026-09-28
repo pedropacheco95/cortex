@@ -1,6 +1,6 @@
 ---
 kind: insight-observation
-updated: 2026-09-13T03:10:00Z
+updated: 2026-09-22T10:08:00Z
 salient: false
 sessions:
   - claude-sessions/pedropacheco1/6269c225-4eb2-4338-8e96-1ac622c1313d
@@ -136,3 +136,117 @@ This revises point 1 above: "repair every dimension in the same pass" assumed th
 dimensions were known. They were not — there were four, and the fourth has no
 contract behind it. See also [[edge-confirmation-sha-format]], found in the same
 pass: another layer that validates clean while a dependent check cannot fire.
+
+
+**Follow-up, 2026-09-22 (weekly-quality member 3): the largest lag yet, and the first
+one where the probe fired before the blessing rather than after.** Waves A and B added
+**24 source files** between 2026-09-13 and 2026-09-17. The daily refresh gave every one
+an anatomy entry and a ledger row (107/107), and the L4 layer picked up **none** of them:
+`graph.json` held 83 `file:` nodes at `built_at_commit: c2de5f6`, a month behind `HEAD`.
+That is 12× the 2-file gap this entry opened with, and it accumulated in nine days.
+
+**The collect worklist did not name it, and could not.** `--collect` reported "107 file(s),
+0 scope(s), 0 aged edge(s)" and a `stale_references` set of 231 — a number that looks like
+the finding but is not. Decomposed: **120 of the 231 were edges the daily pass had already
+re-stamped at `HEAD` that same morning**, 94 were edges at older commits, 17 were concept
+nodes. Not one entry in the set named a missing file. The 24-file gap was invisible in the
+worklist and invisible to `checkInsightGraph`; only the file-node/anatomy bijection found it.
+**`stale_references` count is not a proxy for regeneration work** — decompose it against
+`confirmed_at_commit` before sizing the pass.
+
+**Two precondition checks worth keeping, both cheap, both nearly changed the plan:**
+
+1. **Rule out significance filtering before calling a gap staleness.** `significance.ts`
+   exists, so 83 < 107 could have been deliberate exclusion. It was not: the 24 missing
+   split 10 high / 10 medium / 4 low centrality while the graph already carried 15
+   low-centrality files. Comparable populations → staleness. Had the missing set been
+   uniformly low, adding them would have fought the design.
+2. **The shrink guard was never at risk, and knowing that up front licensed the repair.**
+   0 file-nodes lacked an anatomy entry, so nothing had been deleted; every dimension could
+   only grow. Confirmed in the outcome: nodes 284→308, edges 351→472, assignments 83→107,
+   clusters 10→12. No dimension shrank, so `reportFull`'s shrink note never fired.
+
+**Repaired additively, every dimension in one pass** (this entry's own point 1): 24 file
+nodes; **imports edges re-derived wholesale from source** rather than patched — 121 added,
+123 re-confirmed at `HEAD`, 0 dropped; 108 non-imports edges re-confirmed; 24 tag
+assignments from the existing vocabulary (no vocabulary growth — 64
+before and after); 17 files added to `claude-hooks`, `pulse-proposals` and
+`schema-validator`, plus two new `scope: "global"` clusters, `cluster:recall` and
+`cluster:compass-ledger`, for the 3.4 layers that had no home. Writes went through Core's
+`serializeGraphV3`/`serializeTagsV3`/`serializeClustersV3`, never hand-rolled JSON, so the
+§4.10.6 total ordering is Core's and not this session's approximation.
+
+**The element layer was again left alone, on 2026-09-13's reasoning, and the question it
+raised is now overdue.** The 24 new files contributed **zero** `element:` nodes, so the
+selectivity this entry documented has widened by a fifth: 180 elements still cover 42 of
+107 files, and 65 files have none. The reasoning holds — no contract requires an L3 main
+player to have an element node, and deriving `calls` edges by hand is the regeneration
+[[insight-full-regen-coherence-check]] warns against — but "recorded so the next pass starts
+from the question" has now been recorded three passes running without the question reaching
+a spec. It belongs in `insight.storage-format` / `insight.refresh-loops`, not in a fourth
+observation.
+
+**Post-repair, all five probes clean:** three-way bijection 107/107/107 (file nodes /
+anatomy / `src/**/*.ts` — the first time this entry records it exact), concept bijection
+21/21, 110 cluster members with 0 unresolvable and 0 orphaned file-nodes, 107/107 tag
+assignments all drawn from vocabulary, and on the edges 0 dangling, 0 empty evidence, 0
+duplicate ids, 0 left unstamped. Blessed at `a66041b`: 0 errors, 0 warnings.
+
+**The standing hazard is unchanged and is the reason this entry keeps growing.** `--report`
+would have blessed the store *before* any of this work — the 24-file gap produces no
+`check.insight-*` error, so "0 error(s), 0 warning(s), ground truth blessed" was available
+at the start of the session for free. The blessing step measures internal consistency, not
+truth. Until the `file:`-node ↔ `anatomy` coverage probe this entry has now asked for twice
+lands in `checkInsightGraph`, the coherence check **must** be run by hand before `--report`,
+and a partial pass must skip `--report` entirely rather than stamp a gap as ground truth.
+
+**A near-miss worth more than the repair: the first import extractor deleted 14 live
+edges, and every dimension still grew while it did.** A regex of the shape
+`(?:import|export)[\s\S]{0,200}?from\s+['"]...['"]` re-derived the imports layer and found
+no source support for 14 existing edges, which were therefore dropped as "no longer
+supported by the code" — and the pass still blessed clean, because 24 new file nodes and
+94 new edges masked the subtraction in every aggregate the shrink guard reads. Checked
+individually, **all 14 were false**: eleven were `await import('./x.js')` dispatch edges
+(the form has no `from` clause — and `dynamic-import-dispatch` is in this project's own tag
+vocabulary, `src/cli/cli.ts` alone carrying 20 of them), and three were static imports whose
+named-import list runs past the 200-character bound, e.g. `refresh-daily.ts`'s multi-line
+`} from './storage.js';` at line 50. Re-derived with static (unbounded), dynamic, and
+side-effect forms all handled: **322 imports edges against the earlier 238**, 121 added,
+123 re-confirmed, **0 dropped**.
+
+Three carry-forwards:
+
+- **An additive repair's safety argument does not extend to its deletions.** "Every
+  dimension grows, so the shrink guard is satisfied" was true and irrelevant: the guard
+  counts totals, so deletions hide inside additions. Any edge a re-derivation *removes*
+  needs its own per-edge justification, checked against source, before the pass is blessed.
+- **Re-deriving a layer means matching the original extractor's power.** These edges were
+  written by an L1 tree-sitter parse; a regex is strictly weaker, so "the source doesn't
+  support it" really meant "my parser can't see it". If a re-derivation is not at least as
+  capable as what produced the data, it may only *add*, never *remove*.
+- **`grep` is not a witness on this codebase.** Four source files — `src/insight/l1.ts`,
+  `src/constellation/compile.ts`, `src/hooks/post-read.ts`, `src/loops/test-runner.ts` —
+  contain a literal NUL byte as a composite-key separator in a template string
+  (`` `${file.path}\0${target}` ``). `file` reports them as `data` and `grep` treats them as
+  binary, returning **no matches and exit 1** rather than an error, which is how
+  `l1.ts -> l1-triage.ts` was briefly misjudged as genuinely stale — its import sits at
+  line 30 in plain sight. Read such files through Node (or `grep -a`) when verifying. Same
+  NUL-heuristic family as [[B-007]], from the consuming side rather than the producing one.
+
+**One weakened guard, declared.** Because the first `--report` had already blessed and
+cleared the stale set, the corrected pass required a fresh `--collect`, which re-captured
+`baseline` from the *already-repaired* store — so `reportFull`'s automated shrink check
+compared the final state against itself and could not have fired. The growth claimed above
+is measured by hand against the original pre-repair baseline recorded in this entry
+(284 nodes / 351 edges / 83 assignments / 10 clusters), not by that guard.
+
+**And one weaker claim than "0 edges left unstamped" suggests.** The 108 non-imports edges
+— 87 `implements-concept`, 49 `calls`, 12 `co-clustered`, 2 `semantically-similar-to` —
+were re-confirmed by testing that each endpoint still *resolves*: the element's symbol
+still appears in the file its id names, the file still exists, the concept still has a
+`concepts/<slug>.md`. That is endpoint liveness, not re-derivation. A symbol surviving in a
+file does not prove it still implements the concept the edge claims. For a pass of this
+size the substitution is defensible, but it is weaker than the reference's "a re-derived
+edge is re-confirmed by construction", and the stamp now says `a66041b` for all of them
+regardless. Anyone auditing edge confidence should treat `imports` (source-derived) and the
+other four types (endpoint-checked) as different grades of evidence.

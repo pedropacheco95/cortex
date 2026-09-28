@@ -1,12 +1,13 @@
 ---
 kind: insight-observation
-updated: 2026-09-06T01:20:00Z
+updated: 2026-09-27T01:21:15Z
 salient: true
 sessions:
   - claude-sessions/pedropacheco1/3885d16d-c73e-4b00-9867-71aafcc75a91
   - claude-sessions/pedropacheco1/d97506f5-d147-4dd2-829c-1131fb83ed23
   - claude-sessions/pedropacheco1/2e498599-40da-4415-bd91-93d104ffac1b
   - claude-sessions/pedropacheco1/b6fa9d2b-cc7e-472d-a709-12d5dd22d38a
+  - claude-sessions/pedropacheco1/5a9983a7-f962-4f2f-be9b-27eb37f751bc
 ---
 
 The five deployed scheduled-task prompt files under
@@ -22,7 +23,10 @@ across at least three bundles:
   implements no such check — its four checks are `checkClaudeMdVersion`,
   `checkIndexHeadings`, `checkIndexBudgets`, `checkTemplateIdentical`
   (template/budget hygiene only). The deployed text also declares schema
-  3.0 (actual: 3.3) and names the wrong report path.
+  3.0 (actual now 3.4) and names the wrong report path — reconfirmed
+  2026-09-27 (`5a9983a7`): the deployed `daily` payload still declares schema
+  3.0 and the pre-reorg `hygiene-report.md` path, unchanged since the
+  2026-09-05 read.
 - **`daily`** (2026-09-04, 2026-09-05): the deployed text names five
   retired standalone skills (e.g. `cortex-pulse-hygiene`) instead of the
   current single `cortex-loop` skill + `references/*.md`, and gives the
