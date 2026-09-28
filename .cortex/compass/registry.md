@@ -27,3 +27,7 @@ B-017 tier-run-failure-reads-as-clean
 B-018 unmatched-verb-falls-through-to-init
 B-019 duplicate-rule-and-bug-ids-pass-validate
 B-020 archive-promotion-refused-by-v2-insight-source-rule
+B-021 measurement-lexicon-word-plus-any-digit
+B-022 scheduled-loop-working-files-open-artefact-threads
+B-023 rule-glob-prefix-subjects-match-every-search
+B-024 generic-title-tokens-qualify-keyword-pointers

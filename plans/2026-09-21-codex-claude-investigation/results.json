@@ -1,0 +1,73 @@
+{
+  "fixture": "<temporary sandbox>",
+  "init": {
+    "exitCode": 0,
+    "profile": "superpowers",
+    "claudeInstructions": true,
+    "codexInstructions": false,
+    "claudeHooks": true,
+    "codexHooks": false,
+    "claudeSkills": 21,
+    "codexSkills": false,
+    "specflowScaffold": true
+  },
+  "preWrite": {
+    "claudeEmitsRule": true,
+    "codexPatchEmitsRule": false,
+    "codexExitCode": 0
+  },
+  "claude": {
+    "acceptedRecords": 2,
+    "messages": 1,
+    "tools": 1
+  },
+  "codexExec": {
+    "acceptedRecords": 3,
+    "messages": 0,
+    "tools": 0
+  },
+  "exclusions": {
+    ".claude/skills/a/SKILL.md": true,
+    ".agents/skills/a/SKILL.md": false,
+    ".codex/hooks.json": false
+  },
+  "provenanceGrammar": {
+    "claude": true,
+    "codex": false
+  },
+  "codexObservationViolations": [
+    {
+      "check": "check.insight-observations",
+      "message": "sessions entry \"codex-sessions/user/session\" is not a well-formed claude-sessions/<user>/<session-id> reference"
+    }
+  ],
+  "skillProposal": {
+    ".claude/skills/example/SKILL.md": true,
+    ".agents/skills/example/SKILL.md": false
+  },
+  "retrieval": {
+    "session retention": 1,
+    "remember earlier conversations": 0
+  },
+  "packageContract": {
+    "publishedRoots": [
+      "dist",
+      "skills",
+      "README.md",
+      "LICENSE"
+    ],
+    "schemaInFreshProject": false,
+    "schemaInPublishedRoots": false
+  },
+  "rootResolution": {
+    "root": {
+      "exitCode": 0,
+      "found": true
+    },
+    "subdirectory": {
+      "exitCode": 1,
+      "found": false,
+      "error": "no insight data for this project (.cortex/insight/ does not exist \u2014 extraction has not run)"
+    }
+  }
+}
