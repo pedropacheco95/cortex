@@ -32,3 +32,4 @@ B-022 scheduled-loop-working-files-open-artefact-threads
 B-023 rule-glob-prefix-subjects-match-every-search
 B-024 generic-title-tokens-qualify-keyword-pointers
 B-025 tests-hardcode-author-checkout-path
+B-026 symlinked-bin-silently-no-ops

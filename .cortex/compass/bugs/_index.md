@@ -2,9 +2,9 @@
 
 **Read this when:** triaging a reported problem, or checking whether a failure mode has been seen before.
 
-**What's here:** twenty-five bugs, `B-001`–`B-025`, one file each, seven-type classified. Filenames carry the slug — scan the directory before opening anything.
+**What's here:** twenty-six bugs, `B-001`–`B-026`, one file each, seven-type classified. Filenames carry the slug — scan the directory before opening anything.
 
-**Open (9)** — none blocking work:
+**Open (10)** — none blocking work:
 
 | Bug | Type | Sev | |
 |---|---|---|---|
@@ -17,6 +17,7 @@
 | B-022 | wrong-rule | medium | nightly loops open artefact threads for their working files |
 | B-023 | wrong-rule | medium | rule glob prefixes point at every search under a tree |
 | B-024 | wrong-rule | medium | two generic tokens qualify a keyword pointer |
+| B-026 | incomplete-rule | high | a symlinked bin runs nothing, exit 0 (hooks too) |
 
 **Resolved (16):** B-001–B-003, B-006, B-008–B-016, B-019, B-020, B-025. Each keeps its Resolution as history; all were caught by the system itself.
 
