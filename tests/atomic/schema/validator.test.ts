@@ -2,9 +2,10 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { validate } from '../../../src/schema/validate.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import * as os from 'os';
 
-const VALID_FIXTURE = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex/tests/fixtures/valid');
+const VALID_FIXTURE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'fixtures', 'valid');
 
 function copyDir(src: string, dest: string): void {
   if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });

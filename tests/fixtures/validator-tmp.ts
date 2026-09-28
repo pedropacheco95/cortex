@@ -6,11 +6,12 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import * as os from 'os';
 import { registerId } from '../../src/compass/registry.js';
 
-export const VALID_FIXTURE = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex/tests/fixtures/valid');
-export const REPO_ROOT = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex');
+export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+export const VALID_FIXTURE = path.join(REPO_ROOT, 'tests', 'fixtures', 'valid');
 
 function copyDir(src: string, dest: string): void {
   if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });

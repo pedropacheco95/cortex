@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { SUPPORTED_VERSION } from '../../../src/schema/version.js';
 import { validate } from '../../../src/schema/validate.js';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-const VALID_FIXTURE = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex/tests/fixtures/valid');
+const VALID_FIXTURE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'fixtures', 'valid');
 
 describe('Spec-level: full validator over valid fixture', () => {
   it('valid fixture produces conformant report with 0 errors', async () => {
