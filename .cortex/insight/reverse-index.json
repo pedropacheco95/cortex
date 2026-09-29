@@ -1,6 +1,6 @@
 {
   "schemaVersion": "3.0",
-  "built_at_commit": "a66041b",
+  "built_at_commit": "1d56a03",
   "referenced_by": {
     "element:src/cli/cli.ts#run": [
       "edge:calls:element:src/cli/cli.ts#run->element:src/cli/init.ts#init"

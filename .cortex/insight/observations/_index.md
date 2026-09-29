@@ -21,6 +21,8 @@ or a decision, before assuming the codebase alone will tell you.
 - `knowledge-layer-placement-gaps.md` — ~14 write homes for a loose fact, no placement table; only R-NNN rules are enforced, several homes are unwired or duplicative.
 - `jev-evaluation.md` — Jev (TypeSafe AI hosted model) investigated for the hooks' fuzzy judgments and rejected; RULES.md rules 3 and 6 rule it out.
 - `cortex-remember-skill-idea.md` — an under-discussion idea for a mid-session "save this fact" skill; design constraints identified, no spec yet.
+- `dev-machine-migration.md` — development spans two Macs since 2026-09-28; old machine's scheduled tasks must be disabled manually; pnpm 12.6 `setup` self-loop bug and fix.
+- `github-account-pinning.md` — this repo's origin is pinned to pedropacheco95 via an SSH host alias; `gh` CLI identity is separate and unpinned.
 
 **How to navigate:** each file is one current-truth observation, not a log. Check
 `sessions:` for the frequency trail and `salient:` for stated-forcefully emphasis —
