@@ -1643,7 +1643,7 @@ End every substantive answer with an explicit confidence and what would change y
    - (d) apply the subject tie-breaker;
    - (e) one fact in exactly one file;
    - (f) set `verified` with its method, and `origin` (S3);
-   - (g) end with the readback `Filing: <fact> → <path>`.
+   - (g) end with the readback `Filing: <fact> → <path> (origin: <origin>)`.
 4. **Hard rules:** the full text of every rule with `applies_when: always`. These are generated.
 5. **Cast:** one line per `world/people/` file and per `world/orgs/` file, giving the name and its `about`. Generated.
 6. **Terms:** the term names (`world/terms/` filenames plus aliases) as one comma-separated line. Generated.
