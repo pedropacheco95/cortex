@@ -113,14 +113,16 @@ const UNTIL = /\buntil:\s*(\d{4}-\d{2}-\d{2})\b/;
  */
 export function parseNowItems(body: string): NowItem[] {
   const lines = body.split('\n');
+  const inFence = fencedLines(lines);
   const items: NowItem[] = [];
   let i = 0;
-  const headingAt = (l: string): boolean => /^#{1,3}\s/.test(l);
+  const headingAt = (k: number): boolean => !inFence[k] && /^#{1,3}\s/.test(lines[k]!);
   while (i < lines.length) {
     const line = lines[i]!;
-    if (/^#{2,3}\s/.test(line)) {
+    if (inFence[i]) i++;
+    else if (/^#{2,3}\s/.test(line)) {
       let j = i + 1;
-      while (j < lines.length && !headingAt(lines[j]!)) j++;
+      while (j < lines.length && !headingAt(j)) j++;
       items.push(makeItem('heading', line.replace(/^#{2,3}\s+/, ''), lines, i, j));
       i = j;
     } else if (/^[-*]\s/.test(line)) {
@@ -131,6 +133,23 @@ export function parseNowItems(body: string): NowItem[] {
     } else i++;
   }
   return items;
+}
+
+/** Which lines sit inside a ``` or ~~~ fence (the fence lines included); headings and list markers there are text. */
+export function fencedLines(lines: string[]): boolean[] {
+  const out: boolean[] = [];
+  let fence: string | null = null;
+  for (const l of lines) {
+    const m = /^\s{0,3}(`{3,}|~{3,})/.exec(l);
+    if (fence === null && m) {
+      fence = m[1]!;
+      out.push(true);
+    } else if (fence !== null) {
+      out.push(true);
+      if (m && m[1]![0] === fence[0] && m[1]!.length >= fence.length && l.trim() === m[1]) fence = null;
+    } else out.push(false);
+  }
+  return out;
 }
 
 function makeItem(kind: NowItem['kind'], title: string, lines: string[], start: number, end: number): NowItem {

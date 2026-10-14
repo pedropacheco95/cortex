@@ -51,6 +51,8 @@ export interface MapWriteOptions {
   noAgents?: boolean;
   /** Write 4.0 blocks even over a 3.x block (`migrate --accept`). */
   force?: boolean;
+  /** Write MAP.md only, never CLAUDE.md or AGENTS.md (`migrate --apply`). */
+  mapOnly?: boolean;
 }
 
 export function writeBlockFile(root: string, name: string, block: string, accepted: boolean, force: boolean, res: MapWriteResult): void {
@@ -80,6 +82,7 @@ export function writeMapAndBlocks(root: string, opts: MapWriteOptions = {}): Map
     res.written.push(`cortex/${MAP_FILE}`);
   }
   res.lines.push(`cortex/${MAP_FILE}: written (${map.replace(/\n$/, '').split('\n').length} lines)`);
+  if (opts.mapOnly) return res;
   const accepted = migrationAccepted(store);
   writeBlockFile(root, 'CLAUDE.md', claudeBlock(), accepted, opts.force ?? false, res);
   if (!opts.noAgents) writeBlockFile(root, 'AGENTS.md', agentsBlock(map), accepted, opts.force ?? false, res);

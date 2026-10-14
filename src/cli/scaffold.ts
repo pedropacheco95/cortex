@@ -367,7 +367,24 @@ export async function installSkills(root: string, yes: boolean): Promise<{ insta
 // CLAUDE.md managed block (init Rule 10 / sync Rule 3)
 // ---------------------------------------------------------------------------
 
-export function upsertClaudeMd(root: string, config?: Record<string, unknown>): 'created' | 'inserted' | 'updated' | 'unchanged' {
+/**
+ * store.migrate Rule 11: once `cortex/cortex.json` declares a 4.0 store, the
+ * CLAUDE.md and AGENTS.md managed blocks belong to it, and the 3.x `sync` and
+ * `init` never write them (so a scheduled sync cannot undo an acceptance).
+ */
+export const FOUR_OH_BLOCK_OWNED = 'managed block owned by the 4.0 store (cortex/); left untouched';
+
+export function fourOhStoreOwnsBlock(root: string): boolean {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'cortex', 'cortex.json'), 'utf-8'));
+    return typeof cfg?.schemaVersion === 'string' && cfg.schemaVersion.startsWith('4.');
+  } catch {
+    return false;
+  }
+}
+
+export function upsertClaudeMd(root: string, config?: Record<string, unknown>): 'created' | 'inserted' | 'updated' | 'unchanged' | 'owned' {
+  if (fourOhStoreOwnsBlock(root)) return 'owned';
   const claudeMdPath = path.join(root, 'CLAUDE.md');
   // 3.4 fifth revision (init Rule 10, sync Rule 3): the block is rendered from
   // `cortex.config.json` as it stands — read here when the caller passes none,

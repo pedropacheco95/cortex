@@ -51,6 +51,8 @@ import {
   promptYesNo,
   createPromptInterface,
   upsertClaudeMd,
+  FOUR_OH_BLOCK_OWNED,
+  fourOhStoreOwnsBlock,
   mergeSettings,
   installGitHook,
   registrationSummaryLines,
@@ -607,7 +609,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   lines.push('cortex sync — summary');
   lines.push(`Project: ${absRoot} (schema ${SCHEMA_VERSION})`);
   lines.push(`Schema version: ${schemaVersionState}.`);
-  lines.push(`CLAUDE.md: managed cortex block ${claudeMdState}.`);
+  lines.push(claudeMdState === 'owned' ? `CLAUDE.md: ${FOUR_OH_BLOCK_OWNED}.` : `CLAUDE.md: managed cortex block ${claudeMdState}.`);
   lines.push(`_index.md: ${indexResult.current.length} current, ${indexResult.localised.length} left as localised.`);
   if (indexResult.current.length > 0) lines.push(`  Current: ${indexResult.current.join(', ')}.`);
   if (indexResult.localised.length > 0) lines.push(`  Localised (left alone): ${indexResult.localised.join(', ')}.`);
