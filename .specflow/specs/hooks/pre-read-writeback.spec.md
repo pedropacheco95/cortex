@@ -15,7 +15,7 @@ governed_by:
 
 # PreRead Hook with Writeback Invitation
 
-> **PARTLY SUPERSEDED at schema 4.0 (draft, 2026-10-14).** Rule 6 (the PreRead recall marker) and Rule 7 (read-deferral, RULES.md rule 6's measured exception) have no 4.0 counterpart. The insight summary on Read is kept for now, because code summaries stay as a frozen export (`cortex-schema.md` Part II S9.3). **The whole spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`).
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14; widened the same day from a partial banner).** Nothing in this hook has a 4.0 counterpart. Rule 6 (the recall marker) and Rule 7 (read deferral, RULES.md rule 6's measured exception) were already retired, and the insight summary on Read (Rules 1–5 and 8) goes too, because the inferred code summaries are dropped by decision (`cortex-schema.md` Part II S9.3, `store.migrate` Rule 12). **The whole spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`).
 
 ## Intent
 

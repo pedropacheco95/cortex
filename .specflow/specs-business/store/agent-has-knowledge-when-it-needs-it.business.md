@@ -27,9 +27,9 @@ The developer who owns the project, and every agent session working in it: inter
 1. A session starts. The agent sees a short map: what the store holds, where to look for a term, a person, an error or a "why", how to file a new fact, and the few rules that always apply.
 2. The agent meets an unfamiliar term. It opens one file named after the term and has the answer.
 3. The agent is about to do something the user has a rule about. The rule is a file of its own, which says when it applies. The agent finds it from the map.
-4. The user explains something that isn't written down. The agent files it in the one file where it belongs, and says so in one visible line: "Filing: <fact> → <path>". The user can correct it on the spot.
+4. The user explains something that isn't written down. The agent files it in the one file where it belongs, and says so in one visible line: "Filing: <fact> → <path> (origin: <session>)". The user can correct it on the spot, and anyone can later trace the fact back to the conversation it came from.
 5. A week later, the code a fact depends on has changed. The project's self-check says the fact may be stale. A "until Friday" note expires on its own date and moves to history.
-6. A project on the old hidden layout migrates. The migration shows, before anything is written, where every old fact will go, and nothing is lost or silently dropped.
+6. A project on the old hidden layout migrates. The migration shows, before anything is written, where every old fact will go, and nothing is lost or silently dropped. The old inferred code summaries are dropped openly: the report counts them and prints the command that removes them.
 
 ## Business Rules
 
@@ -37,14 +37,15 @@ The developer who owns the project, and every agent session working in it: inter
 2. Every fact lives in exactly one file.
 3. Only a short map is always loaded. Everything else is read when needed.
 4. The user's rules are first-class: each one says, in words, the situation it applies to.
-5. Every fact records when it was last confirmed and how (seen, told or inferred). What can go stale says what it depends on, and anything time-bound carries an end date.
+5. Every fact records where it came from (a session, an ingested document, a commit, a report, or the old store) and when it was last confirmed and how (seen, told or inferred). What can go stale says what it depends on, and anything time-bound carries an end date.
 6. History is never rewritten, only appended to.
-7. Moving to the new layout never loses a fact. Every old item is accounted for, and the old store stays until the user accepts the move.
+7. Moving to the new layout never loses a fact. Every old item is accounted for, and the old store stays until the user accepts the move. The old inferred code summaries (insight anatomy, concepts and graph) are not facts anyone gave the project: they are dropped by a recorded decision (2026-10-14), counted in the report, and left on disk for the user to remove.
 8. Nothing here needs a model call to work. Judgement belongs to the agent and the user; the tool validates, generates, expires and reports.
 
 ## Success Metrics
 
-- This repository's own store migrates with 100% of its entries accounted for and 0 dropped.
+- This repository's own store migrates with 100% of its entries accounted for, and 0 dropped other than the inferred code summaries dropped by decision.
 - The always-loaded map stays at or under about 60 lines.
 - The project's self-check flags every expired time-bound item and every fact whose dependencies changed after it was last confirmed.
-- Every fact a session files is announced with a visible "Filing:" line.
+- Every fact a session files is announced with a visible "Filing:" line that names its origin.
+- Every file in the store has an origin a reader can follow.

@@ -1531,11 +1531,29 @@ Every file under `cortex/` except `cortex.json`, `MAP.md` and `history/sources/r
 | `about` | yes | one line, ≤ 160 chars | The one-line hook. It says what the file answers, not what it is. |
 | `permanence` | yes | `stable` \| `changing` \| `volatile` | How fast the fact is expected to change. `now/` files are always `volatile`. |
 | `verified` | yes | `YYYY-MM-DD (observed\|told\|inferred)` | When the fact was last confirmed, and how: seen in code or output; told by a person; or inferred. |
+| `origin` | yes | one origin, or a list of them (forms below) | Where the fact came from: the pointer a reader follows to the original. Distinct from `verified`, which says when and how it was last confirmed. |
 | `depends_on` | no | list of repo-relative paths or globs | What makes it stale. Used by the staleness report (S11, `check.stale`). |
 | `need` | no | list of repo-relative paths or globs | Where in the code the fact matters. |
 | `aliases` | no | list of strings | Other names, including 3.x ids (`R-002`, `B-019`, `IR-001`, `S-021`). Searching for an alias finds the file. |
 | `privacy` | no | `private` | Advisory only (S1). |
 
+- **`origin` forms.** Each value is one of:
+
+  | Form | Points at | Set by |
+  |---|---|---|
+  | `session:<id>` | an agent session, by its opaque session id (Claude Code: `$CLAUDE_CODE_SESSION_ID`) | the `cortex-remember` skill |
+  | `source:history/sources/<file>.md` | an ingested document or transcript, by its digest | whoever files a fact taken from that source |
+  | `commit:<7–40 hex>` | a commit | a fact read from a commit or its message |
+  | `report:<repo-relative path>` | a loop or tool report | a loop that files a fact |
+  | `migrated:<3.x entry ref>@<short sha>` | the 3.x entry it was migrated from (S9.3), at the commit that was `HEAD` when `migrate --apply` ran | `cortex migrate` |
+  | `expired:now/<topic>.md` | the `now/` file an expired item was moved from (S6) | `cortex store expire` |
+  | `person:<who>@<YYYY-MM-DD>` | a person, when no session or document exists (a hand edit, or a harness with no session id) | a person, or the skill's fallback |
+  | `external:<who or where, ≤ 120 chars>` | where an original came from | only in `history/sources/` digests (S7) |
+
+  - **A list, when a file gathers several origins.** A file that receives an appended fact (the skill), several merged entries (migrate), or items from several `now/` files (expire) lists one origin per contribution, in the order they were added, without duplicates.
+  - **No hosts, user paths or URLs.** A session is named by its opaque id, never by a transcript path or a web link, because those carry a username or host into a public repository (RULES.md rule 20).
+  - **Resolution.** `source:` and `expired:` are store-relative paths, and `check.links` warns when a `source:` path does not resolve. `migrated:` points into git history: it is pinned to a commit because `.cortex/` is removed after acceptance, so `check.links` never resolves it. Entries from the gitignored 3.x folders (`pulse/`, `atlas/sources/`) are not in that commit, so their `migrated:` origin records only where they came from.
+  - **`origin` is not `source`.** Rules (S4) and changes (S5) also carry `source`, which says who has the authority behind the rule or the ask. `origin` is the provenance pointer, and every file has one.
 - **Per-module additions:**
   - rules (S4);
   - decisions and changes (S5);
@@ -1552,6 +1570,7 @@ applies_when: "The agent is giving the user a factual claim, diagnosis, explanat
 scope: [user-message, agent-answer, action]
 match: { commands: [], paths: [] }
 source: user@2026-10-12
+origin: session:3f2a9c1e-7b4d-4e8a-9f60-2c1d5e8b7a94
 verified: 2026-10-12 (told)
 permanence: stable
 ---
@@ -1602,7 +1621,7 @@ End every substantive answer with an explicit confidence and what would change y
 - **The filename is `<YYYY-MM-DD>-<slug>.md`;** the date is the event date.
 - **A history file is never edited after its first commit,** except to append a `## Correction <YYYY-MM-DD>` section. The validator compares against git and warns on any other edit (`check.append-only`).
 - **Sources:**
-  - `history/sources/` holds a **redacted digest** (summary, claims, asks), with frontmatter `origin` (who or where it came from), `captured` (date) and `raw` (the gitignored path of the original, optional);
+  - `history/sources/` holds a **redacted digest** (summary, claims, asks), with frontmatter `captured` (date), `raw` (the gitignored path of the original, optional) and the S3 `origin`. A digest's `origin` may use the `external:<who or where>` form, which no other folder allows;
   - the digest of a public-repo project follows `visibility` (S9.1).
 
 ## S8. `MAP.md` and the managed blocks
@@ -1623,7 +1642,7 @@ End every substantive answer with an explicit confidence and what would change y
    - (c) otherwise create one using the kind → folder table (S8.2);
    - (d) apply the subject tie-breaker;
    - (e) one fact in exactly one file;
-   - (f) set `verified` with its method;
+   - (f) set `verified` with its method, and `origin` (S3);
    - (g) end with the readback `Filing: <fact> → <path>`.
 4. **Hard rules:** the full text of every rule with `applies_when: always`. These are generated.
 5. **Cast:** one line per `world/people/` file and per `world/orgs/` file, giving the name and its `about`. Generated.
@@ -1683,8 +1702,9 @@ End every substantive answer with an explicit confidence and what would change y
 - **Coverage unit: the entry.**
   - A single-subject 3.x file is one entry.
   - A multi-entry file contributes one entry per top-level list item or `##` section: `preferences.md`, `standing-authorities.md`, `environment.md`, `do-not-repeat.md`, `registry.md`, each `intent-register.yaml` entry, each `pulse/suggestions.md` `S-NNN`, each `pulse/gaps.md` `G-NNN`.
-  - **Every entry gets exactly one disposition:** `migrated → <path>`, `kept outside the store → <path>`, `retired (machinery)`, or `pending decision` (proposals).
+  - **Every entry gets exactly one disposition:** `migrated → <path>`, `retired (machinery)`, `dropped by decision`, or `pending decision` (proposals).
   - **Coverage** is the share of entries with a disposition, and the target is 100%.
+  - **Dropped by decision** (2026-10-14): the 3.x insight layer's inferred code summaries are not migrated and not kept frozen. They are `insight/anatomy/**`, `insight/concepts/**` and the insight graph with its indexes (`insight/graph.json`, `tags.json`, `clusters.json`, `reverse-index.json`, `ledger.json`). The report lists them as one group per folder, with a count of files, and prints the command that removes them. `migrate` never runs that command. `insight/observations/` is not part of the drop: observations are facts, and they migrate.
 
 **Mapping (the defaults):**
 
@@ -1705,9 +1725,9 @@ End every substantive answer with an explicit confidence and what would change y
 | `atlas/sources/*`, `archive/documents/*` | `history/sources/<date>-<slug>.md` (digest from `extracted/` or the `.meta.md`); raw → `history/sources/raw/` | — |
 | `archive/intent-register.yaml` entries | `history/changes/<date>-<id-slug>.md`, `kind: change-request`, `status` kept, `spec` from `landing` | — |
 | `insight/observations/*` | `code/<area>/<slug>.md` by default | review (may belong in `world/` or `now/`) |
-| `insight/anatomy/**`, `insight/concepts/**` | kept outside the store at their current path: "frozen export, untested" | — |
+| `insight/anatomy/**`, `insight/concepts/**`, `insight/{graph,tags,clusters,reverse-index,ledger}.json` | dropped by decision (counted per folder; removal command printed, never run) | — |
 | `pulse/suggestions.md` `S-NNN`, `pulse/gaps.md` `G-NNN` (pending) | `now/proposals.md`, one item each, `until:` = migration date + 30 days, full text kept | pending decision |
-| `_index.md` files, `recall-index.json`, `constellation.json`, `insight/*.json`, `archive/register.md`, `archive/types/*`, `pulse/**` other | retired (machinery or regenerable) | — |
+| `_index.md` files, `recall-index.json`, `constellation.json`, `archive/register.md`, `archive/types/*`, `pulse/**` other | retired (machinery or regenerable) | — |
 | `cortex.config.json` | `cortex/cortex.json` (`visibility` kept; other keys listed as retired) | — |
 
 ## S10. Commit trailers
@@ -1727,7 +1747,7 @@ They run through `cortex store validate`. A check that errors makes the command 
 |---|---|---|
 | `check.store-config` | error | `cortex.json` is valid, `schemaVersion` parses, MAJOR = 4 |
 | `check.store-layout` | error | only the S1 folders exist; no files directly under `world/` or `history/` |
-| `check.frontmatter` | error | S3 required fields present and well-formed; unknown fields produce a warning |
+| `check.frontmatter` | error | S3 required fields present and well-formed, `origin` included (a known form; `external:` only under `history/sources/`); unknown fields produce a warning |
 | `check.naming` | error | kebab-case; date prefix under `history/` and nowhere else; no 3.x id as a filename |
 | `check.rule` | error | S4 fields; `scope` values in the enum |
 | `check.applies-when` | warning | S4 description lint |
@@ -1736,7 +1756,7 @@ They run through `cortex store validate`. A check that errors makes the command 
 | `check.now-until` | error | every `now/` item carries `until:`; an expired item produces a warning |
 | `check.near-duplicate` | warning | two files whose `about` lines share ≥ 0.8 token Jaccard (after stop-words), or two files with the same name in different folders |
 | `check.aliases` | error | an alias names two files |
-| `check.links` | warning | a store-relative link that does not resolve |
+| `check.links` | warning | a store-relative link, or a `source:` origin, that does not resolve |
 | `check.append-only` | warning | a committed `history/` file changed other than by an appended `## Correction` |
 | `check.stale` | warning | a `depends_on` path changed in git after the file's `verified` date |
 | `check.map-size` / `check.map-fresh` | warning | MAP over 60 lines; MAP or a managed block out of date |

@@ -29,7 +29,7 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 
 ### A clean store validates with exit 0
 
-- **Given** a store created by `cortex store init` plus one well-formed term file
+- **Given** a store created by `cortex store init` plus one well-formed term file (with `origin`)
 - **When** `cortex store validate` runs
 - **Then** it prints no findings and exits 0
 
@@ -38,6 +38,18 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 - **Given** `world/terms/fare.md` lacks `verified`
 - **When** the store is validated
 - **Then** there is an `error` from `check.frontmatter` naming that file and `verified`, and the exit code is 1
+
+### A file without an origin is an error
+
+- **Given** `world/terms/fare.md` with every other required field but no `origin`
+- **When** the store is validated
+- **Then** `check.frontmatter` reports an `error` naming that file and `origin`, and the exit code is 1
+
+### A malformed or misplaced origin is an error
+
+- **Given** `world/terms/fare.md` with `origin: /Users/someone/.claude/projects/x.jsonl`, and `world/terms/tide.md` with `origin: "external:a client email"`
+- **When** the store is validated
+- **Then** `check.frontmatter` reports an `error` for each: the first is no known form, the second uses `external:` outside `history/sources/`
 
 ### A folder outside the layout is an error
 

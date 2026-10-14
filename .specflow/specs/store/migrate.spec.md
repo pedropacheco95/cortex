@@ -29,27 +29,30 @@ Existing 3.x stores must move to the 4.0 layout without losing knowledge (vision
 ## Rules
 
 1. **Entries.** The source is split into entries, per schema S9.3's coverage unit. Each entry has a stable ref: `<3.x path>` for single-subject files, `<3.x path>#<n>` (1-based) for list items and sections, `<path>#<id>` for intent entries, `S-NNN` and `G-NNN`.
-2. **Dispositions.** Every entry gets exactly one disposition, per the S9.3 mapping table: `migrated → <path>`, `kept outside the store → <path>`, `retired`, or `pending decision`. Coverage = entries with a disposition / all entries. An entry no table row matches is listed `unmapped`, counts against coverage, and makes `--apply` refuse.
+2. **Dispositions.** Every entry gets exactly one disposition, per the S9.3 mapping table: `migrated → <path>`, `retired`, `dropped by decision`, or `pending decision`. Coverage = entries with a disposition / all entries. An entry no table row matches is listed `unmapped`, counts against coverage, and makes `--apply` refuse.
 3. **Plan file.** `--plan <file>` is JSON `{ "<entry ref>": "<target path under cortex/>" | "retired" }`. A plan target overrides the default and clears its `review` flag. A plan ref that matches no entry is an error. A target that violates `store.validate` naming or layout is also an error.
 4. **Content.** A migrated entry keeps its text verbatim in the body. Its 3.x id and any old filename stem go to `aliases`. Its frontmatter is mapped:
    - `about` from `title`, `term` or `name`;
    - `verified` from the 3.x date fields (`date`, `opened`, `updated`, `captured`), with method `told` for decisions, terms and rules and `observed` for bugs, evidence and observations;
    - `permanence` from its module (`world` and `code` → `changing`, `history` → `stable`, `now` → `volatile`);
    - `governs` globs → `match.paths`;
-   - `affects` paths → `need`.
-5. **Merging into one file.** Several entries that target the same file are appended as `##` sections in source order, and the report lists each.
-6. **Coverage report** (markdown, or `--json`): totals by disposition; a table of every entry (ref, disposition, target, flags); the `review` list; the `pending decision` list with each proposal's first line; the `unmapped` list; the retired 3.x config keys; the visibility findings on migrated text; and the command to remove `.cortex/` after acceptance.
+   - `affects` paths → `need`;
+   - `origin` → `migrated:<entry ref>@<short sha of HEAD at apply>`, one value per entry merged into the file (Rule 5).
+   The 3.x `provenance:` and `derives_from:` fields are not mapped by this spec; they stay readable in git history at that commit.
+5. **Merging into one file.** Several entries that target the same file are appended as `##` sections in source order, the file's `origin` lists each entry's `migrated:` value in the same order, and the report lists each.
+6. **Coverage report** (markdown, or `--json`): totals by disposition; a table of every entry (ref, disposition, target, flags); the `review` list; the `pending decision` list with each proposal's first line; the `dropped by decision` section (Rule 12); the `unmapped` list; the retired 3.x config keys; the visibility findings on migrated text; and the command to remove `.cortex/` after acceptance.
 7. **Dry run is the default.** Without `--apply`, nothing is written except the report file if `--report` is given.
 8. **`--apply`** writes `cortex/` (refusing if `cortex/` exists with files not written by a previous apply of the same inputs), runs `cortex store map` (which leaves a 3.x block alone), and then runs `cortex store validate`, printing its result. It is re-runnable: the same inputs give a byte-identical tree.
 9. **`--accept`** requires a previous `--apply`. It records `"migration": { "from": "<3.x version>", "accepted": "<date>" }` in `cortex/cortex.json` and rewrites the managed blocks to 4.0. It deletes nothing.
 10. **Never dropped.** Pending proposals (`S-NNN` whose status is pending, `G-NNN`) go to `now/proposals.md`. Each is one item: a heading `## <id>: <first line>`, then `until: <apply date + 30 days>`, then `status: pending decision`, then its full text. They also appear in the report's `pending decision` list. What happens when they expire unreviewed is specified in `store.freshness` Rule 2.
 11. **The 3.x commands leave a 4.0 block alone.** When `cortex/cortex.json` exists with a 4.0 `schemaVersion`, the 3.x `cortex sync` and `cortex init` never write the `CLAUDE.md` or `AGENTS.md` managed block. They print `managed block owned by the 4.0 store (cortex/); left untouched` and otherwise behave as before on `.cortex/`. This is the one change this spec makes to the 3.x code path. Acceptance therefore cannot be undone by a scheduled `sync`.
+12. **Insight is dropped by decision** (2026-10-14; schema S9.3). The 3.x inferred code summaries are neither migrated nor kept: `insight/anatomy/**`, `insight/concepts/**` and the insight graph with its indexes (`insight/{graph,tags,clusters,reverse-index,ledger}.json`). Each file is one entry with disposition `dropped by decision`, so coverage still reaches 100%. The report shows them as one row per group (anatomy, concepts, graph) with a file count, not one row per file, and prints the removal command (`git rm -r -q .cortex/insight/anatomy .cortex/insight/concepts` plus the five graph files). `migrate` never runs it, with or without `--apply` or `--accept`. `insight/observations/*` is not dropped: each observation migrates under its own row of the mapping table.
 
 ## Acceptance Criteria
 
 ### Every entry is accounted for in a dry run
 
-- **Given** a 3.x fixture store with one rule, one resolved bug, one open bug, a 3-item `preferences.md`, two decisions, one term, one evidence file, one intent entry, one pending `S-NNN` and the insight anatomy tree
+- **Given** a 3.x fixture store with one rule, one resolved bug, one open bug, a 3-item `preferences.md`, two decisions, one term, one evidence file, one intent entry, one pending `S-NNN`, one insight observation, and an insight anatomy tree, concepts folder and `graph.json`
 - **When** `cortex migrate` runs
 - **Then** the report lists every entry, coverage is 100%, and no file outside the report is written
 
@@ -57,7 +60,20 @@ Existing 3.x stores must move to the 4.0 layout without losing knowledge (vision
 
 - **Given** the same fixture
 - **When** `cortex migrate` runs
-- **Then** the rule → `world/rules/<slug>.md` (flagged review); the resolved bug → `history/incidents/<opened>-<slug>.md`; the open bug → `code/<area>/<slug>.md`; the decision → `world/decisions/<slug>.md` plus `history/changes/<date>-<slug>.md`; the intent entry → `history/changes/` with `kind: change-request` and its status kept; the anatomy tree → kept outside the store
+- **Then** the rule → `world/rules/<slug>.md` (flagged review); the resolved bug → `history/incidents/<opened>-<slug>.md`; the open bug → `code/<area>/<slug>.md`; the decision → `world/decisions/<slug>.md` plus `history/changes/<date>-<slug>.md`; the intent entry → `history/changes/` with `kind: change-request` and its status kept; the observation → `code/<area>/<slug>.md` (flagged review); the anatomy, concepts and graph files → `dropped by decision`
+
+### Insight summaries are dropped by decision, counted, and left on disk
+
+- **Given** the fixture, with 3 anatomy files, 2 concept files and `insight/graph.json`
+- **When** `cortex migrate --apply` runs, and then `cortex migrate --accept`
+- **Then** the report's `dropped by decision` section shows anatomy 3, concepts 2 and graph 1, prints the removal command, and coverage is 100%
+- **And** no file under `cortex/` comes from them, every one of those 6 files still exists under `.cortex/insight/`, and the observation was migrated
+
+### Migrated files carry their 3.x origin
+
+- **Given** the fixture, whose `HEAD` short sha is `<sha>`
+- **When** `cortex migrate --apply` runs
+- **Then** the migrated term has `origin: [migrated:atlas/domain/<term>.md@<sha>]`, and `world/agreements/working-preferences.md` has three `migrated:compass/preferences.md#1..#3@<sha>` values in source order
 
 ### Multi-entry files count per entry
 
