@@ -167,7 +167,7 @@ export interface BuildContext {
 
 export interface ProvenanceRef { entry: string; target: string; resolved: string | null }
 
-const MAPPED_FIELDS = new Set(['id', 'title', 'term', 'name', 'aliases', 'provenance', 'derives_from', 'definition', 'governs', 'stated_intent', 'landing']);
+const MAPPED_FIELDS = new Set(['id', 'title', 'term', 'name', 'aliases', 'provenance', 'derives_from', 'sessions', 'session', 'sources', 'definition', 'governs', 'stated_intent', 'landing']);
 
 function addDays(date: string, n: number): string {
   const d = new Date(`${date}T00:00:00Z`);
@@ -239,7 +239,12 @@ export function provenanceRefs(p: Planned, byFile: Map<string, Planned>, sha: st
   const prov = p.entry.fm['provenance'];
   if (Array.isArray(prov)) for (const x of prov) if (x && typeof x === 'object' && 'derives_from' in x) raw.push(String((x as Record<string, unknown>)['derives_from']));
   if (typeof p.entry.fm['derives_from'] === 'string') raw.push(p.entry.fm['derives_from'] as string);
-  return raw.map((t) => {
+  const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === 'string' ? [v] : []);
+  raw.push(...list(p.entry.fm['sessions']), ...list(p.entry.fm['session']));
+  // Atlas `sources:` are paths relative to the file (`../sources/x.md`), or session refs.
+  const fileDir = path.posix.dirname(p.entry.files[0]!);
+  for (const s of list(p.entry.fm['sources'])) raw.push(/^claude-sessions\//.test(s) || !s.startsWith('.') ? s : path.posix.normalize(path.posix.join(fileDir, s)));
+  return [...new Set(raw)].map((t) => {
     const s = /^claude-sessions\/[^/]+\/([A-Za-z0-9._-]+)$/.exec(t);
     if (s) return { entry: p.entry.ref, target: t, resolved: `session:${s[1]}` };
     const rel = t.replace(/^\.?\/?\.cortex\//, '').replace(/^\.\//, '');

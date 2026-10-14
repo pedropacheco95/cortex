@@ -23,7 +23,8 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 3. `check.near-duplicate` compares `about` lines after lower-casing, removing punctuation and the stop-word list in `src/store/checks/stopwords.ts`. Two files sharing ≥ 0.8 token Jaccard, or two files with the same name in different folders, give one warning naming both.
 4. `check.append-only` compares each committed `history/` file with its first committed version. Text added after the old content inside a `## Correction <date>` section is allowed; any other difference warns. Outside git, it is skipped.
 5. Without a `cortex/` folder, the command prints `no 4.0 store (cortex/cortex.json not found)` and exits 1.
-6. Checks are pure functions over the loaded store (plus git reads for append-only, stale and trailers), so each is tested alone.
+6. `check.visibility` also warns on a line containing the literal text `(private)` when `visibility.repo` is `public`: a public store that calls something private is either wrong about the repository or leaking a private pointer.
+7. Checks are pure functions over the loaded store (plus git reads for append-only, stale and trailers), so each is tested alone.
 
 ## Acceptance Criteria
 
@@ -81,6 +82,12 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 - **When** a line of its original text is changed and the store is validated
 - **Then** `check.append-only` warns
 - **And when** instead only a `## Correction 2026-10-14` section is appended, there is no warning
+
+### A public store that says "(private)" is flagged
+
+- **Given** `cortex.json` has `visibility.repo: public` and `world/systems/github-remote.md` contains `the repository (private)`
+- **When** the store is validated
+- **Then** `check.visibility` warns on that line
 
 ### No store, clear failure
 

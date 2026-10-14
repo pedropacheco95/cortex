@@ -25,6 +25,11 @@ export function visibilityHits(text: string): { line: number; family: string; te
   return hits;
 }
 
+/** Lines of a public store that call something "(private)" (spec store.validate Rule 6). */
+export function privateClaims(text: string): number[] {
+  return text.split('\n').flatMap((l, i) => (l.includes('(private)') ? [i + 1] : []));
+}
+
 export function checkStoreVisibility(store: Store): Finding[] {
   const { repo, allow } = storeVisibility(store);
   if (repo !== 'public') return [];
@@ -33,6 +38,7 @@ export function checkStoreVisibility(store: Store): Finding[] {
   for (const f of store.files.filter((x) => x.module === 'world' || x.module === 'code')) {
     const repoRel = `${STORE_DIR}/${f.path}`;
     if (allowed.some((m) => m(repoRel) || m(f.path))) continue;
+    for (const n of privateClaims(f.raw)) out.push(finding('warning', 'check.visibility', `${f.path}:${n}`, 'repo is public but this line says "(private)"; correct the claim or move the pointer to an untracked note'));
     const hits = visibilityHits(f.raw);
     for (const h of hits.slice(0, VISIBILITY_MAX_LINES_PER_FILE)) {
       out.push(finding('warning', 'check.visibility', `${f.path}:${h.line}`, `repo is public and this line carries a ${h.family} (${h.text}); move it to an untracked note or add the file to visibility.allow`));

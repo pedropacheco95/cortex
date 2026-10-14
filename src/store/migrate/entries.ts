@@ -278,6 +278,11 @@ export function readLegacyStore(root: string): LegacyStore | null {
       covered.add(rel);
       continue;
     }
+    if (/^pulse\/threads\/T-\d+[^/]*\.md$/.test(rel)) {
+      const t = parseFile(read(legacy, rel)).frontmatter ?? {};
+      add({ ...base(rel, t, '', 'retired'), reason: `thread ${String(t['id'] ?? '')} (${String(t['status'] ?? 'unknown')}), not carried into 4.0` });
+      continue;
+    }
     if (top === 'pulse') {
       add({ ...base(rel, {}, '', 'retired'), reason: 'pulse working state' });
       continue;

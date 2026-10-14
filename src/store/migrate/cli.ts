@@ -5,7 +5,7 @@
 import { localToday } from '../types.js';
 import { migrate } from './run.js';
 
-export const MIGRATE_USAGE = 'cortex migrate [--plan <file>] [--report <file>] [--json] [--apply|--accept] [--today YYYY-MM-DD]';
+export const MIGRATE_USAGE = 'cortex migrate [--plan <file>] [--redact <file>] [--report <file>] [--json] [--apply|--accept] [--today YYYY-MM-DD]';
 
 export interface MigrateCliIO { stdout?: (line: string) => void; stderr?: (line: string) => void }
 
@@ -16,14 +16,14 @@ export async function migrateCli(args: string[], root = '.', io: MigrateCliIO = 
     const i = args.indexOf(flag);
     return i >= 0 ? args[i + 1] : undefined;
   };
-  const known = new Set(['--plan', '--report', '--json', '--apply', '--accept', '--today']);
+  const known = new Set(['--plan', '--redact', '--report', '--json', '--apply', '--accept', '--today']);
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
     if (!known.has(a)) {
       stderr(`cortex migrate: unknown argument "${a}". Usage: ${MIGRATE_USAGE}`);
       return 2;
     }
-    if (['--plan', '--report', '--today'].includes(a)) i++;
+    if (['--plan', '--redact', '--report', '--today'].includes(a)) i++;
   }
   if (args.includes('--apply') && args.includes('--accept')) {
     stderr('cortex migrate: --apply and --accept are separate steps');
@@ -35,7 +35,7 @@ export async function migrateCli(args: string[], root = '.', io: MigrateCliIO = 
     return 2;
   }
   const r = migrate(root, {
-    plan: value('--plan'), report: value('--report'), json: args.includes('--json'),
+    plan: value('--plan'), redact: value('--redact'), report: value('--report'), json: args.includes('--json'),
     apply: args.includes('--apply'), accept: args.includes('--accept'), today,
   });
   for (const l of r.out) (r.exitCode === 0 ? stdout : stderr)(l);

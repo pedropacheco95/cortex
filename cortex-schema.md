@@ -1705,7 +1705,8 @@ End every substantive answer with an explicit confidence and what would change y
   - **Every entry gets exactly one disposition:** `migrated → <path>`, `retired (machinery)`, `dropped by decision`, or `pending decision` (proposals).
   - **Coverage** is the share of entries with a disposition, and the target is 100%.
   - **Dropped by decision** (2026-10-14): the 3.x insight layer's inferred code summaries are not migrated and not kept frozen. They are `insight/anatomy/**`, `insight/concepts/**` and the insight graph with its indexes (`insight/graph.json`, `tags.json`, `clusters.json`, `reverse-index.json`, `ledger.json`). The report lists them as one group per folder, with a count of files, and prints the command that removes them. `migrate` never runs that command. `insight/observations/` is not part of the drop: observations are facts, and they migrate.
-  - **The citation graph becomes `origin`.** A migrated entry's 3.x `provenance:`/`derives_from:` references are appended to its `origin` (S3): a target that migrates to a source digest gives `source:`, another migrated entry gives `migrated:`, and a `claude-sessions/<user>/<id>` reference gives `session:<id>`. A reference that does not resolve, or whose target is retired or dropped, is listed in the report as `unresolved provenance` with its old path, and the report counts `provenance refs: <resolved>/<total>`.
+  - **Redactions.** `--redact <file>` replaces named text (client or project names) with neutral labels, and applies per-entry edits, in the migrated text only. The report lists refs and counts, never the original text.
+  - **The citation graph becomes `origin`.** A migrated entry's 3.x `provenance:`/`derives_from:`, `sessions:`/`session:` and atlas `sources:` references are appended to its `origin` (S3): a target that migrates to a source digest gives `source:`, another migrated entry gives `migrated:`, and a `claude-sessions/<user>/<id>` reference gives `session:<id>`. A reference that does not resolve, or whose target is retired or dropped, is listed in the report as `unresolved provenance` with its old path, and the report counts `provenance refs: <resolved>/<total>`.
 
 **Mapping (the defaults):**
 
@@ -1761,5 +1762,5 @@ They run through `cortex store validate`. A check that errors makes the command 
 | `check.append-only` | warning | a committed `history/` file changed other than by an appended `## Correction` |
 | `check.stale` | warning | a `depends_on` path changed in git after the file's `verified` date |
 | `check.map-size` / `check.map-fresh` | warning | MAP over 60 lines; MAP or a managed block out of date |
-| `check.visibility` | warning | Part I's rule, over `cortex/world/` and `cortex/code/` |
+| `check.visibility` | warning | Part I's rule, over `cortex/world/` and `cortex/code/`; on a public store, also any line containing `(private)` |
 | `check.trailers` | warning | S10 |

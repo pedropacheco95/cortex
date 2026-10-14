@@ -124,3 +124,16 @@ describe('store.validate', () => {
     expect(fs.existsSync(path.join(root, 'cortex'))).toBe(false);
   });
 });
+
+describe('store.validate Rule 6 (amendment 2026-10-14)', () => {
+  it('flags "(private)" on a public store', () => {
+    const root = tmpRepo('private');
+    storeInit(root);
+    const cfgPath = path.join(root, 'cortex/cortex.json');
+    fs.writeFileSync(cfgPath, JSON.stringify({ schemaVersion: '4.0', visibility: { repo: 'public', allow: [] } }));
+    writeStoreFile(root, 'world/systems/github-remote.md', baseFm({ about: 'Where the repository lives' }), 'Remote: the repository (private).\n');
+    const hit = of(root, 'check.visibility').find((f) => f.path.startsWith('world/systems/github-remote.md:'));
+    expect(hit?.level).toBe('warning');
+    expect(hit?.message).toContain('(private)');
+  });
+});

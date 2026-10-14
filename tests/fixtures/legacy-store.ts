@@ -27,7 +27,7 @@ export function writeLegacyStore(root: string): void {
   w(root, 'archive/documents/brief/source.md', '# The brief\n\nRaw text.\n');
   w(root, 'archive/documents/brief/extracted/summary.md', '# Summary\n\nThe brief asks for two things.\n');
   w(root, 'archive/intent-register.yaml', 'entries:\n  - id: IR-001\n    stated_intent: "add the presence filter"\n    date: 2026-08-05\n    status: reconciled\n    landing: discipline.hardening#A directory without a bundle\n');
-  w(root, 'insight/observations/jev-evaluation.md', '---\nkind: insight-observation\nupdated: 2026-08-20T16:40:02Z\nsessions:\n  - claude-sessions/someone/abc12345\n---\n\nThe evaluator runs nightly.\n');
+  w(root, 'insight/observations/jev-evaluation.md', '---\nkind: insight-observation\nupdated: 2026-08-20T16:40:02Z\n---\n\nThe evaluator runs nightly.\n');
   w(root, 'insight/anatomy/src/a.ts.md', 'a\n');
   w(root, 'insight/anatomy/src/b.ts.md', 'b\n');
   w(root, 'insight/anatomy/src/c.ts.md', 'c\n');
@@ -36,4 +36,14 @@ export function writeLegacyStore(root: string): void {
   w(root, 'insight/graph.json', '{}\n');
   w(root, 'pulse/suggestions.md', '---\nkind: pulse-suggestions\n---\n\n# Distil suggestions\n\n## S-021: Headless commands hang\n\n**Pattern:** run them backgrounded.\n\n### Detail\nPoll with a timeout.\n\n```\n## not a heading\n```\n');
   w(root, 'pulse/reports/hygiene.md', 'report\n');
+}
+
+/** Extra 3.x files for the Rule 13 (sessions/sources) and Rule 14 (redaction) criteria. */
+export function writeLegacyExtras(root: string): void {
+  w(root, 'insight/observations/nightly-runs.md', '---\nkind: insight-observation\nupdated: 2026-08-21T10:00:00Z\nsessions:\n  - claude-sessions/someone/abc12345\n---\n\nNightly runs finish by six.\n');
+  w(root, 'atlas/sources/brief-notes.md', 'raw notes\n');
+  w(root, 'atlas/sources/brief-notes.meta.md', '---\nid: source.brief-notes\nkind: notes\ncaptured: 2026-01-03T09:00:00Z\norigin: "a call with the user"\n---\n\nNotes from the call.\n');
+  w(root, 'atlas/domain/crossing.md', '---\nid: domain.crossing\nterm: crossing\ndefinition: One ferry trip.\nsources:\n  - ../sources/brief-notes.md\n---\n');
+  w(root, 'compass/bugs/B-003-acme-sync.md', '---\nid: B-003\ntitle: Sync failed on the acme project\ntype: crash\nseverity: low\nstatus: resolved\naffects:\n  - core-cli.sync\nopened: 2026-07-05T00:00:00Z\n---\n\nFound running sync against acme.\n');
+  w(root, 'compass/environment.md', '# Environment\n\nRemote: example.invalid/repo (private).\n');
 }

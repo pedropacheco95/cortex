@@ -10,7 +10,7 @@ import { readLegacyStore } from '../../../src/store/migrate/entries.js';
 import { parseFile } from '../../../src/store/frontmatter.js';
 import { validateStore } from '../../../src/store/validate.js';
 import { tmpRepo, cleanRepos, gitInit, commitAll, git, snapshot } from '../../fixtures/store.js';
-import { writeLegacyStore } from '../../fixtures/legacy-store.js';
+import { writeLegacyStore, writeLegacyExtras } from '../../fixtures/legacy-store.js';
 
 afterEach(cleanRepos);
 
@@ -184,5 +184,52 @@ describe('store.migrate', () => {
     expect(claude).toContain('@cortex/MAP.md');
     expect(JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf8')).migration).toEqual({ from: '3.4', accepted: TODAY });
     expect(fs.existsSync(path.join(root, '.cortex'))).toBe(true);
+  });
+});
+
+describe('store.migrate Rules 13–14 (amendment 2026-10-14)', () => {
+  function repoX(label: string): string {
+    const root = tmpRepo(label);
+    gitInit(root);
+    writeLegacyStore(root);
+    writeLegacyExtras(root);
+    commitAll(root, '3.x store');
+    return root;
+  }
+
+  it('turns session and source references into origins', async () => {
+    const root = repoX('sessions');
+    const { code } = await run(root, ['--apply']);
+    expect(code).toBe(0);
+    const obs = fs.readFileSync(path.join(root, 'cortex/code/repo/nightly-runs.md'), 'utf8');
+    expect(fm(root, 'code/repo/nightly-runs.md')['origin']).toContain('session:abc12345');
+    expect(fm(root, 'world/terms/crossing.md')['origin']).toContain('source:history/sources/2026-01-03-brief-notes.md');
+    const term = fs.readFileSync(path.join(root, 'cortex/world/terms/crossing.md'), 'utf8');
+    for (const t of [obs, term]) {
+      expect(t).not.toMatch(/^\s*sessions:/m);
+      expect(t).not.toMatch(/^\s*sources:/m);
+      expect(t).not.toContain('someone');
+    }
+  });
+
+  it('applies redactions and edits to the migrated text only', async () => {
+    const root = repoX('redact');
+    const before = snapshot(path.join(root, '.cortex'));
+    const r = path.join(root, 'r.json');
+    fs.writeFileSync(r, JSON.stringify({ replace: { acme: 'client-A' }, edits: { 'compass/environment.md#1': [['(private)', '(public)']] } }));
+    const { code, text } = await run(root, ['--redact', r, '--apply']);
+    expect(code).toBe(0);
+    const bug = fs.readFileSync(path.join(root, 'cortex/history/incidents/2026-07-05-acme-sync.md'), 'utf8');
+    expect(bug).toContain('client-A');
+    expect(bug.replace('B-003-acme-sync', '')).not.toMatch(/\bacme\b(?!-sync)/);
+    const sys = Object.entries(snapshot(path.join(root, 'cortex/world/systems'))).map(([, v]) => v).join('\n');
+    expect(sys).toContain('(public)');
+    expect(snapshot(path.join(root, '.cortex'))).toEqual(before);
+    const section = text.slice(text.indexOf('## Redactions'), text.indexOf('## Retired threads'));
+    expect(section).toContain('compass/bugs/B-003-acme-sync.md');
+    expect(section).toContain('compass/environment.md#1');
+    expect(section.replace(/compass\/bugs\/B-003-acme-sync\.md/g, '')).not.toContain('acme');
+    fs.writeFileSync(r, JSON.stringify({ edits: { 'compass/environment.md#1': [['not there', 'x']] } }));
+    expect((await run(root, ['--redact', r])).code).toBe(1);
   });
 });

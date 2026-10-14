@@ -11,7 +11,8 @@ import { STORE_CONFIG, STORE_FOLDERS, MAP_FILE, loadStore, storeDir } from '../l
 import { ensureGitignore } from '../init.js';
 import { writeMapAndBlocks } from '../managed-block.js';
 import { validateLoaded, formatFinding } from '../validate.js';
-import { visibilityHits } from '../checks/visibility.js';
+import { privateClaims, visibilityHits } from '../checks/visibility.js';
+import { applyRedactions, readRedactFile, type RedactStat } from './redact.js';
 import { LEGACY_DIR, readLegacyStore, type LegacyStore } from './entries.js';
 import { buildTree, planMigration, provenanceRefs, readPlanFile, CONFIG_TARGET, type Planned, type PlanFile, type ProvenanceRef } from './plan.js';
 
@@ -52,11 +53,13 @@ export interface Report {
   visibility: { repo: string; findings: string[] };
   removeDroppedCommand: string;
   removeStoreCommand: string;
+  redactions: RedactStat[];
+  threads: string[];
 }
 
 const DISPOSITION_LABEL: Record<string, string> = { migrated: 'migrated', retired: 'retired', dropped: 'dropped by decision', pending: 'pending decision', unmapped: 'unmapped' };
 
-export function buildReport(root: string, legacy: LegacyStore, planned: Planned[]): Report {
+export function buildReport(root: string, legacy: LegacyStore, planned: Planned[], redactions: RedactStat[] = []): Report {
   const totals: Record<string, number> = { migrated: 0, retired: 0, dropped: 0, pending: 0, unmapped: 0 };
   for (const p of planned) totals[p.disposition.kind]!++;
   const total = planned.length;
@@ -78,6 +81,7 @@ export function buildReport(root: string, legacy: LegacyStore, planned: Planned[
     const t = p.disposition.targets[0]!;
     if (!t.startsWith('world/') && !t.startsWith('code/')) continue;
     for (const h of visibilityHits(p.entry.body)) findings.push(`${p.entry.ref} → ${t}: ${h.family} (${h.text})`);
+    if (repo === 'public') for (const n of privateClaims(p.entry.body)) findings.push(`${p.entry.ref} → ${t}: line ${n} says "(private)"`);
   }
   return {
     version: legacy.version,
@@ -92,6 +96,8 @@ export function buildReport(root: string, legacy: LegacyStore, planned: Planned[
     visibility: { repo, findings },
     removeDroppedCommand: droppedPaths.length ? `git rm -r -q ${droppedPaths.join(' ')}` : '',
     removeStoreCommand: `git rm -r -q ${LEGACY_DIR} && rm -rf ${LEGACY_DIR}`,
+    redactions,
+    threads: planned.filter((p) => p.disposition.kind === 'retired' && /^pulse\/threads\//.test(p.entry.ref)).map((p) => `${String(p.entry.fm['id'] ?? p.entry.stem)} (${String(p.entry.fm['status'] ?? 'unknown')})`),
   };
 }
 
@@ -126,6 +132,9 @@ export function renderReport(r: Report, mode: string): string {
     for (const d of r.dropped) L.push(`| ${d.group} | ${d.files} |`);
     L.push('', `Removal command (not run): \`${r.removeDroppedCommand}\``);
   }
+  L.push('', `## Redactions (${r.redactions.length} entries)`, '');
+  for (const x of r.redactions) L.push(`- ${x.ref}: ${x.replaced} replacement(s)${x.labels.length ? ` (${x.labels.join(', ')})` : ''}${x.edited ? `, ${x.edited} edit(s)` : ''}`);
+  L.push('', `## Retired threads (${r.threads.length})`, '', r.threads.length ? `Not carried into 4.0: ${r.threads.join(', ')}` : 'none');
   L.push('', `## Unresolved provenance (${r.provenance.unresolved.length})`, '');
   for (const u of r.provenance.unresolved) L.push(`- ${u.entry} → ${u.target}`);
   const unmapped = r.planned.filter((p) => p.disposition.kind === 'unmapped');
@@ -142,13 +151,14 @@ export function reportJson(r: Report): unknown {
   return {
     version: r.version, total: r.total, covered: r.covered, coverage: r.coverage, totals: r.totals,
     provenance: r.provenance, dropped: r.dropped, retiredConfigKeys: r.retiredConfigKeys, visibility: r.visibility,
-    removeDroppedCommand: r.removeDroppedCommand, removeStoreCommand: r.removeStoreCommand,
+    removeDroppedCommand: r.removeDroppedCommand, removeStoreCommand: r.removeStoreCommand, redactions: r.redactions, threads: r.threads,
     entries: r.planned.map((p) => ({ ref: p.entry.ref, disposition: p.disposition, review: p.review, fromPlan: p.fromPlan, files: p.entry.files })),
   };
 }
 
 export interface MigrateOptions {
   plan?: string;
+  redact?: string;
   report?: string;
   json?: boolean;
   apply?: boolean;
@@ -175,8 +185,18 @@ function existingTree(dir: string): Map<string, string> {
 export function migrate(root: string, opts: MigrateOptions): MigrateResult {
   const out: string[] = [];
   if (opts.accept) return accept(root, opts.today);
-  const legacy = readLegacyStore(root);
-  if (!legacy) return { exitCode: 1, out: [`no 3.x store (${LEGACY_DIR}/ not found)`] };
+  const original = readLegacyStore(root);
+  if (!original) return { exitCode: 1, out: [`no 3.x store (${LEGACY_DIR}/ not found)`] };
+  let legacy = original;
+  let redactions: RedactStat[] = [];
+  if (opts.redact) {
+    const rf = readRedactFile(opts.redact);
+    if (rf.error) return { exitCode: 1, out: [rf.error] };
+    const r = applyRedactions(original, rf.redact!);
+    if (r.errors.length) return { exitCode: 1, out: r.errors };
+    legacy = r.legacy;
+    redactions = r.stats;
+  }
   let plan: PlanFile | null = null;
   if (opts.plan) {
     const r = readPlanFile(opts.plan);
@@ -185,7 +205,7 @@ export function migrate(root: string, opts: MigrateOptions): MigrateResult {
   }
   const { planned, errors } = planMigration(legacy, plan);
   if (errors.length) return { exitCode: 1, out: errors };
-  const report = buildReport(root, legacy, planned);
+  const report = buildReport(root, legacy, planned, redactions);
   const text = opts.json ? JSON.stringify(reportJson(report), null, 2) + '\n' : renderReport(report, opts.apply ? 'apply' : 'dry run (nothing written)');
   if (opts.report) fs.writeFileSync(opts.report, text);
   else out.push(text.replace(/\n$/, ''));
