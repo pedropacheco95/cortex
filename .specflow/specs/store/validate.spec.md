@@ -1,6 +1,6 @@
 ---
 id: store.validate
-status: draft
+status: implemented
 depends_on:
   - store.layout
 implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.business.md

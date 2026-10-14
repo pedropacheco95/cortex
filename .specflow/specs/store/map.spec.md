@@ -1,6 +1,6 @@
 ---
 id: store.map
-status: draft
+status: implemented
 depends_on:
   - store.layout
   - store.rules

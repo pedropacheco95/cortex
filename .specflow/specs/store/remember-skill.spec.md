@@ -1,6 +1,6 @@
 ---
 id: store.remember-skill
-status: draft
+status: implemented
 depends_on:
   - store.map
 implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.business.md

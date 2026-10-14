@@ -110,11 +110,20 @@ export async function promptYesNo(promptText: string, rl?: readline.Interface): 
  * sync's progress count) so they cannot drift apart — the extraction the
  * standing authorities prefer over parallel implementations.
  */
+/**
+ * Bundles that work only on a 4.0 store (`cortex/`, schema Part II). The 3.x
+ * `init` and `sync` never install them, so the 3.x additions chain does not
+ * name them (store.remember-skill; the skill stops on a project without
+ * `cortex/cortex.json`). They ship in the package and are mirrored in this
+ * repository's `.claude/skills/`.
+ */
+export const STORE_V4_BUNDLES: readonly string[] = ['cortex-remember'];
+
 export function listSkillBundles(srcDir: string): string[] {
   if (!fs.existsSync(srcDir)) return [];
   return fs
     .readdirSync(srcDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcDir, e.name, 'SKILL.md')))
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcDir, e.name, 'SKILL.md')) && !STORE_V4_BUNDLES.includes(e.name))
     .map((e) => e.name)
     .sort();
 }

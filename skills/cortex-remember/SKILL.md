@@ -1,0 +1,45 @@
+---
+name: cortex-remember
+description: >
+  File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", or explains something the store doesn't hold.
+---
+
+# Cortex: remember
+
+File one fact in the 4.0 store (`cortex/`), by the placement procedure in `cortex/MAP.md`, and end with one visible readback line so the user can correct it on the spot.
+
+**Precondition.** This skill works only on a 4.0 store. If `cortex/cortex.json` does not exist, stop and say: "This project has no 4.0 store (cortex/); nothing filed." Never write into `.cortex/`.
+
+## Steps, in order
+
+1. **Search first.** Run `rg -i '<key words>' cortex/` for the fact's subject, and `rg '^about:' cortex/` as the index of every file.
+2. **Append to the existing subject file.** If a file for the subject exists, add the fact there. Never restate a fact that already lives elsewhere: one fact lives in exactly one file. If the fact contradicts what the file says, change that file and end with the `Updated:` line of step 8.
+3. **Otherwise use the kind → folder table** in `cortex/MAP.md` to pick the folder, and create one file named by the word a reader would search for (lower-case kebab-case, no ids, no dates outside `history/`).
+4. **Apply the tie-breaker** from MAP when the fact fits two subjects: file it where the reader would be working when it bites, and add an alias in the other.
+5. **Set `verified` with a method, and `origin`.**
+   - `verified: <today> (told)` when the user said it; `(observed)` when you saw it in code or output; `(inferred)` otherwise.
+   - `origin: session:<id>`, where `<id>` is the value of `$CLAUDE_CODE_SESSION_ID` (run `echo $CLAUDE_CODE_SESSION_ID`).
+   - When appending to an existing file, add your value to that file's `origin` list instead of replacing it.
+   - If the harness exposes no session id (Codex, or any other agent without one), use `origin: person:user@<today>`. This is a stated limit: the link back to the conversation is lost.
+   - If the fact came from an ingested document, use `origin: source:<its history/sources/ digest path>`.
+   - Never write a transcript path or a URL as an origin: this repository may be public.
+   - A new file also needs `about` (one line saying what it answers) and `permanence` (`stable`, `changing` or `volatile`).
+6. **For a fact that is only true for now** (a sprint, leave, a status, a risk, an open question), write it in `now/<topic>.md` as a list item or `##` heading carrying `until: <YYYY-MM-DD>`.
+7. **Run `cortex store validate`** and fix any error it reports for the file you wrote.
+8. **End with the readback**, exactly one line:
+   - `Filing: <fact> → <path> (origin: <origin>)` for a new or appended fact (the fact in at most 12 words);
+   - `Updated: <fact> → <path> (origin: <origin>)` when you changed an existing statement.
+
+## Rules from the user
+
+A rule ("from now on…", "always…", "never…") goes to `world/rules/<rule>.md`, one rule per file:
+
+- `applies_when`: one sentence describing the situation the agent is in, written for a matcher and starting with an actor or a condition ("The agent is about to…", "When the user…"). Never a topic ("anything about deploys"). Use `always` only for a rule that applies in every session.
+- `scope`: a non-empty subset of `user-message`, `agent-answer`, `action`, `session-end`.
+- `source: user@<today>`.
+- The body is the rule text, imperative and complete.
+
+## Never
+
+- Never write under `history/` except to create a new dated file (`history/<kind>/<YYYY-MM-DD>-<slug>.md`). History is append-only.
+- Never file the same fact in two places, and never skip the readback line.

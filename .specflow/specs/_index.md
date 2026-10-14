@@ -20,7 +20,7 @@
 - `provenance/` — `derives_from:` frontmatter, `check.provenance`, and the backward-traversal index
 - `migration/` — the v3 module migration (compass rename, decisions single-home)
 - `discipline/` — process-agnostic discipline primitives both process profiles invoke (verification gate, hardening convention)
-- `store/` — the schema 4.0 visible store (`cortex/`): layout, validator and placement lint, `MAP.md`, rules, freshness, managed blocks, `cortex migrate` 3.x→4.0, and the `cortex-remember` skill (DRAFT, awaiting approval)
+- `store/` — the schema 4.0 visible store (`cortex/`): layout, validator and placement lint, `MAP.md`, rules, freshness, managed blocks, `cortex migrate` 3.x→4.0, and the `cortex-remember` skill (approved 2026-10-14; implemented on branch cortex-v4; migration applied, not accepted)
 - `recall/` — the recall surface: the compiled `recall-index.json` (step 2) and its consumers (step 3): `cortex why`/`cortex recall`, the generated atlas index blocks; the two hook consumers live in `hooks/`
 
 ## Dependency Graph
