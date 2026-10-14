@@ -38,8 +38,9 @@ function deepMap(v: unknown, f: (s: string) => string): unknown {
   return v;
 }
 
-function mapEntry(e: Entry, f: (s: string) => string): Entry {
-  return { ...e, body: f(e.body), title: f(e.title), section: e.section === null ? null : f(e.section), fm: deepMap(e.fm, f) as Record<string, unknown> };
+/** Body and fields are counted; title and section are derived text, mapped with `quiet` so a substitution is counted once. */
+function mapEntry(e: Entry, f: (s: string) => string, quiet: (s: string) => string): Entry {
+  return { ...e, body: f(e.body), title: quiet(e.title), section: e.section === null ? null : quiet(e.section), fm: deepMap(e.fm, f) as Record<string, unknown> };
 }
 
 /** Apply `redact` to a copy of the store's entries; errors name an edit whose text is absent or a ref that matches nothing. */
@@ -53,24 +54,25 @@ export function applyRedactions(legacy: LegacyStore, redact: RedactFile): { lega
     let replaced = 0;
     let edited = 0;
     const labels = new Set<string>();
-    let out = mapEntry(e, (s) => {
+    const sub = (count: boolean) => (s: string): string => {
       let t = s;
       for (const { re, label } of terms) {
         t = t.replace(re, () => {
-          replaced++;
+          if (count) replaced++;
           labels.add(label);
           return label;
         });
       }
       return t;
-    });
+    };
+    let out = mapEntry(e, sub(true), sub(false));
     for (const [from, to] of redact.edits[e.ref] ?? []) {
       let hit = 0;
       out = mapEntry(out, (s) => {
         const n = s.split(from).length - 1;
         hit += n;
         return n ? s.split(from).join(to) : s;
-      });
+      }, (s) => s.split(from).join(to));
       if (!hit) errors.push(`redact edit for ${e.ref}: its "from" text is not in the entry`);
       edited += hit;
     }
