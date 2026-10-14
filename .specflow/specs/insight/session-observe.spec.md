@@ -15,6 +15,8 @@ governs:
 
 # Session-Observe Loop — the v3 successor to insight-gaps
 
+> **PARTLY SUPERSEDED at schema 4.0 (draft, 2026-10-14).** The observations this loop writes are facts and migrate into the 4.0 store (`cortex-schema.md` Part II S9.3; `store.migrate`). The loop itself has no 4.0 counterpart: in a 4.0 store its capture job is done by the `cortex-remember` skill at session end (`store.remember-skill`). Its enrichment of the insight code summaries goes with the insight layer, which is dropped by decision (S9.3). **The whole spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and the loop keeps running until then. Retired with a banner, not deleted.
+
 ## Intent
 
 `cortex-loop-session-observe` reads the shared Claude Code session-transcript corpus (the same corpus `cortex-pulse-distil` reads) and infers durable knowledge from how a session actually went — corrections the user made, gotchas hit, non-obvious behaviour discovered, patterns established, and project context stated in passing (v3 design §9; schema §4.10.11). The loop's hierarchy inverts from how it first shipped: **the primary output is ungated, automatic learning** — what a session teaches lands directly in `.cortex/insight/`, with no per-item approval, because insight is machine-owned and ungated by design (RULES 7's machine-owned-ungated allowance, the same basis as `insight.refresh-loops`). The pulse gate is secondary, reserved for the minority of candidates that must *bind* future work — a convention, a decision. Graduation to a hard rule is the slow, gated path; being useful to the next session is the fast, ungated one.
