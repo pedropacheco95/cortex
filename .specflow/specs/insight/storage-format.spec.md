@@ -13,6 +13,8 @@ governs:
 
 # Insight Storage Format — v3 layout, per-file entries, and the JSON graph
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** A 4.0 store (`cortex/`, `cortex-schema.md` Part II) has no insight layer: the inferred code summaries (anatomy, concepts and the graph) are dropped by decision, not migrated and not kept frozen (S9.3, `store.migrate` Rule 12). This storage contract has no 4.0 counterpart, except `insight/observations/`, whose entries migrate as facts (S9.3 mapping table). **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 This spec fixes the on-disk shape of `.cortex/insight/` for v3 — implements addendum §A4 (superseding schema §4.10 and all of §4.10.1–§4.10.5 wholesale). Insight moves from a concept-map over curated artefacts to a leveled, scoped, per-file understanding of the *source code itself* (design §5.8, §8.3). This spec owns the shapes only: the scoped vs. flat directory layouts, the per-file understanding entry (frontmatter + section contract), `scope-registry.yaml`, the staleness ledger, the reverse-dependency index, and the three JSON graph files (`graph.json`, `tags.json`, `clusters.json`). It does not own the query verbs (`insight.cli`), the extraction behaviour that populates these shapes (`insight.extract-skill`), or the refresh cadence that keeps them current (`insight.refresh-loops`) — those specs build against this one. Deterministic Core (R-001): the formats carry no enforcement authority, no hook injects them, and validating a hand-authored fixture against these shapes requires no LLM.

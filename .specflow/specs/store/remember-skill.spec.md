@@ -30,6 +30,7 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 3. A rule from the user ("from now on…", "always…", "never…") is filed in `world/rules/` with `applies_when` written as a situation, `source: user@<today>`, and a `scope`.
 4. The skill never restates a fact that already exists elsewhere. If the fact contradicts an existing file, it updates that file and says so in the readback (`Updated: … → <path> (origin: <origin>)`).
 5. The skill never writes under `history/` except to create a new dated file.
+6. **Stated limit: harnesses without a session id.** The session link exists only where the harness exposes a session id (Claude Code sets `$CLAUDE_CODE_SESSION_ID`). Codex, and any other harness that reads `AGENTS.md` without exposing one, gets the fallback `person:user@<today>`: the file still has a valid origin, but the link back to the conversation is lost. This is accepted for 4.0, not a defect to work around with transcript paths or URLs (S3, RULES.md rule 20).
 
 ## Acceptance Criteria
 

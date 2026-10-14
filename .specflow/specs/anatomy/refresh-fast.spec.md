@@ -23,6 +23,8 @@ governed_by:
 > answers with a pointed retirement message. The former `governs:` targets no
 > longer exist, so the list is removed. Retained for lineage.
 
+> **Also superseded at schema 4.0 (2026-10-14).** The insight successor named above is itself dropped by decision in a 4.0 store (`cortex-schema.md` Part II S9.3, `store.migrate` Rule 12; `insight.refresh-loops` carries the banner). Nothing in this lineage is in force for a 4.0 store.
+
 ## Intent
 
 `cortex anatomy-refresh-fast` (design §11.4 item 3) is the post-commit tier of mark-dirty-fast / refresh-deep: after every commit it re-derives the cheap anatomy fields for the files that commit touched — tokens, sha256, tree-sitter import/export edges — and flags changed files `needs_purpose_refresh: true`. Zero LLM calls, sub-second target, backgrounded by the already-installed git hook so commits are never blocked. This is the loop that makes anatomy drift stop being the default state on active projects (the load-bearing freshness loop).

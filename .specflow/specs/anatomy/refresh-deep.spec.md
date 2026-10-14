@@ -25,6 +25,8 @@ governed_by:
 > `cortex-loop-anatomy-refresh` skill bundle deleted. The former `governs:`
 > targets no longer exist, so the list is removed. Retained for lineage.
 
+> **Also superseded at schema 4.0 (2026-10-14).** The insight successor named above is itself dropped by decision in a 4.0 store (`cortex-schema.md` Part II S9.3, `store.migrate` Rule 12; `insight.refresh-loops` carries the banner). Nothing in this lineage is in force for a 4.0 store.
+
 ## Intent
 
 `cortex loop-anatomy-refresh --deep` (daily, design §11.4 item 4) is the purpose-filler: it gathers every row flagged `needs_purpose_refresh: true`, batches them (~25 files with head excerpts), obtains one-line purposes from the agentic layer, and writes them back — clearing flags, atomically with `last_seen`. It is the Skill that `cortex init`'s inline pass invokes (`core-cli.init` Rule 6), finally closing the day-1 "every file has a purpose" promise. Same deterministic-bookends shape as distil.

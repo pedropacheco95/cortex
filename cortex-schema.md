@@ -1613,7 +1613,7 @@ End every substantive answer with an explicit confidence and what would change y
 ## S6. `now/`: volatile items
 
 - **Every item carries `until: YYYY-MM-DD`.** An item is a list item or a `##`/`###` heading, and the lines under a heading belong to it.
-- **On or after its `until:` date,** an item is **expired**. `cortex store expire` lists the expired items, and with `--apply` removes them from `now/` and appends them to `history/changes/<date>-now-expired.md` with `kind: other`. Nothing is lost: expiry is the one sanctioned deletion, and it is a move.
+- **On or after its `until:` date,** an item is **expired**. `cortex store expire` lists the expired items, and with `--apply` removes them from `now/` and writes them to a new `history/changes/<date>-now-expired.md` with `kind: other` (a second run on the same day writes `<date>-now-expired-2.md`, and so on, so no history file is appended to). Nothing is lost: expiry is the one sanctioned deletion, and it is a move.
 - **An item without `until:` is an `error`.**
 
 ## S7. `history/`: append-only
@@ -1705,6 +1705,7 @@ End every substantive answer with an explicit confidence and what would change y
   - **Every entry gets exactly one disposition:** `migrated → <path>`, `retired (machinery)`, `dropped by decision`, or `pending decision` (proposals).
   - **Coverage** is the share of entries with a disposition, and the target is 100%.
   - **Dropped by decision** (2026-10-14): the 3.x insight layer's inferred code summaries are not migrated and not kept frozen. They are `insight/anatomy/**`, `insight/concepts/**` and the insight graph with its indexes (`insight/graph.json`, `tags.json`, `clusters.json`, `reverse-index.json`, `ledger.json`). The report lists them as one group per folder, with a count of files, and prints the command that removes them. `migrate` never runs that command. `insight/observations/` is not part of the drop: observations are facts, and they migrate.
+  - **The citation graph becomes `origin`.** A migrated entry's 3.x `provenance:`/`derives_from:` references are appended to its `origin` (S3): a target that migrates to a source digest gives `source:`, another migrated entry gives `migrated:`, and a `claude-sessions/<user>/<id>` reference gives `session:<id>`. A reference that does not resolve, or whose target is retired or dropped, is listed in the report as `unresolved provenance` with its old path, and the report counts `provenance refs: <resolved>/<total>`.
 
 **Mapping (the defaults):**
 

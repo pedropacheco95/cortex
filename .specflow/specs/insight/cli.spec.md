@@ -13,6 +13,8 @@ governs:
 
 # Insight Query CLI — `cortex insight file/concept/element`
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** A 4.0 store (`cortex/`, `cortex-schema.md` Part II) has no insight layer: the inferred code summaries (anatomy, concepts and the graph) are dropped by decision, not migrated and not kept frozen (S9.3, `store.migrate` Rule 12). The `cortex insight file|concept|element` queries have nothing to query. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 This spec defines the `cortex insight` query surface for v3 — implements addendum §A5.1 (superseding schema §4.10.5). Three deterministic subcommands — `file`, `concept`, `element` — read the pre-extracted shapes fixed by `insight.storage-format` and return them at the grain asked for. This spec supersedes v2's `query | get | neighbors | list` verbs entirely: v2 queried a concept-map over curated artefacts, v3 queries a codebase-understanding layer over source-code entities, and the verb change reflects that difference (design §5.6). All three subcommands are deterministic Core reading files already on disk — **no LLM runs at query time** (RULES 3); the judgment was spent at extraction time by `insight.extract-skill`. There is deliberately no `cortex insight ask` in v3 — natural-language questions are answered by Claude in-session over these three primitives, not by a subprocess (design §5.6, addendum §A5.1).

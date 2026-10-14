@@ -20,10 +20,11 @@ Each module goes stale in its own way (schema S1). Two mechanisms are determinis
 ## Rules
 
 1. `check.now-until`: a `now/` item without `until:` is an `error`. An item whose `until` ≤ today is a `warning` ("expired").
-2. `cortex store expire` lists the expired items. With `--apply`, it removes them from their `now/` files and appends them, with their source file, to `history/changes/<today>-now-expired.md` (`kind: other`, `status: expired`, and `origin: expired:now/<topic>.md`, one value per `now/` file the items came from). The history file is created, or appended to if it already exists today. Nothing else is deleted. An expired item in `now/proposals.md` (heading `## S-NNN: …` or `## G-NNN: …`) is a **proposal that expired unreviewed**. Its history record keeps its id and full text under the marker line `pending decision, expired unreviewed`. `cortex store expire` (with or without `--apply`) prints a separate line `<n> proposal(s) expired unreviewed: <ids>` whenever n > 0, so a morning reader sees that the calendar, not a person, closed them.
+2. `cortex store expire` lists the expired items. With `--apply`, it removes them from their `now/` files and appends them, with their source file, to `history/changes/<today>-now-expired.md` (`kind: other`, `status: expired`, and `origin: expired:now/<topic>.md`, one value per `now/` file the items came from). The history file is always a new file (Rule 6), so a committed history file is never appended to. Nothing else is deleted. An expired item in `now/proposals.md` (heading `## S-NNN: …` or `## G-NNN: …`) is a **proposal that expired unreviewed**. Its history record keeps its id and full text under the marker line `pending decision, expired unreviewed`. `cortex store expire` (with or without `--apply`) prints a separate line `<n> proposal(s) expired unreviewed: <ids>` whenever n > 0, so a morning reader sees that the calendar, not a person, closed them.
 3. `cortex store stale [--json]` (and `check.stale`, a warning): for every file with `depends_on`, list each path or glob with at least one commit after the file's `verified` date (`git log --since=<verified+1 day> -- <path>`), with the newest commit's short sha and date.
 4. `today` is injectable (`--today YYYY-MM-DD`) for tests and loops. Its default is the local date.
 5. Outside a git repository, `stale` prints `not a git repository` and exits 0 with no findings.
+6. **One file per expiry run.** If `history/changes/<today>-now-expired.md` already exists, `expire --apply` writes `<today>-now-expired-2.md`, then `-3`, and so on: the first free name. An existing expiry record is never edited, which keeps `check.append-only` clean.
 
 ## Acceptance Criteria
 
@@ -52,6 +53,12 @@ Each module goes stale in its own way (schema S1). Two mechanisms are determinis
 - **When** `cortex store expire --apply --today 2026-10-14` runs
 - **Then** it prints the line `1 proposal(s) expired unreviewed: S-021`
 - **And** `history/changes/2026-10-14-now-expired.md` holds `S-021`, its full text and the line `pending decision, expired unreviewed`
+
+### A second expiry on the same day writes a new file
+
+- **Given** `history/changes/2026-10-14-now-expired.md` already exists and is committed, and `now/team.md` has another expired item
+- **When** `cortex store expire --apply --today 2026-10-14` runs
+- **Then** the item goes to a new `history/changes/2026-10-14-now-expired-2.md`, the first file is byte-identical to before, and `cortex store validate` gives no `check.append-only` warning
 
 ### Expire without --apply changes nothing
 

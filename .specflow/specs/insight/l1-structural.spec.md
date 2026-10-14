@@ -15,6 +15,8 @@ governs:
 
 # L1 Structural Extraction — the deterministic Core pass
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** A 4.0 store (`cortex/`, `cortex-schema.md` Part II) has no insight layer: the inferred code summaries (anatomy, concepts and the graph) are dropped by decision, not migrated and not kept frozen (S9.3, `store.migrate` Rule 12). The L1 structural pass that feeds it is retired with it. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 The Level 1 structural pass (build-order-v3 step 5a; v3 design §5.2) is the deterministic raw material every other insight phase consumes: a tree-sitter parse (RULES 18 — the only parser) producing the import/export graph, file sizes, entry points, module structure, and centrality analysis over the project's source files. It runs **in Core** with no LLM anywhere in its path (RULES 3, R-001) — L1 is what makes the extraction skill's planning phase (`insight.extract-skill` Phase 2) and the fast refresh tier's structural filter (`insight.refresh-loops`) possible without spending judgment on what structure alone can answer.
