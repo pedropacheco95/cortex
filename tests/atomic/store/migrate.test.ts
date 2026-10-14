@@ -166,6 +166,8 @@ describe('store.migrate', () => {
     const p = fs.readFileSync(path.join(root, 'cortex/now/proposals.md'), 'utf8');
     expect(p).toContain('## S-021: Headless commands hang\nuntil: 2026-11-13\nstatus: pending decision');
     expect(p).toContain('**Pattern:** run them backgrounded.');
+    expect(p).toContain('##### Detail\nPoll with a timeout.');
+    expect(p).toContain('```\n## not a heading\n```');
     expect(text).toContain('- S-021: Headless commands hang → now/proposals.md');
     expect(validateStore(root, TODAY).findings.filter((f) => f.check === 'check.now-until')).toEqual([]);
   });

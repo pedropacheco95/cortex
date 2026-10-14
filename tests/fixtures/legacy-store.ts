@@ -34,6 +34,6 @@ export function writeLegacyStore(root: string): void {
   w(root, 'insight/concepts/one.md', '1\n');
   w(root, 'insight/concepts/two.md', '2\n');
   w(root, 'insight/graph.json', '{}\n');
-  w(root, 'pulse/suggestions.md', '---\nkind: pulse-suggestions\n---\n\n# Distil suggestions\n\n## S-021: Headless commands hang\n\n**Pattern:** run them backgrounded.\n\n```\n## not a heading\n```\n');
+  w(root, 'pulse/suggestions.md', '---\nkind: pulse-suggestions\n---\n\n# Distil suggestions\n\n## S-021: Headless commands hang\n\n**Pattern:** run them backgrounded.\n\n### Detail\nPoll with a timeout.\n\n```\n## not a heading\n```\n');
   w(root, 'pulse/reports/hygiene.md', 'report\n');
 }

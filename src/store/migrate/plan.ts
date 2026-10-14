@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { classify, HISTORY_FOLDERS, WORLD_FOLDERS } from '../layout.js';
 import { frontmatterText, yamlScalar } from '../yaml.js';
+import { fencedLines } from '../frontmatter.js';
 import { isoDate, type Entry, type LegacyStore } from './entries.js';
 
 export type Disposition =
@@ -315,7 +316,13 @@ function buildProposals(cs: Contribution[], ctx: BuildContext, originsOf: Map<st
     origin: dedupe(cs.flatMap((c) => originsOf.get(c.p.entry.ref) ?? [])),
     aliases: cs.map((c) => c.p.entry.ref),
   });
-  const items = cs.map((c) => `## ${c.p.entry.ref}: ${c.p.entry.title}\nuntil: ${until}\nstatus: pending decision\n\n${c.p.entry.body.trim()}`);
+  // A proposal's own `##`/`###` headings (outside fences) would split its now/ item, so they move down two levels.
+  const nest = (text: string): string => {
+    const lines = text.split('\n');
+    const fenced = fencedLines(lines);
+    return lines.map((l, i) => (!fenced[i] && /^#{2,4}\s/.test(l) ? `##${l}` : l)).join('\n');
+  };
+  const items = cs.map((c) => `## ${c.p.entry.ref}: ${c.p.entry.title}\nuntil: ${until}\nstatus: pending decision\n\n${nest(c.p.entry.body.trim())}`);
   return `${fm}\n# Proposals waiting for a decision\n\n${items.join('\n\n')}\n`;
 }
 
@@ -401,7 +408,20 @@ function buildFile(target: string, cs: Contribution[], ctx: BuildContext, origin
   };
   let body: string;
   if (!multi) body = bodyOf(main);
-  else body = cs.map((c) => `## ${aboutOf(c.p.entry.section && c.p.entry.row === 'preferences' ? `${blockLead(c.p.entry.body)}` : blockLead(c.p.entry.body) || c.p.entry.title).slice(0, 100)}\n\n${bodyOf(c)}`).join('\n\n');
+  else {
+    // Rule 5: merged entries keep source order, each under the `##` section it sat under in 3.x, so a
+    // block's meaning ("Ask first" vs "Apply directly") survives. A whole-file entry gets its own section.
+    const parts: string[] = [];
+    let last: string | null | undefined;
+    for (const c of cs) {
+      const x = c.p.entry;
+      const heading = x.ref.includes('#') ? x.section : aboutOf(x.title).slice(0, 100);
+      if (heading !== last && heading) parts.push(`## ${heading}`);
+      last = heading;
+      parts.push(bodyOf(c));
+    }
+    body = parts.join('\n\n');
+  }
   if (folder === 'world/rules' && body.trim() === '') body = e.title;
   return `${frontmatterText(fm)}\n${body.replace(/\s+$/, '')}\n`;
 }
