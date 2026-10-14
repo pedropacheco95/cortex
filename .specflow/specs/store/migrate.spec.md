@@ -10,6 +10,8 @@ implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.busi
 governed_by: []
 governs:
   - "src/store/migrate/**/*.ts"
+  - "src/cli/sync.ts"
+  - "src/cli/init.ts"
 ---
 
 # `cortex migrate`: 3.x → 4.0
@@ -40,7 +42,8 @@ Existing 3.x stores must move to the 4.0 layout without losing knowledge (vision
 7. **Dry run is the default.** Without `--apply`, nothing is written except the report file if `--report` is given.
 8. **`--apply`** writes `cortex/` (refusing if `cortex/` exists with files not written by a previous apply of the same inputs), runs `cortex store map` (which leaves a 3.x block alone), and then runs `cortex store validate`, printing its result. It is re-runnable: the same inputs give a byte-identical tree.
 9. **`--accept`** requires a previous `--apply`. It records `"migration": { "from": "<3.x version>", "accepted": "<date>" }` in `cortex/cortex.json` and rewrites the managed blocks to 4.0. It deletes nothing.
-10. **Never dropped.** Pending proposals (`S-NNN` whose status is pending, `G-NNN`) go to `now/proposals.md` with their full text and `until:` = apply date + 30 days. They also appear in the report's `pending decision` list.
+10. **Never dropped.** Pending proposals (`S-NNN` whose status is pending, `G-NNN`) go to `now/proposals.md`. Each is one item: a heading `## <id>: <first line>`, then `until: <apply date + 30 days>`, then `status: pending decision`, then its full text. They also appear in the report's `pending decision` list. What happens when they expire unreviewed is specified in `store.freshness` Rule 2.
+11. **The 3.x commands leave a 4.0 block alone.** When `cortex/cortex.json` exists with a 4.0 `schemaVersion`, the 3.x `cortex sync` and `cortex init` never write the `CLAUDE.md` or `AGENTS.md` managed block. They print `managed block owned by the 4.0 store (cortex/); left untouched` and otherwise behave as before on `.cortex/`. This is the one change this spec makes to the 3.x code path. Acceptance therefore cannot be undone by a scheduled `sync`.
 
 ## Acceptance Criteria
 
@@ -97,6 +100,12 @@ Existing 3.x stores must move to the 4.0 layout without losing knowledge (vision
 - **Given** a pending `S-021` in `pulse/suggestions.md`
 - **When** `cortex migrate --apply` runs
 - **Then** `now/proposals.md` contains its full text with an `until:` 30 days after the apply date, and the report lists it under `pending decision`
+
+### 3.x sync and init leave the 4.0 block untouched
+
+- **Given** an accepted migration (a v4.0 block in `CLAUDE.md`, and `cortex/cortex.json` at 4.0) and the 3.x store still present
+- **When** the 3.x `cortex sync` runs, and then `cortex init` runs
+- **Then** the `CLAUDE.md` and `AGENTS.md` blocks are byte-identical to before, and each command prints that the block is owned by the 4.0 store
 
 ### Accept switches the blocks and deletes nothing
 
