@@ -15,6 +15,8 @@ governed_by:
 
 # PreRead Hook with Writeback Invitation
 
+> **PARTLY SUPERSEDED at schema 4.0 (draft, 2026-10-14).** Rule 6 (the PreRead recall marker) and Rule 7 (read-deferral, RULES.md rule 6's measured exception) have no 4.0 counterpart. The insight summary on Read is kept for now, because code summaries stay as a frozen export (`cortex-schema.md` Part II S9.3). **The whole spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`).
+
 ## Intent
 
 The PreRead hook (design §5, now core opt-out) injects the anatomy summary before a file read — purpose, tokens, specs, rules — plus the one-line writeback invitation that makes it the priming half of refine-during-use: if the purpose proves wrong or stale, the session emits a `<cortex:purpose>` tag that `hooks.post-read` captures. Injection primes; capture happens downstream.

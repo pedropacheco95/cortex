@@ -13,6 +13,8 @@ governs:
 
 # Pulse Review CLI
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** In a 4.0 store (`cortex/`, `cortex-schema.md` Part II), the pulse review CLI does not exist: the knowledge it served is found by pulling from `cortex/MAP.md`, and rules will be pushed by the optional Senses layer. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`), and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 The pulse review CLI is the human gate of the propose-don't-mutate convention (design §10.3, §11.5): `cortex pulse-list` shows pending suggestions, `cortex pulse-accept <id>` applies one exactly as proposed, `cortex pulse-reject <id>` records a dismissal that suppresses re-proposal for the configured window. It is shared infrastructure — every current and future loop's suggestions flow through this one gate. Deterministic Core; no LLM.

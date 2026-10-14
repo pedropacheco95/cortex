@@ -16,6 +16,8 @@ governed_by:
 
 # Open-Thread Prompt Routing — `cortex hook prompt-route` (UserPromptSubmit)
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** In a 4.0 store (`cortex/`, `cortex-schema.md` Part II), the open-thread prompt router does not exist: the knowledge it served is found by pulling from `cortex/MAP.md`, and rules will be pushed by the optional Senses layer. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`), and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 The threads ledger (`pulse.threads`) remembers the question a session asked and nobody answered,

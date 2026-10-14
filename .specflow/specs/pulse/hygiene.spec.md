@@ -15,6 +15,8 @@ governs:
 
 # Hygiene Loop
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** In a 4.0 store (`cortex/`, `cortex-schema.md` Part II), the pulse hygiene loop does not exist: the knowledge it served is found by pulling from `cortex/MAP.md`, and rules will be pushed by the optional Senses layer. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`), and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 `cortex pulse-hygiene` is the daily deterministic sweep (design §10.2): it surveys the project for unfinished or broken state and writes `pulse/reports/hygiene.md`, which the SessionStart hook already surfaces (freshness window, schema §5). Deterministic Core CLI; the shipped `cortex-pulse-hygiene` skill bundle wraps it for scheduled runs.
