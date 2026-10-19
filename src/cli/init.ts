@@ -39,6 +39,8 @@ import {
   installSkills,
   upsertClaudeMd,
   FOUR_OH_BLOCK_OWNED,
+  FOUR_OH_STORE_REFUSAL,
+  fourOhStoreAccepted,
   fourOhStoreOwnsBlock,
   mergeSettings,
   installGitHook,
@@ -484,6 +486,11 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   const partial = opts.partial ?? false;
   const profile = opts.profile;
   const nowIso = new Date().toISOString();
+
+  // store.migrate Rule 11 (amendment 2026-10-19): an accepted or fresh 4.0 store is not 3.x's to manage.
+  if (fourOhStoreAccepted(absRoot)) {
+    return { exitCode: 2, summary: `cortex init: refused — ${FOUR_OH_STORE_REFUSAL}. Nothing was written.` };
+  }
 
   // Rule 1 — preflight: refuse before anything is written.
   if (platform !== 'darwin') {

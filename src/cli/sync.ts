@@ -52,6 +52,8 @@ import {
   createPromptInterface,
   upsertClaudeMd,
   FOUR_OH_BLOCK_OWNED,
+  FOUR_OH_STORE_REFUSAL,
+  fourOhStoreAccepted,
   fourOhStoreOwnsBlock,
   mergeSettings,
   installGitHook,
@@ -476,6 +478,11 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   const platform = opts.platform ?? process.platform;
   const home = opts.home ?? os.homedir();
   const yes = opts.yes ?? false;
+
+  // store.migrate Rule 11 (amendment 2026-10-19): an accepted or fresh 4.0 store is not 3.x's to manage.
+  if (fourOhStoreAccepted(absRoot)) {
+    return { exitCode: 3, summary: `cortex sync: refused — ${FOUR_OH_STORE_REFUSAL}. Nothing was written.` };
+  }
 
   // Rule 1 — preflight: refuse before anything is written.
   if (platform !== 'darwin') {

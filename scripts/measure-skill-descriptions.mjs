@@ -59,6 +59,7 @@ export const TIERS = {
   'cortex-extract-insight': 'A',
   'cortex-loop': 'D',
   'cortex-register-tasks': 'A',
+  'cortex-migrate': 'B',
   'cortex-remember': 'B',
   'specflow-brainstorm': 'A',
   'specflow-bugs': 'A',
@@ -108,6 +109,7 @@ export const REQUIRED_TRIGGERS = {
   'verification-before-completion': ['evidence gate', 'claiming work done'],
 
   // Tier B — nothing names them, so the description is the only way in.
+  'cortex-migrate': ['migrate', 'cortex migrate'],
   'cortex-remember': ['remember this', 'from now on'],
   'specflow-new-project': ['new project', 'start a new', 'I want to build'],
   'specflow-request-review': ['review this', 'review the diff', 'code review'],

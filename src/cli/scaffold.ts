@@ -117,7 +117,7 @@ export async function promptYesNo(promptText: string, rl?: readline.Interface): 
  * `cortex/cortex.json`). They ship in the package and are mirrored in this
  * repository's `.claude/skills/`.
  */
-export const STORE_V4_BUNDLES: readonly string[] = ['cortex-remember'];
+export const STORE_V4_BUNDLES: readonly string[] = ['cortex-remember', 'cortex-migrate'];
 
 export function listSkillBundles(srcDir: string): string[] {
   if (!fs.existsSync(srcDir)) return [];
@@ -387,6 +387,26 @@ export function fourOhStoreOwnsBlock(root: string): boolean {
   try {
     const cfg = JSON.parse(fs.readFileSync(path.join(root, 'cortex', 'cortex.json'), 'utf-8'));
     return typeof cfg?.schemaVersion === 'string' && cfg.schemaVersion.startsWith('4.');
+  } catch {
+    return false;
+  }
+}
+
+/** store.migrate Rule 11 (amendment 2026-10-19): the refusal once a 4.0 store is accepted or fresh. */
+export const FOUR_OH_STORE_REFUSAL = 'this project uses the 4.0 store (cortex/); use cortex store init or cortex store map';
+
+/**
+ * True when `cortex/cortex.json` is 4.x and the store is accepted
+ * (`migration.accepted` is a date) or was never migrated (no `migration`
+ * field: a fresh `cortex store init`). Then the 3.x `init` and `sync`
+ * refuse, so a scheduled sync cannot reinstall what accept removed.
+ */
+export function fourOhStoreAccepted(root: string): boolean {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'cortex', 'cortex.json'), 'utf-8'));
+    if (typeof cfg?.schemaVersion !== 'string' || !cfg.schemaVersion.startsWith('4.')) return false;
+    const mig = cfg.migration;
+    return mig === undefined || mig === null || (typeof mig === 'object' && typeof mig.accepted === 'string');
   } catch {
     return false;
   }

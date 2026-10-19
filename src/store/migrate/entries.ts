@@ -15,8 +15,12 @@
  *   `<path>#<id>`.
  * - `pulse/suggestions.md` and `pulse/gaps.md` contribute one entry per
  *   `## S-NNN` / `## G-NNN` block, ref `S-NNN` / `G-NNN`.
- * - An atlas source (`<stem>.md` raw plus `<stem>.meta.md`) and an archive
- *   document directory are one entry each.
+ * - An atlas source (`<stem>.<ext>` raw files of any extension, plus
+ *   `<stem>.meta.md`; the stem ends at the first `.`) and an archive document
+ *   directory are one entry each (amendment 2026-10-19).
+ * - Junk (`.DS_Store`, `._*`, `Thumbs.db`) is retired `not a store file`;
+ *   everything under `pulse/` off the regenerable list is `unpromoted work`,
+ *   which a plan must decide (spec store.migrate Rule 2).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -28,7 +32,15 @@ export type RowId =
   | 'config' | 'rule' | 'bug-resolved' | 'bug-open'
   | 'environment' | 'preferences' | 'do-not-repeat' | 'standing-authorities' | 'registry'
   | 'decision' | 'stakeholder' | 'term' | 'evidence' | 'source' | 'document' | 'intent'
-  | 'observation' | 'dropped' | 'proposal' | 'retired' | 'unmapped';
+  | 'observation' | 'dropped' | 'proposal' | 'retired' | 'unpromoted' | 'unmapped';
+
+/** Retired reasons (store.migrate Rule 2). */
+export const REGENERABLE = 'machinery or regenerable';
+export const UNPROMOTED = 'unpromoted work';
+export const NOT_A_STORE_FILE = 'not a store file';
+export const NOT_A_STORE_FOLDER = 'not a store folder';
+/** Bugs that go to `history/incidents/` (store.migrate Rule 2); any other status is an open pitfall. */
+export const RESOLVED_BUG_STATUSES = new Set(['resolved', 'fixed-verified']);
 
 export interface Entry {
   ref: string;
@@ -54,9 +66,11 @@ export interface Entry {
   reason?: string;
   /** Raw originals to copy to `history/sources/raw/` (`.cortex`-relative). */
   raw?: string[];
+  /** For a source: its digest has no `.meta.md` to come from. */
+  noMeta?: boolean;
 }
 
-const DATE_FIELDS = ['date', 'opened', 'updated', 'captured', 'ingested_at'];
+const DATE_FIELDS = ['date', 'opened', 'updated', 'captured', 'ingested_at', 'discovered'];
 
 export function isoDate(v: unknown): string | null {
   if (v instanceof Date) return v.toISOString().slice(0, 10);
@@ -160,6 +174,36 @@ const MULTI: Record<string, RowId> = {
 
 const DROPPED_GRAPH = new Set(['graph.json', 'tags.json', 'clusters.json', 'reverse-index.json', 'ledger.json']);
 
+export function isJunk(rel: string): boolean {
+  const b = path.posix.basename(rel);
+  return b === '.DS_Store' || b === 'Thumbs.db' || b.startsWith('._');
+}
+
+/** The dropped-by-decision group of an insight file, or null (Rule 12; scoped groups by first folder, ` <n>` stripped). */
+export function droppedGroup(rel: string): string | null {
+  if (rel.startsWith('insight/anatomy/')) return 'anatomy';
+  if (rel.startsWith('insight/concepts/')) return 'concepts';
+  if (rel.startsWith('insight/') && DROPPED_GRAPH.has(rel.slice('insight/'.length))) return 'graph';
+  const m = /^insight\/scopes\/[^/]+\/([^/]+)/.exec(rel);
+  if (!m) return null;
+  const first = m[1]!.replace(/ \d+$/, '');
+  if (first === 'anatomy') return 'anatomy';
+  if (first === 'concepts') return 'concepts';
+  if (first === 'graph.json' || first === 'graph') return 'graph';
+  return 'other';
+}
+
+/** The regenerable part of `pulse/` (Rule 2); `dismissed.md` only when it holds no entries. */
+function pulseRegenerable(legacy: string, rel: string): boolean {
+  if (/^pulse\/(state|extraction|sessions|scratch)\//.test(rel)) return true;
+  if (rel === 'pulse/dismissed.md') {
+    const body = parseFile(read(legacy, rel)).body;
+    const lines = body.split('\n');
+    return !lines.some((l) => /^##\s/.test(l) || /^\s*(?:[-*]|\d+\.)\s/.test(l));
+  }
+  return false;
+}
+
 /** Split `## S-NNN` / `## G-NNN` blocks; anything before the first is the file's frame. */
 function proposals(legacy: string, rel: string, idRe: RegExp): Entry[] {
   const { frontmatter, body } = parseFile(read(legacy, rel));
@@ -184,6 +228,8 @@ export interface LegacyStore {
   version: string;
   entries: Entry[];
   config: Record<string, unknown> | null;
+  /** Every `.cortex`-relative file, for the no-loss accounting (Rule 16). */
+  files: string[];
 }
 
 export function readLegacyStore(root: string): LegacyStore | null {
@@ -199,25 +245,34 @@ export function readLegacyStore(root: string): LegacyStore | null {
     e.files.forEach((f) => covered.add(f));
   };
 
-  // Atlas sources: pair each raw `<stem>.md` with its `<stem>.meta.md`.
-  const sourceStems = new Set(files.filter((f) => /^atlas\/sources\/[^/]+\.md$/.test(f) && !f.endsWith('/_index.md')).map((f) => f.replace(/\.meta\.md$/, '').replace(/\.md$/, '')));
+  // Junk first, so it is never paired as a source or counted as a document raw.
+  for (const rel of files) if (isJunk(rel)) add({ ...base(rel, {}, '', 'retired'), reason: NOT_A_STORE_FILE });
+
+  // Atlas sources: the raw files of a stem (any extension) with its `<stem>.meta.md`.
+  const stemOf = (f: string): string => `atlas/sources/${path.posix.basename(f).split('.')[0]}`;
+  const sourceFiles = files.filter((f) => /^atlas\/sources\/[^/]+$/.test(f) && !f.endsWith('/_index.md') && !covered.has(f));
+  const sourceStems = new Set(sourceFiles.map(stemOf));
   for (const stemPath of [...sourceStems].sort()) {
     const meta = `${stemPath}.meta.md`;
-    const rawRel = `${stemPath}.md`;
     const hasMeta = files.includes(meta);
+    const raws = sourceFiles.filter((f) => stemOf(f) === stemPath && f !== meta).sort();
     const parsed = hasMeta ? parseFile(read(legacy, meta)) : { frontmatter: {}, body: '' };
-    const e = base(hasMeta ? meta : rawRel, parsed.frontmatter ?? {}, parsed.body, 'source');
-    e.ref = rawRel;
-    e.files = [rawRel, ...(hasMeta ? [meta] : [])].filter((f) => files.includes(f));
-    e.raw = files.includes(rawRel) ? [rawRel] : [];
+    const e = base(hasMeta ? meta : raws[0]!, parsed.frontmatter ?? {}, parsed.body, 'source');
+    e.ref = raws[0] ?? meta;
+    e.files = [...raws, ...(hasMeta ? [meta] : [])];
+    e.raw = raws;
     e.stem = path.posix.basename(stemPath);
+    if (!hasMeta) {
+      e.noMeta = true;
+      e.title = e.stem;
+    }
     add(e);
   }
 
   // Archive documents: one entry per directory.
-  const docDirs = new Set(files.filter((f) => /^archive\/documents\/[^/]+\//.test(f)).map((f) => f.split('/').slice(0, 3).join('/')));
+  const docDirs = new Set(files.filter((f) => /^archive\/documents\/[^/]+\//.test(f) && !covered.has(f)).map((f) => f.split('/').slice(0, 3).join('/')));
   for (const d of [...docDirs].sort()) {
-    const inDoc = files.filter((f) => f.startsWith(`${d}/`));
+    const inDoc = files.filter((f) => f.startsWith(`${d}/`) && !covered.has(f));
     let meta: Record<string, unknown> = {};
     const metaRel = inDoc.find((f) => /\/metadata\.ya?ml$/.test(f));
     if (metaRel) {
@@ -242,7 +297,8 @@ export function readLegacyStore(root: string): LegacyStore | null {
     e.files = inDoc;
     e.stem = path.posix.basename(d);
     e.title = String(meta['title'] ?? e.stem);
-    e.raw = inDoc.filter((f) => /\/source\.[^/]+$/.test(f));
+    // Raw = every file but the metadata and the extracted markdown (Rule 1).
+    e.raw = inDoc.filter((f) => f !== metaRel && !(f.startsWith(`${d}/extracted/`) && f.endsWith('.md')));
     add(e);
   }
 
@@ -250,13 +306,17 @@ export function readLegacyStore(root: string): LegacyStore | null {
     if (covered.has(rel)) continue;
     const top = rel.split('/')[0]!;
     // Dropped by decision (S9.3, store.migrate Rule 12) — before the _index.md row.
-    if (rel.startsWith('insight/anatomy/') || rel.startsWith('insight/concepts/') || (rel.startsWith('insight/') && DROPPED_GRAPH.has(rel.slice('insight/'.length)))) {
-      const group = rel.startsWith('insight/anatomy/') ? 'anatomy' : rel.startsWith('insight/concepts/') ? 'concepts' : 'graph';
+    const group = droppedGroup(rel);
+    if (group) {
       add({ ...base(rel, {}, '', 'dropped'), group });
       continue;
     }
-    if (path.posix.basename(rel) === '_index.md' || rel === 'recall-index.json' || rel === 'constellation.json' || rel === 'archive/register.md' || rel.startsWith('archive/types/')) {
-      add({ ...base(rel, {}, '', 'retired'), reason: 'machinery or regenerable' });
+    if (path.posix.basename(rel) === '_index.md' || rel === 'recall-index.json' || rel === 'constellation.json' || rel === 'archive/register.md' || rel.startsWith('archive/types/') || rel === 'insight/scope-registry.yaml') {
+      add({ ...base(rel, {}, '', 'retired'), reason: REGENERABLE });
+      continue;
+    }
+    if (/^archive\/[^/]+\//.test(rel) && !/^archive\/(documents|types)\//.test(rel)) {
+      add({ ...base(rel, {}, '', 'unpromoted'), reason: NOT_A_STORE_FOLDER });
       continue;
     }
     if (rel === 'cortex.config.json') {
@@ -280,11 +340,12 @@ export function readLegacyStore(root: string): LegacyStore | null {
     }
     if (/^pulse\/threads\/T-\d+[^/]*\.md$/.test(rel)) {
       const t = parseFile(read(legacy, rel)).frontmatter ?? {};
-      add({ ...base(rel, t, '', 'retired'), reason: `thread ${String(t['id'] ?? '')} (${String(t['status'] ?? 'unknown')}), not carried into 4.0` });
+      add({ ...base(rel, t, '', 'unpromoted'), reason: `${UNPROMOTED} (thread ${String(t['id'] ?? '')}, ${String(t['status'] ?? 'unknown')})` });
       continue;
     }
     if (top === 'pulse') {
-      add({ ...base(rel, {}, '', 'retired'), reason: 'pulse working state' });
+      if (pulseRegenerable(legacy, rel)) add({ ...base(rel, {}, '', 'retired'), reason: REGENERABLE });
+      else add({ ...base(rel, {}, '', 'unpromoted'), reason: UNPROMOTED });
       continue;
     }
     if (MULTI[rel]) {
@@ -319,7 +380,7 @@ export function readLegacyStore(root: string): LegacyStore | null {
     const fm = parsed.frontmatter ?? {};
     let row: RowId = 'unmapped';
     if (/^compass\/rules\/R-\d+[^/]*\.md$/.test(rel)) row = 'rule';
-    else if (/^compass\/bugs\/B-\d+[^/]*\.md$/.test(rel)) row = String(fm['status']) === 'resolved' ? 'bug-resolved' : 'bug-open';
+    else if (/^compass\/bugs\/B-\d+[^/]*\.md$/.test(rel)) row = RESOLVED_BUG_STATUSES.has(String(fm['status'])) ? 'bug-resolved' : 'bug-open';
     else if (/^atlas\/decisions\/[^/]+\.md$/.test(rel)) row = 'decision';
     else if (/^atlas\/stakeholders\/[^/]+\.md$/.test(rel)) row = 'stakeholder';
     else if (/^atlas\/domain\/[^/]+\.md$/.test(rel)) row = 'term';
@@ -328,5 +389,5 @@ export function readLegacyStore(root: string): LegacyStore | null {
     add(base(rel, fm, parsed.body, row));
   }
   const version = typeof config?.['schemaVersion'] === 'string' ? (config['schemaVersion'] as string) : '3.x';
-  return { dir: legacy, version, entries: entries.sort((a, b) => a.ref.localeCompare(b.ref, 'en', { numeric: true })), config };
+  return { dir: legacy, version, entries: entries.sort((a, b) => a.ref.localeCompare(b.ref, 'en', { numeric: true })), config, files };
 }

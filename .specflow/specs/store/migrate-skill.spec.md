@@ -1,6 +1,6 @@
 ---
 id: store.migrate-skill
-status: implementing
+status: implemented
 depends_on:
   - store.migrate
 implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.business.md

@@ -8,7 +8,8 @@ import * as path from 'path';
 import { classify, HISTORY_FOLDERS, WORLD_FOLDERS } from '../layout.js';
 import { frontmatterText, yamlScalar } from '../yaml.js';
 import { fencedLines } from '../frontmatter.js';
-import { isoDate, type Entry, type LegacyStore } from './entries.js';
+import { parseFile } from '../frontmatter.js';
+import { isoDate, NOT_A_STORE_FOLDER, type Entry, type LegacyStore } from './entries.js';
 
 export type Disposition =
   | { kind: 'migrated'; targets: string[] }
@@ -17,16 +18,31 @@ export type Disposition =
   | { kind: 'pending'; target: string }
   | { kind: 'unmapped' };
 
+/** One `now/proposals.md` item rendered from a proposals digest (Rule 3). */
+export interface ProposalItem { id: string; title: string; body: string }
+
 export interface Planned {
   entry: Entry;
   disposition: Disposition;
   review: string | null;
   fromPlan: boolean;
+  /** The plan's folder key that decided this entry, when one did. */
+  folderKey?: string;
+  /** Digest: the plan's file, and its body. */
+  digest?: { file: string; body: string };
+  /** A raw rescue: the target is under `history/sources/raw/`. */
+  rawRescue?: boolean;
+  /** Retired `unpromoted work` (or `not a store folder`) with no plan decision (Rule 16). */
+  undecided?: boolean;
+  /** Proposal items from a digest targeted at `now/proposals.md`. */
+  items?: ProposalItem[];
 }
 
 export const PROPOSALS_TARGET = 'now/proposals.md';
 export const CONFIG_TARGET = 'cortex.json';
 const PREFERENCES_TARGET = 'world/agreements/working-preferences.md';
+export const RAW_PREFIX = 'history/sources/raw/';
+const BUG_STATUSES = new Set(['open', 'triaged', 'resolved']);
 const AUTHORITY_TARGET = 'world/rules/agent-authority.md';
 
 export function kebab(text: string, maxWords = 6): string {
@@ -57,22 +73,35 @@ export function blockLead(text: string): string {
 }
 
 function bugArea(e: Entry): string {
-  const affects = Array.isArray(e.fm['affects']) ? (e.fm['affects'] as unknown[]).map(String) : [];
-  const first = affects[0];
+  const list = (k: string): string[] => (Array.isArray(e.fm[k]) ? (e.fm[k] as unknown[]).map(String) : []);
+  const first = list('affects')[0] ?? list('specs')[0] ?? list('related_specs')[0];
   if (!first) return 'repo';
   if (!first.includes('/')) return kebab(first.split('.')[0]!, 4);
   const parts = first.split('/');
   return kebab((parts[0] === 'src' && parts.length > 2 ? parts[1] : parts[0])!, 4);
 }
 
-function defaultDisposition(e: Entry, all: Entry[]): { d: Disposition; review: string | null } {
+/** Rule 4 date chain: the 3.x date fields, then the newest git date of the entry's files, then the apply date. */
+export type FileDate = (legacyRel: string) => string | null;
+
+export function dateChain(e: Entry, fileDate: FileDate, today: string): string {
+  if (e.date) return e.date;
+  const dates = e.files.map((f) => fileDate(f)).filter((d): d is string => !!d).sort();
+  return dates[dates.length - 1] ?? today;
+}
+
+function bugReview(e: Entry): string | null {
+  const st = String(e.fm['status'] ?? '');
+  return BUG_STATUSES.has(st) ? null : `3.x status ${st}`;
+}
+
+function defaultDisposition(e: Entry, all: Entry[], date: string): { d: Disposition; review: string | null } {
   const m = (targets: string[], review: string | null = null) => ({ d: { kind: 'migrated', targets } as Disposition, review });
-  const date = e.date ?? '0000-00-00';
   switch (e.row) {
     case 'config': return m([CONFIG_TARGET]);
     case 'rule': return m([`world/rules/${stemSlug(e.stem)}.md`], 'applies_when drafted from the title; source and verified date taken from git');
-    case 'bug-resolved': return m([`history/incidents/${date}-${stemSlug(e.stem)}.md`]);
-    case 'bug-open': return m([`code/${bugArea(e)}/${stemSlug(e.stem)}.md`]);
+    case 'bug-resolved': return m([`history/incidents/${date}-${stemSlug(e.stem)}.md`], bugReview(e));
+    case 'bug-open': return m([`code/${bugArea(e)}/${stemSlug(e.stem)}.md`], bugReview(e));
     case 'environment': return m([`world/systems/${kebab(blockLead(e.body), 5)}.md`], 'environment entry: check it is a pointer, not a host map (check.visibility runs)');
     case 'preferences': return m([PREFERENCES_TARGET], 'a code convention belongs in code/');
     case 'do-not-repeat': return m([`code/repo/${kebab(blockLead(e.body), 6)}.md`], 'may belong in a narrower code area');
@@ -87,13 +116,14 @@ function defaultDisposition(e: Entry, all: Entry[]): { d: Disposition; review: s
     case 'stakeholder': return m([`world/${e.fm['name'] ? 'people' : 'orgs'}/${stemSlug(e.stem)}.md`]);
     case 'term': return m([`world/terms/${kebab(String(e.fm['term'] ?? e.stem), 8)}.md`]);
     case 'evidence': return m([`history/measurements/${date}-${stemSlug(e.stem)}.md`]);
-    case 'source': return m([`history/sources/${date}-${stemSlug(e.stem)}.md`]);
+    case 'source': return m([`history/sources/${date}-${stemSlug(e.stem)}.md`], e.noMeta ? 'no .meta.md: the digest is a stub naming the raw file' : null);
     case 'document': return m([`history/sources/${date}-${stemSlug(e.stem)}.md`]);
     case 'intent': return m([`history/changes/${date}-${kebab(String(e.fm['stated_intent'] ?? e.id ?? 'intent'), 6)}.md`]);
     case 'observation': return m([`code/repo/${stemSlug(e.stem)}.md`], 'may belong in world/ or now/');
     case 'proposal': return { d: { kind: 'pending', target: PROPOSALS_TARGET }, review: null };
     case 'dropped': return { d: { kind: 'dropped', group: e.group ?? 'insight' }, review: null };
     case 'retired': return { d: { kind: 'retired', reason: e.reason ?? 'machinery' }, review: null };
+    case 'unpromoted': return { d: { kind: 'retired', reason: e.reason ?? 'unpromoted work' }, review: e.reason === NOT_A_STORE_FOLDER ? 'not a schema folder: move it out of .cortex/ before removing .cortex/ (or decide it in the plan)' : null };
     default: return { d: { kind: 'unmapped' }, review: null };
   }
 }
@@ -103,6 +133,7 @@ const HISTORY = new Set<string>(HISTORY_FOLDERS);
 
 /** Why `rel` cannot be a 4.0 target (layout S1, naming S2), or null. */
 export function targetProblem(rel: string): string | null {
+  if (rel.startsWith(RAW_PREFIX)) return /(^|\/)\.\.?(\/|$)/.test(rel) || rel.endsWith('/') ? 'not a raw file path' : null;
   if (!rel.endsWith('.md')) return 'a target must be a .md file';
   const parts = rel.split('/');
   const { module, folder } = classify(rel);
@@ -116,42 +147,138 @@ export function targetProblem(rel: string): string | null {
   return null;
 }
 
-export type PlanFile = Record<string, string>;
+export type PlanValue = string | { target: string; file: string };
+export type PlanFile = Record<string, PlanValue>;
 
-export interface PlanResult { planned: Planned[]; errors: string[] }
+export interface PlanResult { planned: Planned[]; errors: string[]; folderKeys: { key: string; decided: number }[] }
 
 export function readPlanFile(file: string): { plan: PlanFile | null; error: string | null } {
   try {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (data === null || typeof data !== 'object' || Array.isArray(data)) return { plan: null, error: `plan ${file} is not a JSON object` };
-    for (const [k, v] of Object.entries(data)) if (typeof v !== 'string') return { plan: null, error: `plan entry ${k} must map to a target path or "retired"` };
+    for (const [k, v] of Object.entries(data)) {
+      const digest = v !== null && typeof v === 'object' && !Array.isArray(v) && typeof (v as Record<string, unknown>)['target'] === 'string' && typeof (v as Record<string, unknown>)['file'] === 'string';
+      if (typeof v !== 'string' && !digest) return { plan: null, error: `plan entry ${k} must map to a target path, "retired", or { "target", "file" }` };
+    }
     return { plan: data as PlanFile, error: null };
   } catch (e) {
     return { plan: null, error: `plan ${file} does not parse: ${(e as Error).message}` };
   }
 }
 
-export function planMigration(legacy: LegacyStore, plan: PlanFile | null): PlanResult {
+export interface PlanOptions {
+  /** Project root: digest files must sit inside it (relative paths resolve against it). */
+  root: string;
+  fileDate: FileDate;
+  today: string;
+}
+
+/** Proposal items of a digest: one per `## <id>: <title>` heading outside fences. */
+export function proposalItems(body: string): ProposalItem[] {
+  const lines = body.split('\n');
+  const fenced = fencedLines(lines);
+  const starts: number[] = [];
+  lines.forEach((l, i) => { if (!fenced[i] && /^##\s+[A-Z][A-Za-z0-9]*-[A-Za-z0-9-]+\s*:/.test(l)) starts.push(i); });
+  return starts.map((st, k) => {
+    const m = /^##\s+([A-Z][A-Za-z0-9]*-[A-Za-z0-9-]+)\s*:\s*(.*)$/.exec(lines[st]!)!;
+    return { id: m[1]!, title: m[2]!.trim(), body: lines.slice(st + 1, starts[k + 1] ?? lines.length).join('\n').replace(/^\n+/, '').replace(/\s+$/, '') };
+  });
+}
+
+/** Fill in the 3.x text of an entry read without it (retired, unpromoted, dropped), so a plan can rescue it. */
+function withText(e: Entry, legacyDir: string): Entry {
+  if (e.body !== '' || e.files.length !== 1 || !e.files[0]!.endsWith('.md')) return e;
+  const parsed = parseFile(fs.readFileSync(path.join(legacyDir, e.files[0]!), 'utf8'));
+  const body = parsed.body;
+  const lead = body.split('\n').map((x) => x.trim()).find((x) => x !== '') ?? e.stem;
+  return { ...e, fm: { ...(parsed.frontmatter ?? {}), ...e.fm }, body, title: String(parsed.frontmatter?.['title'] ?? lead.replace(/^#+\s*/, '')) };
+}
+
+export function planMigration(legacy: LegacyStore, plan: PlanFile | null, opts: PlanOptions): PlanResult {
   const errors: string[] = [];
   const byRef = new Map(legacy.entries.map((e) => [e.ref, e]));
-  for (const [ref, target] of Object.entries(plan ?? {})) {
-    if (!byRef.has(ref)) errors.push(`plan ref ${ref} matches no entry`);
-    else if (target !== 'retired') {
-      const p = targetProblem(target);
-      if (p) errors.push(`plan target ${target} (for ${ref}): ${p}`);
+  const exact = new Map<string, PlanValue>();
+  const folders: { key: string; prefix: string; value: PlanValue; decided: number }[] = [];
+  const digests = new Map<string, { file: string; body: string }>();
+  for (const [key, value] of Object.entries(plan ?? {})) {
+    if (key.endsWith('/**')) {
+      const prefix = key.slice(0, -2);
+      if (value !== 'retired' && !(typeof value === 'string' && value.startsWith(RAW_PREFIX) && value.endsWith('/'))) errors.push(`plan folder key ${key}: its value must be "retired" or a ${RAW_PREFIX}<folder>/ path`);
+      else if (!legacy.entries.some((e) => e.ref.startsWith(prefix))) errors.push(`plan folder key ${key} matches no entry`);
+      else folders.push({ key, prefix, value, decided: 0 });
+      continue;
+    }
+    const e = byRef.get(key);
+    if (!e) {
+      errors.push(`plan ref ${key} matches no entry`);
+      continue;
+    }
+    exact.set(key, value);
+    const target = typeof value === 'string' ? value : value.target;
+    if (target === 'retired') continue;
+    const p = targetProblem(target);
+    if (p) errors.push(`plan target ${target} (for ${key}): ${p}`);
+    if (target.startsWith(RAW_PREFIX) && e.files.length !== 1) errors.push(`plan target ${target} (for ${key}): a raw rescue takes a single-file entry`);
+    const nonMd = e.files.length === 1 && !e.files[0]!.endsWith('.md');
+    if (typeof value === 'string' && nonMd && !target.startsWith(RAW_PREFIX)) errors.push(`plan target ${target} (for ${key}): ${e.files[0]} is not markdown, so it is rescued only as raw or as a digest`);
+    if (typeof value !== 'string') {
+      const abs = path.resolve(opts.root, value.file);
+      const rel = path.relative(path.resolve(opts.root), abs);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) errors.push(`plan digest file ${value.file} (for ${key}) is outside the project`);
+      else if (!fs.existsSync(abs)) errors.push(`plan digest file ${value.file} (for ${key}) does not exist`);
+      else {
+        const body = fs.readFileSync(abs, 'utf8');
+        if (/^---\r?\n/.test(body)) errors.push(`plan digest file ${value.file} (for ${key}) carries frontmatter; migrate writes all of it`);
+        else digests.set(key, { file: value.file, body });
+      }
     }
   }
-  const planned = legacy.entries.map((e) => {
-    const def = defaultDisposition(e, legacy.entries);
-    const over = plan?.[e.ref];
-    if (over === undefined || errors.length) return { entry: e, disposition: def.d, review: def.review, fromPlan: false };
-    if (over === 'retired') return { entry: e, disposition: { kind: 'retired', reason: 'retired by the plan file' } as Disposition, review: null, fromPlan: true };
-    const targets = [over];
+  const planned = legacy.entries.map((orig): Planned => {
+    const date = dateChain(orig, opts.fileDate, opts.today);
+    const def = defaultDisposition(orig, legacy.entries, date);
+    const undecided = orig.row === 'unpromoted';
+    const base: Planned = { entry: orig, disposition: def.d, review: def.review, fromPlan: false, ...(undecided ? { undecided: true } : {}) };
+    if (errors.length) return base;
+    let over: PlanValue | undefined = exact.get(orig.ref);
+    let folderKey: string | undefined;
+    if (over === undefined) {
+      const f = folders.filter((x) => orig.ref.startsWith(x.prefix)).sort((a, b) => b.prefix.length - a.prefix.length)[0];
+      if (f) {
+        f.decided++;
+        folderKey = f.key;
+        over = f.value === 'retired' ? 'retired' : `${f.value as string}${orig.ref.slice(f.prefix.length)}`;
+      }
+    }
+    if (over === undefined) return base;
+    if (over === 'retired') return { entry: orig, disposition: { kind: 'retired', reason: 'retired by the plan file' }, review: null, fromPlan: true, ...(folderKey ? { folderKey } : {}) };
+    const e = withText(orig, legacy.dir);
+    const target = typeof over === 'string' ? over : over.target;
+    const targets = [target];
     // A decision keeps its change event when it stays a decision.
-    if (e.row === 'decision' && over.startsWith('world/decisions/') && def.d.kind === 'migrated') targets.push(def.d.targets[1]!);
-    return { entry: e, disposition: { kind: 'migrated', targets } as Disposition, review: null, fromPlan: true };
+    if (e.row === 'decision' && target.startsWith('world/decisions/') && def.d.kind === 'migrated') targets.push(def.d.targets[1]!);
+    const out: Planned = { entry: e, disposition: { kind: 'migrated', targets }, review: target.startsWith(RAW_PREFIX) ? 'raw rescue: kept only in the gitignored raw folder' : null, fromPlan: true, ...(folderKey ? { folderKey } : {}) };
+    if (target.startsWith(RAW_PREFIX)) out.rawRescue = true;
+    const dg = digests.get(orig.ref);
+    if (dg) {
+      out.digest = dg;
+      if (target === PROPOSALS_TARGET) {
+        out.items = proposalItems(dg.body);
+        if (!out.items.length) errors.push(`plan digest file ${dg.file} (for ${orig.ref}) targets ${PROPOSALS_TARGET} but has no "## <id>: <title>" heading`);
+        out.disposition = { kind: 'pending', target: PROPOSALS_TARGET };
+      }
+    }
+    return out;
   });
-  return { planned, errors };
+  // Proposal ids are unique across now/proposals.md (S-NNN entries and digest items).
+  const ids = new Map<string, string>();
+  for (const p of planned) {
+    const own = p.entry.row === 'proposal' && p.disposition.kind === 'pending' && !p.fromPlan ? [p.entry.ref] : [];
+    for (const id of [...own, ...(p.items ?? []).map((i) => i.id)]) {
+      if (ids.has(id)) errors.push(`proposal id ${id} is used twice in ${PROPOSALS_TARGET} (${ids.get(id)} and ${p.entry.ref})`);
+      else ids.set(id, p.entry.ref);
+    }
+  }
+  return { planned, errors, folderKeys: folders.map((f) => ({ key: f.key, decided: f.decided })) };
 }
 
 // ---------------------------------------------------------------- building
@@ -163,6 +290,8 @@ export interface BuildContext {
   today: string;
   /** `YYYY-MM-DD` of the last commit touching a 3.x file, for entries with no date field. */
   fileDate: (legacyRel: string) => string | null;
+  /** `--visibility`: overrides the 3.x `visibility.repo` in the written `cortex.json`. */
+  visibility?: string;
 }
 
 export interface ProvenanceRef { entry: string; target: string; resolved: string | null }
@@ -218,8 +347,9 @@ function aboutOf(text: string): string {
   return cut.slice(0, cut.lastIndexOf(' ') > 80 ? cut.lastIndexOf(' ') : 159) + '…';
 }
 
-const METHOD: Partial<Record<Entry['row'], 'told' | 'observed'>> = {
+const METHOD: Partial<Record<Entry['row'], 'told' | 'observed' | 'inferred'>> = {
   'bug-resolved': 'observed', 'bug-open': 'observed', evidence: 'observed', observation: 'observed', source: 'observed', document: 'observed',
+  dropped: 'inferred', unpromoted: 'observed', retired: 'observed',
 };
 
 function permanenceOf(target: string): string {
@@ -230,7 +360,7 @@ function permanenceOf(target: string): string {
 interface Contribution { p: Planned; target: string; role: 'main' | 'change-event' }
 
 function entryDate(e: Entry, ctx: BuildContext): string {
-  return e.date ?? ctx.fileDate(e.files[0]!) ?? ctx.today;
+  return dateChain(e, ctx.fileDate, ctx.today);
 }
 
 /** Rule 13: each provenance reference of an entry, resolved to an origin value or left dangling. */
@@ -256,9 +386,37 @@ export function provenanceRefs(p: Planned, byFile: Map<string, Planned>, sha: st
 }
 
 export interface BuiltTree {
-  /** cortex-relative path → content (raw copies included). */
-  files: Map<string, string>;
+  /** cortex-relative path → content; raw copies are bytes. */
+  files: Map<string, string | Buffer>;
   provenance: ProvenanceRef[];
+  /** `.cortex`-relative file → the raw path it was copied to (Rule 15). */
+  rawCopies: Map<string, string>;
+}
+
+/**
+ * Rule 15: where each raw file of a source goes. One raw keeps
+ * `raw/<digest-stem><ext>`; several go under `raw/<digest-stem>/` at their
+ * paths inside the 3.x folder. Returns [3.x file, raw path] pairs and the
+ * digest's `raw:` value.
+ */
+export function rawLayout(e: Entry, target: string): { pairs: [string, string][]; field: string | null } {
+  const raws = e.raw ?? [];
+  if (!raws.length) return { pairs: [], field: null };
+  const digestStem = path.posix.basename(target, '.md');
+  if (raws.length === 1) {
+    const r = raws[0]!;
+    const name = path.posix.basename(r);
+    let ext: string | null = null;
+    if (e.row === 'document') ext = /^source(\..+)$/.exec(name)?.[1] ?? null;
+    else if (e.row === 'source') ext = name.slice(name.split('.')[0]!.length) || null;
+    if (ext) {
+      const rel = `${RAW_PREFIX}${digestStem}${ext}`;
+      return { pairs: [[r, rel]], field: rel };
+    }
+  }
+  const baseDir = e.row === 'document' ? `${e.ref}/` : 'atlas/sources/';
+  const folder = `${RAW_PREFIX}${digestStem}/`;
+  return { pairs: raws.map((r) => [r, `${folder}${r.startsWith(baseDir) ? r.slice(baseDir.length) : path.posix.basename(r)}`]), field: folder };
 }
 
 function draftAppliesWhen(title: string): string {
@@ -267,7 +425,7 @@ function draftAppliesWhen(title: string): string {
 }
 
 export function buildTree(legacy: LegacyStore, planned: Planned[], ctx: BuildContext): BuiltTree {
-  const files = new Map<string, string>();
+  const files = new Map<string, string | Buffer>();
   const byFile = new Map<string, Planned>();
   for (const p of planned) for (const f of p.entry.files) byFile.set(f, p);
   const contributions = new Map<string, Contribution[]>();
@@ -277,18 +435,36 @@ export function buildTree(legacy: LegacyStore, planned: Planned[], ctx: BuildCon
   };
   const provenance: ProvenanceRef[] = [];
   const originsOf = new Map<string, string[]>();
+  const rawCopies = new Map<string, string>();
   for (const p of planned) {
     if (p.disposition.kind !== 'migrated' && p.disposition.kind !== 'pending') continue;
     const refs = provenanceRefs(p, byFile, ctx.sha);
     provenance.push(...refs);
-    originsOf.set(p.entry.ref, [`migrated:${p.entry.ref}@${ctx.sha}`, ...refs.flatMap((r) => (r.resolved ? [r.resolved] : []))]);
+    const origin = [`migrated:${p.entry.ref}@${ctx.sha}`, ...refs.flatMap((r) => (r.resolved ? [r.resolved] : []))];
+    originsOf.set(p.entry.ref, origin);
+    if (p.rawRescue && p.disposition.kind === 'migrated') {
+      const t = p.disposition.targets[0]!;
+      files.set(t, fs.readFileSync(path.join(legacy.dir, p.entry.files[0]!)));
+      rawCopies.set(p.entry.files[0]!, t);
+      continue;
+    }
+    if (p.items) {
+      // A proposals digest: one Rule 10 item per heading, each carrying the report's origin.
+      for (const it of p.items) {
+        const item: Planned = { ...p, entry: { ...p.entry, ref: it.id, id: it.id, title: it.title, body: it.body, row: 'proposal' } };
+        originsOf.set(it.id, origin);
+        push(PROPOSALS_TARGET, { p: item, target: PROPOSALS_TARGET, role: 'main' });
+      }
+      continue;
+    }
     if (p.disposition.kind === 'pending') push(p.disposition.target, { p, target: p.disposition.target, role: 'main' });
     else p.disposition.targets.forEach((t, i) => push(t, { p, target: t, role: i === 0 ? 'main' : 'change-event' }));
   }
 
   for (const [target, cs] of [...contributions].sort(([a], [b]) => a.localeCompare(b))) {
     if (target === CONFIG_TARGET) {
-      const vis = legacy.config?.['visibility'] ?? { repo: 'unknown', allow: [] };
+      const legacyVis = (legacy.config?.['visibility'] ?? { repo: 'unknown', allow: [] }) as Record<string, unknown>;
+      const vis = ctx.visibility ? { ...legacyVis, repo: ctx.visibility, allow: Array.isArray(legacyVis['allow']) ? legacyVis['allow'] : [] } : legacyVis;
       files.set(CONFIG_TARGET, JSON.stringify({ schemaVersion: '4.0', visibility: vis, migration: { from: legacy.version, accepted: null } }, null, 2) + '\n');
       continue;
     }
@@ -299,13 +475,13 @@ export function buildTree(legacy: LegacyStore, planned: Planned[], ctx: BuildCon
     files.set(target, buildFile(target, cs, ctx, originsOf));
     for (const c of cs) {
       if (c.role !== 'main') continue;
-      for (const r of c.p.entry.raw ?? []) {
-        const ext = path.posix.extname(r) || '.md';
-        files.set(`history/sources/raw/${path.posix.basename(target, '.md')}${ext}`, fs.readFileSync(path.join(legacy.dir, r), 'utf8'));
+      for (const [r, rel] of rawLayout(c.p.entry, target).pairs) {
+        files.set(rel, fs.readFileSync(path.join(legacy.dir, r)));
+        rawCopies.set(r, rel);
       }
     }
   }
-  return { files, provenance };
+  return { files, provenance, rawCopies };
 }
 
 function dedupe(xs: string[]): string[] {
@@ -339,7 +515,7 @@ function buildFile(target: string, cs: Contribution[], ctx: BuildContext, origin
   const module = target.split('/')[0];
   const dates = cs.map((c) => entryDate(c.p.entry, ctx)).sort();
   const latest = dates[dates.length - 1]!;
-  const method = METHOD[e.row] ?? 'told';
+  const method = main.p.digest ? 'inferred' : (METHOD[e.row] ?? 'told');
 
   let about: string;
   if (target === PREFERENCES_TARGET && multi) about = 'How the user wants work done here: working preferences and conventions';
@@ -390,8 +566,8 @@ function buildFile(target: string, cs: Contribution[], ctx: BuildContext, origin
   }
   if (folder === 'history/sources') {
     fm['captured'] = latest;
-    const raw = e.raw?.[0];
-    if (raw) fm['raw'] = `history/sources/raw/${path.posix.basename(target, '.md')}${path.posix.extname(raw) || '.md'}`;
+    const raw = rawLayout(e, target).field;
+    if (raw) fm['raw'] = raw;
     const ext = typeof e.fm['origin'] === 'string' ? (e.fm['origin'] as string).replace(/\s+/g, ' ').trim() : '';
     if (ext) (fm['origin'] as string[]).push(`external:${ext.length > 120 ? ext.slice(0, 119) + '…' : ext}`);
   }
@@ -403,7 +579,9 @@ function buildFile(target: string, cs: Contribution[], ctx: BuildContext, origin
       const dec = (c.p.disposition as { targets: string[] }).targets[0]!;
       return `Decision recorded on ${entryDate(x, ctx)}: ${x.title}.\n\nThe current answer is in [${dec}](${dec}).`;
     }
+    if (c.p.digest) return c.p.digest.body.trim();
     let text = x.body.trim();
+    if (x.row === 'source' && x.noMeta && !text) text = `The original is kept as a raw file (\`raw:\` above): ${x.files.join(', ')}.`;
     if (x.row === 'term' && typeof x.fm['definition'] === 'string') text = `${String(x.fm['definition']).trim()}${text ? `\n\n${text}` : ''}`;
     if (x.row === 'intent') text = `> ${String(x.fm['stated_intent'] ?? '')}`;
     if (folder === 'world/decisions' && !multi) {

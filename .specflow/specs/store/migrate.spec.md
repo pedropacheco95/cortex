@@ -1,6 +1,6 @@
 ---
 id: store.migrate
-status: implementing
+status: implemented
 depends_on:
   - store.layout
   - store.validate
