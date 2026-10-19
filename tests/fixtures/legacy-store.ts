@@ -121,6 +121,8 @@ export function writeLegacySystem(root: string, home: string, markerFor: (dir: s
   wb(root, '.claude/skills/cortex-loop-hygiene/.cortex-installed.json', JSON.stringify({ sha256: 'f'.repeat(64) }));
   wb(root, '.claude/skills/specflow-bugs/SKILL.md', '---\nname: specflow-bugs\n---\nFile bugs in .cortex/compass/bugs/.\n');
   wb(root, '.claude/skills/own-skill/SKILL.md', '---\nname: own-skill\n---\nUnrelated.\n');
+  wb(root, '.claude/skills/ref-skill/SKILL.md', '---\nname: ref-skill\n---\nSee references.\n');
+  wb(root, '.claude/skills/ref-skill/references/paths.md', 'Bugs live in .cortex/compass/bugs/.\n');
   const task = (name: string, marker: string | null) => wb(home, `.claude/scheduled-tasks/${name}/SKILL.md`, `---\nname: ${name}\n---\n${marker ? `<!-- cortex-project-root: ${marker} -->\n` : ''}Run.\n`);
   task('demo-daily', path.resolve(root));
   task('demo-weekly-quality', path.resolve(root));

@@ -100,6 +100,20 @@ function installBundles(root: string, lines: string[]): void {
   }
 }
 
+/** True when the bundle's SKILL.md or any markdown/text file under it names `.cortex/` (Rule 18 step 5). */
+function bundleNamesLegacyStore(bundle: string): boolean {
+  const stack = [bundle];
+  while (stack.length) {
+    const d = stack.pop()!;
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) stack.push(p);
+      else if (/\.(md|txt|ya?ml|json)$/.test(e.name) && e.name !== INSTALLED_MARKER_FILENAME && fs.readFileSync(p, 'utf8').includes('.cortex/')) return true;
+    }
+  }
+  return false;
+}
+
 function listSuperseded(root: string, lines: string[]): void {
   const dir = path.join(root, '.claude', 'skills');
   if (!fs.existsSync(dir)) return;
@@ -107,8 +121,7 @@ function listSuperseded(root: string, lines: string[]): void {
   const naming: string[] = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true }).filter((x) => x.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
     if (SUPERSEDED.has(e.name) || e.name.startsWith('cortex-loop-') || SKIP_NAMING_CHECK.has(e.name)) continue;
-    const skill = path.join(dir, e.name, 'SKILL.md');
-    if (fs.existsSync(skill) && fs.readFileSync(skill, 'utf8').includes('.cortex/')) naming.push(e.name);
+    if (bundleNamesLegacyStore(path.join(dir, e.name))) naming.push(e.name);
   }
   if (names.length) {
     lines.push('', `Superseded 3.x skill bundles (${names.length}, not deleted):`);
