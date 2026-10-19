@@ -24,7 +24,7 @@ governs:
 
 ## Rules
 
-1. **Bundle.** The bundle is `skills/cortex-migrate/SKILL.md`, mirrored byte for byte to `.claude/skills/cortex-migrate/SKILL.md`. Its description fits the skill-listing budget. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, so the 3.x `init` and `sync` never install it, and `cortex migrate --accept` installs it (`store.migrate` Rule 18).
+1. **Bundle.** The bundle is `skills/cortex-migrate/SKILL.md`, mirrored byte for byte to `.claude/skills/cortex-migrate/SKILL.md`. Its description fits the skill-listing budget. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, so the 3.x `init` and `sync` never install it. It is not installed into projects at all. A migration needs it before anything is applied, so the `cortex migrate` dry run prints the packaged path (`store.migrate` Rule 3), and the session reads the skill from there. This repository has it in `.claude/skills/` as the mirror.
 2. **Steps, in order:**
    1. run `cortex migrate --json --report .cortex-migrate/report.json` (adding `--visibility` when the person states it);
    2. read every entry that is `retired` with reason `unpromoted work` or `not a store folder`, every entry flagged `review`, and every concept under `concept definitions`, opening the files as needed and working in folder groups;
@@ -40,7 +40,7 @@ governs:
    - Keep one consolidated copy when several files hold the same thing (passes and their merge).
 4. **Knowledge that is never retired:**
    - an unanswered question for a person, which goes to `now/` or is rescued;
-   - a pending proposal, which is digested to `now/proposals.md` as `## <id>: <title>` items;
+   - a pending proposal, which is digested to `now/proposals.md` as `## <id>: <title>` items (the 3.x id where it had one, else `P-<report stem>-<n>`);
    - a recorded reason for a dismissal or a rejection.
 5. **Non-markdown work** (tests, scripts) is rescued only as raw (`history/sources/raw/<folder>/…`) or as a digest, never into `world/` or `code/`. For a set of passes, keep the latest suite and retire the others.
 6. **Disagreement.** When two kept files disagree, the digest records both statements with their refs, and never picks one.

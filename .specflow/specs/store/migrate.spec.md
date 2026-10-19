@@ -25,7 +25,7 @@ Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached
 
 ## Entities
 
-- **READS:** `.cortex/**` (including gitignored `pulse/` and `atlas/sources/`), `git ls-files .cortex`, an optional plan file and the digest files it names, an optional redact file; with `--accept`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/skills/*`, and `~/.claude/scheduled-tasks/*/SKILL.md` (or the folder in `CORTEX_SCHEDULED_TASKS_DIR`).
+- **READS:** `.cortex/**` (including gitignored `pulse/` and `atlas/sources/`), `git ls-files .cortex`, an optional plan file and the digest files it names, an optional redact file; with `--accept`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/skills/*`, and `<home>/.claude/scheduled-tasks/*/SKILL.md` (`<home>` is the user's home directory; tests pass their own, as `tasks-register` does).
 - **WRITES:** the report (stdout, or `--report <file>`); with `--apply`, `cortex/**` and the `.gitignore` line; with `--accept`, the managed blocks, `cortex/cortex.json` `migration.accepted`, the hook entries in `.claude/settings.json` and `.claude/settings.local.json` (removal only), and the 4.0 bundles under `.claude/skills/`.
 - **NEVER WRITES:** anything under `.cortex/`, any scheduled-task payload, or a 3.x skill bundle.
 - **NEVER DELETES:** any file.
@@ -34,7 +34,7 @@ Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached
 
 1. **Entries.** The source is split into entries, per schema S9.3's coverage unit. Each entry has a stable ref: `<3.x path>` for single-subject files, `<3.x path>#<n>` (1-based) for list items and sections, `<path>#<id>` for intent entries, `S-NNN` and `G-NNN`.
    - An atlas source is the stem of `atlas/sources/<stem>.<ext>` for any extension, where the stem ends at the file name's first `.`. Its raw files are every non-`.meta.md` file with that stem, and its digest comes from `<stem>.meta.md` when there is one.
-   - An archive document is one folder `archive/documents/<doc>/`. Its raw files are every file of the folder except `metadata.yaml` and `extracted/**`.
+   - An archive document is one folder `archive/documents/<doc>/`. Its raw files are every file of the folder except `metadata.yaml` and the `.md` files under `extracted/` (which form the digest). A non-markdown file under `extracted/` is therefore raw.
    - An empty folder (for example a Finder duplicate `rules 2/`) contributes no entry.
 2. **Dispositions.** Every entry gets exactly one disposition, per the S9.3 mapping table: `migrated → <path>`, `retired`, `dropped by decision`, or `pending decision`. Coverage = entries with a disposition / all entries. An entry no table row matches is listed `unmapped`, counts against coverage, and makes `--apply` refuse.
    - A retired entry carries one reason: `machinery or regenerable`, `unpromoted work`, `not a store file`, `not a store folder`, `id registry`, or `retired by the plan file`.
@@ -57,7 +57,8 @@ Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached
    - a `.md` target for an entry whose 3.x file is not markdown;
    - a digest file that is missing, outside the working directory, or carries frontmatter.
 
-   A digest whose target is `now/proposals.md` is rendered as Rule 10 items. Each `## <id>: <title>` heading in the digest file becomes one item, with `origin` `migrated:<ref>@<sha>`, and each item is listed under `pending decision`.
+   A digest whose target is `now/proposals.md` is rendered as Rule 10 items. Each `## <id>: <title>` heading in the digest file becomes one item, with `origin` `migrated:<ref>@<sha>`, and each item is listed under `pending decision`. The id is the 3.x id where the proposal had one (`S-NNN`, `G-NNN`), else `P-<report stem>-<n>`. An id used twice in `now/proposals.md`, or one that is already an alias of another file, is an error. The file's `aliases` list each item id once.
+   - **Where the plan comes from.** The dry-run report ends with the path of the packaged `cortex-migrate` skill (`<package>/skills/cortex-migrate/SKILL.md`), so a session in any project can read and follow it before anything is applied. Nothing is installed for this.
 4. **Content.** A migrated entry keeps its text verbatim in the body. Its 3.x id and any old filename stem go to `aliases`. Its frontmatter is mapped:
    - `about` from `title`, `term` or `name`;
    - `verified` from the 3.x date fields (`date`, `opened`, `updated`, `captured`, `ingested_at`, `discovered`, then the file's last git commit date, then the apply date; target paths use the same chain and are never dated `0000-00-00`), with method `told` for decisions, terms and rules and `observed` for bugs, evidence and observations;
@@ -74,7 +75,7 @@ Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached
 10. **Never dropped.** Pending proposals (`S-NNN` whose status is pending, `G-NNN`) go to `now/proposals.md`. Each is one item: a heading `## <id>: <first line>`, then `until: <apply date + 30 days>`, then `status: pending decision`, then its full text. They also appear in the report's `pending decision` list. What happens when they expire unreviewed is specified in `store.freshness` Rule 2.
 11. **The 3.x commands leave a 4.0 store alone.** When `cortex/cortex.json` exists with a 4.0 `schemaVersion`:
    - **Before acceptance** (`migration.accepted` is `null`), the 3.x `cortex sync` and `cortex init` never write the `CLAUDE.md` or `AGENTS.md` managed block. They print `managed block owned by the 4.0 store (cortex/); left untouched`, and otherwise behave as before on `.cortex/`.
-   - **After acceptance, or on a 4.0 store with no `migration` field** (a fresh `cortex store init`), they refuse. They exit 1 with `this project uses the 4.0 store (cortex/); use cortex store init or cortex store map`, and write nothing. Otherwise a scheduled `sync` would reinstall the hooks and skills that Rule 18 removed.
+   - **After acceptance, or on a 4.0 store with no `migration` field** (a fresh `cortex store init`), they refuse. They exit with their existing refusal codes (`init` 2, `sync` 3) and the message `this project uses the 4.0 store (cortex/); use cortex store init or cortex store map`, and write nothing. Otherwise a scheduled `sync` would reinstall the hooks and skills that Rule 18 removed.
 
    These are the only changes this spec makes to the 3.x code path. A sync can protect a foreign project only once the installed `cortex` binary carries this rule: no foreign project is accepted before that.
 12. **Insight is dropped by decision** (2026-10-14; schema S9.3). The 3.x inferred code summaries are neither migrated nor kept: `insight/anatomy/**`, `insight/concepts/**`, the insight graph with its indexes (`insight/{graph,tags,clusters,reverse-index,ledger}.json`), and the scoped layout's `insight/scopes/**`. Each file is one entry with disposition `dropped by decision`, so coverage still reaches 100%.
@@ -106,9 +107,9 @@ Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached
     - When `--apply` runs with visibility findings on a public or unknown repo and no `--redact`, it prints `<n> visibility findings would be committed to a public (or unknown-visibility) repository; review them, or rerun with --redact <file>`. It does not block.
 18. **Accept retires the 3.x system around the store.** After Rule 9's block switch, `--accept`:
     1. **Hooks.** It removes from `.claude/settings.json` and `.claude/settings.local.json` every hook entry whose command starts with `cortex hook `, and drops any matcher group or event left empty. Every other key and entry stays. A changed file is written as 2-space JSON with a trailing newline, and the output says the file's formatting may have changed. A file with no such entry is not written.
-    2. **4.0 bundles.** It installs each 4.0 bundle (`STORE_V4_BUNDLES`: `cortex-remember`, `cortex-migrate`) into `.claude/skills/<name>/`, with a `.cortex-installed.json` marker. A bundle of that name that already exists with different content is left alone and listed.
+    2. **4.0 bundles.** It installs `cortex-remember` (the 4.0 bundle a migrated project needs day to day; `cortex-migrate` is read from the package, Rule 3) into `.claude/skills/cortex-remember/`, with a `.cortex-installed.json` marker. A bundle of that name that already exists with different content is left alone and listed.
     3. **Superseded bundles.** It lists, and never deletes, the 3.x bundles that 4.0 supersedes in `.claude/skills/`: `cortex-archive-ingest`, `cortex-extract-insight`, `cortex-loop`, `cortex-register-tasks`, and every `cortex-loop-*`. Each is labelled `unmodified` (its marker's hash matches its content) or `modified or unmarked: check before removing`, and the output ends with one removal command.
-    4. **Scheduled tasks.** It lists, and never touches, the scheduled-task payload folders whose `SKILL.md` carries `<!-- cortex-project-root: <this project's absolute path> -->`. They are selected by that marker, never by name. The output says to disable each in the Claude Code Desktop app before deleting its folder.
+    4. **Scheduled tasks.** It lists, and never touches, the payload folders under `<home>/.claude/scheduled-tasks/` whose `SKILL.md` carries `<!-- cortex-project-root: <this project's absolute path> -->`. They are selected by that marker, never by name. The output says to disable each in the Claude Code Desktop app before deleting its folder.
     5. **Skills that name the old store.** It counts the installed bundles outside that list whose `SKILL.md` names `.cortex/`: `installed skills that still name .cortex/: <n>`, with their names. Updating them is a Specflow 4.0 task, outside this spec.
 19. **Unknown archive folders, tests, and other non-knowledge files.** The default for `archive/<other>/**` is the review flag "move it out of `.cortex/` before removing `.cortex/`". A non-markdown file can be rescued only as raw or as a digest (Rule 3), so code and tests never land verbatim in `world/` or `code/`.
 
@@ -239,6 +240,18 @@ All of these use the foreign fixture (`writeForeignStore`). It holds a 3.3 confi
 - **When** `cortex migrate --apply` runs
 - **Then** `history/sources/raw/<stem>/` holds `source.pdf`, `source.scan.pdf`, `source/log.txt` and `source-email.md`, each byte-identical; the digest's `raw:` names that folder; and the report shows `not written: 0`
 
+### A re-apply with binary raws is byte-identical
+
+- **Given** `cortex migrate --apply` has run on the foreign fixture with a deciding plan
+- **When** it runs again with the same inputs
+- **Then** it exits 0 and the `cortex/` tree, binary raws included, is byte-identical
+
+### The dry run points at the skill
+
+- **Given** the foreign fixture
+- **When** `cortex migrate` runs
+- **Then** the report's last section names the packaged `skills/cortex-migrate/SKILL.md` path, and the file exists
+
 ### Single-raw sources keep today's path
 
 - **Given** the base fixture (`archive/documents/brief/source.md`)
@@ -313,11 +326,11 @@ All of these use the foreign fixture (`writeForeignStore`). It holds a 3.3 confi
 
 ### Accept retires the 3.x system and deletes nothing
 
-- **Given** an applied foreign fixture, and a tasks folder (from `CORTEX_SCHEDULED_TASKS_DIR`) holding two payloads marked with this root, one marked with another root, and one unmarked payload
+- **Given** an applied foreign fixture, and a home folder whose `.claude/scheduled-tasks/` holds two payloads marked with this root, one marked with another root, and one unmarked payload
 - **When** `cortex migrate --accept` runs
 - **Then**
   - only the foreign hook remains in `.claude/settings.json`;
-  - `.claude/skills/cortex-remember/` and `.claude/skills/cortex-migrate/` exist with markers;
+  - `.claude/skills/cortex-remember/` exists with a marker;
   - the output lists `cortex-loop` as `unmodified`, `cortex-archive-ingest` and `cortex-loop-hygiene` as `modified or unmarked`, both payloads for this root and no other, and `installed skills that still name .cortex/: 1`;
   - no file under `.claude/skills/`, the tasks folder or `.cortex/` was deleted.
 
@@ -325,4 +338,4 @@ All of these use the foreign fixture (`writeForeignStore`). It holds a 3.3 confi
 
 - **Given** an accepted migration, and separately a fresh `cortex store init` project with no `.cortex/`
 - **When** the 3.x `cortex sync` runs, and then `cortex init`
-- **Then** each exits 1 with the 4.0 message, and `.claude/`, `CLAUDE.md` and `.cortex/` are byte-identical
+- **Then** `sync` exits 3 and `init` exits 2, each with the 4.0 message, and `.claude/`, `CLAUDE.md` and `.cortex/` are byte-identical
