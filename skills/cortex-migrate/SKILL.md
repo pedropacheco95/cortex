@@ -8,11 +8,11 @@ description: >
 
 `cortex migrate` is deterministic, so it cannot tell whether a 3.x working file holds knowledge. You read what it cannot judge, and decide each file. Your decisions become the plan file, and Core applies them. The rule is that no information is lost: a file is retired only when what it says is kept elsewhere, can be regenerated, or is scaffolding.
 
-Work in `.cortex-migrate/`, and add that line to `.git/info/exclude` (never to `.gitignore`).
+Work in `.cortex-migrate/`, and add that line to the file `git rev-parse --git-path info/exclude` prints (never to `.gitignore`).
 
 ## Steps, in order
 
-1. **Dry run.** Run `cortex migrate --json --report .cortex-migrate/report.json`. Add `--visibility public` or `--visibility private` when the person has said which the repository is.
+1. **Dry run.** Run `cortex migrate --json --report .cortex-migrate/report.json`. Add `--visibility public` or `--visibility private` when the person has said which the repository is. If the command prints a usage text instead, or `report.json` has no `noLoss` field, the installed `cortex` predates the 4.0 store: stop, and say so.
 2. **Read.** From the report, take every entry that is retired as `unpromoted work` or `not a store folder` (its `undecided` field is true), every entry with a `review` flag, and every file under `concepts`. Work through them in folder groups, opening the files as needed. In a set of passes and their merge, read the merge first.
 3. **Decide each one**, and give each decision a one-line reason (see Deciding below).
 4. **Write** `plan.json` and `decisions.md` in `.cortex-migrate/`. `decisions.md` is a table of ref, decision, target and reason, so that a person can audit every call.

@@ -9,7 +9,7 @@ import { classify, HISTORY_FOLDERS, WORLD_FOLDERS } from '../layout.js';
 import { frontmatterText, yamlScalar } from '../yaml.js';
 import { fencedLines } from '../frontmatter.js';
 import { parseFile } from '../frontmatter.js';
-import { isoDate, NOT_A_STORE_FOLDER, type Entry, type LegacyStore } from './entries.js';
+import { isoDate, NOT_A_STORE_FOLDER, withText, type Entry, type LegacyStore } from './entries.js';
 
 export type Disposition =
   | { kind: 'migrated'; targets: string[] }
@@ -185,15 +185,6 @@ export function proposalItems(body: string): ProposalItem[] {
   });
 }
 
-/** Fill in the 3.x text of an entry read without it (retired, unpromoted, dropped), so a plan can rescue it. */
-function withText(e: Entry, legacyDir: string): Entry {
-  if (e.body !== '' || e.files.length !== 1 || !e.files[0]!.endsWith('.md')) return e;
-  const parsed = parseFile(fs.readFileSync(path.join(legacyDir, e.files[0]!), 'utf8'));
-  const body = parsed.body;
-  const lead = body.split('\n').map((x) => x.trim()).find((x) => x !== '') ?? e.stem;
-  return { ...e, fm: { ...(parsed.frontmatter ?? {}), ...e.fm }, body, title: String(parsed.frontmatter?.['title'] ?? lead.replace(/^#+\s*/, '')) };
-}
-
 export function planMigration(legacy: LegacyStore, plan: PlanFile | null, opts: PlanOptions): PlanResult {
   const errors: string[] = [];
   const byRef = new Map(legacy.entries.map((e) => [e.ref, e]));
@@ -278,6 +269,10 @@ export function planMigration(legacy: LegacyStore, plan: PlanFile | null, opts: 
       else ids.set(id, p.entry.ref);
     }
   }
+  // A digest item id must not already be an alias of another migrated file (`check.aliases` after apply).
+  const aliasIds = new Map<string, string>();
+  for (const p of planned) if (p.disposition.kind === 'migrated' && p.entry.id) aliasIds.set(p.entry.id, p.entry.ref);
+  for (const p of planned) for (const it of p.items ?? []) if (aliasIds.has(it.id)) errors.push(`proposal id ${it.id} (from ${p.entry.ref}) is already an alias of ${aliasIds.get(it.id)}; give it a P-<report stem>-<n> id`);
   return { planned, errors, folderKeys: folders.map((f) => ({ key: f.key, decided: f.decided })) };
 }
 

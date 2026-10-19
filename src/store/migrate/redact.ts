@@ -43,6 +43,18 @@ function mapEntry(e: Entry, f: (s: string) => string, quiet: (s: string) => stri
   return { ...e, body: f(e.body), title: quiet(e.title), section: e.section === null ? null : quiet(e.section), fm: deepMap(e.fm, f) as Record<string, unknown> };
 }
 
+/** The `replace` substitution alone, for text that is not an entry (a digest body); counts each replacement. */
+export function replacer(redact: RedactFile): (text: string) => { text: string; replaced: number; labels: string[] } {
+  const terms = Object.entries(redact.replace).map(([text, label]) => ({ re: new RegExp(`(?<![A-Za-z0-9_])${esc(text)}(?![A-Za-z0-9_])`, 'g'), label }));
+  return (text) => {
+    let replaced = 0;
+    const labels = new Set<string>();
+    let t = text;
+    for (const { re, label } of terms) t = t.replace(re, () => { replaced++; labels.add(label); return label; });
+    return { text: t, replaced, labels: [...labels].sort() };
+  };
+}
+
 /** Apply `redact` to a copy of the store's entries; errors name an edit whose text is absent or a ref that matches nothing. */
 export function applyRedactions(legacy: LegacyStore, redact: RedactFile): { legacy: LegacyStore; stats: RedactStat[]; errors: string[] } {
   const errors: string[] = [];

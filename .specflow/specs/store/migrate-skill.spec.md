@@ -19,14 +19,14 @@ governs:
 ## Entities
 
 - **READS:** the `cortex migrate --json` report, the `.cortex/` files it names, and `cortex/MAP.md` when it exists (for the kind → folder table).
-- **WRITES:** under `.cortex-migrate/` only: `report.json`, `plan.json`, `decisions.md`, and `digests/*.md`. It adds `.cortex-migrate/` to `.git/info/exclude`, never to `.gitignore`.
+- **WRITES:** under `.cortex-migrate/` only: `report.json`, `plan.json`, `decisions.md`, and `digests/*.md`. It adds `.cortex-migrate/` to the repository's exclude file (`git rev-parse --git-path info/exclude`), never to `.gitignore`.
 - **NEVER WRITES:** `.cortex/`, `cortex/`, `.gitignore`, `CLAUDE.md`, or any commit.
 
 ## Rules
 
 1. **Bundle.** The bundle is `skills/cortex-migrate/SKILL.md`, mirrored byte for byte to `.claude/skills/cortex-migrate/SKILL.md`. Its description fits the skill-listing budget. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, so the 3.x `init` and `sync` never install it. It is not installed into projects at all. A migration needs it before anything is applied, so the `cortex migrate` dry run prints the packaged path (`store.migrate` Rule 3), and the session reads the skill from there. This repository has it in `.claude/skills/` as the mirror.
 2. **Steps, in order:**
-   1. run `cortex migrate --json --report .cortex-migrate/report.json` (adding `--visibility` when the person states it);
+   1. run `cortex migrate --json --report .cortex-migrate/report.json` (adding `--visibility` when the person states it); if it prints usage text, or the report has no `noLoss` field, the installed `cortex` predates 4.0, so stop and say so;
    2. read every entry that is `retired` with reason `unpromoted work` or `not a store folder`, every entry flagged `review`, and every concept under `concept definitions`, opening the files as needed and working in folder groups;
    3. decide each one, with a one-line reason;
    4. write `.cortex-migrate/plan.json` and `.cortex-migrate/decisions.md` (a table of ref, decision, target and reason);

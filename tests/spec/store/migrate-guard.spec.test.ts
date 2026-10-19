@@ -78,13 +78,16 @@ describe('store.migrate Rule 11: the 3.x commands and a 4.0 store', () => {
     expect(tree(root)).toEqual(before);
   }, 120_000);
 
-  it('on a fresh 4.0 store with no .cortex/: init refuses', async () => {
+  it('on a fresh 4.0 store with no .cortex/: sync and init refuse', async () => {
     const root = makeTmpDir('guard-fresh-proj');
     const home = makeTmpDir('guard-fresh-home');
     dirs.push(root, home);
     gitInit(root);
     storeInit(root);
     const before = tree(root);
+    const s = await sync(root, { home, platform: 'darwin' });
+    expect(s.exitCode).toBe(3);
+    expect(s.summary).toContain(FOUR_OH);
     const i = await init(root, { home, platform: 'darwin', noLlm: true });
     expect(i.exitCode).toBe(2);
     expect(i.summary).toContain(FOUR_OH);

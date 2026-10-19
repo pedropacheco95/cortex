@@ -16,9 +16,9 @@ import { validateLoaded, formatFinding } from '../validate.js';
 import { privateClaims, visibilityHits } from '../checks/visibility.js';
 import { parseFile } from '../frontmatter.js';
 import { packageRoot } from '../../cli/scaffold.js';
-import { applyRedactions, readRedactFile, type RedactStat } from './redact.js';
-import { LEGACY_DIR, readLegacyStore, type LegacyStore } from './entries.js';
-import { buildTree, planMigration, provenanceRefs, rawLayout, readPlanFile, CONFIG_TARGET, type Planned, type PlanFile, type ProvenanceRef } from './plan.js';
+import { applyRedactions, readRedactFile, replacer, type RedactFile, type RedactStat } from './redact.js';
+import { hydrate, LEGACY_DIR, readLegacyStore, type LegacyStore } from './entries.js';
+import { buildTree, planMigration, proposalItems, provenanceRefs, rawLayout, readPlanFile, CONFIG_TARGET, type Planned, type PlanFile, type ProvenanceRef } from './plan.js';
 import { retireLegacySystem } from './system.js';
 
 const RETIRED_CONFIG_KEYS = ['hooks', 'pulse', 'harness', 'loop', 'profile'];
@@ -359,27 +359,51 @@ const asBuffer = (v: string | Buffer | undefined): Buffer | undefined => (v === 
 export function migrate(root: string, opts: MigrateOptions): MigrateResult {
   const out: string[] = [];
   if (opts.accept) return accept(root, opts.today, opts.home ?? os.homedir());
-  const original = readLegacyStore(root);
-  if (!original) return { exitCode: 1, out: [`no 3.x store (${LEGACY_DIR}/ not found)`] };
-  let legacy = original;
-  let redactions: RedactStat[] = [];
-  if (opts.redact) {
-    const rf = readRedactFile(opts.redact);
-    if (rf.error) return { exitCode: 1, out: [rf.error] };
-    const r = applyRedactions(original, rf.redact!);
-    if (r.errors.length) return { exitCode: 1, out: r.errors };
-    legacy = r.legacy;
-    redactions = r.stats;
-  }
+  const read = readLegacyStore(root);
+  if (!read) return { exitCode: 1, out: [`no 3.x store (${LEGACY_DIR}/ not found)`] };
   let plan: PlanFile | null = null;
   if (opts.plan) {
     const r = readPlanFile(opts.plan);
     if (r.error) return { exitCode: 1, out: [r.error] };
     plan = r.plan;
   }
+  let rf: RedactFile | null = null;
+  if (opts.redact) {
+    const r = readRedactFile(opts.redact);
+    if (r.error) return { exitCode: 1, out: [r.error] };
+    rf = r.redact;
+  }
+  // Entries a plan rescues or a redact edit names get their 3.x text before redaction, so both see it (Rules 3, 14).
+  const rescued = Object.entries(plan ?? {}).filter(([k, v]) => !k.endsWith('/**') && v !== 'retired').map(([k]) => k);
+  const named = new Set([...rescued, ...Object.keys(rf?.edits ?? {})]);
+  const original = hydrate(read, (ref) => named.has(ref));
+  let legacy = original;
+  let redactions: RedactStat[] = [];
+  if (rf) {
+    const r = applyRedactions(original, rf);
+    if (r.errors.length) return { exitCode: 1, out: r.errors };
+    legacy = r.legacy;
+    redactions = r.stats;
+  }
   const fileDate = fileDateFn(root);
   const { planned, errors, folderKeys } = planMigration(legacy, plan, { root, fileDate, today: opts.today });
   if (errors.length) return { exitCode: 1, out: errors };
+  if (rf) {
+    // Digest bodies are migrated text too (Rule 14): the replace terms reach them.
+    const sub = replacer(rf);
+    for (const p of planned) {
+      if (!p.digest) continue;
+      const r = sub(p.digest.body);
+      if (!r.replaced) continue;
+      p.digest = { ...p.digest, body: r.text };
+      if (p.items) p.items = proposalItems(r.text);
+      const prev = redactions.find((x) => x.ref === p.entry.ref);
+      if (prev) {
+        prev.replaced += r.replaced;
+        prev.labels = [...new Set([...prev.labels, ...r.labels])].sort();
+      } else redactions.push({ ref: p.entry.ref, replaced: r.replaced, edited: 0, labels: r.labels });
+    }
+  }
   const report = buildReport(root, legacy, planned, { redactions, folderKeys, visibility: opts.visibility });
   const text = opts.json ? JSON.stringify(reportJson(report), null, 2) + '\n' : renderReport(report, opts.apply ? 'apply' : 'dry run (nothing written)');
   if (opts.report) fs.writeFileSync(opts.report, text);

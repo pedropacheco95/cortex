@@ -222,6 +222,23 @@ function proposals(legacy: string, rel: string, idRe: RegExp): Entry[] {
   });
 }
 
+/** Rows read without their text (only their path matters by default). */
+const TEXTLESS = new Set<RowId>(['retired', 'unpromoted', 'dropped']);
+
+/** An entry read without its text, filled in from disk so a plan can rescue it (and redactions reach it). */
+export function withText(e: Entry, legacyDir: string): Entry {
+  if (!TEXTLESS.has(e.row) || e.body !== '' || e.files.length !== 1 || !e.files[0]!.endsWith('.md')) return e;
+  const parsed = parseFile(fs.readFileSync(path.join(legacyDir, e.files[0]!), 'utf8'));
+  const body = parsed.body;
+  const lead = body.split('\n').map((x) => x.trim()).find((x) => x !== '') ?? e.stem;
+  return { ...e, fm: { ...(parsed.frontmatter ?? {}), ...e.fm }, body, title: String(parsed.frontmatter?.['title'] ?? lead.replace(/^#+\s*/, '')) };
+}
+
+/** Fill in the text of the named entries (store.migrate Rules 3 and 14: rescues and edits see the 3.x text). */
+export function hydrate(legacy: LegacyStore, refs: (ref: string) => boolean): LegacyStore {
+  return { ...legacy, entries: legacy.entries.map((e) => (refs(e.ref) ? withText(e, legacy.dir) : e)) };
+}
+
 export interface LegacyStore {
   /** Absolute `.cortex/` path. */
   dir: string;

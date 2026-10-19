@@ -87,7 +87,7 @@ Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached
    - a target that is another migrated 3.x entry (a decision, rule, bug, term, …) → `migrated:<that entry's ref>@<sha>`;
    - a `claude-sessions/<user>/<id>` reference → `session:<id>` (the user segment is dropped, RULES.md rule 20).
    A target that does not exist, or that is retired or dropped by decision, is **unresolved**: it adds nothing to `origin` and is listed in the report's `unresolved provenance` section as `<entry ref> → <old target path>`. Each reference is counted once per entry, so the report gives `provenance refs: <resolved>/<total>`, and the plan file does not override this rule. An unresolved reference does not lower entry coverage, because the entry itself has a disposition; it is shown so that a person can repair it.
-14. **Redactions and edits** (`--redact <file>`, JSON `{ "replace": { "<text>": "<label>" }, "edits": { "<entry ref>": [["<from>", "<to>"], …] } }`). `replace` substitutes every whole-word occurrence of each text with its label in the migrated text of every entry (body, title, carried fields); `edits` substitutes literal text in one entry only. Both apply to what `cortex/` receives; `.cortex/` is never touched. The file holds the original text, so it lives outside the repository or under a gitignored folder. The report lists each redacted or edited entry with its count of substitutions and the labels used. An edit whose `from` text is not in its entry is an error.
+14. **Redactions and edits** (amended 2026-10-19: an entry a plan rescues, or an edit names, is read with its 3.x text before redaction, and `replace` also reaches digest bodies) (`--redact <file>`, JSON `{ "replace": { "<text>": "<label>" }, "edits": { "<entry ref>": [["<from>", "<to>"], …] } }`). `replace` substitutes every whole-word occurrence of each text with its label in the migrated text of every entry (body, title, carried fields); `edits` substitutes literal text in one entry only. Both apply to what `cortex/` receives; `.cortex/` is never touched. The file holds the original text, so it lives outside the repository or under a gitignored folder. The report lists each redacted or edited entry with its count of substitutions and the labels used. An edit whose `from` text is not in its entry is an error.
 15. **Raw files: every one, byte for byte, never colliding.**
     - Raw originals are copied as bytes, never as text.
     - A source with exactly one raw file writes it to `history/sources/raw/<digest-stem><ext>`, where `<ext>` is everything after `source` in an archive document (`source.a.tar.gz` gives `.a.tar.gz`) or everything after the stem in an atlas source. This output is unchanged for single-raw sources.
@@ -299,6 +299,18 @@ All of these use the foreign fixture (`writeForeignStore`). It holds a 3.3 confi
   - `t.py` is byte-identical under raw and listed under `gitignored only`;
   - `now/proposals.md` holds `S-901` and `S-902` as pending-decision items whose origin is `migrated:pulse/reports/loop.md@<sha>`, and both are listed under `digested` and `pending decision`;
   - the term file has `origin: [migrated:insight/concepts/fare.md@<sha>]`.
+
+### Redactions reach rescued and digested text
+
+- **Given** a redact file `{ "replace": { "acme": "client-A" }, "edits": { "pulse/onboarding-scratch/x/RULES.md": [["(private)", "(tenant)"]] } }`, where the rescued `RULES.md` and the digest file for `pulse/reports/loop.md` both name `acme`
+- **When** `cortex migrate --plan plan.json --redact r.json --apply` runs
+- **Then** `world/rules/x-service.md` says `client-A` and `(tenant)`, `now/proposals.md` says `client-A`, neither says `acme`, and the `redactions` section lists both refs
+
+### A proposal id that is already an alias is refused
+
+- **Given** a proposals digest with the heading `## B-101: …`, where `B-101` is a migrated bug's id
+- **When** `cortex migrate --plan plan.json` runs
+- **Then** it exits 1 naming `B-101`
 
 ### Bad plans are refused
 

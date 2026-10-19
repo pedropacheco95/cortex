@@ -303,3 +303,35 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(fs.readFileSync(path.join(root, '.claude/settings.json'), 'utf8')).toBe(raw);
   });
 });
+
+describe('store.migrate Rule 14 reaches rescued and digested text (amendment 2026-10-19)', () => {
+  it('redacts a rescued unpromoted file, a digest body, and an edit on an unpromoted ref', async () => {
+    const root = foreign('redact-rescue');
+    fs.writeFileSync(path.join(root, '.cortex/pulse/onboarding-scratch/x/RULES.md'), '# Service rules\n\n1. Never retry an acme write blindly.\n2. Keep the (private) bucket.\n');
+    const plan = decidingPlan(root);
+    fs.writeFileSync(path.join(root, 'd.md'), '## S-901: one\n\nFirst, for acme.\n\n## S-902: two\n\nSecond.\n');
+    const r = path.join(root, 'r.json');
+    fs.writeFileSync(r, JSON.stringify({ replace: { acme: 'client-A' }, edits: { 'pulse/onboarding-scratch/x/RULES.md': [['(private)', '(tenant)']] } }));
+    const { code, text } = await run(root, ['--plan', plan, '--redact', r, '--apply']);
+    expect(code, text).toBe(0);
+    const rules = fs.readFileSync(path.join(root, 'cortex/world/rules/x-service.md'), 'utf8');
+    expect(rules).toContain('client-A');
+    expect(rules).toContain('(tenant)');
+    expect(rules).not.toContain('acme');
+    const proposals = fs.readFileSync(path.join(root, 'cortex/now/proposals.md'), 'utf8');
+    expect(proposals).toContain('First, for client-A.');
+    expect(proposals).not.toContain('acme');
+    const red = section(text, 'Redactions');
+    expect(red).toContain('pulse/onboarding-scratch/x/RULES.md');
+    expect(red).toContain('pulse/reports/loop.md');
+  });
+
+  it('rejects a proposal id that is already an alias of another file', async () => {
+    const root = foreign('alias-collision');
+    const plan = decidingPlan(root);
+    fs.writeFileSync(path.join(root, 'd.md'), '## B-101: clash\n\nSame id as a bug.\n');
+    const r = await run(root, ['--plan', plan]);
+    expect(r.code).toBe(1);
+    expect(r.text).toContain('B-101');
+  });
+});
