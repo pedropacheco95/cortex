@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { validate } from '../../../src/schema/validate.js';
 import { checkIndexCompleteness, referencedIds, isCollapsed } from '../../../src/schema/checks/index-completeness.js';
-import { makeTmpFixture, cleanup, writeRule, writeBug, writeCompassIndex, rulesDir, bugsDir, REPO_ROOT } from '../../fixtures/validator-tmp.js';
+import { makeTmpFixture, cleanup, writeRule, writeBug, writeCompassIndex, rulesDir, bugsDir } from '../../fixtures/validator-tmp.js';
 
 function plantBugs(root: string, ids: string[]): void {
   for (const id of ids) writeBug(root, `${id}-x.md`, id);
@@ -133,13 +133,5 @@ describe('checkIndexCompleteness details', () => {
     } finally {
       cleanup(empty);
     }
-  });
-});
-
-describe("this repo's own compass indexes are complete", () => {
-  it('compass/rules/_index.md and compass/bugs/_index.md produce no finding', () => {
-    expect(fs.existsSync(path.join(REPO_ROOT, '.cortex', 'compass', 'rules', '_index.md'))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, '.cortex', 'compass', 'bugs', '_index.md'))).toBe(true);
-    expect(checkIndexCompleteness(REPO_ROOT)).toEqual([]);
   });
 });

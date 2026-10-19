@@ -4,6 +4,8 @@ Cortex is a holistic, owned-end-to-end system for understanding a codebase, dist
 
 ## Specflow
 
+Entry: run `specflow-entry` first — classify the request, then run the skill it routes to.
+
 This project uses Specflow — specs are the source of truth, code is an artifact. There are **two parallel spec trees**:
 
 - `specs-business/` — high-level outcomes, user journeys, and success metrics for stakeholders. **Read this first** to understand *why* something exists.
@@ -96,54 +98,8 @@ pnpm test:scenario        # scenario layer (full sandbox)
 - Never ignore RULES.md.
 - Never use npm — use pnpm.
 
-<!-- cortex:start v3.4 -->
+<!-- cortex:start v4.0 -->
 ## Cortex
-
-Cortex is active on **cortex**. The knowledge layer lives in `.cortex/`:
-
-- `compass/` — rules, conventions, and the bug ledger. The "why" and the "must".
-- `atlas/` — stakeholders, decisions (narrative), domain terms, source materials.
-- `archive/` — ingested source documents (client specs, transcripts, contracts) and their structured extractions.
-- `insight/` — inferred understanding of the codebase itself. See "Cortex Insight" below.
-
-**Protocol:** before working a task, read the relevant `_index.md` first — they are
-prompts that tell you what to read and when. This applies more, not less, to sessions
-that dispatch, review or plan rather than edit: everything reaches them as a claim, and
-`compass/` is where claims are checked. For "why" questions, grep `compass/` and
-`atlas/`. For unfamiliar terms, check `atlas/domain/`. Follow frontmatter
-cross-references (the citation graph) to trace any claim to its source.
-
-**Placement:** durable knowledge lives in `.cortex/` (tracked, except `atlas/sources/`,
-`pulse/` and archived raw sources). This repository is public: compass and atlas carry pointers, never hosts, ports or account ids (RULES.md rule 20).
-
-Specs are the source of truth: `.specflow/specs-business/` (outcomes) and
-`.specflow/specs/` (implementation), linked by `implements:`/`implemented_by:`. Don't
-let the trees drift.
-
-Modules present: compass, atlas, archive, insight, pulse. Schema: 3.4.
-
-## Cortex Insight
-
-This project has a Cortex insight layer at .cortex/insight/ that
-contains rich per-file understanding, concept extraction, and
-semantic connections across the codebase. It is queryable via
-the `cortex insight` CLI.
-
-Read the file itself when you're going to modify it, need exact
-syntax, or the change requires knowing every line. Query insight
-instead when you're trying to understand what a file does, whether
-it's relevant, how it relates, or what its main pieces are — a
-richer resume than reading 500 lines and remembering fragments.
-Consult insight first; read the file when you need exactness.
-
-- cortex insight file <path>      — rich per-file understanding
-- cortex insight concept <name>   — how a concept lives in the code
-- cortex insight element <query>  — atomic element (may return
-  "no rich entry"; still discoverable via the file entry)
-
-Also check `insight/observations/` for session-learned context
-(audience, scale, intent) the code alone can't show.
-
-Insight is inferred, not curated. Where it conflicts with a compass
-rule or a spec, the gated layer wins — context, not authority.
+This project keeps its knowledge in `cortex/` (plain files, one subject each). Start from the map:
+@cortex/MAP.md
 <!-- cortex:end -->
