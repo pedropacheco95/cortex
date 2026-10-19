@@ -1,7 +1,8 @@
 {
   "schemaVersion": "4.0",
   "visibility": {
-    "repo": "public"
+    "repo": "public",
+    "allow": []
   },
   "migration": {
     "from": "3.4",

@@ -1,7 +1,7 @@
 ---
 about: Proposals carried over from the 3.x store, waiting for a decision
 permanence: volatile
-verified: "2026-10-14 (observed)"
+verified: "2026-10-19 (observed)"
 origin:
   - migrated:G-001@d7ed910
   - migrated:G-002@d7ed910
@@ -29,6 +29,9 @@ origin:
   - migrated:G-025@d7ed910
   - migrated:G-026@d7ed910
   - migrated:G-027@d7ed910
+  - migrated:pulse/reports/session-observe.md@d7ed910
+  - migrated:pulse/reports/specflow-lint.md@d7ed910
+  - migrated:pulse/reports/verification-report.md@d7ed910
   - migrated:S-013@d7ed910
   - migrated:S-014@d7ed910
   - migrated:S-015@d7ed910
@@ -69,6 +72,19 @@ aliases:
   - G-025
   - G-026
   - G-027
+  - S-003
+  - S-010
+  - S-011
+  - S-019
+  - S-020
+  - LINT-004
+  - LINT-005
+  - LINT-001
+  - P-specflow-lint-1
+  - P-verification-report-1
+  - P-verification-report-2
+  - P-verification-report-3
+  - P-verification-report-4
   - S-013
   - S-014
   - S-015
@@ -87,7 +103,7 @@ aliases:
 # Proposals waiting for a decision
 
 ## G-001: Quoted spans in a Bash command are prose, not invocation
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `pulse.usage` Rule 2
@@ -118,7 +134,7 @@ the two tests named "does not count a verb quoted inside an echo or a grep patte
 count a grep whose only .cortex mention is inside quotes". Nothing else depends on it.
 
 ## G-002: One command that invokes a verb N times counts as one
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `pulse.usage` Rule 2
@@ -159,7 +175,7 @@ Files: `scripts/measure-skill-descriptions.mjs`.
 Removal: n/a — nothing was added.
 
 ## G-004: Step 0 observer repairs: defensive branches coded, not asserted
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `insight.session-observe` Rules 11–13, `pulse.distil` Rule 11
@@ -176,7 +192,7 @@ corpus before its three attempts expire; its `attempts` entry then lingers harml
 Decide whether refresh should protect unobserved sessions from the rebuild.
 
 ## G-005: Tool-use extraction: notebook_path fallback is from the tool schema, not observed
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `loops.session-reading` Rule 7
@@ -190,7 +206,7 @@ assistant but with `message.role: assistant` are included by the tool helper (mi
 `custom-title` entry is malformed; only the malformed-last case is tested.
 
 ## G-006: Usage search classification: edge handling coded, not asserted
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `pulse.usage` Rules 8–11
@@ -206,7 +222,7 @@ is not a search (spec says "carrying a path"); a `.cortex/<unknown-module>` sear
 Rule 11 scans both shapes.
 
 ## G-007: Thread ledger primitives: serialiser and parser edge cases coded, not asserted
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `pulse.threads` Rules 1, 2, 5, 7
@@ -220,7 +236,7 @@ left to `check.threads` per Rule 1). `threadPath` picks the lexicographically fi
 `<id>-*.md` files exist for one id.
 
 ## G-008: Thread verbs and promote: usage-error paths and provenance edge cases untested
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `pulse.threads` Rules 11–13
@@ -235,7 +251,7 @@ not asserted. `nextBugId`, `loadThread`, `splitCitation` and a `yamlScalar` dupl
 thread-cli.ts because threads.ts lacked them; consider hoisting.
 
 ## G-009: Hygiene Rule 8: skipped-count line and the loop skill reference
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `pulse.hygiene` Rule 8
@@ -247,7 +263,7 @@ fails to parse; the spec only says the count is kept. The shipped hygiene skill 
 not name the new "Threads and session records" section (the plan forbade bundle changes).
 
 ## G-010: Session-end hook: detection edge cases coded beyond the spec wording
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `hooks.session-end` Rules 4, 5, 7c; `pulse.threads` Rules 4, 9
@@ -265,7 +281,7 @@ a cause schema §4.5.3 does not list. Observed on the live run: markdown table r
 lexicon findings (nine on one transcript); being addressed with the harness-entry exclusion.
 
 ## G-011: Ref resolver and clause index: test-harness and tolerance edges
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `schema.bears-on` Rules 1–3, `schema.schema-clauses`
@@ -279,7 +295,7 @@ The spec-layer test uses the fixture's `schema.validator` id where the criterion
 `pulse.usage`, because the valid fixture has no such spec.
 
 ## G-012: Recall index compiler: id fallback, whitespace, and a gray-matter cache quirk
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `recall.recall-index` Rules 8, 10
@@ -296,7 +312,7 @@ MINOR: subject keys are created for every resolving ref even when the carrier co
 list (Rule 2 read literally).
 
 ## G-013: bears_on seeding and the two decision warnings: judgment calls
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `insight.session-observe` Rule 6, `constellation.compiler` Rule 10, schema §4.3
@@ -309,7 +325,7 @@ rather than counting it. `readLedgerSeed` stops at the cap mid-file, so later se
 contribute once the first ledger fills it.
 
 ## G-014: cortex sync does not add the 3.4 gitignore line on upgrade
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `core-cli.init` Rule 2 (fifth gitignore line), schema §10.4 (3.3→3.4 "sync refreshes scaffolding")
@@ -322,7 +338,7 @@ the first `cortex scan` then produced an untracked index. Added by hand here. Sy
 missing `GITIGNORE_LINES` on a MINOR upgrade, or §10.4 should say the line is init-only.
 
 ## G-015: Accepted evidence-candidate lands without a trailing newline
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `atlas.evidence` Rule 7, schema §4.5.1
@@ -334,7 +350,7 @@ newline, following the existing B-003 fenced-block semantic; the tests assert th
 Decide whether create payloads should always end in a newline.
 
 ## G-016: Recall query module: index inconsistency and token edges
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `hooks.search-annotate` Rules 4, 5, 9, 11; `recall.recall-index` Rule 6
@@ -350,7 +366,7 @@ becomes the target. The imperative-free criterion forbids "you", but titles are 
 thread title contains it; the grammar test uses fixtures without it.
 
 ## G-017: PreRead recall marker: parent-directory subjects excluded; evidence ids never cut
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `hooks.pre-read-writeback` Rule 6, schema §5 PreRead row (c)
@@ -365,7 +381,7 @@ Marker-only reads do not touch the read ledger and never carry the duplicate not
 the marker lookup logs to hook-errors and still emits the summary (not reachable with the loader).
 
 ## G-018: cortex why / recall and the invocation gate: small unasserted paths
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `recall.why` Rules 1–7, `core-cli.init` Rule 18
@@ -378,7 +394,7 @@ matched key differs from the ref the first line reads `<key> (<kind>, for <ref>)
 says the key is named. `--version`/`-v` are treated as unrecognised until a version verb exists.
 
 ## G-019: Generated index blocks: trailing newline and sync's re-append half
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `recall.index-blocks` Rules 5, 7; `core-cli.sync` Rule 4
@@ -390,7 +406,7 @@ from the second run). Sync's "refresh re-appends the block" half of Rule 7 has n
 `refreshIndexes` never rewrites today; flagged in a comment for the version-keyed template work.
 
 ## G-020: Hygiene retention does not cover the recall-fired and read-deferred ledgers
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `pulse.hygiene` Rule 7, `hooks.search-annotate` Rule 9, `hooks.pre-read-writeback` Rule 7
@@ -402,7 +418,7 @@ status: pending decision
 `state/reads/` only. Extend Rule 7 to the three per-session ledger directories or say why not.
 
 ## G-021: Step 4 seed: duplicated scheduled-session constants and an uncut long path
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `hooks.prompt-route` Rule 4, `hooks.search-annotate` Rule 10, `pulse.usage` Rule 11
@@ -416,7 +432,7 @@ trailing `(<path>)` over the first `/`-bearing token, otherwise an `Open:` line 
 `state/` from its key text; Rule 11's wording is being aligned by the orchestrator.
 
 ## G-022: Read-deferral gate: an unreachable criterion half and a budget-order observation
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `hooks.pre-read-writeback` Rule 7
@@ -433,7 +449,7 @@ will routinely lose their Connections in the deny reason. Legacy read-memory sel
 Rule 7 check is coded but untested.
 
 ## G-023: prompt-route lists the threads directory itself instead of via listThreads
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `hooks.prompt-route` Rule 5
@@ -446,7 +462,7 @@ directory and parses with `parseThreadFile` (same skip-unparseable semantics, te
 `listThreads` grows an options parameter or the rule wording follows the code.
 
 ## G-024: Session-end lexicon captures the assistant's own status ladders as findings
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `hooks.session-end` Rule 7c
@@ -459,7 +475,7 @@ bullet). Lines with progress-bar glyphs, `NN%` figures or "done when" are status
 measurements. Being addressed in wave follow-up A3.
 
 ## G-025: Recall carriers: rule subjects shadowed by exact paths and capped across globs
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `recall.recall-index` Rules 2, 15, 17
@@ -475,7 +491,7 @@ rule governing `.specflow/**` gets only its directory-prefix subject. R-/B- foll
 resolved bugs by design ("scheduled tasks" → two resolved bugs on this repo).
 
 ## G-026: Id registry: reserved lines are claimable, sync step has no progress message
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `schema.id-registry` Rules 2–4, `core-cli.sync` Rules 14–15
@@ -489,7 +505,7 @@ exactly seven; the registry creation is only in the summary line. The bug-curren
 without `owner` is deliberately not warned (shape-only).
 
 ## G-027: Promote: a refused promote leaves a reserved registry id; archive-root check is prefix-based
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Spec:** `schema.id-registry` Rule 3, `insight.promotion-mechanism` Rules 5–6
@@ -503,8 +519,419 @@ prefixes; an absolute `**Target:**` is refused earlier by review.ts's permitted-
 hole, but the two checks overlap. `check.pulse` still has no Source-shape check per proposal type
 (B-020's adjacent item): the producer/gate split is caught only by the ingest-skill spec test.
 
+## S-003: Per-artefact review approvals during a staged design pass do not authorize im...
+until: 2026-11-18
+status: pending decision
+
+**Type:** rule-candidate
+**Source:** session-observe (sessions: ca09424d-c3cf-471c-b5a3-5e9077cf1fe4)
+**Target:** .cortex/compass/preferences.md
+**Pattern:** Per-artefact review approvals during a staged design pass do not authorize implementation — only an explicit /goal invocation does
+
+**Proposed addition:**
+
+```
+During a staged design-then-build pass (design doc -> schema -> build order -> specs -> implementation), treat each artefact's review-gate approval ('go ahead', 'looks good') as authorization for that artefact ONLY. Do not proceed into implementation until the user gives an explicit `/goal` invocation, even if every prior artefact was approved.
+```
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+## S-010: Test-runner: check for retired/superseded spec status before fix-staging a shared-root-cause failure batch
+until: 2026-11-18
+status: pending decision
+
+**Type:** rule-candidate
+**Source:** session-observe (sessions: 3d5ecd3a-f32c-476b-a21b-843cd358cee8)
+**Target:** .cortex/compass/rules/R-004-test-runner-check-for-retired-superseded-spec-status-before.md
+**Pattern:** Before running --fix-stage on a batch of test-runner failures that all trace to one root cause, check whether the affected spec carries a SUPERSEDED/retired status banner — a burst of same-root-cause failures can be orphaned tests for a feature the owner deliberately killed, not a real regression, and --fix-stage would spawn writer/verifier PRs that resurrect the retired feature.
+
+**Proposed file:**
+
+```
+---
+id: R-004
+title: "Test-runner: check for retired/superseded spec status before fix-staging a shared-root-cause failure batch"
+source:
+  - ../../pulse/reports/session-observe.md
+governs:
+  - "src/loops/test-runner.ts"
+  - ".claude/skills/cortex-loop-test-runner/**"
+provenance:
+  - derives_from: claude-sessions/pedropacheco1/3d5ecd3a-f32c-476b-a21b-843cd358cee8
+confidence: INFERRED
+---
+
+#### R-004 — Test-runner: check for retired/superseded spec status before fix-staging a shared-root-cause failure batch
+
+When the test-runner loop's collect step surfaces multiple pending failures that share a single root cause, diagnose the root cause and check the governing spec's status header before invoking --fix-stage. If the spec (or a sibling spec) carries a SUPERSEDED/retired banner naming the failing files as retired targets, classify the failures as test-defect (orphaned tests for a killed feature), do NOT run --fix-stage (it would spawn one writer/verifier PR per failing test, reversing a documented owner decision), and instead flag the orphaned files for manual cleanup.
+
+```
+
+## S-011: Reframe session-observe: ungated per-session enrichment is the primary output, gated rule/decision proposals are secondary
+until: 2026-11-18
+status: pending decision
+
+**Type:** decision-candidate
+**Source:** session-observe (sessions: 88e9092f-857a-4b6f-99a0-041771ffab2e)
+**Target:** .cortex/atlas/decisions/2026-07-19-reframe-session-observe-ungated-per-session-enrichment-is-th.md
+
+**Proposed file:**
+
+```
+---
+id: decision.2026-07-19-reframe-session-observe-ungated-per-session-enrichment-is-th
+title: "Reframe session-observe: ungated per-session enrichment is the primary output, gated rule/decision proposals are secondary"
+date: 2026-07-19T01:20:37.006Z
+provenance:
+  - derives_from: claude-sessions/pedropacheco1/88e9092f-857a-4b6f-99a0-041771ffab2e
+---
+
+On 2026-07-15 the user pushed back on cortex-loop-session-observe's original framing, which treated mining rule-candidates and decision-candidates (both requiring the user's pulse-accept approval) as the loop's main job. The user's stated intent: 'Claude analyses the conversations I have with him every day and commits to memory things that he thinks will help him be better at interacting with me in this project' — approval-gated proposals should not dominate, and the user does not want to have to approve everything the loop notices. The reframe treats this as an extension of the existing insight layer's authority model (machine-owned, ungated, grain-of-salt, provenance-carrying) rather than a new mechanism: today's insight is purely code-shaped (anatomy/ per-file, concepts/ cross-file), so session-learned project context (e.g. 'expects ~1000 users', working-style preferences) had no anchor and previously got forced through the approval gate as a pseudo-rule or dropped entirely. Open questions left for follow-up at the end of this brainstorming session: the shape of a project-context surface not anchored to a single file, how it gets surfaced to Claude ambiently (vs. on-demand insight queries), where the gate boundary sits (binding rules/decisions vs. one-off observations), how staleness is handled for undated project context, and how this divides labour with pulse-distil (which mines cross-session repetition and could drive promotion from ungated observation to gated rule). No implementation changes were made in this session itself (explicitly marked as brainstorming only) — this decision captures the reasoning that motivated the subsequent 'ungated observation is primary, proposals are the exception' shape now encoded in the cortex-loop-session-observe skill and spec.
+
+```
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+## S-019: Tests exercising sync()/init() must stub HOME
+until: 2026-11-18
+status: pending decision
+
+**Type:** rule-candidate
+**Source:** session-observe (sessions: 5d0bfb94-f382-47c0-8190-8f2cc978dd0c)
+**Target:** .cortex/compass/rules/R-004-tests-exercising-sync-init-must-stub-home.md
+**Pattern:** A test exercising cortex sync()/init() — directly or via the CLI dispatcher — must pass an explicit home option or stub process.env.HOME
+
+**Proposed file:**
+
+```
+---
+id: R-004
+title: "Tests exercising sync()/init() must stub HOME"
+source:
+  - ../../pulse/reports/session-observe.md
+governs:
+  - "tests/**/*.test.ts"
+provenance:
+  - derives_from: claude-sessions/pedropacheco1/5d0bfb94-f382-47c0-8190-8f2cc978dd0c
+confidence: INFERRED
+---
+
+#### R-004 — Tests exercising sync()/init() must stub HOME
+
+A test that exercises `cortex sync`/`cortex init` — directly or via the CLI dispatcher in `src/cli/` — must pass an explicit `home` option or stub `process.env.HOME`. Omitting it resolves the real `os.homedir()` and writes real scheduled-task directories into the developer's actual `~/.claude/scheduled-tasks/`. This recurred after B-011 was first resolved (a `withHomeEnv` helper scoped to CLI-dispatch tests only) when a new direct-call test (`tests/spec/core-cli/sync-retirement.spec.test.ts`) independently omitted the override and leaked entries into the real home directory before being caught and fixed a second time.
+
+```
+
+## S-020: SKILL_ADDITIONS: a declarative version-window, not a prompt or a roster, for sync to honor deliberately deleted skill bundles
+until: 2026-11-18
+status: pending decision
+
+**Type:** decision-candidate
+**Source:** session-observe (sessions: f4e6e3a9-b9fd-475c-807c-68910703d74d, 5d0bfb94-f382-47c0-8190-8f2cc978dd0c)
+**Target:** .cortex/atlas/decisions/2026-08-20-skill-additions-a-declarative-version-window-not-a-prompt-or.md
+
+**Proposed file:**
+
+```
+---
+id: decision.2026-08-20-skill-additions-a-declarative-version-window-not-a-prompt-or
+title: "SKILL_ADDITIONS: a declarative version-window, not a prompt or a roster, for sync to honor deliberately deleted skill bundles"
+date: 2026-08-20T16:43:48.444Z
+provenance:
+  - derives_from: claude-sessions/pedropacheco1/f4e6e3a9-b9fd-475c-807c-68910703d74d
+  - derives_from: claude-sessions/pedropacheco1/5d0bfb94-f382-47c0-8190-8f2cc978dd0c
+---
+
+On 2026-08-08, Pedro asked how `cortex sync` could stop reinstalling skill bundles a developer had deliberately deleted from `.claude/skills/`. Three heavier alternatives were designed first — prompting and recording an exclusion list in project config, a declare-only cull verb, or a roster file of installed bundles — before Pedro pushed back on all three as over-engineered and proposed a plain version-bump comparison instead. The team adopted a `SKILL_ADDITIONS` chain mirroring the already-existing `SKILL_MIGRATIONS` retirement chain: an absent shipped bundle is (re)installed only if its addition-chain entry's version is strictly above the project's `schemaVersion` recorded before the sync run; absence at or past that version reads as deliberate deletion, with zero user-facing prompt. This required seeding the chain with one bootstrap entry naming every currently-shipped bundle, and established that any newly-shipped bundle now requires a MINOR schema bump so already-current projects actually see it. The design deliberately avoided cursor-based application — rejected for the same reason `SKILL_MIGRATIONS` itself had already been caught failing on, in an earlier session (5d0bfb94), where a declined removal's cursor advanced past the entry and the orphaned bundle became permanently unreachable — in favor of a declarative 'no project at or past version X should have this' check re-evaluated on every run.
+
+```
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+---
+
+Ungated observations were written directly to insight per-file entries (## Insights / ## Query pointers only, with claude-sessions provenance trailers). Every compass/atlas change above is a typed proposal — apply via `cortex pulse-accept <S-NNN>`; this loop never writes gated content (RULES 7).
+
+## LINT-004: One business spec title-cases a section heading
+until: 2026-11-18
+status: pending decision
+
+`.specflow/specs-business/scaffolding/assistant-reaches-for-cortex-instead-of-guessing.business.md:30`
+still reads `## Who This Is For`; the other 31 business specs use `## Who this is for`.
+One-word casing edit.
+
+## LINT-005: One acceptance criterion has no **Then**
+until: 2026-11-18
+status: pending decision
+
+`.specflow/specs/core-cli/init-profile.spec.md:138` — the "validator accepts the enum and
+rejects anything else" criterion is still a single `**Given**` bullet carrying all three
+outcomes as `→` arrow clauses. Still the only criterion in 81 dev specs with no `**Then**`.
+Suggested shape unchanged from last week's report (split Given / Then; content judgment, so not
+auto-fixed).
+
+## LINT-001: Eight business specs lack a persona prefix
+until: 2026-11-18
+status: pending decision
+
+All eight files named last week still exist under the same names (verified individually):
+`archive/documents-are-captured-and-authoritative`,
+`insight/corrections-and-memory-reach-persistence`,
+`migration/the-modules-name-what-they-hold`,
+`provenance/every-rule-traces-to-its-source`,
+`specflow/nothing-is-built-before-it-is-agreed`,
+`specflow/a-specific-ask-is-not-generalised-away`,
+`specflow/diagnoses-and-tests-mean-what-they-say`,
+`specflow/craft-review-never-substitutes-for-a-test`.
+
+Recommendation unchanged: **record the exemption** for invariant-style business specs in
+`compass/rules/` so this stops recurring. Six weeks of re-raising a finding nobody intends to
+act on as written is itself the signal that the rule, not the specs, needs the edit.
+
+## P-specflow-lint-1: Record the two spec-lint judgment calls as decisions
+until: 2026-11-18
+status: pending decision
+
+The weekly lint run carried two judgment calls as binding, but they live in no decision file:
+
+- **`core-cli/sync.spec.md` rule numbering 1–10, 15, 11–14 is deliberate** — Rule 15 is a stable
+  handle cross-referenced by name; never "fix" by renumbering.
+- **`**Then**`-presence, not full Given/When/Then triples, is the house invariant** — the 40
+  specs with `**Then**`-only criteria are conformant.
+
+## P-verification-report-1: The build order is eleven weeks stale
+until: 2026-11-18
+status: pending decision
+
+**FAIL (unchanged).** `build-order-v3.md` last touched **2026-07-08** (`git log`), now
+**eleven weeks** stale:
+
+- its step 1 is the "Schema 3.0 addendum" while the project runs schema **3.4 (fifth revision)**;
+- every one of its ten steps is shipped (spot-checked last run; no `src/` change since);
+- it carries zero status markers.
+
+Recommendation unchanged: archive it beside `support_documentation/build-order-v2.md` (the
+existing precedent) and write the build order for the round waves A/B belong to — or add
+per-step status markers. Human decision.
+
+## P-verification-report-2: CLAUDE.md contradicts the tree
+until: 2026-11-18
+status: pending decision
+
+Re-confirmed today: line 20 still says "the spec trees are currently SCAFFOLDED STRUCTURE ONLY —
+no specs have been written yet" (there are 113); line 39 names `cortex-design.md` (the file is
+`cortex-v3-design.md`); line 43 names `build-order.md` (the file is `build-order-v3.md`).
+Flagged, not filed — onboarding-drift owns the proposal. Second week flagged here.
+
+## P-verification-report-3: Nine journey gaps have neither a test nor a deferral
+until: 2026-11-18
+status: pending decision
+
+**PASS on mapping; 9 undecided journey gaps (unchanged).** 23 business specs carry a recorded
+journey deferral in their Notes; 9 have neither a journey test nor a deferral. Closing each is a
+one-line Notes edit or a test — a spec write, so a human call.
+
+## P-verification-report-4: No scenario spec covers any business spec
+until: 2026-11-18
+status: pending decision
+
+**FAIL — 0 of 32 covered (sixth consecutive run).** `tests/scenario/specs/` contains only
+`.gitkeep`; no scenario spec exists, so no `covers:` list exists. One unbuilt layer reported 32
+times. Not satisfiable by any loop — it needs the scenario layer to be built (a build-order
+item, Check 3).
+
 ## S-013: Always-resident context is a permanent per-session cost in every consuming pr...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: fc8202fc-723d-4a7c-82df-597d17b5601c, 70746728-ff13-4543-a618-90ab8d6b8232, 618b4051-af55-475e-8d18-4e95af0adf42, 3bac199d-2d61-471f-b48b-f91c871cd282)
@@ -520,7 +947,7 @@ status: pending decision
 ```
 
 ## S-014: Pedro routinely runs two or more Claude sessions against this repo at once; a...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 618b4051-af55-475e-8d18-4e95af0adf42, f4e6e3a9-b9fd-475c-807c-68910703d74d, 70746728-ff13-4543-a618-90ab8d6b8232)
@@ -536,7 +963,7 @@ status: pending decision
 ```
 
 ## S-015: Changes to `cortex init` / `cortex sync` / skill installation are not done un...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 5d0bfb94-f382-47c0-8190-8f2cc978dd0c, 70746728-ff13-4543-a618-90ab8d6b8232, f4e6e3a9-b9fd-475c-807c-68910703d74d, 3bac199d-2d61-471f-b48b-f91c871cd282)
@@ -552,7 +979,7 @@ status: pending decision
 ```
 
 ## S-018: Writing a session handoff document — current state, what was being attempted,...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Type:** skill-proposal
@@ -604,7 +1031,7 @@ One file, these sections in order. Write for a reader with zero memory of your c
 ```
 
 ## S-021: Headless `cortex` invocations in scheduled/unattended runs can hang at near-z...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 9c6cdd6d-65db-46dd-998f-2232f2b016bb, 797a3f69-2c76-4d6a-86b4-3a9dd6910913, 738a8033-6a3e-4ac5-9063-23ab51cb5024, 18c9473f-b581-4cca-bd1a-ce9e50c725bb)
@@ -620,7 +1047,7 @@ Headless `cortex` commands are run backgrounded and polled, never awaited synchr
 ```
 
 ## S-022: The global `cortex` binary on this machine is a `pnpm link` to this repo's `d...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: fc8202fc-723d-4a7c-82df-597d17b5601c, 5d0bfb94-f382-47c0-8190-8f2cc978dd0c, 70746728-ff13-4543-a618-90ab8d6b8232)
@@ -636,7 +1063,7 @@ The global `cortex` binary is a `pnpm link` straight to this repo's `dist/` outp
 ```
 
 ## S-024: Give Claude extra tools, not extra obstacles — a design that adds context-pol...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: f2a2b32d-7342-4527-99e4-a7716db566b6, f4e6e3a9-b9fd-475c-807c-68910703d74d)
@@ -652,7 +1079,7 @@ status: pending decision
 ```
 
 ## S-025: Cortex's own insight layer is scoped to `src/` only — the 150-200 non-src fil...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 9c6cdd6d-65db-46dd-998f-2232f2b016bb, 67da915c-1080-40a7-a0a8-ece57da80042, 09124a88-f17c-456b-9005-164bc9d793d7, 797a3f69-2c76-4d6a-86b4-3a9dd6910913, 3cde3a93-2188-49fa-b41b-eac6de3a81ac, d3f0bc08-35e2-4c69-bd4f-4d120632e173, f2a2b32d-7342-4527-99e4-a7716db566b6, 24a8c676-da90-4f8c-ad2f-c3891847195b)
@@ -668,7 +1095,7 @@ status: pending decision
 ```
 
 ## S-026: The session-observe boundary audit misattributes ANY pre-existing uncommitted...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 9c6cdd6d-65db-46dd-998f-2232f2b016bb, 67da915c-1080-40a7-a0a8-ece57da80042, 09124a88-f17c-456b-9005-164bc9d793d7, c564d673-033f-4801-879c-f8bc6628e43c, d97506f5-d147-4dd2-829c-1131fb83ed23)
@@ -684,7 +1111,7 @@ Do not treat the daily bundle's session-observe boundary-audit violations as a r
 ```
 
 ## S-027: A scheduled bundle can fail to produce its reports with no error surfaced any...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: de9fdb35-c4bf-439e-b00e-b5c5d99febe4, 8da7a3fc-de1a-4627-a3da-53c03a0c3b0c, 21e2fe3a-3538-44ab-b913-05072d15d0cd, 756acbee-b342-4c03-a263-e17c939a01f4, f8c94661-47c1-4ea2-bb28-01cb26f70e0e, b6fa9d2b-cc7e-472d-a709-12d5dd22d38a)
@@ -700,7 +1127,7 @@ Do not read an absent or stale pulse report as a clean cycle. A scheduled-bundle
 ```
 
 ## S-028: The five deployed scheduled-task payloads under `~/.claude/scheduled-tasks/co...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 3885d16d-c73e-4b00-9867-71aafcc75a91, d97506f5-d147-4dd2-829c-1131fb83ed23, 2e498599-40da-4415-bd91-93d104ffac1b, b6fa9d2b-cc7e-472d-a709-12d5dd22d38a)
@@ -716,7 +1143,7 @@ The deployed scheduled-task prompts on this machine are stale; the live `<schedu
 ```
 
 ## S-032: A full insight refresh reporting "0 error(s), 0 warning(s)" is not evidence t...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 6269c225-4eb2-4338-8e96-1ac622c1313d, 48235c09-94b4-4161-80b4-b9bf15253041, 5bb14cf5-9c83-40e8-b08b-b90d14df7818)
@@ -743,7 +1170,7 @@ Candidates: 13 received; 13 proposed (12 carried forward with original ids). Dro
 Threshold N=3 (`pulse.distilThresholdN`). First runs bound collection to the last 30 days (engineering call). Proposals flow through `cortex pulse-list` / `pulse-accept` — this loop never touches compass.
 
 ## S-033: Cost and usefulness questions about existing behaviour are settled with a mea...
-until: 2026-11-13
+until: 2026-11-18
 status: pending decision
 
 **Source:** distil (sessions: 70746728-ff13-4543-a618-90ab8d6b8232, f2a2b32d-7342-4527-99e4-a7716db566b6, 9a121da9-c7a7-403c-bb80-1cb82cb1cf6f)
