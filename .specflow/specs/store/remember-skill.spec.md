@@ -34,6 +34,7 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 7. **Source digest** (2026-10-19, schema S7). When the user hands over a document or transcript to keep, the skill writes `history/sources/<YYYY-MM-DD>-<slug>.md`: a redacted digest (summary, claims, asks) with `captured: <today>`, `origin: external:<who or where, ≤ 120 chars, no URL>`, and, when the original is given as a file, `raw: history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>` with the original copied there byte for byte (that folder is gitignored). Facts taken from the digest are then filed by the steps of Rule 2 with `origin: source:history/sources/<file>.md`. This section comes after the Rule 2 steps in the SKILL.md.
 8. **Propose mode** (2026-10-19, schema S6). When the fact is a proposal rather than a settled fact (a rule an agent inferred, a suggested change, a gap found while working, or anything a person must approve), the skill appends one item to `now/proposals.md`: `## P-<YYYY-MM-DD>-<slug>: <title>`, then `until: <today + 30 days>` and `status: pending decision`, then the full text and where it came from. It creates the file with the S3 frontmatter (`permanence: volatile`) when absent, and adds its `origin` to the file's list. It ends with the readback `Proposed: <proposal> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: <origin>)`. Approval is a person, or an agent holding that authority, moving the text to its home and removing the item; the skill never approves its own proposal. This section comes after the Rule 2 steps.
 9. The order and wording of the Rule 2 steps and the description are unchanged by Rules 7 and 8.
+10. **The write gate** (2026-10-19), the same as the skills' (`specflow.store-v4-awareness` Rule 6). Every write of this skill, in all modes, applies only once `migration.accepted` is set in `cortex/cortex.json` or when the project has no `.cortex/`. Before that, the skill prints `This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.` and writes nothing, so a re-run of `cortex migrate --apply` cannot overwrite a captured fact.
 
 ## Acceptance Criteria
 
@@ -84,3 +85,9 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** after the readback step it names `now/proposals.md`, the heading `## P-<YYYY-MM-DD>-<slug>: <title>`, `until:`, `status: pending decision`, the `Proposed:` readback line, and that the skill never approves its own proposal
+
+### The skill writes nothing before acceptance
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** its precondition names `migration.accepted`, the no-`.cortex/` case, and the line `This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.`, before the steps

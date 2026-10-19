@@ -8,7 +8,7 @@ description: >
 
 File one fact in the 4.0 store (`cortex/`), by the placement procedure in `cortex/MAP.md`, and end with one visible readback line so the user can correct it on the spot.
 
-**Precondition.** This skill works only on a 4.0 store. If `cortex/cortex.json` does not exist, stop and say: "This project has no 4.0 store (cortex/); nothing filed." Never write into `.cortex/`.
+**Precondition.** This skill works only on a 4.0 store. If `cortex/cortex.json` does not exist, stop and say: "This project has no 4.0 store (cortex/); nothing filed." Never write into `.cortex/`. It writes only once the migration is accepted (`migration.accepted` is set in `cortex/cortex.json`), or when the project has no `.cortex/`, in every mode below. If `.cortex/` exists and `migration.accepted` is `null`, stop and say: "This project's store is migrated but not accepted (cortex migrate --accept); nothing filed."
 
 ## Steps, in order
 

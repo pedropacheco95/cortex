@@ -65,4 +65,11 @@ describe('store.remember-skill', () => {
     const t = afterReadback();
     for (const p of ['`now/proposals.md`', '`## P-<YYYY-MM-DD>-<slug>: <title>`', '`until: <today + 30 days>`', '`status: pending decision`', '`Proposed: <proposal> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: <origin>)`', 'never approves its own proposal']) expect(t, p).toContain(p);
   });
+
+  it('writes nothing before acceptance (Rule 10)', () => {
+    const pre = text.slice(0, text.indexOf('## Steps, in order'));
+    expect(pre).toContain('`migration.accepted`');
+    expect(pre).toContain('no `.cortex/`');
+    expect(pre).toContain("This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.");
+  });
 });
