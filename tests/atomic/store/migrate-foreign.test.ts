@@ -335,3 +335,38 @@ describe('store.migrate Rule 14 reaches rescued and digested text (amendment 202
     expect(r.text).toContain('B-101');
   });
 });
+
+describe('store.migrate Rule 4 amendments (2026-10-19, foreign stores)', () => {
+  it('turns a session URL in a carried origin into session:, strips other URLs, and flags review', async () => {
+    const root = foreign('origin-url');
+    fs.writeFileSync(path.join(root, '.cortex/archive/documents/contract/metadata.yaml'), 'id: archive.contract\nkind: contract\ningested_at: 2026-02-01T10:00:00Z\norigin: "Claude Code session session_0198AbC (https://claude.ai/code/session_0198AbC) that ran the plan; mirror at https://example.org/a/b.exp (archived)"\n');
+    commitAll(root, 'origin with urls');
+    const { code, text } = await run(root, ['--plan', decidingPlan(root), '--apply']);
+    expect(code, text).toBe(0);
+    const origin = fm(root, 'history/sources/2026-02-01-contract.md')['origin'] as string[];
+    expect(origin).toContain('session:session_0198AbC');
+    const ext = origin.find((o) => o.startsWith('external:'))!;
+    expect(ext).toBe('external:that ran the plan; mirror at (archived)');
+    expect(origin.join(' ')).not.toContain('://');
+    expect(row(text, 'archive/documents/contract')).toMatch(/\| review/);
+    expect(section(text, 'Review')).toContain('origin URL stripped');
+    expect(validateStore(root, TODAY).findings.filter((f) => f.level === 'error')).toEqual([]);
+  });
+
+  it('drops a stem alias that two migrated files would share, and lists it', async () => {
+    const root = foreign('stems');
+    fs.mkdirSync(path.join(root, '.cortex/pulse/onboarding-scratch/y'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex/pulse/onboarding-scratch/y/notes.md'), 'more notes\n');
+    const plan = JSON.parse(fs.readFileSync(decidingPlan(root), 'utf8'));
+    plan['pulse/onboarding-scratch/x/notes.md'] = 'code/repo/x-notes.md';
+    plan['pulse/onboarding-scratch/y/notes.md'] = 'code/repo/y-notes.md';
+    fs.writeFileSync(path.join(root, 'plan.json'), JSON.stringify(plan));
+    const { code, text } = await run(root, ['--plan', path.join(root, 'plan.json'), '--apply']);
+    expect(code, text).toBe(0);
+    expect(fm(root, 'code/repo/x-notes.md')['aliases'] ?? []).not.toContain('notes');
+    expect(fm(root, 'code/repo/y-notes.md')['aliases'] ?? []).not.toContain('notes');
+    expect(fm(root, 'code/repo/x-notes.md')['origin']).toEqual([`migrated:pulse/onboarding-scratch/x/notes.md@${sha(root)}`]);
+    expect(section(text, 'Dropped stem aliases (1)')).toContain('notes: code/repo/x-notes.md, code/repo/y-notes.md');
+    expect(validateStore(root, TODAY).findings.filter((f) => f.check === 'check.aliases')).toEqual([]);
+  });
+});

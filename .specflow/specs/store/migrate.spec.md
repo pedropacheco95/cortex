@@ -67,6 +67,8 @@ Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached
    - `affects` paths → `need`;
    - `origin` → `migrated:<entry ref>@<short sha of HEAD at apply>`, one value per entry merged into the file (Rule 5).
    The 3.x citation graph (`provenance:` / `derives_from:`) is carried into `origin` by Rule 13.
+   - **Carried origin text (amended 2026-10-19).** In a carried 3.x `origin:` text, a claude.ai session URL or the words "Claude Code session <id>" become `session:<id>`; every other URL is removed, and the remaining description becomes `external:<text ≤ 120 chars>`; the entry is flagged review `origin URL stripped`.
+   - **Stem aliases (amended 2026-10-19).** A stem alias is added only when no other migrated file would carry the same alias; a shared stem is dropped for all of them, the `migrated:` origin keeps the old path, and the report lists dropped stem aliases.
 5. **Merging into one file.** Several entries that target the same file are appended as `##` sections in source order, the file's `origin` lists each entry's `migrated:` value in the same order, and the report lists each.
 6. **Coverage report** (markdown, or `--json`): the no-loss lines (Rule 16) and the visibility line (Rule 17) in its header; totals by disposition; a table of every entry (ref, disposition, target, flags, provenance refs resolved/total); the `review` list; the `pending decision` list with each proposal's first line; the `dropped by decision` section (Rule 12); the `unresolved provenance` section (Rule 13); the `redactions` section (Rule 14, refs and counts only, never the original text); the retired threads by id and status; the `unmapped` list; the retired 3.x config keys; the visibility findings on migrated text; the `undecided` list by folder, with counts (Rule 16); the `digested` list (ref → target → digest file); the plan's folder keys with the count each decided; the `concept definitions` (each concept file's ref and first definition line); the `files` line and the `gitignored only` list (Rule 15); and the command to remove `.cortex/` after acceptance. Every printed removal command is `git rm -r -q --ignore-unmatch <paths> && rm -rf <paths>`, because 3.x insight and pulse files are often untracked.
 7. **Dry run is the default.** Without `--apply`, nothing is written except the report file if `--report` is given.
@@ -311,6 +313,18 @@ All of these use the foreign fixture (`writeForeignStore`). It holds a 3.3 confi
 - **Given** a proposals digest with the heading `## B-101: …`, where `B-101` is a migrated bug's id
 - **When** `cortex migrate --plan plan.json` runs
 - **Then** it exits 1 naming `B-101`
+
+### A URL in a carried origin is converted, not kept
+
+- **Given** a document whose 3.x `origin:` is `Claude Code session session_0198AbC (https://claude.ai/code/session_0198AbC) that ran the plan; mirror at https://example.org/a/b.exp (archived)`
+- **When** `cortex migrate --apply` runs
+- **Then** the digest's `origin` holds `session:session_0198AbC` and `external:that ran the plan; mirror at (archived)`, no origin contains `://`, the entry is flagged review `origin URL stripped`, and validate reports no error
+
+### A shared stem alias is dropped
+
+- **Given** two rescued files both named `notes.md`, targeted at `code/repo/x-notes.md` and `code/repo/y-notes.md`
+- **When** `cortex migrate --apply` runs
+- **Then** neither file carries the alias `notes`, the report's `dropped stem aliases` section lists it with both files, and `check.aliases` reports nothing
 
 ### Bad plans are refused
 

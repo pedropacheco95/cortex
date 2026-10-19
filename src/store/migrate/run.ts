@@ -18,7 +18,7 @@ import { parseFile } from '../frontmatter.js';
 import { packageRoot } from '../../cli/scaffold.js';
 import { applyRedactions, readRedactFile, replacer, type RedactFile, type RedactStat } from './redact.js';
 import { hydrate, LEGACY_DIR, readLegacyStore, type LegacyStore } from './entries.js';
-import { buildTree, planMigration, proposalItems, provenanceRefs, rawLayout, readPlanFile, CONFIG_TARGET, type Planned, type PlanFile, type ProvenanceRef } from './plan.js';
+import { buildTree, planMigration, proposalItems, provenanceRefs, rawLayout, readPlanFile, sharedStemAliases, CONFIG_TARGET, type Planned, type PlanFile, type ProvenanceRef } from './plan.js';
 import { retireLegacySystem } from './system.js';
 
 const RETIRED_CONFIG_KEYS = ['hooks', 'pulse', 'harness', 'loop', 'profile'];
@@ -111,6 +111,7 @@ export interface Report {
   folderKeys: { key: string; decided: number }[];
   concepts: { ref: string; line: string }[];
   skillPath: string;
+  droppedStemAliases: { alias: string; files: string[] }[];
 }
 
 const DISPOSITION_LABEL: Record<string, string> = { migrated: 'migrated', retired: 'retired', dropped: 'dropped by decision', pending: 'pending decision', unmapped: 'unmapped' };
@@ -221,6 +222,7 @@ export function buildReport(root: string, legacy: LegacyStore, planned: Planned[
     folderKeys: opts.folderKeys ?? [],
     concepts,
     skillPath: path.join(packageRoot(), 'skills', 'cortex-migrate', 'SKILL.md'),
+    droppedStemAliases: [...sharedStemAliases(planned)].map(([alias, files]) => ({ alias, files })),
   };
 }
 
@@ -299,6 +301,8 @@ export function renderReport(r: Report, mode: string): string {
   }
   L.push('', `## Concept definitions (${r.concepts.length})`, '', 'First definition line of each dropped concept file. A plan can rescue one into world/terms/.', '');
   for (const c of r.concepts) L.push(`- ${c.ref}: ${c.line}`);
+  L.push('', `## Dropped stem aliases (${r.droppedStemAliases.length})`, '', 'Old filename stems more than one migrated file would carry; dropped for all of them (the migrated: origin keeps the old path).', '');
+  for (const d of r.droppedStemAliases) L.push(`- ${d.alias}: ${d.files.join(', ')}`);
   L.push('', `## Redactions (${r.redactions.length} entries)`, '');
   for (const x of r.redactions) L.push(`- ${x.ref}: ${x.replaced} replacement(s)${x.labels.length ? ` (${x.labels.join(', ')})` : ''}${x.edited ? `, ${x.edited} edit(s)` : ''}`);
   L.push('', `## Retired threads (${r.threads.length})`, '', r.threads.length ? `Not carried into 4.0 unless the plan decides: ${r.threads.join(', ')}` : 'none');
@@ -318,7 +322,7 @@ export function renderReport(r: Report, mode: string): string {
 export function reportJson(r: Report): unknown {
   return {
     version: r.version, total: r.total, covered: r.covered, coverage: r.coverage, totals: r.totals,
-    noLoss: r.noLoss, undecided: r.undecided, files: r.files, gitignoredOnly: r.gitignoredOnly, digested: r.digested, folderKeys: r.folderKeys, concepts: r.concepts, scopes: r.scopes, skillPath: r.skillPath,
+    noLoss: r.noLoss, undecided: r.undecided, files: r.files, gitignoredOnly: r.gitignoredOnly, digested: r.digested, folderKeys: r.folderKeys, concepts: r.concepts, scopes: r.scopes, skillPath: r.skillPath, droppedStemAliases: r.droppedStemAliases,
     provenance: r.provenance, dropped: r.dropped, retiredConfigKeys: r.retiredConfigKeys, visibility: r.visibility,
     removeDroppedCommand: r.removeDroppedCommand, removeStoreCommand: r.removeStoreCommand, redactions: r.redactions, threads: r.threads,
     entries: r.planned.map((p) => ({ ref: p.entry.ref, disposition: p.disposition, review: p.review, fromPlan: p.fromPlan, undecided: p.undecided ?? false, digest: p.digest?.file ?? null, folderKey: p.folderKey ?? null, files: p.entry.files })),

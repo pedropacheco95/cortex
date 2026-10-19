@@ -81,6 +81,31 @@ function bugArea(e: Entry): string {
   return kebab((parts[0] === 'src' && parts.length > 2 ? parts[1] : parts[0])!, 4);
 }
 
+/**
+ * Rule 4 (amended 2026-10-19): a carried 3.x `origin:` text. A claude.ai
+ * session URL, or the words "Claude Code session <id>", become `session:<id>`;
+ * every other URL is removed, and what remains becomes `external:<text>`
+ * (≤ 120 chars). `stripped` is true when anything was converted or removed.
+ */
+export function originFromText(text: string): { origins: string[]; stripped: boolean } {
+  let t = text.replace(/\s+/g, ' ').trim();
+  const ids: string[] = [];
+  const take = (id: string): void => { if (!ids.includes(id)) ids.push(id); };
+  t = t.replace(/\(?\s*https?:\/\/claude\.ai\/code\/(session_[A-Za-z0-9_-]+)\S*?\s*\)?(?=[\s;,.]|$)/g, (_m, id: string) => { take(id); return ''; });
+  t = t.replace(/Claude Code session\s+(session_[A-Za-z0-9_-]+|[0-9a-f]{8}-[0-9a-f-]{27,})/gi, (_m, id: string) => { take(id); return ''; });
+  t = t.replace(/\(\s*https?:\/\/[^\s)]*[^)]*?\)/g, '').replace(/https?:\/\/[^\s;,)]+/g, '');
+  t = t.replace(/\(\s*\)/g, '').replace(/\s*;\s*(;\s*)+/g, '; ').replace(/\s+([;,.])/g, '$1').replace(/\s+/g, ' ').replace(/^[\s;,.:-]+|[\s;,:-]+$/g, '').trim();
+  const stripped = ids.length > 0 || t !== text.replace(/\s+/g, ' ').trim();
+  const origins = ids.map((id) => `session:${id}`);
+  if (t) origins.push(`external:${t.length > 120 ? t.slice(0, 119) + '…' : t}`);
+  return { origins, stripped };
+}
+
+function originReview(e: Entry): string | null {
+  const o = e.fm['origin'];
+  return typeof o === 'string' && (/:\/\//.test(o) || /Claude Code session/i.test(o)) ? 'origin URL stripped' : null;
+}
+
 /** Rule 4 date chain: the 3.x date fields, then the newest git date of the entry's files, then the apply date. */
 export type FileDate = (legacyRel: string) => string | null;
 
@@ -116,8 +141,8 @@ function defaultDisposition(e: Entry, all: Entry[], date: string): { d: Disposit
     case 'stakeholder': return m([`world/${e.fm['name'] ? 'people' : 'orgs'}/${stemSlug(e.stem)}.md`]);
     case 'term': return m([`world/terms/${kebab(String(e.fm['term'] ?? e.stem), 8)}.md`]);
     case 'evidence': return m([`history/measurements/${date}-${stemSlug(e.stem)}.md`]);
-    case 'source': return m([`history/sources/${date}-${stemSlug(e.stem)}.md`], e.noMeta ? 'no .meta.md: the digest is a stub naming the raw file' : null);
-    case 'document': return m([`history/sources/${date}-${stemSlug(e.stem)}.md`]);
+    case 'source': return m([`history/sources/${date}-${stemSlug(e.stem)}.md`], [e.noMeta ? 'no .meta.md: the digest is a stub naming the raw file' : null, originReview(e)].filter(Boolean).join('; ') || null);
+    case 'document': return m([`history/sources/${date}-${stemSlug(e.stem)}.md`], originReview(e));
     case 'intent': return m([`history/changes/${date}-${kebab(String(e.fm['stated_intent'] ?? e.id ?? 'intent'), 6)}.md`]);
     case 'observation': return m([`code/repo/${stemSlug(e.stem)}.md`], 'may belong in world/ or now/');
     case 'proposal': return { d: { kind: 'pending', target: PROPOSALS_TARGET }, review: null };
@@ -456,6 +481,7 @@ export function buildTree(legacy: LegacyStore, planned: Planned[], ctx: BuildCon
     else p.disposition.targets.forEach((t, i) => push(t, { p, target: t, role: i === 0 ? 'main' : 'change-event' }));
   }
 
+  const dropStems = sharedStemAliases(planned);
   for (const [target, cs] of [...contributions].sort(([a], [b]) => a.localeCompare(b))) {
     if (target === CONFIG_TARGET) {
       const legacyVis = (legacy.config?.['visibility'] ?? { repo: 'unknown', allow: [] }) as Record<string, unknown>;
@@ -467,7 +493,7 @@ export function buildTree(legacy: LegacyStore, planned: Planned[], ctx: BuildCon
       files.set(target, buildProposals(cs, ctx, originsOf));
       continue;
     }
-    files.set(target, buildFile(target, cs, ctx, originsOf));
+    files.set(target, buildFile(target, cs, ctx, originsOf, dropStems));
     for (const c of cs) {
       if (c.role !== 'main') continue;
       for (const [r, rel] of rawLayout(c.p.entry, target).pairs) {
@@ -502,7 +528,31 @@ function buildProposals(cs: Contribution[], ctx: BuildContext, originsOf: Map<st
   return `${fm}\n# Proposals waiting for a decision\n\n${items.join('\n\n')}\n`;
 }
 
-function buildFile(target: string, cs: Contribution[], ctx: BuildContext, originsOf: Map<string, string[]>): string {
+/** The old filename stem an entry would carry as an alias at `target`, or null (Rule 4). */
+function stemAlias(x: Entry, target: string): string | null {
+  return x.files.length === 1 && !x.ref.includes('#') && x.row !== 'intent' && path.posix.basename(target, '.md') !== x.stem ? x.stem : null;
+}
+
+/**
+ * Rule 4 (amended 2026-10-19): stem aliases that more than one migrated file
+ * would carry. They are dropped for all of them; the `migrated:` origin keeps
+ * the old path. Keys are lower-case, as `check.aliases` compares them.
+ */
+export function sharedStemAliases(planned: Planned[]): Map<string, string[]> {
+  const by = new Map<string, Set<string>>();
+  for (const p of planned) {
+    if (p.disposition.kind !== 'migrated' || p.rawRescue) continue;
+    const t = p.disposition.targets[0]!;
+    const st = stemAlias(p.entry, t);
+    if (!st) continue;
+    const k = st.toLowerCase();
+    if (!by.has(k)) by.set(k, new Set());
+    by.get(k)!.add(t);
+  }
+  return new Map([...by].filter(([, ts]) => ts.size > 1).map(([k, ts]) => [k, [...ts].sort()]));
+}
+
+function buildFile(target: string, cs: Contribution[], ctx: BuildContext, originsOf: Map<string, string[]>, dropStems: Map<string, string[]> = new Map()): string {
   const main = cs[0]!;
   const e = main.p.entry;
   const multi = cs.length > 1;
@@ -526,7 +576,8 @@ function buildFile(target: string, cs: Contribution[], ctx: BuildContext, origin
     const x = c.p.entry;
     const out: string[] = [];
     if (x.id) out.push(x.id);
-    if (x.files.length === 1 && !x.ref.includes('#') && x.row !== 'intent' && path.posix.basename(target, '.md') !== x.stem) out.push(x.stem);
+    const st = stemAlias(x, target);
+    if (st && !dropStems.has(st.toLowerCase())) out.push(st);
     if (x.row === 'term' && Array.isArray(x.fm['aliases'])) out.push(...(x.fm['aliases'] as unknown[]).map(String));
     return out;
   }));
@@ -563,8 +614,7 @@ function buildFile(target: string, cs: Contribution[], ctx: BuildContext, origin
     fm['captured'] = latest;
     const raw = rawLayout(e, target).field;
     if (raw) fm['raw'] = raw;
-    const ext = typeof e.fm['origin'] === 'string' ? (e.fm['origin'] as string).replace(/\s+/g, ' ').trim() : '';
-    if (ext) (fm['origin'] as string[]).push(`external:${ext.length > 120 ? ext.slice(0, 119) + '…' : ext}`);
+    if (typeof e.fm['origin'] === 'string') for (const o of originFromText(e.fm['origin'] as string).origins) if (!(fm['origin'] as string[]).includes(o)) (fm['origin'] as string[]).push(o);
   }
   if (module === 'code' && e.row === 'bug-open' && cs.every((c) => c.p.entry.row === 'bug-open')) fm['status'] = 'open';
 
