@@ -21,6 +21,8 @@ governed_by: []
 > `governs:` targets no longer exist, so the list is removed. Retained for
 > lineage.
 
+> **Also superseded at schema 4.0 (2026-10-14).** The insight successor named above is itself dropped by decision in a 4.0 store (`cortex-schema.md` Part II S9.3, `store.migrate` Rule 12; `insight.refresh-loops` carries the banner). Nothing in this lineage is in force for a 4.0 store.
+
 ## Intent
 
 The native anatomy scanner (`cortex scan`) builds the per-file code-structure index Claude reads to understand a codebase without hand-written documentation. It lists files, estimates tokens, parses top-level structure and imports with tree-sitter, resolves a one-line purpose per file (docstring-first, with a delegated LLM fallback), cross-links governing specs, and emits the anatomy artefacts (`files.md`, `graph.json`, `layers.md`) defined in `cortex-schema.md` §4.1. This is the artefact that makes the outcome in `anatomy.contributor-gets-a-legible-codebase` real (design §7).

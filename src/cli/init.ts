@@ -38,6 +38,10 @@ import { specsRoot, businessRoot, SPECS_REL, BUSINESS_REL } from '../paths.js';
 import {
   installSkills,
   upsertClaudeMd,
+  FOUR_OH_BLOCK_OWNED,
+  FOUR_OH_STORE_REFUSAL,
+  fourOhStoreAccepted,
+  fourOhStoreOwnsBlock,
   mergeSettings,
   installGitHook,
   writeScheduledTasks,
@@ -483,6 +487,11 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   const profile = opts.profile;
   const nowIso = new Date().toISOString();
 
+  // store.migrate Rule 11 (amendment 2026-10-19): an accepted or fresh 4.0 store is not 3.x's to manage.
+  if (fourOhStoreAccepted(absRoot)) {
+    return { exitCode: 2, summary: `cortex init: refused — ${FOUR_OH_STORE_REFUSAL}. Nothing was written.` };
+  }
+
   // Rule 1 — preflight: refuse before anything is written.
   if (platform !== 'darwin') {
     return {
@@ -516,7 +525,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
       // `cortex sync` — repair/upgrade an existing project without a forced
       // re-init. `--force` still re-runs init itself for the rare case a
       // from-scratch re-init is truly wanted.
-      summary: `cortex init: refused — .cortex/ already exists at ${cortexDir}. Run \`cortex sync\` to repair or upgrade this existing project (or re-run \`cortex init --force\` to re-initialise from scratch — merges and appends only; overwrites remain --force-gated). Nothing was written.`,
+      summary: `cortex init: refused — .cortex/ already exists at ${cortexDir}. Run \`cortex sync\` to repair or upgrade this existing project (or re-run \`cortex init --force\` to re-initialise from scratch — merges and appends only; overwrites remain --force-gated). Nothing was written.${fourOhStoreOwnsBlock(absRoot) ? ` CLAUDE.md: ${FOUR_OH_BLOCK_OWNED}.` : ''}`,
     };
   }
 
@@ -633,7 +642,7 @@ export async function init(root: string, opts: InitOptions = {}): Promise<InitRe
   if (tasks.retired.length > 0) {
     lines.push(`Scheduled tasks retired (schema §9.1 deregistration): ${tasks.retired.join(', ')}.`);
   }
-  lines.push(`CLAUDE.md: managed cortex block ${claudeMdState}.`);
+  lines.push(claudeMdState === 'owned' ? `CLAUDE.md: ${FOUR_OH_BLOCK_OWNED}.` : `CLAUDE.md: managed cortex block ${claudeMdState}.`);
   lines.push(
     migration.migrated.length > 0
       ? `Migration: bugs.md → .cortex/compass/bugs/ (${migration.migrated.length} bug(s): ${migration.migrated.join(', ')}); deprecation marker left at bugs.md.`

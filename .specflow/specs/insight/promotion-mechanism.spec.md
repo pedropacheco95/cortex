@@ -15,6 +15,8 @@ governs:
 
 # Typed Pulse Gate + Promotion Mechanism
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** A 4.0 store has no pulse review gate: `pulse.review-cli` is retired (it carries its own banner), pending proposals migrate to `now/proposals.md` with an `until:` date (`store.migrate` Rule 10), and facts are filed directly by the `cortex-remember` skill. The typed promotion this spec extends therefore has no 4.0 counterpart. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 This spec extends the pulse review CLI (`pulse.review-cli`, `src/pulse/review.ts`) from v1's append-only, cerebrum-only gate into the typed gate v2 needs (schema §4.5.1, §4.5.2, §4.10.4): five `**Type:**` values, three payload operation shapes including the new byte-exact **edit**, extended `Target:` roots (`.cortex/atlas/`, `.cortex/insight/map/`, `RULES.md`), and — the load-bearing new behaviour — `promotion` accept, which lands a gated write, injects a `source:` back-reference to the insight original, and marks that original promoted rather than deleting it. It reuses the existing gate rather than building a second one: one review queue, one S-namespace, one `dismissed.md` (v2 design §3.7). Deterministic Core (R-001); accept is transactional — a refusal applies nothing and leaves the suggestion `pending`.

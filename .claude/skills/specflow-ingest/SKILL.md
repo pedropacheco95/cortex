@@ -28,6 +28,10 @@ approved proposal is handed to the change-router for execution.
 
 ## Cortex Awareness
 
+**Which store (Cortex 4.0 transition).** If `cortex/cortex.json` exists, this project uses the 4.0 store: read `cortex/` in place of the `.cortex/` paths in this skill. Start from `cortex/MAP.md`. Rules are in `cortex/world/rules/` (they apply by `match.paths`, not `governs`), decisions in `cortex/world/decisions/`, terms in `cortex/world/terms/`, working preferences in `cortex/world/agreements/working-preferences.md`, and open pitfalls (the former open bugs) in `cortex/code/<area>/` with `status: open`. There is no insight layer in 4.0: where this skill would query insight, read the file and grep `cortex/code/<area>/` and `cortex/world/terms/`. Check the store with `cortex store validate`. While `.cortex/` also exists and the migration is not accepted (`migration.accepted` is `null` in `cortex/cortex.json`), read `cortex/` but write nothing to either store beyond what this skill's 3.x instructions already allow. After acceptance, write nothing to `.cortex/`; file a durable fact with the `cortex-remember` skill. Without `cortex/cortex.json`, use the `.cortex/` paths as written.
+
+**Writing to the 4.0 store.** Once the migration is accepted (`migration.accepted` is set in `cortex/cortex.json`), or when the project has no `.cortex/`, hand the memory-shaped remainder to the `cortex-remember` skill's source-digest step instead of `cortex-archive-ingest`: a redacted digest in `cortex/history/sources/`, the original under `cortex/history/sources/raw/`, and the stakeholders, decisions and terms it carries filed from that digest. A manifest entry that proposes a new business spec names the `cortex/world/decisions/` file it corresponds to. This skill still never files a bug; route it to `specflow-bugs`.
+
 When the project has a `.cortex/` directory:
 
 - **The sibling boundary (both directions).** This skill owns requirement-shaped

@@ -1,5 +1,7 @@
 # Insight — Overview
 
+> **At schema 4.0 (draft, 2026-10-14) the insight layer is dropped by decision** (`cortex-schema.md` Part II S9.3, `store.migrate` Rule 12). The specs for the code summaries (storage format, L1 pass, query CLI, extraction skill, refresh loops) carry SUPERSEDED banners and stay in force for 3.x stores until the migration is accepted. `insight/observations/` is the exception: its entries are facts and migrate into the 4.0 store.
+
 ## What this is
 
 The engineering specs for the `.cortex/insight/` module at v3: the ungated, queryable **codebase-understanding layer**. Insight moved at v3 from a concept-map over curated artefacts to a leveled (L1–L4), optionally scoped, per-file understanding of the source code itself — what each file is for, its main players, its non-obvious quirks, and how it connects to the rest of the codebase, including connections no import statement reveals. It covers the storage contract, the deterministic L1 structural pass, the three-verb query CLI, the extraction skill that builds the layer, the three refresh loops that keep it current, and the session-observe loop that enriches it from how sessions actually went.

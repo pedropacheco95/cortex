@@ -31,6 +31,10 @@ it cannot.
 > layer the validator cannot: naming conventions, entity-reference style, overview
 > quality, engineering-jargon leakage, and the auto-fixes.
 
+**Which store (Cortex 4.0 transition).** If `cortex/cortex.json` exists, this project uses the 4.0 store: read `cortex/` in place of the `.cortex/` paths in this skill. Start from `cortex/MAP.md`. Rules are in `cortex/world/rules/` (they apply by `match.paths`, not `governs`), decisions in `cortex/world/decisions/`, terms in `cortex/world/terms/`, working preferences in `cortex/world/agreements/working-preferences.md`, and open pitfalls (the former open bugs) in `cortex/code/<area>/` with `status: open`. There is no insight layer in 4.0: where this skill would query insight, read the file and grep `cortex/code/<area>/` and `cortex/world/terms/`. Check the store with `cortex store validate`. While `.cortex/` also exists and the migration is not accepted (`migration.accepted` is `null` in `cortex/cortex.json`), read `cortex/` but write nothing to either store beyond what this skill's 3.x instructions already allow. After acceptance, write nothing to `.cortex/`; file a durable fact with the `cortex-remember` skill. Without `cortex/cortex.json`, use the `.cortex/` paths as written.
+
+**Writing to the 4.0 store.** Once the migration is accepted (`migration.accepted` is set in `cortex/cortex.json`), or when the project has no `.cortex/`, `cortex validate` validates the 4.0 project. It runs the `cortex store validate` checks plus the spec-tree checks (overview presence, id/path agreement, dev and business spec fields, `implements:`/`implemented_by:` symmetry), and resolves a `governed_by` rule id through the `aliases` of `cortex/` files. Run it first, as on 3.x. This skill writes nothing to the store; its fixes stay in the spec trees.
+
 ## When to Run
 
 - After onboarding (specflow-onboard-codebase or deep-onboard agent)

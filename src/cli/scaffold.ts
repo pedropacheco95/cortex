@@ -110,11 +110,20 @@ export async function promptYesNo(promptText: string, rl?: readline.Interface): 
  * sync's progress count) so they cannot drift apart — the extraction the
  * standing authorities prefer over parallel implementations.
  */
+/**
+ * Bundles that work only on a 4.0 store (`cortex/`, schema Part II). The 3.x
+ * `init` and `sync` never install them, so the 3.x additions chain does not
+ * name them (store.remember-skill; the skill stops on a project without
+ * `cortex/cortex.json`). They ship in the package and are mirrored in this
+ * repository's `.claude/skills/`.
+ */
+export const STORE_V4_BUNDLES: readonly string[] = ['cortex-remember', 'cortex-migrate'];
+
 export function listSkillBundles(srcDir: string): string[] {
   if (!fs.existsSync(srcDir)) return [];
   return fs
     .readdirSync(srcDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcDir, e.name, 'SKILL.md')))
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(srcDir, e.name, 'SKILL.md')) && !STORE_V4_BUNDLES.includes(e.name))
     .map((e) => e.name)
     .sort();
 }
@@ -367,7 +376,44 @@ export async function installSkills(root: string, yes: boolean): Promise<{ insta
 // CLAUDE.md managed block (init Rule 10 / sync Rule 3)
 // ---------------------------------------------------------------------------
 
-export function upsertClaudeMd(root: string, config?: Record<string, unknown>): 'created' | 'inserted' | 'updated' | 'unchanged' {
+/**
+ * store.migrate Rule 11: once `cortex/cortex.json` declares a 4.0 store, the
+ * CLAUDE.md and AGENTS.md managed blocks belong to it, and the 3.x `sync` and
+ * `init` never write them (so a scheduled sync cannot undo an acceptance).
+ */
+export const FOUR_OH_BLOCK_OWNED = 'managed block owned by the 4.0 store (cortex/); left untouched';
+
+export function fourOhStoreOwnsBlock(root: string): boolean {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'cortex', 'cortex.json'), 'utf-8'));
+    return typeof cfg?.schemaVersion === 'string' && cfg.schemaVersion.startsWith('4.');
+  } catch {
+    return false;
+  }
+}
+
+/** store.migrate Rule 11 (amendment 2026-10-19): the refusal once a 4.0 store is accepted or fresh. */
+export const FOUR_OH_STORE_REFUSAL = 'this project uses the 4.0 store (cortex/); use cortex store init or cortex store map';
+
+/**
+ * True when `cortex/cortex.json` is 4.x and the store is accepted
+ * (`migration.accepted` is a date) or was never migrated (no `migration`
+ * field: a fresh `cortex store init`). Then the 3.x `init` and `sync`
+ * refuse, so a scheduled sync cannot reinstall what accept removed.
+ */
+export function fourOhStoreAccepted(root: string): boolean {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'cortex', 'cortex.json'), 'utf-8'));
+    if (typeof cfg?.schemaVersion !== 'string' || !cfg.schemaVersion.startsWith('4.')) return false;
+    const mig = cfg.migration;
+    return mig === undefined || mig === null || (typeof mig === 'object' && typeof mig.accepted === 'string');
+  } catch {
+    return false;
+  }
+}
+
+export function upsertClaudeMd(root: string, config?: Record<string, unknown>): 'created' | 'inserted' | 'updated' | 'unchanged' | 'owned' {
+  if (fourOhStoreOwnsBlock(root)) return 'owned';
   const claudeMdPath = path.join(root, 'CLAUDE.md');
   // 3.4 fifth revision (init Rule 10, sync Rule 3): the block is rendered from
   // `cortex.config.json` as it stands — read here when the caller passes none,

@@ -12,6 +12,8 @@ governs:
 
 # Insight Extraction Skill — the plan-not-pipeline codebase-understanding builder
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** A 4.0 store (`cortex/`, `cortex-schema.md` Part II) has no insight layer: the inferred code summaries (anatomy, concepts and the graph) are dropped by decision, not migrated and not kept frozen (S9.3, `store.migrate` Rule 12). The extraction skill that builds the layer is retired with it. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 `cortex-extract-insight` is the Claude Code **skill** (no CLI wrapper — RULES 3, v3 design §5.3) that produces the initial `.cortex/insight/` layer for a codebase Claude doesn't yet understand. It is not a fixed pipeline: Claude reads the L1 structural pass and *decides* how to analyze the rest, in four phases — structural (consumed, not owned here), planning, scoped execution, cross-scope unification (v3 design §5.3). The orchestration contract is lifted verbatim from the Graphify extraction study's TAKE verdicts: parallel sub-agents dispatched in one message, each writing its fragment to disk, "the file exists on disk" as the success signal, a missing fragment as warn-don't-silently-skip, and more than half missing as an abort (study Axis 1, design §5.3). Recursion for oversized scopes re-plans from the top rather than letting a scope sub-agent spawn its own sub-agents (build-order flag F7) — the skill's own fan-out stays one level deep.

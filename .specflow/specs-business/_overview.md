@@ -23,6 +23,7 @@ Cortex helps a developer (and the AI assistant working alongside them) genuinely
 - **Every authoritative document captured, once** — client specs, transcripts, and contracts enter through one pipeline, kept verbatim forever, with superseded versions preserved.
 - **Every rule traces to its authority** — ask why a rule exists and the answer is one hop away; ask what depends on a changed source and the full list comes back.
 - **Modules named for what they hold** — anyone reading the knowledge layer can tell what each part is for from its name, and every fact lives in exactly one place.
+- **The agent has the project's knowledge and rules when it needs them** (schema 4.0, draft) — a visible folder of one-subject notes behind a short always-loaded map, first-class rules, facts that say how fresh they are, and a lossless move from the old hidden layout.
 - **Work that can be trusted as done** — completion claims carry evidence, and the disciplines that produce that evidence hold under pressure, whichever build process the project runs.
 
 Each outcome is linked to the engineering specs that deliver it, so a reader can move sideways from "what we promise" to "how it's built".

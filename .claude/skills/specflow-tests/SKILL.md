@@ -52,6 +52,10 @@ spawns have even less context — they see only the test code, nothing else.
 
 ## Cortex Awareness
 
+**Which store (Cortex 4.0 transition).** If `cortex/cortex.json` exists, this project uses the 4.0 store: read `cortex/` in place of the `.cortex/` paths in this skill. Start from `cortex/MAP.md`. Rules are in `cortex/world/rules/` (they apply by `match.paths`, not `governs`), decisions in `cortex/world/decisions/`, terms in `cortex/world/terms/`, working preferences in `cortex/world/agreements/working-preferences.md`, and open pitfalls (the former open bugs) in `cortex/code/<area>/` with `status: open`. There is no insight layer in 4.0: where this skill would query insight, read the file and grep `cortex/code/<area>/` and `cortex/world/terms/`. Check the store with `cortex store validate`. While `.cortex/` also exists and the migration is not accepted (`migration.accepted` is `null` in `cortex/cortex.json`), read `cortex/` but write nothing to either store beyond what this skill's 3.x instructions already allow. After acceptance, write nothing to `.cortex/`; file a durable fact with the `cortex-remember` skill. Without `cortex/cortex.json`, use the `.cortex/` paths as written.
+
+**Writing to the 4.0 store.** Once the migration is accepted (`migration.accepted` is set in `cortex/cortex.json`), or when the project has no `.cortex/`, write the verification report to `cortex/now/verification.md` instead of `.cortex/pulse/reports/verification.md`. The whole report is one item: the heading `## Verification <YYYY-MM-DD>: <spec or scope>`, `until: <today + 14 days>` on the next line, and `####` or lower for any heading inside it. Create the file with the S3 frontmatter (`permanence: volatile`) when it is absent, replace an older item for the same scope, and run `cortex store validate`. A gap that needs a human decision is a proposal, filed through the `cortex-remember` skill's propose mode.
+
 When the project has a `.cortex/` directory, read the knowledge layer before generating
 (skip this section cleanly when `.cortex/` is absent):
 

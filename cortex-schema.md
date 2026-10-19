@@ -1,6 +1,7 @@
 # Cortex Schema — The Contract Between Core and Skills
 
 **Schema version:** `3.4`
+**Draft next major:** `4.0` (Part II at the end of this file, awaiting approval). Part I below stays the contract for 3.x stores until their migration is accepted.
 **Status:** v3.0 draft for review by Pedro. This file is the **living contract** and is revised in place at each version — the v2.0 text is preserved in git history. (Unlike the design documents, which are frozen records.)
 **Depends on:** `cortex-design.md` (the v1 design doc, frozen), `cortex-v2-design.md` (the v2 design doc, frozen), and `cortex-v3-design.md` (the v3 design doc). Where design and schema disagree, this document wins on file formats, frontmatter, cross-references, and versioning — that is its job. Where the design docs are silent or vague, this document **makes the decision** (see §0) rather than deferring.
 
@@ -1459,3 +1460,326 @@ The mechanical check set (one row ⇒ one implementable check). Grouped by the d
 ---
 
 **End of schema v3.1.** 3.1 is a MINOR addition over 3.0 (§10.2): `insight/observations/` — ungated, session-learned project-context observations, themed one-entry-per-file with a two-signal (frequency/emphasis) importance model and a SessionStart digest, written by `cortex-loop-session-observe` — plus its validator check `check.insight-observations` (§4.10.11, §1, Appendix A); nothing removed, renamed, or made required. (The directory shape above revises 3.1's original single-file draft in place — no project shipped on the earlier shape.) The 3.0 fold-in record follows. Folded in from `cortex-schema-v3-addendum.md` (build-order-v3 step 1; see git history for the addendum's drafting record and the fold-in commit). Changes from 2.0: `cerebrum/` renamed `compass/` (rule/bug ids unchanged); `anatomy/` removed, absorbed into `insight/`; `archive/` added (ingested documents + extractions, mixed git policy); `insight/` rebuilt wholesale (leveled L1–L4 per-file entries, scoped/unscoped layouts, new JSON shapes with a discrete confidence-tier enum and a path-derived node-id grammar, a staleness ledger, and a reverse-dependency index); the `cortex insight file/concept/element` query CLI (supersedes `query/get/neighbors/list`); the `cortex-extract-insight` skill I/O contract; `provenance:`/`derives_from:` frontmatter on compass rules, both spec trees, and atlas decisions, with a backward-traversal index; decisions single-homed to `atlas/decisions/` (`compass/decisions.md` does not exist); the pulse typed-suggestion enum gains `decision-candidate`; the scheduled-task/loop roster changes (anatomy-refresh and the v2.0 insight-refresh/gaps pair retire; three insight-refresh tiers plus `cortex-loop-session-observe` take their place); the CLAUDE.md template and `loop.md` re-rooted; and the version-gate wiring (`schemaVersion: "3.0"`; validator `supportedMajor`/`supportedMinor` activation is deferred to build-order-v3 step 2, coupled with the rename). Next: build-order-v3 step 2 (module migration + version-gate activation).
+
+---
+
+# Part II — Schema 4.0 (DRAFT for Pedro's approval, 2026-10-14)
+
+**4.0 is a MAJOR bump** (§10.2): the store moves from the hidden `.cortex/` to a visible `cortex/` folder, and the five trust-based modules (compass, atlas, archive, insight, pulse) are replaced by four modules split by what makes a fact go stale. Part I (3.4) stays in force for 3.x stores until each project's migration is accepted (§S9); a 4.0 Core reads both. **Senses is not part of 4.0**. The registry fields it will compile (`applies_when`, `scope`, `match`) are defined now (§S4), so adding it later is a MINOR.
+
+Contents:
+- S1 The store layout
+- S2 File shape: one subject per file
+- S3 Frontmatter
+- S4 Rules
+- S5 Decisions and changes
+- S6 `now/`: volatile items
+- S7 `history/`: append-only
+- S8 `MAP.md` and the managed blocks
+- S9 Configuration, versioning and migration
+- S10 Commit trailers
+- S11 Validator checks (4.0)
+
+## S1. The store layout
+
+```
+CLAUDE.md, AGENTS.md          generated managed block (S8.3)
+cortex/
+├── cortex.json               config: schemaVersion "4.0", visibility (S9.1)
+├── MAP.md                    generated; the only always-loaded file (S8)
+├── code/<area>/<subject>.md  how to work in one code area: pitfalls, commands, conventions, why
+├── world/
+│   ├── people/ orgs/ terms/ systems/ agreements/
+│   ├── decisions/<question>.md   current answer to one question (S5)
+│   └── rules/<rule>.md           how we work (S4)
+├── history/                  dated, append-only (S7)
+│   ├── sources/<YYYY-MM-DD>-<slug>.md   redacted digest; raw originals in sources/raw/ (gitignored)
+│   ├── changes/<YYYY-MM-DD>-<slug>.md   change events (S5)
+│   ├── incidents/<YYYY-MM-DD>-<slug>.md
+│   └── measurements/<YYYY-MM-DD>-<slug>.md
+└── now/<topic>.md            volatile items, each with until: (S6)
+```
+
+- **Module = freshness mechanism.**
+  - `code/` goes stale with the code (`depends_on` against git, S3).
+  - `world/` goes stale with people and the outside world (`verified` age).
+  - `history/` never goes stale (append-only).
+  - `now/` goes stale with the calendar (`until:`).
+- **Folders are fixed.** The folders of `world/` and `history/` are exactly those above. `code/<area>/` areas are free: the area is a code area's name in kebab-case, e.g. `hooks`, `schema`, `repo`, and `repo` holds facts about the repository as a whole.
+- **Git policy.**
+  - Everything under `cortex/` is tracked except `history/sources/raw/`, and `init`/`migrate` write that line to `.gitignore`.
+  - A file marked `privacy: private` is still tracked, and the field is advisory in 4.0. Privacy tiers are parked.
+- **No `_index.md` files.** `MAP.md` replaces them (S8). RULES.md rule 9 needs an amendment for `cortex/`.
+
+## S2. File shape: one subject per file
+
+- **One subject per file, named by the word a reader would search for:**
+  - lower-case kebab-case;
+  - no ids in the filename (ids live in `aliases`);
+  - no dates, except under `history/`.
+- **One fact lives in exactly one file.** Other files may link to it, but never restate it.
+- **Client or tenant sections.** When a subject differs per client or tenant, the file holds one `## <client>` section per client and keeps its shared facts above the first one. A subject is never split into per-client files.
+- **The body is plain markdown,** with no required headings, except in rules (S4) and decisions (S5).
+- **Links** use repository-relative paths (`cortex/world/terms/fare.md`) or store-relative paths (`world/terms/fare.md`). Both resolve.
+
+## S3. Frontmatter
+
+Every file under `cortex/` except `cortex.json`, `MAP.md` and `history/sources/raw/**` starts with YAML frontmatter.
+
+| Field | Required | Shape | Meaning |
+|---|---|---|---|
+| `about` | yes | one line, ≤ 160 chars | The one-line hook. It says what the file answers, not what it is. |
+| `permanence` | yes | `stable` \| `changing` \| `volatile` | How fast the fact is expected to change. `now/` files are always `volatile`. |
+| `verified` | yes | `YYYY-MM-DD (observed\|told\|inferred)` | When the fact was last confirmed, and how: seen in code or output; told by a person; or inferred. |
+| `origin` | yes | one origin, or a list of them (forms below) | Where the fact came from: the pointer a reader follows to the original. Distinct from `verified`, which says when and how it was last confirmed. |
+| `depends_on` | no | list of repo-relative paths or globs | What makes it stale. Used by the staleness report (S11, `check.stale`). |
+| `need` | no | list of repo-relative paths or globs | Where in the code the fact matters. |
+| `aliases` | no | list of strings | Other names, including 3.x ids (`R-002`, `B-019`, `IR-001`, `S-021`). Searching for an alias finds the file. |
+| `privacy` | no | `private` | Advisory only (S1). |
+
+- **`origin` forms.** Each value is one of:
+
+  | Form | Points at | Set by |
+  |---|---|---|
+  | `session:<id>` | an agent session, by its opaque session id (Claude Code: `$CLAUDE_CODE_SESSION_ID`) | the `cortex-remember` skill |
+  | `source:history/sources/<file>.md` | an ingested document or transcript, by its digest | whoever files a fact taken from that source |
+  | `commit:<7–40 hex>` | a commit | a fact read from a commit or its message |
+  | `report:<repo-relative path>` | a loop or tool report | a loop that files a fact |
+  | `migrated:<3.x entry ref>@<short sha>` | the 3.x entry it was migrated from (S9.3), at the commit that was `HEAD` when `migrate --apply` ran | `cortex migrate` |
+  | `expired:now/<topic>.md` | the `now/` file an expired item was moved from (S6) | `cortex store expire` |
+  | `person:<who>@<YYYY-MM-DD>` | a person, when no session or document exists (a hand edit, or a harness with no session id) | a person, or the skill's fallback |
+  | `external:<who or where, ≤ 120 chars>` | where an original came from | only in `history/sources/` digests (S7) |
+
+  - **A list, when a file gathers several origins.** A file that receives an appended fact (the skill), several merged entries (migrate), or items from several `now/` files (expire) lists one origin per contribution, in the order they were added, without duplicates.
+  - **No hosts, user paths or URLs.** A session is named by its opaque id, never by a transcript path or a web link, because those carry a username or host into a public repository (RULES.md rule 20).
+  - **Resolution.** `source:` and `expired:` are store-relative paths, and `check.links` warns when a `source:` path does not resolve. `migrated:` points into git history: it is pinned to a commit because `.cortex/` is removed after acceptance, so `check.links` never resolves it. Entries from the gitignored 3.x folders (`pulse/`, `atlas/sources/`) are not in that commit, so their `migrated:` origin records only where they came from.
+  - **`origin` is not `source`.** Rules (S4) and changes (S5) also carry `source`, which says who has the authority behind the rule or the ask. `origin` is the provenance pointer, and every file has one.
+- **Per-module additions:**
+  - rules (S4);
+  - decisions and changes (S5);
+  - open pitfalls in `code/`: `status: open` (a 3.x open bug becomes one, S9.3); `status: resolved` is not allowed in `code/`, because a resolved incident belongs in `history/incidents/`.
+  - **Bugs in 4.0** (2026-10-19). A new bug gets no `B-NNN` id. It is filed as `code/<area>/<slug>.md` with `status: open`, and references to it use that path. Its diagnosis fields (type, severity, owner, fix in flight, the commit it was found at) are body lines, not frontmatter. A 3.x id stays an alias, so existing references still resolve. When the bug is fixed, its text and aliases move to a new `history/incidents/<YYYY-MM-DD>-<slug>.md`, and the `code/` file is removed.
+- **Last-updated date:** git log provides it; there is no field for it.
+- **Unknown fields** produce a `warning`.
+
+## S4. Rules (`world/rules/<rule>.md`)
+
+```yaml
+---
+about: State your degree of uncertainty in answers
+applies_when: "The agent is giving the user a factual claim, diagnosis, explanation, recommendation or estimate"
+scope: [user-message, agent-answer, action]
+match: { commands: [], paths: [] }
+source: user@2026-10-12
+origin: session:3f2a9c1e-7b4d-4e8a-9f60-2c1d5e8b7a94
+verified: 2026-10-12 (told)
+permanence: stable
+---
+End every substantive answer with an explicit confidence and what would change your mind.
+```
+
+| Field | Required | Shape |
+|---|---|---|
+| `applies_when` | yes | One sentence describing a **situation** the agent is in, written for a matcher. The literal value `always` marks a hard rule that MAP lists in full (S8). |
+| `scope` | yes | non-empty subset of `user-message`, `agent-answer`, `action`, `session-end` |
+| `match` | no | `{ commands: [<regex>], paths: [<glob>] }`: exact patterns, checked before any classifier |
+| `source` | yes | `<who>@<YYYY-MM-DD>`. Rules come only from the user or from an approved proposal. A rule an agent infers (from onboarding, a review or the code) is filed as a proposal in `now/proposals.md` (S6), never directly in `world/rules/`. |
+
+- **The body is the rule text,** imperative and complete, so it can be pushed verbatim.
+- **Description lint** (`check.applies-when`, a warning; the lint is deterministic):
+  - `applies_when` must be 6–60 words;
+  - it must start with an actor or a condition (`The agent`, `The user`, `A session`, `When`, `Before`, `After`, `While`);
+  - it must not contain the topic phrasings `about`, `related to`, `regarding`, `anything to do with`.
+- **The Senses seam.** Senses (a later MINOR) compiles `applies_when` + `scope` + `match` into its question registry. Without Senses, rules are pulled: MAP points at `world/rules/` and lists the `always` rules.
+
+## S5. Decisions and changes
+
+- **`world/decisions/<question>.md`:** one file per question, holding the current answer.
+  - `about` states the question.
+  - The body has three headings in this order: `## Answer`, `## Why`, `## Rejected`; `## Rejected` may say `none recorded`.
+  - The decision file is edited when the answer changes, and every edit is accompanied by a change event.
+- **`history/changes/<YYYY-MM-DD>-<slug>.md`:** one event per change.
+
+  | Field | Required | Shape |
+  |---|---|---|
+  | `kind` | yes | open enum: `change-request` \| `decision-change` \| `other`; new values produce a `warning`, not an `error` |
+  | `status` | yes | free string; for `change-request`, the 3.x intent statuses are kept verbatim (`open`, `reconciled`, …) |
+  | `decision` | no | path of the `world/decisions/` file this event changed |
+  | `spec` | no | dev or business spec id or path |
+  | `source` | no | path under `history/sources/`, or a verbatim quote of the ask |
+
+- **Status transitions** (2026-10-19). In a `history/changes/` file, `status` is the one field that may change after the first commit. Each transition appends one line at the end of the body, `- <YYYY-MM-DD>: <from> → <to>, <reason>`, and nothing else in the file changes except an appended `## Correction` section (S7).
+- **Lineage:** code → commit trailers (S10) → dev spec → business spec → change → source.
+- **Specs stay in Specflow's trees.** 4.0 does not touch them. Specs hold what the system should do; decisions hold the current answer to a question and why.
+
+## S6. `now/`: volatile items
+
+- **Every item carries `until: YYYY-MM-DD`.** An item is a list item or a `##`/`###` heading, and the lines under a heading belong to it.
+- **On or after its `until:` date,** an item is **expired**. `cortex store expire` lists the expired items, and with `--apply` removes them from `now/` and writes them to a new `history/changes/<date>-now-expired.md` with `kind: other` (a second run on the same day writes `<date>-now-expired-2.md`, and so on, so no history file is appended to). Nothing is lost: expiry is the one sanctioned deletion, and it is a move.
+- **An item without `until:` is an `error`.**
+- **Proposals** (2026-10-19). `now/proposals.md` holds the proposals waiting for a decision, one `##` item each: the heading `## <id>: <title>`, then the lines `until: <YYYY-MM-DD>` and `status: pending decision`, then the full text. A migrated item keeps its 3.x id (S9.3); a new item's id is `P-<YYYY-MM-DD>-<slug>`. A proposal is approved when a person, or an agent holding that authority, moves its text to its home in the store and removes the item. There is no approval command.
+- **Skill working output** (2026-10-19). Output a skill must keep beyond the session goes to `now/<topic>.md` as one `##` item with `until:`, with `####` or lower for any headings inside it. Scratch work stays outside the store and outside git.
+
+## S7. `history/`: append-only
+
+- **The filename is `<YYYY-MM-DD>-<slug>.md`;** the date is the event date.
+- **A history file is never edited after its first commit,** except to append a `## Correction <YYYY-MM-DD>` section, or, in `history/changes/`, to record a status transition (S5). The validator compares against git and warns on any other edit (`check.append-only`).
+- **Sources:**
+  - `history/sources/` holds a **redacted digest** (summary, claims, asks), with frontmatter `captured` (date), `raw` (the gitignored path of the original, optional) and the S3 `origin`. A digest's `origin` may use the `external:<who or where>` form, which no other folder allows;
+  - the digest of a public-repo project follows `visibility` (S9.1).
+
+## S8. `MAP.md` and the managed blocks
+
+### S8.1 What MAP holds, in order (≤ 60 lines, `check.map-size`)
+
+1. **What the store is and its four modules,** with one line each. This is fixed template text.
+2. **Read triggers.** Fixed template:
+   - unknown term → `world/terms/`;
+   - person or role → `world/people/`, `world/orgs/`;
+   - error message → grep its literal text in `cortex/`;
+   - "why" → `world/decisions/` and `history/`;
+   - "what's happening now" → `now/`;
+   - "how do we work" → `world/rules/`.
+3. **Placement procedure.** Fixed template:
+   - (a) search first (`rg -i '<word>' cortex/`, and `rg '^about:' cortex/` as the index);
+   - (b) append to the existing subject file if one exists;
+   - (c) otherwise create one using the kind → folder table (S8.2);
+   - (d) apply the subject tie-breaker;
+   - (e) one fact in exactly one file;
+   - (f) set `verified` with its method, and `origin` (S3);
+   - (g) end with the readback `Filing: <fact> → <path> (origin: <origin>)`.
+4. **Hard rules:** the full text of every rule with `applies_when: always`. These are generated.
+5. **Cast:** one line per `world/people/` file and per `world/orgs/` file, giving the name and its `about`. Generated.
+6. **Terms:** the term names (`world/terms/` filenames plus aliases) as one comma-separated line. Generated.
+
+### S8.2 Kind → folder table (in MAP)
+
+| The fact is… | Folder |
+|---|---|
+| how to work in a code area: pitfall, command, convention, why the code is this way | `code/<area>/` |
+| who someone is, or an organisation | `world/people/`, `world/orgs/` |
+| what a word means here | `world/terms/` |
+| an external system, environment, service or account pointer | `world/systems/` |
+| an agreement with a client, partner or the user | `world/agreements/` |
+| the current answer to a question, and why | `world/decisions/` |
+| how we work (a rule the user set) | `world/rules/` |
+| something that happened: a change, incident, measurement or ingested document | `history/<kind>/` |
+| true only for now: sprint, leave, status, risk, open question, idea | `now/` |
+
+**Subject tie-breaker (provisional; to be benched):**
+
+> The subject is what the fact constrains. If it constrains two, file it under the one the reader would be working in when it bites, and add an alias in the other.
+
+### S8.3 Managed blocks
+
+- **Markers:** `<!-- cortex:start v4.0 -->` … `<!-- cortex:end -->`, the same idiom as Part I §8. One block per file, and content outside the block is never touched.
+- **`CLAUDE.md`:** the block holds a two-line pointer and the line `@cortex/MAP.md`.
+- **`AGENTS.md`:** the block holds a copy of MAP's content, since Codex does not follow `@` includes.
+- **`cortex store map`** regenerates `MAP.md` and both blocks, and `check.map-fresh` warns when they are stale.
+
+## S9. Configuration, versioning and migration
+
+### S9.1 `cortex/cortex.json`
+
+```json
+{ "schemaVersion": "4.0", "visibility": { "repo": "public", "allow": [] } }
+```
+
+- **`schemaVersion` is required.**
+- **`migration`** (optional): `{ "from": "3.4", "accepted": "YYYY-MM-DD" | null }`, written by `cortex migrate --apply` (`accepted: null`) and `--accept`. A 4.0 store **without** this field (a fresh `cortex store init` in a project with no `.cortex/`) counts as accepted. Until it is accepted, the managed blocks stay at 3.x (S8.3).
+- **`visibility`** keeps its Part I §10.1 meaning and its RULES.md rule 20 duty, applied to `cortex/world/` and `cortex/code/` instead of `compass/` and `atlas/`. `repo` is `public`, `private` or `unknown`. A migrated store carries `unknown` when the 3.x config never recorded it and `--visibility` was not given.
+- **Unknown keys** produce a `warning`.
+- **The 3.x keys `hooks`, `pulse`, `harness`, `loop` and `profile` do not exist in 4.0.** Migration lists them as retired.
+
+### S9.2 Detection
+
+- **A project is 4.0** when `cortex/cortex.json` exists.
+- **Both stores at once:** while a project has `.cortex/` (3.x) as well, the 3.x commands keep working on `.cortex/` and the `cortex store` commands work on `cortex/`, until the migration is accepted.
+
+### S9.3 `cortex migrate` (3.x → 4.0)
+
+- **Dry run by default.** It writes only its report.
+- **`--apply`** writes `cortex/` and leaves `.cortex/` untouched.
+- **`--accept`** switches the managed blocks to 4.0. It also unregisters the 3.x hooks, installs the 4.0 skill bundles, and lists, without touching, the superseded 3.x skill bundles and the project's scheduled-task payloads (amendment 2026-10-19). It deletes nothing. Deleting `.cortex/` is left to the human, and the report lists the command.
+- **Deterministic.** Judgement calls take a **deterministic default**, flagged `review` in the report. Producing a plan is agentic work, outside Core: the `cortex-migrate` skill does it.
+- **The plan file** (`--plan <file>`, JSON) overrides any default, for **any** entry, including one that is retired or dropped by decision. A value takes one of four forms:
+  - `"<4.0 target path>"`: verbatim rescue;
+  - `"history/sources/raw/<path>"`: a raw rescue, copied byte for byte;
+  - `"retired"`: an explicit retire;
+  - `{ "target": "<path>", "file": "<agent-written body>" }`: a **digest**, whose content replaces the 3.x body.
+  A key ending in `/**` sets the disposition of every entry under that prefix, and an exact ref wins over it. A file that is not markdown is never migrated verbatim into a `.md` target: it is rescued as raw or as a digest.
+- **Re-runnable.** Applying the same inputs twice produces the same tree.
+- **Coverage unit: the entry.**
+  - A single-subject 3.x file is one entry.
+  - A multi-entry file contributes one entry per top-level list item or `##` section: `preferences.md`, `standing-authorities.md`, `environment.md`, `do-not-repeat.md`, `registry.md`, each `intent-register.yaml` entry, each `pulse/suggestions.md` `S-NNN`, each `pulse/gaps.md` `G-NNN`.
+  - **Every entry gets exactly one disposition:** `migrated → <path>`, `retired` (with the reason `machinery or regenerable`, `unpromoted work`, `not a store file`, `not a store folder`, or a plan decision), `dropped by decision`, or `pending decision` (proposals).
+  - **Coverage** is the share of entries with a disposition, and the target is 100%.
+  - **Dropped by decision** (2026-10-14): the 3.x insight layer's inferred code summaries are not migrated and not kept frozen. They are `insight/anatomy/**`, `insight/concepts/**`, the insight graph with its indexes (`insight/graph.json`, `tags.json`, `clusters.json`, `reverse-index.json`, `ledger.json`), and the scoped layout's `insight/scopes/**`. The report lists them as one group per kind (anatomy, concepts, graph, other) with a count of files and of scopes, and prints the command that removes them. `migrate` never runs that command. The concept files' first definition lines are listed, so a plan can rescue a definition into `world/terms/`. `insight/observations/` is not part of the drop: observations are facts, and they migrate.
+  - **Unpromoted work must be decided** (2026-10-19). Everything under `pulse/` that is not on the regenerable list is `unpromoted work`: reports, onboarding output, proposal notes, threads, and a `dismissed.md` with entries. `--apply` refuses while any such entry has no plan decision.
+  - **No loss** (2026-10-19). Every tracked `.cortex/` file lands verbatim in `cortex/`, or is decided (by the plan, or by the recorded drop), or is regenerable. Every untracked file is regenerable, decided or landed. The report header counts both, and `--apply` refuses while either has an undecided file. Raw files are copied byte for byte, and two raws never share a path.
+  - **Redactions.** `--redact <file>` replaces named text (client or project names) with neutral labels, and applies per-entry edits, in the migrated text only. The report lists refs and counts, never the original text.
+  - **Visibility.** When the 3.x config does not record `visibility.repo`, the report says so and checks as if the repo were public. `--visibility public|private` sets it for the report and for the `cortex.json` that `--apply` writes.
+  - **The citation graph becomes `origin`.** A migrated entry's 3.x `provenance:`/`derives_from:`, `sessions:`/`session:` and atlas `sources:` references are appended to its `origin` (S3): a target that migrates to a source digest gives `source:`, another migrated entry gives `migrated:`, and a `claude-sessions/<user>/<id>` reference gives `session:<id>`. A reference that does not resolve, or whose target is retired or dropped, is listed in the report as `unresolved provenance` with its old path, and the report counts `provenance refs: <resolved>/<total>`.
+
+**Mapping (the defaults).** Dates, wherever a row uses one, come from the first of `date`, `opened`, `updated`, `captured`, `ingested_at` and `discovered`, then the last git commit date of the 3.x file, then the apply date. A path is never dated `0000-00-00`.
+
+| 3.x | 4.0 default | Flag |
+|---|---|---|
+| `compass/rules/R-*.md` | `world/rules/<slug>.md`; `governs` → `match.paths`; `applies_when` drafted from the title; `scope: [action]`; id → `aliases` | review (`applies_when`) |
+| `compass/bugs/B-*` with status `resolved` or `fixed-verified` | `history/incidents/<date>-<slug>.md` | — |
+| `compass/bugs/B-*`, any other status | `code/<area>/<slug>.md` with `status: open`; area = first segment of the first `affects` entry, else of the first `specs`/`related_specs` entry, else `repo` | review when the status is outside `open`, `triaged`, `resolved` |
+| `compass/environment.md` entries | `world/systems/<slug>.md` | review; `check.visibility` runs |
+| `compass/preferences.md` entries | `world/agreements/working-preferences.md`, one section each | review (code conventions belong in `code/`) |
+| `compass/do-not-repeat.md` entries | `code/repo/<slug>.md` | review |
+| `compass/standing-authorities.md` | `world/rules/agent-authority.md` (`applies_when` drafted) | review |
+| `compass/registry.md` entries | retired; every id becomes an alias of its file | — |
+| `atlas/decisions/<date>-<slug>.md` | `world/decisions/<slug>.md` + `history/changes/<date>-<slug>.md` (`kind: decision-change`) | review when two decisions bear on one question |
+| `atlas/stakeholders/*` | `world/people/<slug>.md` (or `world/orgs/` if the file has no person name) | — |
+| `atlas/domain/*` | `world/terms/<term>.md`; `aliases` kept | — |
+| `atlas/evidence/*` | `history/measurements/<date>-<slug>.md` | — |
+| `atlas/sources/<stem>.<ext>` (any extension; the stem ends at the first `.`), with its `<stem>.meta.md` if any | `history/sources/<date>-<slug>.md` (digest from the `.meta.md`, else a stub naming the raw); raw → `history/sources/raw/<digest-stem><ext>`; a carried `origin:` text: a claude.ai session URL or "Claude Code session <id>" → `session:<id>`, other URLs removed, the rest → `external:` (≤ 120 chars) | review when there is no `.meta.md`; review `origin URL stripped` |
+| `archive/documents/<doc>/` | `history/sources/<date>-<slug>.md` (digest from `extracted/`; its `origin:` text converted as for atlas sources); raw = every file except `metadata.yaml` and `extracted/**`. One raw → `history/sources/raw/<digest-stem><ext>` (`<ext>` is everything after `source`); several → `history/sources/raw/<digest-stem>/<path in the folder>` | — |
+| `archive/<other folder>/**` (not `documents/` or `types/`) | retired, `not a store folder`, as `unpromoted work`: the plan decides it | review |
+| `archive/intent-register.yaml` entries | `history/changes/<date>-<id-slug>.md`, `kind: change-request`, `status` kept, `spec` from `landing` | — |
+| `insight/observations/*` | `code/<area>/<slug>.md` by default | review (may belong in `world/` or `now/`) |
+| `insight/anatomy/**`, `insight/concepts/**`, `insight/{graph,tags,clusters,reverse-index,ledger}.json`, `insight/scopes/**` | dropped by decision (counted per kind; removal command printed, never run) | — |
+| `pulse/suggestions.md` `S-NNN`, `pulse/gaps.md` `G-NNN` | `now/proposals.md`, one item each, `until:` = migration date + 30 days, full text kept | pending decision |
+| `_index.md` files, `recall-index.json`, `constellation.json`, `archive/register.md`, `archive/types/**`, `insight/scope-registry.yaml`, `pulse/state/**`, `pulse/extraction/**`, `pulse/sessions/**`, `pulse/scratch/**`, an empty or template-only `pulse/dismissed.md` | retired, `machinery or regenerable` | — |
+| every other file under `pulse/` (reports, onboarding output, proposal notes, threads, a `dismissed.md` with entries) | retired, `unpromoted work`: `--apply` refuses until the plan decides it | — |
+| `.DS_Store`, `._*`, `Thumbs.db` | retired, `not a store file` | — |
+| `cortex.config.json` | `cortex/cortex.json` (`visibility` kept, or set by `--visibility`; other keys listed as retired) | — |
+
+## S10. Commit trailers
+
+| Trailer | Value | Meaning |
+|---|---|---|
+| `Spec:` | spec id | The spec the commit implements or changes. |
+| `Source:` | `history/sources/…` path or `history/changes/…` path | Where the ask came from. |
+
+Both are optional and repeatable. A trailer that names a spec id or path that does not exist produces a `warning` (`check.trailers`, over the last 50 commits).
+
+## S11. Validator checks (4.0)
+
+They run through `cortex store validate`. A check that errors makes the command exit 1; one that only warns still exits 0.
+
+| Check | Level | Rule |
+|---|---|---|
+| `check.store-config` | error | `cortex.json` is valid, `schemaVersion` parses, MAJOR = 4 |
+| `check.store-layout` | error | only the S1 folders exist; no files directly under `world/` or `history/` |
+| `check.frontmatter` | error | S3 required fields present and well-formed, `origin` included (a known form; `external:` only under `history/sources/`); unknown fields produce a warning |
+| `check.naming` | error | kebab-case; date prefix under `history/` and nowhere else; no 3.x id as a filename |
+| `check.rule` | error | S4 fields; `scope` values in the enum |
+| `check.applies-when` | warning | S4 description lint |
+| `check.decision` | warning | S5 headings in order |
+| `check.change` | error | S5 required fields; unknown `kind` produces a warning |
+| `check.now-until` | error | every `now/` item carries `until:`; an expired item produces a warning |
+| `check.near-duplicate` | warning | two files whose `about` lines share ≥ 0.8 token Jaccard (after stop-words), or two files with the same name in different folders |
+| `check.aliases` | error | an alias names two files |
+| `check.links` | warning | a store-relative link, or a `source:` origin, that does not resolve |
+| `check.append-only` | warning | a committed `history/` file changed other than by an appended `## Correction`, or, in `history/changes/`, by a status transition (S5) |
+| `check.stale` | warning | a `depends_on` path changed in git after the file's `verified` date |
+| `check.map-size` / `check.map-fresh` | warning | MAP over 60 lines; MAP or a managed block out of date |
+| `check.visibility` | warning | Part I's rule, over `cortex/world/` and `cortex/code/`; on a public store, also any line containing `(private)` |
+| `check.trailers` | warning | S10 |
+
+- **`cortex validate` on a 4.0 project** (2026-10-19). When `cortex/cortex.json` exists and `.cortex/cortex.config.json` does not, `cortex validate` runs the checks above and Part I's spec-tree checks: `check.overview-present`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec` and `check.xref-symmetry`. A `governed_by` id that is an alias of a `cortex/` file resolves. Exit codes are as in Part I. When both stores exist, `cortex validate` validates the 3.x store as before.

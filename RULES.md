@@ -38,11 +38,15 @@ A hook may surface a warning but must never fail, block, or stall a session. **T
 
 **Why:** a hook must never break or slow the user's session. The exception exists to measure, once and reversibly, whether a summary can stand in for a read; if the proceed-rate says it cannot, the exception is removed, not widened.
 
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): there is no exception. A 4.0 store has no Read-deferral gate, so no hook may deny, ask, or exit non-zero.
+
 ## 7. Loops and pulse write ONLY to `.cortex/pulse/` and propose changes for human approval.
 
 They never mutate compass/anatomy/atlas/specs directly. Sole exception: the test-runner, which writes code behind a writer/verifier split.
 
 **Why:** the persistence layer stays a curated artefact.
+
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): loops write proposals only to `cortex/now/proposals.md`, each item with an `until:` date (schema S6), and never edit `cortex/code/`, `cortex/world/` or the specs directly. `history/` is append-only (S7); the sanctioned writes are `cortex store expire` moving expired `now/` items into `history/changes/`, and the `cortex-remember` skill filing a fact the user or the session supplied, with its readback line. The test-runner exception is unchanged.
 
 ## 8. Every artefact carries YAML frontmatter conforming to the schema.
 
@@ -53,6 +57,8 @@ They never mutate compass/anatomy/atlas/specs directly. Sole exception: the test
 Each carries an `_index.md` or `_overview.md` written as a prompt, not a passive placeholder.
 
 **Why:** it's the primary scaffolding that makes Cortex used, not just installed.
+
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): `cortex/` has no `_index.md` files. Its one index is the generated `cortex/MAP.md` (schema S8), which every session loads; `specs/` and `specs-business/` keep their `_overview.md` files as above.
 
 ## 10. `implements:` is strictly single-valued.
 
@@ -65,6 +71,8 @@ A many-to-one mapping signals a spec-decomposition problem to fix, not a frontma
 CLAUDE.md Cortex section <400 tokens, each `_index.md` <300 (a generated recall block counts toward the file's budget and collapses to fit it), SessionStart injection <100, PreRead injection <50 for the insight summary plus at most 50 for the recall marker line — combined ceiling 100, or 125 with the writeback invitation (one extended figure, not a second pool), search-time annotation (PreToolUse Grep/Bash) ≤60 and at most two lines, emitted only on a match, SessionEnd and Stop inject nothing.
 
 **Why:** scaffolding is read every session; tokens must buy grounding.
+
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): the always-loaded scaffolding is `cortex/MAP.md`, at most 60 lines (`check.map-size`), reached from the `CLAUDE.md` managed block's `@cortex/MAP.md` line (the block itself is two lines plus that include). The PreRead, search-time, SessionStart, SessionEnd and Stop figures above have no 4.0 counterpart, because a 4.0 store installs none of those hooks.
 
 ## 12. `environment.md` and compass hold pointers, never secrets.
 
@@ -87,6 +95,8 @@ Never "here are the specs, build it all."
 `.cortex/atlas/sources/` and `.cortex/pulse/` are gitignored (sensitive/transient); `.cortex/compass/` and atlas (minus sources) are committable durable knowledge, and `.cortex/insight/` is committed in full (machine-owned AND committed — the fourth git-policy quadrant, schema Decision 1).
 
 **Why:** separate regenerable working state from durable project knowledge.
+
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): everything under `cortex/` is tracked except `cortex/history/sources/raw/`, which holds raw originals and is gitignored (`init` and `migrate` write that line). There is no machine-owned layer: the 3.x insight summaries are dropped by decision (S9.3).
 
 ## 16. The constellation is read-only.
 
@@ -117,3 +127,5 @@ When a change — human- or agent-made — modifies validator checks, schema cla
 `cortex.config.json` `visibility.repo` is `public`, `private` or `unknown` (default). When it is `public`, tracked files under `.cortex/compass/` and `.cortex/atlas/` carry no hosts, addresses, ports, SSH targets or account identifiers — `check.visibility` warns on each line it finds (schema §10.1, `schema.visibility`), and a file the human has judged goes on `visibility.allow` or its contents move to an untracked note. Rule 12 covers secrets; this rule covers the aggregate.
 
 **Why:** an external team's `environment.md` accumulated a production map by reasonable increments — no secret in any line, reconnaissance in the whole — in a public repository. Nothing in Cortex knew the repository was public, so nothing could warn.
+
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): the field lives in `cortex/cortex.json` `visibility`, and the rule applies to tracked files under `cortex/world/` and `cortex/code/` instead of `compass/` and `atlas/`. `origin` values name sessions by opaque id, never by a transcript path or URL (schema S3).

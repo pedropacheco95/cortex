@@ -1,6 +1,6 @@
 # Anatomy — Overview
 
-> **SUPERSEDED at v3 (build-order-v3 step 7):** the anatomy module is retired and absorbed into `insight/` (design §5.10). Every spec in this folder carries a supersession banner; retained for lineage.
+> **SUPERSEDED at v3 (build-order-v3 step 7):** the anatomy module is retired and absorbed into `insight/` (design §5.10). Every spec in this folder carries a supersession banner; retained for lineage. Its v3 successor, the insight layer, is in turn dropped by decision at schema 4.0 (2026-10-14).
 
 ## What this is
 

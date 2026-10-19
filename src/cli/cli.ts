@@ -48,7 +48,7 @@
  * line after this paragraph is its mirror, asserted equal by
  * tests/atomic/core-cli/dispatch.test.ts so the two cannot drift.
  *
- * Verbs: init, sync, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
+ * Verbs: init, sync, store, migrate, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
  */
 import { init } from './init.js';
 import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
@@ -63,6 +63,8 @@ import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profi
 const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['init', 'init [target] [--force] [--yes] [--no-llm] [--partial] [--profile <name>] [--timeout-ms <n>]'],
   ['sync', 'sync [target] [--yes]'],
+  ['store', 'store init|validate|map|expire|stale … (the 4.0 store, cortex/)'],
+  ['migrate', 'migrate [--plan <file>] [--report <file>] [--json] [--apply|--accept]'],
   ['validate', 'validate [path] [--json]'],
   ['scan', 'scan'],
   ['insight', 'insight file|concept|element <query> [--json]'],
@@ -571,6 +573,18 @@ export async function run(argv: string[]): Promise<number> {
   // pull side of recall over `.cortex/recall-index.json` (recall.why Rules
   // 1–7). Index-only, read-only; the verb is passed through so the module
   // owns both grammars. Never reaches the Rule 18 gate below.
+  // `cortex store <init|validate|map|expire|stale>` — the 4.0 store under
+  // `cortex/` (schema Part II; specs store.*). `cortex migrate` moves a 3.x
+  // `.cortex/` store to it (store.migrate).
+  if (argv[0] === 'store') {
+    const { storeCli } = await import('../store/cli.js');
+    return storeCli(argv.slice(1), '.');
+  }
+  if (argv[0] === 'migrate') {
+    const { migrateCli } = await import('../store/migrate/cli.js');
+    return migrateCli(argv.slice(1), '.');
+  }
+
   if (argv[0] === 'why' || argv[0] === 'recall') {
     const { recallCli } = await import('../recall/cli.js');
     return recallCli(argv, '.');

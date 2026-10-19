@@ -51,6 +51,10 @@ import {
   promptYesNo,
   createPromptInterface,
   upsertClaudeMd,
+  FOUR_OH_BLOCK_OWNED,
+  FOUR_OH_STORE_REFUSAL,
+  fourOhStoreAccepted,
+  fourOhStoreOwnsBlock,
   mergeSettings,
   installGitHook,
   registrationSummaryLines,
@@ -475,6 +479,11 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   const home = opts.home ?? os.homedir();
   const yes = opts.yes ?? false;
 
+  // store.migrate Rule 11 (amendment 2026-10-19): an accepted or fresh 4.0 store is not 3.x's to manage.
+  if (fourOhStoreAccepted(absRoot)) {
+    return { exitCode: 3, summary: `cortex sync: refused — ${FOUR_OH_STORE_REFUSAL}. Nothing was written.` };
+  }
+
   // Rule 1 — preflight: refuse before anything is written.
   if (platform !== 'darwin') {
     return {
@@ -607,7 +616,7 @@ export async function sync(root: string, opts: SyncOptions = {}): Promise<SyncRe
   lines.push('cortex sync — summary');
   lines.push(`Project: ${absRoot} (schema ${SCHEMA_VERSION})`);
   lines.push(`Schema version: ${schemaVersionState}.`);
-  lines.push(`CLAUDE.md: managed cortex block ${claudeMdState}.`);
+  lines.push(claudeMdState === 'owned' ? `CLAUDE.md: ${FOUR_OH_BLOCK_OWNED}.` : `CLAUDE.md: managed cortex block ${claudeMdState}.`);
   lines.push(`_index.md: ${indexResult.current.length} current, ${indexResult.localised.length} left as localised.`);
   if (indexResult.current.length > 0) lines.push(`  Current: ${indexResult.current.join(', ')}.`);
   if (indexResult.localised.length > 0) lines.push(`  Localised (left alone): ${indexResult.localised.join(', ')}.`);

@@ -17,6 +17,8 @@ governs:
 
 # One `cortex-loop` Bundle — eleven loop skills become one callable-only skill
 
+> **PARTLY SUPERSEDED at schema 4.0 (draft, 2026-10-14).** The two insight members, `insight-refresh-daily` and `insight-refresh-full` (and their `references/insight-refresh-*.md` files), are retired in a 4.0 store: the insight layer is dropped by decision (`cortex-schema.md` Part II S9.3; `insight.refresh-loops` carries the full banner). **The whole spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and the bundle keeps its eleven members until then. Retired with a banner, not deleted.
+
 ## Intent
 
 The eleven loop/pulse skill bundles (`cortex-pulse-hygiene`, `cortex-loop-bug-triage`,

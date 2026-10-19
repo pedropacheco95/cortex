@@ -18,6 +18,8 @@ governs:
 
 # Insight Refresh Loops — fast, daily, and full maintenance of the codebase-understanding layer
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** A 4.0 store (`cortex/`, `cortex-schema.md` Part II) has no insight layer: the inferred code summaries (anatomy, concepts and the graph) are dropped by decision, not migrated and not kept frozen (S9.3, `store.migrate` Rule 12). The two scheduled loops `cortex-loop-insight-refresh-daily` and `cortex-loop-insight-refresh-full` are therefore retired, and so is the post-commit fast tier that feeds them. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and the loops keep running until then. Retired with a banner, not deleted, per the repo's convention; nothing on disk is removed by this change.
+
 ## Intent
 
 Three loops keep `.cortex/insight/` current after `insight.extract-skill` has produced it, scaling with *meaningful* change rather than commit volume (v3 design §5.9). `cortex-loop-insight-refresh-fast` is the git post-commit deterministic tier (no LLM). `cortex-loop-insight-refresh-daily` runs hybrid significance triage and re-extracts L2/L3 where warranted, neighbourhood-updating L4 as a byproduct. `cortex-loop-insight-refresh-full` runs the periodic ground-truth L4 regeneration. All three are the machine-owned-ungated maintainer class (schema Decision 13 carried into v3): they maintain insight state directly and propose nothing (RULES 7). Where the Graphify study's DIFFERENTLY verdicts say v3 must go beyond Graphify — reverse-dependency invalidation, confidence-aging, scope-scoped invalidation — these loops are exactly where that machinery lives (design §5.9).

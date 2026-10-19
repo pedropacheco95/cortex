@@ -14,6 +14,8 @@ governed_by:
 
 # Threads Ledger — `pulse/threads/` and `cortex thread`
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** In a 4.0 store (`cortex/`, `cortex-schema.md` Part II), the threads ledger does not exist: the knowledge it served is found by pulling from `cortex/MAP.md`, and rules will be pushed by the optional Senses layer. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`), and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 A thread is a thing a session left unresolved: a question it asked and nobody answered, an offer

@@ -15,6 +15,8 @@ governed_by:
 
 # Distil Loop
 
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** In a 4.0 store (`cortex/`, `cortex-schema.md` Part II), the distil loop and its suggestion queue does not exist: the knowledge it served is found by pulling from `cortex/MAP.md`, and rules will be pushed by the optional Senses layer. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`), and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
 ## Intent
 
 `cortex pulse-distil` (weekly, design §10.3) turns what the developer keeps saying in sessions into cerebrum proposals: it reads this project's transcripts since the last run (via `loops.session-reading`), extracts recurring patterns — corrections, preferences, environment facts — and writes threshold-passing candidates as §4.5 proposal sections the pulse gate can accept. Deterministic bookends, agentic middle: Core collects and Core proposes; only the pattern judgment is LLM work.
