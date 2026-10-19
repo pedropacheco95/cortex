@@ -10,6 +10,7 @@ implemented_by:
   - ../../specs/store/managed-block.spec.md
   - ../../specs/store/migrate.spec.md
   - ../../specs/store/remember-skill.spec.md
+  - ../../specs/store/migrate-skill.spec.md
 ---
 
 # The agent has the project's knowledge and rules when it needs them, and keeps them current
@@ -29,7 +30,7 @@ The developer who owns the project, and every agent session working in it: inter
 3. The agent is about to do something the user has a rule about. The rule is a file of its own, which says when it applies. The agent finds it from the map.
 4. The user explains something that isn't written down. The agent files it in the one file where it belongs, and says so in one visible line: "Filing: <fact> → <path> (origin: <session>)". The user can correct it on the spot, and anyone can later trace the fact back to the conversation it came from.
 5. A week later, the code a fact depends on has changed. The project's self-check says the fact may be stale. A "until Friday" note expires on its own date and moves to history.
-6. A project on the old hidden layout migrates. The migration shows, before anything is written, where every old fact will go, and nothing is lost or silently dropped. The old inferred code summaries are dropped openly: the report counts them and prints the command that removes them.
+6. A project on the old hidden layout migrates. The migration shows, before anything is written, where every old fact will go, and nothing is lost or silently dropped. The old inferred code summaries are dropped openly: the report counts them and prints the command that removes them. Working files that may hold knowledge (reports, onboarding notes, open questions) are never retired silently: an agent reads them and decides rescue, digest or retire, and a person sees every decision before anything is written. Accepting the migration also retires the old hooks and loops around the store, without deleting anything.
 
 ## Business Rules
 

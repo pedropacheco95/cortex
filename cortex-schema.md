@@ -1683,7 +1683,7 @@ End every substantive answer with an explicit confidence and what would change y
 
 - **`schemaVersion` is required.**
 - **`migration`** (optional): `{ "from": "3.4", "accepted": "YYYY-MM-DD" | null }`, written by `cortex migrate --apply` (`accepted: null`) and `--accept`. A 4.0 store **without** this field (a fresh `cortex store init` in a project with no `.cortex/`) counts as accepted. Until it is accepted, the managed blocks stay at 3.x (S8.3).
-- **`visibility`** keeps its Part I §10.1 meaning and its RULES.md rule 20 duty, applied to `cortex/world/` and `cortex/code/` instead of `compass/` and `atlas/`.
+- **`visibility`** keeps its Part I §10.1 meaning and its RULES.md rule 20 duty, applied to `cortex/world/` and `cortex/code/` instead of `compass/` and `atlas/`. `repo` is `public`, `private` or `unknown`. A migrated store carries `unknown` when the 3.x config never recorded it and `--visibility` was not given.
 - **Unknown keys** produce a `warning`.
 - **The 3.x keys `hooks`, `pulse`, `harness`, `loop` and `profile` do not exist in 4.0.** Migration lists them as retired.
 
@@ -1696,25 +1696,34 @@ End every substantive answer with an explicit confidence and what would change y
 
 - **Dry run by default.** It writes only its report.
 - **`--apply`** writes `cortex/` and leaves `.cortex/` untouched.
-- **`--accept`** switches the managed blocks to 4.0. Deleting `.cortex/` is left to the human, and the report lists the command.
-- **Deterministic.** Judgement calls take a **deterministic default**, flagged `review` in the report. A plan file (`--plan <file>`, JSON: `{ "<3.x entry ref>": "<4.0 target path>" }`) overrides any default; producing that plan is agentic work, outside Core.
+- **`--accept`** switches the managed blocks to 4.0. It also unregisters the 3.x hooks, installs the 4.0 skill bundles, and lists, without touching, the superseded 3.x skill bundles and the project's scheduled-task payloads (amendment 2026-10-19). It deletes nothing. Deleting `.cortex/` is left to the human, and the report lists the command.
+- **Deterministic.** Judgement calls take a **deterministic default**, flagged `review` in the report. Producing a plan is agentic work, outside Core: the `cortex-migrate` skill does it.
+- **The plan file** (`--plan <file>`, JSON) overrides any default, for **any** entry, including one that is retired or dropped by decision. A value takes one of four forms:
+  - `"<4.0 target path>"`: verbatim rescue;
+  - `"history/sources/raw/<path>"`: a raw rescue, copied byte for byte;
+  - `"retired"`: an explicit retire;
+  - `{ "target": "<path>", "file": "<agent-written body>" }`: a **digest**, whose content replaces the 3.x body.
+  A key ending in `/**` sets the disposition of every entry under that prefix, and an exact ref wins over it. A file that is not markdown is never migrated verbatim into a `.md` target: it is rescued as raw or as a digest.
 - **Re-runnable.** Applying the same inputs twice produces the same tree.
 - **Coverage unit: the entry.**
   - A single-subject 3.x file is one entry.
   - A multi-entry file contributes one entry per top-level list item or `##` section: `preferences.md`, `standing-authorities.md`, `environment.md`, `do-not-repeat.md`, `registry.md`, each `intent-register.yaml` entry, each `pulse/suggestions.md` `S-NNN`, each `pulse/gaps.md` `G-NNN`.
-  - **Every entry gets exactly one disposition:** `migrated → <path>`, `retired (machinery)`, `dropped by decision`, or `pending decision` (proposals).
+  - **Every entry gets exactly one disposition:** `migrated → <path>`, `retired` (with the reason `machinery or regenerable`, `unpromoted work`, `not a store file`, `not a store folder`, or a plan decision), `dropped by decision`, or `pending decision` (proposals).
   - **Coverage** is the share of entries with a disposition, and the target is 100%.
-  - **Dropped by decision** (2026-10-14): the 3.x insight layer's inferred code summaries are not migrated and not kept frozen. They are `insight/anatomy/**`, `insight/concepts/**` and the insight graph with its indexes (`insight/graph.json`, `tags.json`, `clusters.json`, `reverse-index.json`, `ledger.json`). The report lists them as one group per folder, with a count of files, and prints the command that removes them. `migrate` never runs that command. `insight/observations/` is not part of the drop: observations are facts, and they migrate.
+  - **Dropped by decision** (2026-10-14): the 3.x insight layer's inferred code summaries are not migrated and not kept frozen. They are `insight/anatomy/**`, `insight/concepts/**`, the insight graph with its indexes (`insight/graph.json`, `tags.json`, `clusters.json`, `reverse-index.json`, `ledger.json`), and the scoped layout's `insight/scopes/**`. The report lists them as one group per kind (anatomy, concepts, graph, other) with a count of files and of scopes, and prints the command that removes them. `migrate` never runs that command. The concept files' first definition lines are listed, so a plan can rescue a definition into `world/terms/`. `insight/observations/` is not part of the drop: observations are facts, and they migrate.
+  - **Unpromoted work must be decided** (2026-10-19). Everything under `pulse/` that is not on the regenerable list is `unpromoted work`: reports, onboarding output, proposal notes, threads, and a `dismissed.md` with entries. `--apply` refuses while any such entry has no plan decision.
+  - **No loss** (2026-10-19). Every tracked `.cortex/` file lands verbatim in `cortex/`, or is decided (by the plan, or by the recorded drop), or is regenerable. Every untracked file is regenerable, decided or landed. The report header counts both, and `--apply` refuses while either has an undecided file. Raw files are copied byte for byte, and two raws never share a path.
   - **Redactions.** `--redact <file>` replaces named text (client or project names) with neutral labels, and applies per-entry edits, in the migrated text only. The report lists refs and counts, never the original text.
+  - **Visibility.** When the 3.x config does not record `visibility.repo`, the report says so and checks as if the repo were public. `--visibility public|private` sets it for the report and for the `cortex.json` that `--apply` writes.
   - **The citation graph becomes `origin`.** A migrated entry's 3.x `provenance:`/`derives_from:`, `sessions:`/`session:` and atlas `sources:` references are appended to its `origin` (S3): a target that migrates to a source digest gives `source:`, another migrated entry gives `migrated:`, and a `claude-sessions/<user>/<id>` reference gives `session:<id>`. A reference that does not resolve, or whose target is retired or dropped, is listed in the report as `unresolved provenance` with its old path, and the report counts `provenance refs: <resolved>/<total>`.
 
-**Mapping (the defaults):**
+**Mapping (the defaults).** Dates, wherever a row uses one, come from the first of `date`, `opened`, `updated`, `captured`, `ingested_at` and `discovered`, then the last git commit date of the 3.x file, then the apply date. A path is never dated `0000-00-00`.
 
 | 3.x | 4.0 default | Flag |
 |---|---|---|
 | `compass/rules/R-*.md` | `world/rules/<slug>.md`; `governs` → `match.paths`; `applies_when` drafted from the title; `scope: [action]`; id → `aliases` | review (`applies_when`) |
-| `compass/bugs/B-*` with status `resolved` | `history/incidents/<opened>-<slug>.md` | — |
-| `compass/bugs/B-*`, open or triaged | `code/<area>/<slug>.md` with `status: open`; area = first segment of the first `affects` spec id, or of its path | — |
+| `compass/bugs/B-*` with status `resolved` or `fixed-verified` | `history/incidents/<date>-<slug>.md` | — |
+| `compass/bugs/B-*`, any other status | `code/<area>/<slug>.md` with `status: open`; area = first segment of the first `affects` entry, else of the first `specs`/`related_specs` entry, else `repo` | review when the status is outside `open`, `triaged`, `resolved` |
 | `compass/environment.md` entries | `world/systems/<slug>.md` | review; `check.visibility` runs |
 | `compass/preferences.md` entries | `world/agreements/working-preferences.md`, one section each | review (code conventions belong in `code/`) |
 | `compass/do-not-repeat.md` entries | `code/repo/<slug>.md` | review |
@@ -1724,13 +1733,17 @@ End every substantive answer with an explicit confidence and what would change y
 | `atlas/stakeholders/*` | `world/people/<slug>.md` (or `world/orgs/` if the file has no person name) | — |
 | `atlas/domain/*` | `world/terms/<term>.md`; `aliases` kept | — |
 | `atlas/evidence/*` | `history/measurements/<date>-<slug>.md` | — |
-| `atlas/sources/*`, `archive/documents/*` | `history/sources/<date>-<slug>.md` (digest from `extracted/` or the `.meta.md`); raw → `history/sources/raw/` | — |
+| `atlas/sources/<stem>.<ext>` (any extension; the stem ends at the first `.`), with its `<stem>.meta.md` if any | `history/sources/<date>-<slug>.md` (digest from the `.meta.md`, else a stub naming the raw); raw → `history/sources/raw/<digest-stem><ext>` | review when there is no `.meta.md` |
+| `archive/documents/<doc>/` | `history/sources/<date>-<slug>.md` (digest from `extracted/`); raw = every file except `metadata.yaml` and `extracted/**`. One raw → `history/sources/raw/<digest-stem><ext>` (`<ext>` is everything after `source`); several → `history/sources/raw/<digest-stem>/<path in the folder>` | — |
+| `archive/<other folder>/**` (not `documents/` or `types/`) | retired, `not a store folder`, as `unpromoted work`: the plan decides it | review |
 | `archive/intent-register.yaml` entries | `history/changes/<date>-<id-slug>.md`, `kind: change-request`, `status` kept, `spec` from `landing` | — |
 | `insight/observations/*` | `code/<area>/<slug>.md` by default | review (may belong in `world/` or `now/`) |
-| `insight/anatomy/**`, `insight/concepts/**`, `insight/{graph,tags,clusters,reverse-index,ledger}.json` | dropped by decision (counted per folder; removal command printed, never run) | — |
-| `pulse/suggestions.md` `S-NNN`, `pulse/gaps.md` `G-NNN` (pending) | `now/proposals.md`, one item each, `until:` = migration date + 30 days, full text kept | pending decision |
-| `_index.md` files, `recall-index.json`, `constellation.json`, `archive/register.md`, `archive/types/*`, `pulse/**` other | retired (machinery or regenerable) | — |
-| `cortex.config.json` | `cortex/cortex.json` (`visibility` kept; other keys listed as retired) | — |
+| `insight/anatomy/**`, `insight/concepts/**`, `insight/{graph,tags,clusters,reverse-index,ledger}.json`, `insight/scopes/**` | dropped by decision (counted per kind; removal command printed, never run) | — |
+| `pulse/suggestions.md` `S-NNN`, `pulse/gaps.md` `G-NNN` | `now/proposals.md`, one item each, `until:` = migration date + 30 days, full text kept | pending decision |
+| `_index.md` files, `recall-index.json`, `constellation.json`, `archive/register.md`, `archive/types/**`, `insight/scope-registry.yaml`, `pulse/state/**`, `pulse/extraction/**`, `pulse/sessions/**`, `pulse/scratch/**`, an empty or template-only `pulse/dismissed.md` | retired, `machinery or regenerable` | — |
+| every other file under `pulse/` (reports, onboarding output, proposal notes, threads, a `dismissed.md` with entries) | retired, `unpromoted work`: `--apply` refuses until the plan decides it | — |
+| `.DS_Store`, `._*`, `Thumbs.db` | retired, `not a store file` | — |
+| `cortex.config.json` | `cortex/cortex.json` (`visibility` kept, or set by `--visibility`; other keys listed as retired) | — |
 
 ## S10. Commit trailers
 
