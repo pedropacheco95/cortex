@@ -4,6 +4,7 @@ status: implemented
 implemented_by:
   - ../../specs/specflow/cortex-awareness.spec.md
   - ../../specs/specflow/insight-awareness.spec.md
+  - ../../specs/specflow/store-v4-awareness.spec.md
 ---
 
 # Spec work draws on everything the project already knows
