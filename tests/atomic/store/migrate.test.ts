@@ -67,7 +67,7 @@ describe('store.migrate', () => {
     expect(text).toContain('| anatomy | 3 |');
     expect(text).toContain('| concepts | 2 |');
     expect(text).toContain('| graph | 1 |');
-    expect(text).toContain('Removal command (not run): `git rm -r -q .cortex/insight/anatomy .cortex/insight/concepts .cortex/insight/graph.json`');
+    expect(text).toContain('Removal command (not run): `git rm -r -q --ignore-unmatch .cortex/insight/anatomy .cortex/insight/concepts .cortex/insight/graph.json && rm -rf .cortex/insight/anatomy .cortex/insight/concepts .cortex/insight/graph.json`');
     expect(text).toContain('Coverage: 100.0%');
     await run(root, ['--accept']);
     for (const f of ['anatomy/src/a.ts.md', 'anatomy/src/b.ts.md', 'anatomy/src/c.ts.md', 'concepts/one.md', 'concepts/two.md', 'graph.json']) {
