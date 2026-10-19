@@ -53,4 +53,16 @@ describe('store.remember-skill', () => {
     expect(rules).toContain('`source: user@<today>`');
     expect(rules).toContain('`scope`:');
   });
+
+  const afterReadback = () => text.slice(text.indexOf('**End with the readback**'));
+
+  it('writes source digests (Rule 7)', () => {
+    const t = afterReadback();
+    for (const p of ['`history/sources/<YYYY-MM-DD>-<slug>.md`', '`captured: <today>`', '`origin: external:', 'no URL', '`raw: history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>`', 'byte for byte', '`origin: source:history/sources/<file>.md`']) expect(t, p).toContain(p);
+  });
+
+  it('has a propose mode (Rule 8)', () => {
+    const t = afterReadback();
+    for (const p of ['`now/proposals.md`', '`## P-<YYYY-MM-DD>-<slug>: <title>`', '`until: <today + 30 days>`', '`status: pending decision`', '`Proposed: <proposal> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: <origin>)`', 'never approves its own proposal']) expect(t, p).toContain(p);
+  });
 });

@@ -15,6 +15,12 @@ user states a specific requirement in passing ("it needs one uppercase", "never 
 "must respond under 200ms"), and again after that ask has landed in a spec. A tap on the
 existing classify → spec → test flow, never a second test suite.
 
+## Cortex 4.0 store
+
+**Which store (Cortex 4.0 transition).** If `cortex/cortex.json` exists, this project uses the 4.0 store: read `cortex/` in place of the `.cortex/` paths in this skill. Start from `cortex/MAP.md`. Rules are in `cortex/world/rules/` (they apply by `match.paths`, not `governs`), decisions in `cortex/world/decisions/`, terms in `cortex/world/terms/`, working preferences in `cortex/world/agreements/working-preferences.md`, and open pitfalls (the former open bugs) in `cortex/code/<area>/` with `status: open`. There is no insight layer in 4.0: where this skill would query insight, read the file and grep `cortex/code/<area>/` and `cortex/world/terms/`. Check the store with `cortex store validate`. While `.cortex/` also exists and the migration is not accepted (`migration.accepted` is `null` in `cortex/cortex.json`), read `cortex/` but write nothing to either store beyond what this skill's 3.x instructions already allow. After acceptance, write nothing to `.cortex/`; file a durable fact with the `cortex-remember` skill. Without `cortex/cortex.json`, use the `.cortex/` paths as written.
+
+**Writing to the 4.0 store.** Once the migration is accepted (`migration.accepted` is set in `cortex/cortex.json`), or when the project has no `.cortex/`, the register is `cortex/history/changes/`, one file per ask, with no `IR-NNN` id. Pinning an ask creates `cortex/history/changes/<YYYY-MM-DD>-<slug>.md` with `kind: change-request`, `status: pending`, `source:` the ask verbatim, `spec:` when the router has already named it, and the S3 fields; the body quotes the ask and gives the stakeholder and the anchor test as lines. After that first commit only `status` may change. On reconcile or flag, change `status` in place and append one line at the end of the body, `- <YYYY-MM-DD>: <from> → <to>, <reason>`. For `reconciled` the reason names the landing and the covering spec test; for `flagged` it names the landing and the filed bug's `cortex/code/` path. Never edit any other field or line: `cortex store validate` warns on that (`check.append-only`).
+
 ## The Iron Law
 
 NO ANCHOR RETIRED WITHOUT A SPEC TEST THAT WOULD FAIL WITHOUT IT

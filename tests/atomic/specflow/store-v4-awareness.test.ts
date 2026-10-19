@@ -16,8 +16,27 @@ const GOVERNED = [
   'specflow-plan', 'specflow-brainstorm', 'specflow-new-project', 'specflow-viewer', 'specflow-entry',
   'specflow-develop', 'specflow-tests', 'specflow-onboard-codebase', 'specflow-deep-onboard', 'specflow-spec-editor',
   'specflow-receive-review', 'specflow-request-review', 'verification-before-completion',
+  'specflow-bugs', 'specflow-intent-reconcile', 'specflow-ingest', 'specflow-lint',
 ];
-const HELD = ['specflow-bugs', 'specflow-intent-reconcile', 'specflow-ingest', 'specflow-lint'];
+const WRITERS: Record<string, string[]> = {
+  'specflow-bugs': ['`cortex/code/<area>/<slug>.md`', '`status: open`', '`cortex/history/incidents/', 'no `B-NNN` id'],
+  'specflow-intent-reconcile': ['`cortex/history/changes/', '`kind: change-request`', '`- <YYYY-MM-DD>: <from> → <to>, <reason>`'],
+  'specflow-ingest': ['`cortex-remember`', 'source-digest'],
+  'specflow-lint': ['`cortex validate`'],
+  'specflow-tests': ['`cortex/now/verification.md`'],
+  'specflow-develop': ['now/proposals.md`'],
+  'specflow-onboard-codebase': ['now/proposals.md`', 'never in `cortex/world/rules/`'],
+  'specflow-deep-onboard': ['`cortex/now/deep-onboard-report.md`', '`$TMPDIR/specflow-deep-onboard/`', 'now/proposals.md`'],
+  'specflow-spec-editor': ['`source: <approver>@<date>`'],
+  'specflow-entry': ['specflow-bugs'],
+};
+const WRITE_HEAD = '**Writing to the 4.0 store.**';
+const writePara = (s: string): string => {
+  const t = body(s);
+  const i = t.indexOf(WRITE_HEAD);
+  const end = t.indexOf('\n\n', i);
+  return t.slice(i, end < 0 ? undefined : end);
+};
 const body = (s: string) => fs.readFileSync(path.join(ROOT, 'skills', s, 'SKILL.md'), 'utf8');
 
 describe('specflow.store-v4-awareness', () => {
@@ -33,7 +52,20 @@ describe('specflow.store-v4-awareness', () => {
     for (const s of GOVERNED) expect(fs.readFileSync(path.join(ROOT, '.claude/skills', s, 'SKILL.md'), 'utf8'), s).toBe(body(s));
   });
 
-  it('the held skills are untouched', () => {
-    for (const s of HELD) expect(body(s), s).not.toContain('Which store (Cortex 4.0 transition)');
+  it('every writing skill carries one gated write paragraph, after the Rule 1 paragraph', () => {
+    for (const s of Object.keys(WRITERS)) {
+      const t = body(s);
+      expect(t.split(WRITE_HEAD).length - 1, s).toBe(1);
+      expect(t.indexOf(WRITE_HEAD), s).toBeGreaterThan(t.indexOf(PARAGRAPH));
+      expect(writePara(s), s).toContain('migration.accepted');
+    }
+  });
+
+  it('the write paragraphs name the decided homes', () => {
+    for (const [s, phrases] of Object.entries(WRITERS)) for (const p of phrases) expect(writePara(s), `${s}: ${p}`).toContain(p);
+  });
+
+  it('every writing skill is mirrored byte for byte', () => {
+    for (const s of Object.keys(WRITERS)) expect(fs.readFileSync(path.join(ROOT, '.claude/skills', s, 'SKILL.md'), 'utf8'), s).toBe(body(s));
   });
 });

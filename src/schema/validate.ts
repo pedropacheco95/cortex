@@ -26,6 +26,8 @@ import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
 import { checkConstellation } from './checks/constellation.js';
 import { checkRecallIndex } from './checks/recall-index.js';
+import { loadStore } from '../store/layout.js';
+import { validateLoaded } from '../store/validate.js';
 import {
   checkInsightIndex,
   checkInsightEntry,
@@ -68,6 +70,12 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
 
   // Find project root
   const root = opts?.root ? path.resolve(opts.root) : findProjectRoot(absTarget) ?? (fs.statSync(absTarget).isDirectory() ? absTarget : path.dirname(absTarget));
+
+  // 0. A 4.0 project (cortex/cortex.json, no 3.x config): the store checks
+  // plus the spec-tree checks (schema S11; validator Rule 15).
+  if (fs.existsSync(path.join(root, 'cortex', 'cortex.json')) && !fs.existsSync(path.join(root, '.cortex', 'cortex.config.json'))) {
+    return validateFourOh(root, target);
+  }
 
   // 1. Check config first
   const configResult = checkConfig(root);
@@ -199,4 +207,36 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
     counts,
     ...(notes.length > 0 ? { notes } : {}),
   };
+}
+
+/** Part I's spec-tree checks that still apply once `.cortex/` is gone (validator Rule 15). */
+async function validateFourOh(root: string, target: string): Promise<ValidationReport> {
+  const store = loadStore(root);
+  const violations: Violation[] = validateLoaded(store).map((f) => ({
+    severity: f.level,
+    check: f.check,
+    clause: 'S11',
+    location: { path: path.join(root, 'cortex', f.path) },
+    message: f.message,
+  }));
+  const aliases = new Set<string>();
+  for (const f of store.files) {
+    const a = f.frontmatter?.['aliases'];
+    if (Array.isArray(a)) for (const x of a) if (typeof x === 'string') aliases.add(x.trim());
+  }
+  const index = await buildIndex(root);
+  const specViolations = [
+    ...checkOverviewPresent(root),
+    ...checkIdMatchesPath(root),
+    ...await checkDevSpecs(root, index),
+    ...await checkBizSpecs(root, index),
+    ...await checkXrefSymmetry(root, index),
+  ].filter((v) => {
+    if (v.check !== 'check.dev-spec' || v.location.key !== 'governed_by') return true;
+    const id = /governed_by ID "([^"]+)" does not resolve/.exec(v.message)?.[1];
+    return id === undefined || !aliases.has(id);
+  });
+  violations.push(...specViolations);
+  const counts = countViolations(violations);
+  return { schemaVersion: SUPPORTED_VERSION, target, conformant: counts.error === 0, violations, counts };
 }

@@ -78,6 +78,8 @@ Before this skill runs:
 
 **Which store (Cortex 4.0 transition).** If `cortex/cortex.json` exists, this project uses the 4.0 store: read `cortex/` in place of the `.cortex/` paths in this skill. Start from `cortex/MAP.md`. Rules are in `cortex/world/rules/` (they apply by `match.paths`, not `governs`), decisions in `cortex/world/decisions/`, terms in `cortex/world/terms/`, working preferences in `cortex/world/agreements/working-preferences.md`, and open pitfalls (the former open bugs) in `cortex/code/<area>/` with `status: open`. There is no insight layer in 4.0: where this skill would query insight, read the file and grep `cortex/code/<area>/` and `cortex/world/terms/`. Check the store with `cortex store validate`. While `.cortex/` also exists and the migration is not accepted (`migration.accepted` is `null` in `cortex/cortex.json`), read `cortex/` but write nothing to either store beyond what this skill's 3.x instructions already allow. After acceptance, write nothing to `.cortex/`; file a durable fact with the `cortex-remember` skill. Without `cortex/cortex.json`, use the `.cortex/` paths as written.
 
+**Writing to the 4.0 store.** Once the migration is accepted (`migration.accepted` is set in `cortex/cortex.json`), or when the project has no `.cortex/`, file each gap note as a proposal in `cortex/now/proposals.md` through the `cortex-remember` skill's propose mode (never in `.cortex/pulse/gaps.md`), and list the proposal ids in the Step 7 report. A bug found while coding goes through `specflow-bugs`.
+
 When the project has a `.cortex/` directory, ground every run in the knowledge layer
 before coding (skip this section cleanly when `.cortex/` is absent):
 

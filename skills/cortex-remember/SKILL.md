@@ -39,6 +39,28 @@ A rule ("from now on…", "always…", "never…") goes to `world/rules/<rule>.m
 - `source: user@<today>`.
 - The body is the rule text, imperative and complete.
 
+## A document to keep: the source digest
+
+When the user hands over a document or transcript to keep:
+
+1. Write a redacted digest (summary, claims, asks) to `history/sources/<YYYY-MM-DD>-<slug>.md`, dated today. Its frontmatter carries the S3 fields, `captured: <today>`, and `origin: external:<who or where, ≤ 120 chars>`, with no URL, host or user path.
+2. If the original is a file, copy it byte for byte to `history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>` (that folder is gitignored), and add `raw: history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>` to the digest's frontmatter.
+3. File each durable fact taken from it by the steps above, with `origin: source:history/sources/<file>.md`.
+
+## Propose mode: a proposal, not a fact
+
+Use this when the thing to keep needs someone's approval: a rule you inferred (never one the user stated), a suggested change, or a gap found while working.
+
+1. Append one item to `now/proposals.md`:
+   - the heading `## P-<YYYY-MM-DD>-<slug>: <title>`;
+   - then the lines `until: <today + 30 days>` and `status: pending decision`;
+   - then the full text, and where it came from.
+2. If the file does not exist, create it with the S3 frontmatter (`permanence: volatile`, `about: Proposals waiting for a decision`). Add your origin to its `origin` list.
+3. Use `####` or lower for headings inside the item, so the item stays one item.
+4. Run `cortex store validate`, then end with exactly one line: `Proposed: <proposal> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: <origin>)`.
+
+A proposal is approved when a person, or an agent holding that authority, moves its text to its home in the store and removes the item. The skill never approves its own proposal.
+
 ## Never
 
 - Never write under `history/` except to create a new dated file (`history/<kind>/<YYYY-MM-DD>-<slug>.md`). History is append-only.

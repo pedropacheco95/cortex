@@ -137,3 +137,46 @@ describe('store.validate Rule 6 (amendment 2026-10-14)', () => {
     expect(hit?.message).toContain('(private)');
   });
 });
+
+describe('store.validate Rule 4 (status transitions, amendment 2026-10-19)', () => {
+  const change = (status: string, spec = 'auth.policy') => baseFm({ about: 'The uppercase ask', kind: 'change-request', status, spec, source: 'the password needs one uppercase' });
+  const setup = (label: string, folder = 'history/changes') => {
+    const root = tmpRepo(label);
+    gitInit(root);
+    storeInit(root);
+    const p = writeStoreFile(root, `${folder}/2026-09-01-x.md`, folder === 'history/changes' ? change('pending') : baseFm({ about: 'An outage', status: 'pending' }), '> the password needs one uppercase\n');
+    commitAll(root, 'change');
+    return { root, p, original: fs.readFileSync(p, 'utf8') };
+  };
+  const line = '- 2026-10-19: pending → reconciled, spec test fails on the probe\n';
+
+  it('a status change with its transition line passes', () => {
+    const { root, p, original } = setup('transition');
+    fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"') + line);
+    expect(of(root, 'check.append-only')).toHaveLength(0);
+  });
+
+  it('a transition line after an appended correction passes', () => {
+    const { root, p, original } = setup('transition-correction');
+    fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"') + '\n## Correction 2026-10-18\nThe stakeholder was the client.\n' + line);
+    expect(of(root, 'check.append-only')).toHaveLength(0);
+  });
+
+  it('a status change with no transition line warns', () => {
+    const { root, p, original } = setup('transition-bare');
+    fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"'));
+    expect(of(root, 'check.append-only')).toHaveLength(1);
+  });
+
+  it('an edit to another field warns, even with a transition line', () => {
+    const { root, p, original } = setup('transition-spec');
+    fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"').replace('spec: "auth.policy"', 'spec: "auth.other"') + line);
+    expect(of(root, 'check.append-only')).toHaveLength(1);
+  });
+
+  it('the same edit outside history/changes warns', () => {
+    const { root, p, original } = setup('transition-incident', 'history/incidents');
+    fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"') + line);
+    expect(of(root, 'check.append-only')).toHaveLength(1);
+  });
+});

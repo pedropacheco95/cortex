@@ -12,6 +12,8 @@ import { STORE_DIR, type Store } from '../layout.js';
 import { finding, type Finding } from '../types.js';
 
 const CORRECTION = /^## Correction \d{4}-\d{2}-\d{2}\b/;
+/** A status transition line in a `history/changes/` file (schema S5, amendment 2026-10-19). */
+const TRANSITION = /^- \d{4}-\d{2}-\d{2}: \S.* → \S.*, \S/;
 
 /** True when `now` is `original` plus only appended `## Correction <date>` sections. */
 export function onlyCorrectionsAppended(original: string, now: string): boolean {
@@ -22,14 +24,53 @@ export function onlyCorrectionsAppended(original: string, now: string): boolean 
   return added === '' || CORRECTION.test(added);
 }
 
+/** The frontmatter `status:` line, masked; the rest of the text untouched. */
+function maskStatus(text: string): { masked: string; status: string | null } {
+  const m = /^---\n([\s\S]*?)\n---(\n|$)/.exec(text);
+  if (!m) return { masked: text, status: null };
+  let status: string | null = null;
+  const fm = m[1]!.split('\n').map((l) => {
+    if (!/^status:/.test(l)) return l;
+    status = l.slice('status:'.length).trim();
+    return 'status: <masked>';
+  }).join('\n');
+  return { masked: `---\n${fm}\n---${m[2]}${text.slice(m[0].length)}`, status };
+}
+
+/**
+ * `history/changes/` only: `status` may change in place when the body ends
+ * with one appended transition line per change; the appended text holds only
+ * transition lines and `## Correction` sections (store.validate Rule 4).
+ */
+export function onlyTransitionsAppended(original: string, now: string): boolean {
+  const a = maskStatus(original);
+  const b = maskStatus(now);
+  const base = a.masked.replace(/\s+$/, '');
+  if (!b.masked.startsWith(base)) return false;
+  const added = b.masked.slice(base.length).split('\n');
+  let inCorrection = false;
+  let transitions = 0;
+  for (const l of added) {
+    if (CORRECTION.test(l)) inCorrection = true;
+    else if (TRANSITION.test(l)) {
+      inCorrection = false;
+      transitions++;
+    } else if (l.trim() !== '' && !inCorrection) return false;
+  }
+  return a.status === b.status || transitions > 0;
+}
+
 export function checkAppendOnly(store: Store): Finding[] {
   if (!isGitRepo(store.root)) return [];
   const out: Finding[] = [];
   for (const f of store.files.filter((x) => x.module === 'history')) {
     const original = firstCommittedContent(store.root, `${STORE_DIR}/${f.path}`);
     if (original === null) continue;
-    if (!onlyCorrectionsAppended(original, f.raw)) {
-      out.push(finding('warning', 'check.append-only', f.path, 'a committed history file changed other than by an appended ## Correction <date> section'));
+    const ok = f.folder === 'history/changes' ? onlyTransitionsAppended(original, f.raw) : onlyCorrectionsAppended(original, f.raw);
+    if (!ok) {
+      out.push(finding('warning', 'check.append-only', f.path, f.folder === 'history/changes'
+        ? 'a committed change file changed other than by a status transition (with its appended line) or an appended ## Correction <date> section'
+        : 'a committed history file changed other than by an appended ## Correction <date> section'));
     }
   }
   return out;
