@@ -31,6 +31,9 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 4. The skill never restates a fact that already exists elsewhere. If the fact contradicts an existing file, it updates that file and says so in the readback (`Updated: … → <path> (origin: <origin>)`).
 5. The skill never writes under `history/` except to create a new dated file.
 6. **Stated limit: harnesses without a session id.** The session link exists only where the harness exposes a session id (Claude Code sets `$CLAUDE_CODE_SESSION_ID`). Codex, and any other harness that reads `AGENTS.md` without exposing one, gets the fallback `person:user@<today>`: the file still has a valid origin, but the link back to the conversation is lost. This is accepted for 4.0, not a defect to work around with transcript paths or URLs (S3, RULES.md rule 20).
+7. **Source digest** (2026-10-19, schema S7). When the user hands over a document or transcript to keep, the skill writes `history/sources/<YYYY-MM-DD>-<slug>.md`: a redacted digest (summary, claims, asks) with `captured: <today>`, `origin: external:<who or where, ≤ 120 chars, no URL>`, and, when the original is given as a file, `raw: history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>` with the original copied there byte for byte (that folder is gitignored). Facts taken from the digest are then filed by the steps of Rule 2 with `origin: source:history/sources/<file>.md`. This section comes after the Rule 2 steps in the SKILL.md.
+8. **Propose mode** (2026-10-19, schema S6). When the fact is a proposal rather than a settled fact (a rule an agent inferred, a suggested change, a gap found while working, or anything a person must approve), the skill appends one item to `now/proposals.md`: `## P-<YYYY-MM-DD>-<slug>: <title>`, then `until: <today + 30 days>` and `status: pending decision`, then the full text and where it came from. It creates the file with the S3 frontmatter (`permanence: volatile`) when absent, and adds its `origin` to the file's list. It ends with the readback `Proposed: <proposal> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: <origin>)`. Approval is a person, or an agent holding that authority, moving the text to its home and removing the item; the skill never approves its own proposal. This section comes after the Rule 2 steps.
+9. The order and wording of the Rule 2 steps and the description are unchanged by Rules 7 and 8.
 
 ## Acceptance Criteria
 
@@ -69,3 +72,15 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** it directs rules to `world/rules/` with `applies_when` written as a situation, plus `source` and `scope`
+
+### The skill writes source digests
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** after the readback step it names `history/sources/<YYYY-MM-DD>-<slug>.md`, `captured`, the `external:` origin with no URL, `raw:` under `history/sources/raw/` copied byte for byte, and `source:` as the origin of facts taken from the digest
+
+### The skill has a propose mode
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** after the readback step it names `now/proposals.md`, the heading `## P-<YYYY-MM-DD>-<slug>: <title>`, `until:`, `status: pending decision`, the `Proposed:` readback line, and that the skill never approves its own proposal

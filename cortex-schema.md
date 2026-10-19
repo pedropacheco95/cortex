@@ -1558,6 +1558,7 @@ Every file under `cortex/` except `cortex.json`, `MAP.md` and `history/sources/r
   - rules (S4);
   - decisions and changes (S5);
   - open pitfalls in `code/`: `status: open` (a 3.x open bug becomes one, S9.3); `status: resolved` is not allowed in `code/`, because a resolved incident belongs in `history/incidents/`.
+  - **Bugs in 4.0** (2026-10-19). A new bug gets no `B-NNN` id. It is filed as `code/<area>/<slug>.md` with `status: open`, and references to it use that path. Its diagnosis fields (type, severity, owner, fix in flight, the commit it was found at) are body lines, not frontmatter. A 3.x id stays an alias, so existing references still resolve. When the bug is fixed, its text and aliases move to a new `history/incidents/<YYYY-MM-DD>-<slug>.md`, and the `code/` file is removed.
 - **Last-updated date:** git log provides it; there is no field for it.
 - **Unknown fields** produce a `warning`.
 
@@ -1582,7 +1583,7 @@ End every substantive answer with an explicit confidence and what would change y
 | `applies_when` | yes | One sentence describing a **situation** the agent is in, written for a matcher. The literal value `always` marks a hard rule that MAP lists in full (S8). |
 | `scope` | yes | non-empty subset of `user-message`, `agent-answer`, `action`, `session-end` |
 | `match` | no | `{ commands: [<regex>], paths: [<glob>] }`: exact patterns, checked before any classifier |
-| `source` | yes | `<who>@<YYYY-MM-DD>`. Rules come only from the user or from an approved proposal. |
+| `source` | yes | `<who>@<YYYY-MM-DD>`. Rules come only from the user or from an approved proposal. A rule an agent infers (from onboarding, a review or the code) is filed as a proposal in `now/proposals.md` (S6), never directly in `world/rules/`. |
 
 - **The body is the rule text,** imperative and complete, so it can be pushed verbatim.
 - **Description lint** (`check.applies-when`, a warning; the lint is deterministic):
@@ -1607,6 +1608,7 @@ End every substantive answer with an explicit confidence and what would change y
   | `spec` | no | dev or business spec id or path |
   | `source` | no | path under `history/sources/`, or a verbatim quote of the ask |
 
+- **Status transitions** (2026-10-19). In a `history/changes/` file, `status` is the one field that may change after the first commit. Each transition appends one line at the end of the body, `- <YYYY-MM-DD>: <from> → <to>, <reason>`, and nothing else in the file changes except an appended `## Correction` section (S7).
 - **Lineage:** code → commit trailers (S10) → dev spec → business spec → change → source.
 - **Specs stay in Specflow's trees.** 4.0 does not touch them. Specs hold what the system should do; decisions hold the current answer to a question and why.
 
@@ -1615,11 +1617,13 @@ End every substantive answer with an explicit confidence and what would change y
 - **Every item carries `until: YYYY-MM-DD`.** An item is a list item or a `##`/`###` heading, and the lines under a heading belong to it.
 - **On or after its `until:` date,** an item is **expired**. `cortex store expire` lists the expired items, and with `--apply` removes them from `now/` and writes them to a new `history/changes/<date>-now-expired.md` with `kind: other` (a second run on the same day writes `<date>-now-expired-2.md`, and so on, so no history file is appended to). Nothing is lost: expiry is the one sanctioned deletion, and it is a move.
 - **An item without `until:` is an `error`.**
+- **Proposals** (2026-10-19). `now/proposals.md` holds the proposals waiting for a decision, one `##` item each: the heading `## <id>: <title>`, then the lines `until: <YYYY-MM-DD>` and `status: pending decision`, then the full text. A migrated item keeps its 3.x id (S9.3); a new item's id is `P-<YYYY-MM-DD>-<slug>`. A proposal is approved when a person, or an agent holding that authority, moves its text to its home in the store and removes the item. There is no approval command.
+- **Skill working output** (2026-10-19). Output a skill must keep beyond the session goes to `now/<topic>.md` as one `##` item with `until:`, with `####` or lower for any headings inside it. Scratch work stays outside the store and outside git.
 
 ## S7. `history/`: append-only
 
 - **The filename is `<YYYY-MM-DD>-<slug>.md`;** the date is the event date.
-- **A history file is never edited after its first commit,** except to append a `## Correction <YYYY-MM-DD>` section. The validator compares against git and warns on any other edit (`check.append-only`).
+- **A history file is never edited after its first commit,** except to append a `## Correction <YYYY-MM-DD>` section, or, in `history/changes/`, to record a status transition (S5). The validator compares against git and warns on any other edit (`check.append-only`).
 - **Sources:**
   - `history/sources/` holds a **redacted digest** (summary, claims, asks), with frontmatter `captured` (date), `raw` (the gitignored path of the original, optional) and the S3 `origin`. A digest's `origin` may use the `external:<who or where>` form, which no other folder allows;
   - the digest of a public-repo project follows `visibility` (S9.1).
@@ -1772,8 +1776,10 @@ They run through `cortex store validate`. A check that errors makes the command 
 | `check.near-duplicate` | warning | two files whose `about` lines share ≥ 0.8 token Jaccard (after stop-words), or two files with the same name in different folders |
 | `check.aliases` | error | an alias names two files |
 | `check.links` | warning | a store-relative link, or a `source:` origin, that does not resolve |
-| `check.append-only` | warning | a committed `history/` file changed other than by an appended `## Correction` |
+| `check.append-only` | warning | a committed `history/` file changed other than by an appended `## Correction`, or, in `history/changes/`, by a status transition (S5) |
 | `check.stale` | warning | a `depends_on` path changed in git after the file's `verified` date |
 | `check.map-size` / `check.map-fresh` | warning | MAP over 60 lines; MAP or a managed block out of date |
 | `check.visibility` | warning | Part I's rule, over `cortex/world/` and `cortex/code/`; on a public store, also any line containing `(private)` |
 | `check.trailers` | warning | S10 |
+
+- **`cortex validate` on a 4.0 project** (2026-10-19). When `cortex/cortex.json` exists and `.cortex/cortex.config.json` does not, `cortex validate` runs the checks above and Part I's spec-tree checks: `check.overview-present`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec` and `check.xref-symmetry`. A `governed_by` id that is an alias of a `cortex/` file resolves. Exit codes are as in Part I. When both stores exist, `cortex validate` validates the 3.x store as before.

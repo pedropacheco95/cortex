@@ -37,6 +37,7 @@ The validator operates on files, not database records. It reads artefacts and pr
 12. **Global id uniqueness across all kinds (schema §6 global rule 1; B-019).** Every `id` is unique within its kind across everything the project index scans in its single pass — dev and business specs (combined, across both trees), compass rules, compass bugs, atlas artefacts (decisions, evidence, domain terms, stakeholders, sources) and scenario specs. A duplicate is an `error` from `check.xref-unique`, one per duplicated id, located at the first file and naming every file that carries the id. Uniqueness is derived from the index's own scan — `buildIndex` keeps every file per id (`id → files[]`), never a second, narrower glob — and the index never silently discards a duplicate: resolving a duplicated id yields **no** file, so a `governed_by`, `affects`, `bears_on`, `compass_rules` or `related_specs` reference to it is reported as unresolved by the referring check alongside the uniqueness error, never satisfied by whichever file the scan listed last.
 13. **Rule and bug self-agreement.** A compass rule's or bug's number must agree in three places: the filename prefix (`R-NNN-<slug>.md` / `B-NNN-<slug>.md`), the `id:` field, and the H1 heading (`# R-NNN — …` / `# B-NNN — …`). Filename versus `id:` disagreement is an `error` from `check.rule` / `check.bug` — already enforced in `src/schema/checks/compass.ts`, restated here so the rule is complete. The H1 is prose the schema does not shape (§4.1, §4.2), so its disagreement is a `warning` from `check.compass-heading`, raised only when the body's first H1 begins with an `R-NNN` / `B-NNN` token that differs from `id:`; a file with no H1, or an H1 with no such token, is not a finding.
 14. **Index completeness.** `compass/rules/_index.md` should reference every `R-NNN` file in `compass/rules/`, and `compass/bugs/_index.md` every `B-NNN` file in `compass/bugs/`. An id counts as referenced when its literal token appears anywhere in the index, or when it lies inside a same-prefix range written `R-001–R-003` (en dash, em dash or hyphen between two ids) — the collapsed forms the indexes already use. An index that carries a `… and N more` line (the §7.1 generated-block tail) or a generated block (`<!-- cortex:recall:start`) counts as **complete** without a scan: it collapsed to fit the <300-token budget by design, and completeness cannot be read off it. Otherwise the missing ids produce, per index, exactly one `warning` from `check.index-completeness` (clause §7.1) at the index file, whose message reads `index lists N of M rules` / `… bugs` and names up to five missing ids. The check never asks an index to grow past its budget — an over-budget index is `check.index-shape`'s warning, and the remedy for both at once is a range or the `… and N more` line, not more rows. An absent directory or index is not this check's finding (`check.index-present` owns absence).
+15. **A 4.0 project** (2026-10-19, schema S11). When the project root has `cortex/cortex.json` and no `.cortex/cortex.config.json`, `cortex validate` does not run the 3.x store checks. It runs `cortex store validate`'s checks (store.validate), each finding reported as a violation with the same check name and level and the clause `S11`, and Part I's spec-tree checks `check.overview-present`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec` and `check.xref-symmetry`. A `governed_by` id that does not resolve in the spec index but is an `aliases` entry of a `cortex/` file resolves, and is not reported. `--json` emits the same `ValidationReport` shape. The CLI exits `1` on any error and `0` otherwise. When both stores exist, Rules 1–14 apply unchanged.
 
 ## Acceptance Criteria
 
@@ -139,6 +140,20 @@ The validator operates on files, not database records. It reads artefacts and pr
 - **Given** the same five bugs and an index whose body mentions `B-005` and the line `- … and 4 more (\`cortex …\`)`, and a rules index carrying a `<!-- cortex:recall:start v3.4 -->` … `<!-- cortex:recall:end -->` block that names no rule
 - **When** the validator runs
 - **Then** neither index produces a `check.index-completeness` finding
+
+### A 4.0 project gets the store checks and the spec-tree checks
+
+- **Given** a project with `cortex/cortex.json`, no `.cortex/`, a valid store, and spec trees whose links are symmetric, one dev spec carrying `governed_by: [R-001]` where `R-001` is an alias of `cortex/world/rules/x.md`
+- **When** `cortex validate` runs
+- **Then** it exits `0` with no error, and no `governed_by` violation
+- **And when** a business spec drops a dev spec from `implemented_by`, it exits `1` with a `check.xref-symmetry` error
+- **And when** a store file lacks `about`, it exits `1` with a `check.frontmatter` error (clause `S11`)
+
+### Both stores present: the 3.x path is unchanged
+
+- **Given** a project with both `.cortex/cortex.config.json` and `cortex/cortex.json`
+- **When** `cortex validate` runs
+- **Then** it runs the 3.x checks, and the report carries no `S11` violation
 
 ## Notes
 

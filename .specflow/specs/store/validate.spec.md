@@ -21,7 +21,7 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 1. `cortex store validate [--json]` runs every S11 check and prints one line per finding: `<level> <check> <path>: <message>`. It exits 1 if any finding is an `error`, 0 otherwise.
 2. `check.store-config`, `check.store-layout`, `check.frontmatter`, `check.naming`, `check.decision`, `check.change`, `check.aliases`, `check.links`, `check.append-only`, `check.visibility` and `check.trailers` follow S11 as written.
 3. `check.near-duplicate` compares `about` lines after lower-casing, removing punctuation and the stop-word list in `src/store/checks/stopwords.ts`. Two files sharing ≥ 0.8 token Jaccard, or two files with the same name in different folders, give one warning naming both.
-4. `check.append-only` compares each committed `history/` file with its first committed version. Text added after the old content inside a `## Correction <date>` section is allowed; any other difference warns. Outside git, it is skipped.
+4. `check.append-only` compares each committed `history/` file with its first committed version. Text added after the old content inside a `## Correction <date>` section is allowed; any other difference warns. Outside git, it is skipped. **Status transitions** (2026-10-19, schema S5): in `history/changes/` only, the frontmatter `status` value may differ from the original when the body ends with one appended transition line per change, `- <YYYY-MM-DD>: <from> → <to>, <reason>`. The check compares both versions with the `status` value masked, and the text after the original body must be transition lines and `## Correction` sections only. A changed `status` with no transition line, an edit to any other field, or a transition line outside `history/changes/` still warns.
 5. Without a `cortex/` folder, the command prints `no 4.0 store (cortex/cortex.json not found)` and exits 1.
 6. `check.visibility` also warns on a line containing the literal text `(private)` when `visibility.repo` is `public`: a public store that calls something private is either wrong about the repository or leaking a private pointer.
 7. Checks are pure functions over the loaded store (plus git reads for append-only, stale and trailers), so each is tested alone.
@@ -82,6 +82,13 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 - **When** a line of its original text is changed and the store is validated
 - **Then** `check.append-only` warns
 - **And when** instead only a `## Correction 2026-10-14` section is appended, there is no warning
+
+### A status transition in a change file is allowed; other edits are not
+
+- **Given** a committed `history/changes/2026-09-01-x.md` with `status: pending`
+- **When** `status` becomes `reconciled` and `- 2026-10-19: pending → reconciled, spec test fails on the probe` is appended, there is no `check.append-only` warning
+- **And when** a transition line follows an appended `## Correction` section, there is no warning
+- **And when** `status` changes with no transition line, or the `spec` field changes, or the same edit is made to a `history/incidents/` file, `check.append-only` warns
 
 ### A public store that says "(private)" is flagged
 
