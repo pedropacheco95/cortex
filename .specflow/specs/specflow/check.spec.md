@@ -32,6 +32,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    - `generated`: `specflow/INDEX.md`
    - `spec`: anything under `specflow/`
    - `hook`: anything under `.githooks/`
+   - `store`: anything under `cortex/`, so `cortex/cortex.json` included. New: Cortex's own config and knowledge are not product code, and `specflow.since` and `specflow.rules` live there.
    - `test`: matches a `specflow.tests` include, or the generic test patterns of schema S12.6
    - `docs`: ends in `.md`
    - `code`: everything else, config included
@@ -39,9 +40,9 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    `generated` paths are ignored by every rule.
 4. **The diff.** The commit's changes are `git diff --cached --name-only --no-renames <base>`, where `<base>` is `HEAD`. A rename counts as a delete and an add. With `git commit --amend`, `<base>` is `HEAD^` (the marker of `specflow.git-hooks` Rule 4). A repository with no `HEAD` is allowed unjudged.
 5. **Rule items.** A spec's *rules* are the numbered items under its heading titled exactly `Rules`, at any heading level. Its *criteria* are as `specflow.index` Rule 2 defines them. Text is compared after collapsing whitespace and removing `**`. Only files under `specflow/impl/` count; promises are outside the check (P7). An item is:
-   - **added** when it is new. A rule whose text already exists in the base at another number has moved, and a move is neither added nor changed.
-   - **changed** when the same rule number or criterion id has different text.
-   - **removed** when it is gone. An **amendment** is a changed or removed item.
+   - **A criterion** is matched by id: **added** when its id is new, **changed** when the same id has different text, **removed** when its id is gone.
+   - **A rule** is matched by text, so renumbering alone changes nothing. A base rule whose text no longer appears anywhere in the staged list is **changed** if its base number still exists, and **removed** if not. It is always named by its base number. A staged rule whose text is not in the base is **added**. New: the bench keyed rules by number, which made every rule after an insertion an amendment.
+   - An **amendment** is a changed or removed item. A commit that edits a rule and inserts another still needs the trailer for the edited rule's base number.
 6. **Rule (a) code-needs-test.** A commit with a `code` path and no `test` path is refused. Measured. Always on.
 7. **Rule (b) test-needs-tag.** Each test case added or changed in the commit must carry a tag naming a criterion that resolves in the staged tree. A case changed means its title or body differs from the base after collapsing whitespace. A helper or import change changes no case. New. Controlled by `specflow.rules.b`.
 8. **Rule (c) criterion-needs-test.** Each changed criterion needs a test tagged with it, added or changed. Added and removed criteria are not judged. Text is compared as in Rule 5, so whitespace and emphasis edits never fire it. New, reasoned and not run. Controlled by `specflow.rules.c`.
@@ -83,6 +84,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
     | Amend a criterion, tagged test never changed, at range | the same two commits | refused by (c) |
     | Everything at once | {spec + code + test} | refused by (d) |
     | Code only | {code} | refused by (a) |
+    | Install the hooks, or turn rule (b) on | {`cortex/cortex.json`} | passes |
     | Amendment without a trailer | {spec} | refused by (e) |
     | Reword Intent or Notes with code | {spec Intent + code + test} | passes |
 
@@ -107,6 +109,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** `package.json` staged alone
 - **When** the check runs
 - **Then** it exits 1 with the rule (a) line naming `package.json`
+
+### The store's own config needs no test
+
+- **Given** `cortex/cortex.json` staged alone, with `specflow.rules.b` changed
+- **When** the check runs
+- **Then** it exits 0
 
 ### Docs, specs and hooks need no test
 
@@ -185,6 +193,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** a spec with rules 1 to 3, and a new rule inserted as 2 so the old 2 and 3 become 3 and 4 with unchanged text
 - **When** the check runs with no trailer
 - **Then** it exits 0
+
+### Inserting a rule and editing a shifted one needs the base number
+
+- **Given** a spec with rules 1 to 3, a new rule inserted as 2, and the old rule 3, now 4, reworded, with no trailer
+- **When** the check runs
+- **Then** it exits 1 with the rule (e) line naming `billing.refunds#rule-3`, and a trailer for `rule-3` makes it exit 0
 
 ### Rules are found on both heading layouts
 

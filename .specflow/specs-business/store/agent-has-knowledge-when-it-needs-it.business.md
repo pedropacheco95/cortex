@@ -1,6 +1,6 @@
 ---
 id: store.agent-has-knowledge-when-it-needs-it
-status: implemented
+status: implementing
 implemented_by:
   - ../../specs/store/layout.spec.md
   - ../../specs/store/validate.spec.md

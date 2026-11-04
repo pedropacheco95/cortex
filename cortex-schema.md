@@ -1915,6 +1915,7 @@ constants:
 
 - **Check records:** `<git-common-dir>/specflow/events.jsonl` and `amendments.jsonl` (`specflow.check` Rule 18). They are not tracked.
 - **Port working folder:** `.cortex-port/`, excluded through `.git/info/exclude`: `report.md`, `report.json`, `promises/`, `tagging/<area>.jsonl`, `decisions.md` (`specflow.port`, `specflow.onboard-skill`).
+- **`cortex/**` paths** are outside rules (a) and (d): the check's path class `store`.
 - **`cortex check` rules** are cited as `rule (a)` to `rule (g)`. `check.*` stays the validator's namespace.
 
 | Rule | Name | Level | Label |

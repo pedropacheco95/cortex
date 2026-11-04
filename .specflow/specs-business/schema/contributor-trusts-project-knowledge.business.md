@@ -1,6 +1,6 @@
 ---
 id: schema.contributor-trusts-project-knowledge
-status: implemented
+status: implementing
 implemented_by:
   - ../../specs/schema/validator.spec.md
   - ../../specs/schema/version-2.spec.md
