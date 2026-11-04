@@ -11,7 +11,7 @@ The engineering specs for the schema 4.0 store: the visible `cortex/` folder, it
 - `store.map`: `MAP.md` generation (read triggers, placement procedure, kind → folder table, tie-breaker, hard rules, cast, terms) (S8.1, S8.2).
 - `store.rules`: rules as first-class files and the `applies_when` description lint (S4).
 - `store.freshness`: `until:` expiry and the `depends_on` staleness report (S3, S6).
-- `store.managed-block`: the 4.0 `CLAUDE.md` and `AGENTS.md` blocks (S8.3).
+- `store.managed-block`: the 4.0 `CLAUDE.md` and `AGENTS.md` blocks, with the `## Specs` section (S8.3).
 - `store.migrate`: `cortex migrate` 3.x → 4.0, with dry run, plan file, coverage report, apply and accept (S9.3).
 - `store.remember-skill`: the `cortex-remember` skill, which captures a fact by MAP's placement procedure and ends with a readback.
 

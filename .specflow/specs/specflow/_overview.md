@@ -18,6 +18,10 @@ The spec-and-test lineage absorbed into Cortex: the conventions of the two spec 
 - `specflow.bugs-root-cause-gate` — the Phase-1 root-cause investigation gate prepended to `specflow-bugs`: no bug type may be named until the failure has been read, reproduced, dated against recent changes, and localised by instrumenting component boundaries. The seven-type tree and ledger output are unchanged.
 - `specflow.tests-red-green` — watch-it-fail-correctly and delete-premature-code in `specflow-tests`: a new test must be observed failing *for the right reason* before its implementation exists, and code written ahead of its test is deleted rather than adapted.
 
+- `specflow.spec-skill` — `specflow-spec`: the code-free session that writes the spec, with the two owner lines, on the big path.
+- `specflow.review-skill` — `specflow-review`: fresh agents read a spec, or on request a diff, by concern and lens.
+- `specflow.onboard-skill` — `specflow-onboard`: port mode (promise conversion, tagging pass) and onboard mode.
+
 _Planned (not yet written):_
 
 - The conventions of the two spec trees (`specs/` and `specs-business/`)
