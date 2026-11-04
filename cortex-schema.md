@@ -1804,7 +1804,7 @@ specflow/
 ```
 
 - **Implementation specs** keep §4.6's frontmatter and body. They gain `serves: [<promise id>]`, exactly one entry, which replaces `implements:` after promise conversion. Before it, `implements:` stays and may point at a `.business.md` file under `promises/`.
-- **Promises** are short, owner-level statements, outside the test check. They count as recorded owner decisions for the stop rule. Frontmatter: `id` (`P-<AREA>-<n>`, where `<AREA>` is the uppercased first folder), `status`. Body: a `#` title and at most 40 lines, stating what the product promises and what it does not.
+- **Promises** are short, owner-level statements, outside the test check. They count as recorded owner decisions for the stop rule. Frontmatter: `id` (`P-<AREA>-<n>`, where `<AREA>` is the uppercased first folder), `title`, `status`. Body: at most 40 lines, with a `## Outcome` section stating what the product promises and what it does not.
 - Every folder keeps its `_overview.md` (§7.3).
 
 ### S12.2 Criterion ids
@@ -1914,7 +1914,7 @@ constants:
 ### S12.7 Records and checks
 
 - **Check records:** `<git-common-dir>/specflow/events.jsonl` and `amendments.jsonl` (`specflow.check` Rule 18). They are not tracked.
-- **Port working folder:** `.cortex-port/`, excluded through `.git/info/exclude`: `report.md`, `report.json`, `promises/`, `tagging.jsonl` (`specflow.port`).
+- **Port working folder:** `.cortex-port/`, excluded through `.git/info/exclude`: `report.md`, `report.json`, `promises/`, `tagging/<area>.jsonl`, `decisions.md` (`specflow.port`, `specflow.onboard-skill`).
 - **`cortex check` rules** are cited as `rule (a)` to `rule (g)`. `check.*` stays the validator's namespace.
 
 | Rule | Name | Level | Label |
@@ -1946,6 +1946,6 @@ constants:
 | `cortex specs port [--dry-run] [--ticket-pattern <regex>] [--verify]` | `specflow.port` |
 | `cortex specs lint [--json] [--fix]` | `specflow.lint` |
 | `cortex specs view [--out <file>] [--title <text>]` | `specflow.viewer` |
-| `cortex tasks collect <learn\|fresh\|quality> [--json] [--out <dir>] [--today YYYY-MM-DD]` | `loops.learn-task`, `loops.fresh-task`, `loops.quality-task` |
+| `cortex tasks collect <learn\|fresh\|quality> [--json] [--out <dir>] [--today YYYY-MM-DD]`; for quality also `--flags <dir> --base <sha>` | `loops.learn-task`, `loops.fresh-task`, `loops.quality-task` |
 | `cortex tasks heartbeat <learn\|fresh\|quality> [--today YYYY-MM-DD]` | the same |
-| `cortex store amendments [--apply] [--today YYYY-MM-DD]` | `loops.learn-task` |
+| `cortex store amendments [--apply] [--json] [--today YYYY-MM-DD]` | `loops.learn-task` |

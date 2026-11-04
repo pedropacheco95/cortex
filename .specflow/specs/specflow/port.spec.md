@@ -41,8 +41,8 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 9. **Report.** `.cortex-port/report.md` has: source layout, HEAD, counts of specs, criteria, test files and test cases, specs per class, each non-clean spec with its class and reason, and untagged cases per test file. `.cortex-port/report.json` holds the same and the full untagged list (`file`, `name`, `line`). `.cortex-port/` is added to `.git/info/exclude`. A spec that is not `clean` still moves; the class says what the check cannot yet rely on.
 10. **Next steps.** On success the command writes `specflow/INDEX.md` and prints, in order: review and commit the move; `cortex store map`; `cortex hooks install`; then the two agentic steps in `specflow-onboard`. It runs none of them.
 11. **Promise conversion (agentic; output contract).** Each business spec becomes one promise of schema S12.1, with `serves: [<promise id>]` added to the frontmatter of every spec that implements it, and `implements:` removed from those specs. This is the one text rewrite, and the owner approves it per repository. Drafts sit in `.cortex-port/promises/` at the path they will take. Reasoning a promise drops goes to `cortex/world/decisions/`, not nowhere.
-12. **Tagging pass (agentic; output contract).** `.cortex-port/tagging.jsonl` has one line for every untagged case: `file`, `name`, `line`, `action` (`tag`, `new-criterion` or `delete`), `reason`, plus `criterion` for `tag` and `spec` and `title` for `new-criterion`. A case matching no criterion proposes `new-criterion` first; `delete` is only for behaviour nobody wants (P5). The owner approves the proposals, and the skill applies them.
-13. **`cortex specs port --verify`** reads `.cortex-port/tagging.jsonl` and the current tests, and prints each untagged case with no proposal, each `tag` proposal naming no criterion, and each malformed line. Exit 1 if any, 0 otherwise. It writes nothing.
+12. **Tagging pass (agentic; output contract).** The files `.cortex-port/tagging/<area>.jsonl` together have one line for every untagged case: `file`, `name`, `line`, `action` (`tag`, `new-criterion` or `delete`), `reason`, plus `criterion` for `tag` and `spec` and `title` for `new-criterion`. A case matching no criterion proposes `new-criterion` first; `delete` is only for behaviour nobody wants (P5). The owner approves the proposals, and the skill applies them.
+13. **`cortex specs port --verify`** reads `.cortex-port/tagging/*.jsonl` and the current tests, and prints each untagged case with no proposal, each `tag` proposal naming no criterion, and each malformed line. Exit 1 if any, 0 otherwise. It writes nothing.
 14. **Going live.** Rules (b) and (c) are switched on by editing `specflow.rules`, and only once `Untagged tests: 0` holds. `lint.rules-early` enforces it (A11).
 
 ## Acceptance Criteria
@@ -181,7 +181,7 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 
 ### Verify finds a case with no proposal
 
-- **Given** 2 untagged cases and a `tagging.jsonl` with one line
+- **Given** 2 untagged cases and `.cortex-port/tagging/billing.jsonl` with one line
 - **When** `cortex specs port --verify` runs
 - **Then** it exits 1 and names the other case
 
