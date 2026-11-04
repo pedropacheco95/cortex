@@ -1,11 +1,14 @@
 ---
 id: core-cli.sync
-status: implemented
+status: draft
 depends_on:
   - core-cli.init
   - core-cli.task-scoping
   - core-cli.tasks-register
   - schema.validator
+  - store.migrate
+  - store.managed-block
+  - specflow.git-hooks
 implements: ../../specs-business/core-cli/developer-keeps-existing-project-current.business.md
 governed_by: []
 governs:
@@ -17,6 +20,8 @@ governs:
 ## Intent
 
 `cortex sync` is the standing repair-and-upgrade command for a project already under Cortex management. Day-1 `cortex init` refuses to re-run on an existing `.cortex/` without `--force` (`core-cli.init` Rule 1), so before this command there was no safe way to put back a missing CLAUDE.md block, pick up newly shipped skills, or refresh scheduled-task prompts after a package upgrade. Sync factors init's already-idempotent scaffolding steps — the CLAUDE.md managed block, `_index.md` templates, skill-bundle install/upgrade, the hooks merge, the git post-commit hook, and the scheduled-task payloads (`core-cli.init` Rules 4, 10, 11, 12, 13) — into a standalone command that init also calls internally, and adds the one thing init's steps don't do on their own: recognising which of them are safe to re-apply against an *existing* project's current state (an unmodified index refreshed, a localised one left alone; an unmodified skill upgraded, a user-modified one preserved) and refusing outright when the project's schema version has drifted too far to trust the templates it would refresh against. Sync never touches `.cortex/`'s knowledge content — compass, atlas, archive, insight, pulse state are exactly as the developer left them, before and after.
+
+Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old skills and updates everything). `cortex sync` becomes the update route on a 4.0 store: it removes retired skills, installs the final set, and refreshes the block and hooks. The old skills leave the package, so the 3.x path can no longer do its job. It stops running: Rules 1–15 and their criteria are kept as the record of what the 3.x path did, and Round 2 removes that code and those tests. Rules 16–26 are what `cortex sync` does from here on.
 
 ## Entities
 
@@ -62,7 +67,37 @@ governs:
 13. **No silent destruction.** Every write to a pre-existing file is a merge, an append, or an upgrade gated by Rules 4/5/6/9's unmodified check — never an unconditional overwrite. This rule wins over any step above if they conflict. Sync has no `--force` flag: unlike init, which uses `--force` to permit re-running against an existing `.cortex/` at all, sync is designed to run repeatedly against an existing project by default, so there is nothing for `--force` to unlock.
 14. **Progress output (optional, side-channel).** `sync()` accepts an optional `onProgress` callback (`SyncOptions.onProgress`). When supplied, it fires once at the start of each of Rules 3, 4, 5, 6, 7, 8, 9, and 11 — the steps slow or silent enough that their absence of feedback reads as a hang — naming the step about to run. Rules 5, 6 and 9 may prompt interactively (`promptYesNo`, the B-012 shared-readline interface); this rule's calls for those steps land immediately before `syncSkillBundles`/`syncScheduledTaskPayloads` are invoked, never from inside either function's own prompt loop, so a progress line can never interleave with an unanswered prompt. When `onProgress` is omitted, nothing about the run changes — no progress output exists and behaviour is byte-identical to a build that predates this rule. The CLI dispatch (`cortex sync`) supplies an `onProgress` that writes each message to **stderr**, prefixed `cortex sync: `, one line per call — stdout carries only the Rule 12 summary, so a piped or redirected `cortex sync` still yields just the report. Progress is a side-channel: it changes nothing about the returned `summary`, the exit code, or any file this spec's other rules write.
 
+### The 4.0 update route (amendment 2026-11-04)
+
+16. **Which project gets what**, checked in this order:
+    1. the platform is not `darwin`: exit 2, with Rule 1's message;
+    2. `cortex/cortex.json` exists, its `schemaVersion` MAJOR differs from the package's: exit 3, `cortex sync: refused — this store is schema <version> and this package supports <major>.x. Nothing was written.`;
+    3. `cortex/cortex.json` exists and `migration.accepted` is set, or it has no `migration` field: the update route, Rule 17;
+    4. `cortex/cortex.json` exists and `migration.accepted` is `null`: exit 3, `cortex sync: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`;
+    5. `.cortex/cortex.config.json` exists: exit 3, `cortex sync: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.`;
+    6. otherwise: exit 2, `cortex sync: refused — no Cortex store found at <root>; set one up with cortex store init. Nothing was written.`
+17. **The update route, in order:** remove retired skills (Rule 18); install and update the final set (Rule 19); refresh `MAP.md` and the managed blocks (Rule 20); refresh the git hooks (Rule 21); register the tasks (Rule 22); list project skills (Rule 23); validate (Rule 24). The blocks come after the skills, so that they see `specflow-spec` (`store.managed-block` Rule 9).
+18. **Retired skills.** A bundle under `.claude/skills/` whose name matches `RETIRED_SKILL_NAMES` (`store.migrate` Rule 18 step 5) is a candidate.
+    - Its `.cortex-installed.json` marker matches its content: it is removed, with the line `skills: removed <name>`.
+    - The marker is missing or does not match: it is left alone, with the line `skills: <name> is retired but has local edits; left for the cortex-migrate skill-adjust step`. There is no prompt and no `--yes`: the skill-adjust step decides it (`store.migrate-skill` Rule 13).
+    - A bundle that name does not match is never a candidate, so a project's own skill is never removed.
+19. **The final set.** `FINAL_BUNDLES`, exported from `src/store/migrate/system.ts`, is the list of `store.migrate` Rule 18 step 2. For each name:
+    - absent: copied from the package with a marker, `skills: installed <name>`;
+    - identical to the package's copy: no change to the content, and a missing marker is written;
+    - differs, and its marker matches its content (no local edit): replaced by the package's copy, `skills: updated <name>`;
+    - differs, with a missing or mismatched marker (a local edit): left alone, `skills: .claude/skills/<name> exists with different content; left alone`;
+    - not in the package: `skills: <name> is missing from the package; not installed`.
+20. **Blocks.** It runs `cortex store map`, which writes `MAP.md` and both blocks, and prints its lines. Text outside the blocks stays untouched (`store.managed-block`).
+21. **Git hooks.** When `git config core.hooksPath` is `.githooks`, it does what `cortex hooks install` does and prints `hooks: refreshed .githooks`. When it is anything else and `specflow/` exists, it installs nothing and prints `hooks: not installed; run cortex hooks install`. Turning a refusing check on in a repository stays a separate act. Outside a git repository it prints `hooks: not a git repository; skipped`.
+22. **Tasks. OPEN: the owner has not decided how tasks install (sitting item 4).** Draft: sync calls `registerTasks({ projectRoot, home, appSupportDir, isDesktopAppRunning })` (`core-cli.tasks-register`), all four injected through `SyncOptions`. If the Desktop app is running, it does not call it and prints `tasks: the Desktop app is running; not registered. Quit it and run cortex tasks register`. If it is closed, it prints what `registerTasks` reports. A failed registration prints `tasks: not registered: <its message>`. Neither case changes sync's exit code.
+23. **Project skills.** It prints the `project skills to adjust` section of `store.migrate` Rule 18 step 5, from the same code.
+24. **Validation and exit.** It runs `cortex store validate`. Exit 0 when that reports no errors; otherwise it prints them and exits 1. Warnings do not fail sync.
+25. **`--dry-run`** writes nothing and registers nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:`, `hooks:` and `tasks:` line prefixed `would: `, and the Rule 23 section unprefixed, and it exits 0 without validating. On a project Rule 16 refuses, it refuses the same way.
+26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md`, `.githooks/` and what `registerTasks` writes. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
+
 ## Acceptance Criteria
+
+The criteria in this section and under `## Notes` describe the 3.x path (Rules 1–15). The 4.0 route has its own section at the end.
 
 ### Missing CLAUDE.md block is repaired, rest of the file untouched
 
@@ -240,3 +275,151 @@ governs:
 - **Given** the migration chain and the shipped bundle list
 - **When** they are compared
 - **Then** no entry names a currently-shipped bundle, and none is dated ahead of the package's own version
+
+## Acceptance Criteria: the 4.0 update route (amendment 2026-11-04)
+
+Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwin, with a test package root holding the final set, and `isDesktopAppRunning` returning true.
+
+### A 3.x project is told to migrate
+
+- **Given** a project with only `.cortex/cortex.config.json`
+- **When** `cortex sync` runs
+- **Then** it exits 3 with the Rule 16 message naming `cortex migrate`, and the project is byte-identical
+
+### An unaccepted migration is told to finish
+
+- **Given** `cortex/cortex.json` with `migration.accepted: null` and `.cortex/` present
+- **When** `cortex sync` runs
+- **Then** it exits 3 with the Rule 16 message naming `cortex migrate --accept`, and the project is byte-identical
+
+### No store is refused
+
+- **Given** a project with neither store
+- **When** `cortex sync` runs
+- **Then** it exits 2 with the message naming `cortex store init`
+
+### A store of another major version is refused
+
+- **Given** `cortex/cortex.json` at `schemaVersion` `5.0`
+- **When** `cortex sync` runs
+- **Then** it exits 3 and the project is byte-identical
+
+### A fresh 4.0 store takes the route
+
+- **Given** a `cortex store init` project with no `migration` field
+- **When** `cortex sync` runs
+- **Then** it exits 0 and the final set is installed
+
+### An unedited retired skill is removed
+
+- **Given** `.claude/skills/specflow-develop` and `.claude/skills/cortex-loop-hygiene`, each with a matching marker
+- **When** `cortex sync` runs
+- **Then** both folders are gone and the output has `skills: removed specflow-develop` and `skills: removed cortex-loop-hygiene`
+
+### An edited retired skill is left for the migrate step
+
+- **Given** `.claude/skills/specflow-plan` whose content does not match its marker, and `.claude/skills/specflow-bugs` with no marker
+- **When** `cortex sync` runs
+- **Then** both are byte-identical, each has the Rule 18 `is retired but has local edits` line, and no prompt was made
+
+### A project's own skill is never removed
+
+- **Given** `.claude/skills/release` and `.claude/skills/specflow-custom`, neither with a marker
+- **When** `cortex sync` runs
+- **Then** both are byte-identical
+
+### The final set arrives
+
+- **Given** no bundle of the final set under `.claude/skills/`
+- **When** `cortex sync` runs
+- **Then** all eight are installed with markers, each has its `skills: installed` line, and `cortex-migrate` is not installed
+
+### An unedited skill is updated
+
+- **Given** an installed `specflow-review` whose marker matches its content, and a package copy that differs
+- **When** `cortex sync` runs
+- **Then** it equals the package's copy, its marker is new, and the output has `skills: updated specflow-review`
+
+### An edited skill is left alone
+
+- **Given** an installed `specflow-review` whose content does not match its marker
+- **When** `cortex sync` runs
+- **Then** it is byte-identical, and the output has `skills: .claude/skills/specflow-review exists with different content; left alone`
+
+### A skill the package lacks is reported
+
+- **Given** a package with no `cortex-quality`
+- **When** `cortex sync` runs
+- **Then** it exits 0 and the output has `skills: cortex-quality is missing from the package; not installed`
+
+### The block reaches stage 2 in one run
+
+- **Given** a project with `specflow/` and a stage 1 block, and a package holding `specflow-spec`
+- **When** `cortex sync` runs once
+- **Then** the `CLAUDE.md` block holds the two stage 2 paragraphs
+
+### Installed hooks are refreshed
+
+- **Given** a git repository with `core.hooksPath` set to `.githooks` and an out-of-date `.githooks/commit-msg`
+- **When** `cortex sync` runs
+- **Then** the file holds what `cortex hooks install` writes, and the output has `hooks: refreshed .githooks`
+
+### Hooks are not switched on by sync
+
+- **Given** a git repository with `specflow/` and `core.hooksPath` unset
+- **When** `cortex sync` runs
+- **Then** `core.hooksPath` is still unset, `.githooks/` does not exist, and the output has `hooks: not installed; run cortex hooks install`
+
+### Outside git, hooks are skipped
+
+- **Given** a project that is not a git repository
+- **When** `cortex sync` runs
+- **Then** it exits 0 and the output has `hooks: not a git repository; skipped`
+
+### Tasks wait for the Desktop app (open)
+
+- **Given** `isDesktopAppRunning` returning true
+- **When** `cortex sync` runs
+- **Then** `registerTasks` is not called, the Rule 22 line is printed, and it exits 0
+
+### Tasks register when the app is closed (open)
+
+- **Given** `isDesktopAppRunning` returning false and a test registry
+- **When** `cortex sync` runs
+- **Then** `registerTasks` was called with the injected roots, and the output carries its report
+
+### A failed registration does not fail sync (open)
+
+- **Given** `isDesktopAppRunning` returning false and no registry
+- **When** `cortex sync` runs
+- **Then** the output has `tasks: not registered:` and it exits 0
+
+### Project skills are listed
+
+- **Given** a project bundle `release` naming `specflow-develop`
+- **When** `cortex sync` runs
+- **Then** the output has `project skills to adjust: 1` and `- release/SKILL.md: specflow-develop`, and the file is byte-identical
+
+### A validation error fails sync
+
+- **Given** a store file with a validation error
+- **When** `cortex sync` runs
+- **Then** it prints the error and exits 1
+
+### A dry run writes nothing
+
+- **Given** a project with an unedited retired skill and no final set
+- **When** `cortex sync --dry-run` runs
+- **Then** it exits 0, the project and the test registry are byte-identical, the output has `would: skills: removed <name>` and `would: skills: installed <name>`, and the `project skills to adjust` section is unprefixed
+
+### A second run changes nothing
+
+- **Given** a project `cortex sync` has just updated
+- **When** `cortex sync` runs again
+- **Then** no file changed, and the output has no `removed`, `installed` or `updated` line
+
+### Knowledge and settings stay out of it
+
+- **Given** a store with files in `world/`, `code/`, `history/` and `now/`, a `specflow/` tree, and a `.claude/settings.json`
+- **When** `cortex sync` runs
+- **Then** all of them are byte-identical

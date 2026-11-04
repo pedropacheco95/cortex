@@ -33,6 +33,7 @@ Current edges (`A → depends on B`):
 - `store.migrate` → `store.layout`, `store.validate`, `store.map`, `store.managed-block`
 - `store.remember-skill` → `store.map`
 - `store.migrate-skill` → `store.migrate`
+- `core-cli.sync` → `store.migrate`, `store.managed-block`, `specflow.git-hooks` (amendment 2026-11-04: the 4.0 update route)
 - `specflow.spec-skill` → `store.managed-block`, `specflow.index`, `specflow.check`, `scaffolding.skill-listing-budget`
 - `specflow.review-skill` → `specflow.spec-skill`, `scaffolding.skill-listing-budget`
 - `specflow.onboard-skill` → `specflow.port`, `specflow.index`, `specflow.review-skill`, `scaffolding.skill-listing-budget`

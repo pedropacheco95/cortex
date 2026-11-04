@@ -13,13 +13,15 @@ When this works, a project already under Cortex management never silently rots. 
 
 ## Who this is for
 
-Developers running Cortex on a project that already has a `.cortex/` — set up days, months, or a package upgrade ago — who need it repaired or brought current without touching what they've built up since.
+Developers running Cortex on a project that already has a store — set up days, months, or a package upgrade ago — who need it repaired or brought current without touching what they've built up since.
 
 ## User Journey
 
 1. The developer notices the assistant isn't reading `.cortex/` at all — nothing in its answers reflects the project's rules or specs. They run the keep-current command. It finds CLAUDE.md missing its Cortex orientation block, writes it in, and leaves everything else in the file untouched. The next session, the assistant orients itself correctly.
 2. Later, the developer upgrades the installed Cortex package and runs the same command. It brings the project's skill bundles, scheduled-upkeep prompts, and orientation templates in line with what the new package ships, and the summary names exactly what changed — which skills upgraded, which were left alone because the developer had modified them, which prompts refreshed.
 3. On a project whose `.cortex/` was scaffolded under a much older major version of Cortex, the command recognises the gap is too wide to bridge safely, refuses to touch the scaffolding, and points the developer at the dedicated migration command instead of half-upgrading something it no longer fully understands.
+
+4. After upgrading the package, on a project on the visible store, the same command removes the skills Cortex no longer ships, installs the current set, and refreshes the orientation block and git hooks. A skill the developer edited is left alone and named, and a retired one with edits waits for the migration step. On a project not yet migrated, the command writes nothing and says to migrate first.
 
 ## Business Rules
 
@@ -28,6 +30,8 @@ Developers running Cortex on a project that already has a `.cortex/` — set up 
 3. The project's accumulated knowledge is never in scope: rules, project memory, ingested documents, and inferred understanding are exactly as the developer left them before and after. The one file the command may add there is the identifier list, created once when missing from the identifiers the files already carry — a ledger, not knowledge — and never touched again.
 4. Everything the command does is named in the summary — no invisible changes, matching the same transparency day-1 setup gives.
 5. A version gap too wide to bridge safely is refused, not partially applied — the developer is pointed at the dedicated upgrade path instead.
+
+6. Old skills leave a project when the command runs, unless the developer edited them; a project's own skills are never removed.
 
 ## Success Metrics
 

@@ -23,12 +23,12 @@ Existing 3.x stores must move to the 4.0 layout without losing knowledge (vision
 
 Amendment 2026-10-19 (foreign stores): dry runs on three real 3.x stores reached 16–18% coverage, and they showed that `--apply` would corrupt binary raws and silently lose others. Pedro's rule for this amendment is "we cannot abide losing information" (Rules 15–19). The judgement stays out of Core: the `cortex-migrate` skill (`store.migrate-skill`) writes the plan.
 
-Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's own skills): a project's other skills still name retired skills and old paths, and would send an agent to something that is gone. Core lists them; the skill makes the edits. The retired skills go at a different time from acceptance: one project accepted long ago, and a client accepts before the replacement skills exist and before its port. So `--accept` is safe to re-run, and a re-run is how a project picks up the later skills and a fresh list (Rules 9, 18).
+Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's own skills): a project's other skills still name retired skills and old paths, and would send an agent to something that is gone. Core lists them; the skill makes the edits. The retired skills go at a different time from acceptance: one project accepted long ago, and a client accepts before the replacement skills exist and before its port. So the list and the later skills do not depend on `--accept`: `cortex sync` is the update route on an accepted store (`core-cli.sync` Rules 16–26), and it uses this spec's list and scan. `--accept` stays safe to re-run.
 
 ## Entities
 
 - **READS:** `.cortex/**` (including gitignored `pulse/` and `atlas/sources/`), `git ls-files .cortex`, an optional plan file and the digest files it names, an optional redact file; with `--accept`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/skills/*`, `<package>/skills/*`, and `<home>/.claude/scheduled-tasks/*/SKILL.md` (`<home>` is the user's home directory and `<package>` the package root; tests pass their own of each, as `tasks-register` does for `<home>`: `retireLegacySystem` takes both).
-- **WRITES:** the report (stdout, or `--report <file>`); with `--apply`, `cortex/**` and the `.gitignore` line; with `--accept`, the managed blocks, `cortex/cortex.json` `migration.accepted`, the hook entries in `.claude/settings.json` and `.claude/settings.local.json` (removal only), and the 4.0 bundles under `.claude/skills/` (Rule 18 step 2's list, new installs and their markers only).
+- **WRITES:** the report (stdout, or `--report <file>`); with `--apply`, `cortex/**` and the `.gitignore` line; with `--accept`, the managed blocks, `cortex/cortex.json` `migration.accepted`, the hook entries in `.claude/settings.json` and `.claude/settings.local.json` (removal only), and the 4.0 bundles under `.claude/skills/` (Rule 18 step 2's list, `FINAL_BUNDLES`, new installs and their markers only).
 - **NEVER WRITES:** anything under `.cortex/`, any scheduled-task payload, or a 3.x skill bundle.
 - **NEVER DELETES:** any file.
 
@@ -75,11 +75,12 @@ Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's
 6. **Coverage report** (markdown, or `--json`): the no-loss lines (Rule 16) and the visibility line (Rule 17) in its header; totals by disposition; a table of every entry (ref, disposition, target, flags, provenance refs resolved/total); the `review` list; the `pending decision` list with each proposal's first line; the `dropped by decision` section (Rule 12); the `unresolved provenance` section (Rule 13); the `redactions` section (Rule 14, refs and counts only, never the original text); the retired threads by id and status; the `unmapped` list; the retired 3.x config keys; the visibility findings on migrated text; the `undecided` list by folder, with counts (Rule 16); the `digested` list (ref → target → digest file); the plan's folder keys with the count each decided; the `concept definitions` (each concept file's ref and first definition line); the `files` line and the `gitignored only` list (Rule 15); and the command to remove `.cortex/` after acceptance. Every printed removal command is `git rm -r -q --ignore-unmatch <paths> && rm -rf <paths>`, because 3.x insight and pulse files are often untracked.
 7. **Dry run is the default.** Without `--apply`, nothing is written except the report file if `--report` is given.
 8. **`--apply`** refuses (exit 1, nothing written) while any entry is unmapped, while any file is undecided (Rule 16), or while any file a migrated entry accounts for would not be written (Rule 15). Otherwise it writes `cortex/` (refusing if `cortex/` exists with files not written by a previous apply of the same inputs), runs `cortex store map` (which leaves a 3.x block alone), and then runs `cortex store validate`, printing its result. It is re-runnable: the same inputs give a byte-identical tree.
-9. **`--accept`** requires a previous `--apply`. It records `"migration": { "from": "<3.x version>", "accepted": "<date>" }` in `cortex/cortex.json`, retires the 3.x system around the store (Rule 18), and then rewrites the managed blocks to 4.0, last, so that the blocks see the bundles just installed (`store.managed-block` Rule 9). It deletes nothing. It is re-runnable, also after `.cortex/` is gone: a re-run keeps the recorded date, runs Rule 18 again, and rewrites the blocks. With `--report <file>`, it also writes the text it prints to that file.
+9. **`--accept`** requires a previous `--apply`. It records `"migration": { "from": "<3.x version>", "accepted": "<date>" }` in `cortex/cortex.json`, retires the 3.x system around the store (Rule 18), and then rewrites the managed blocks to 4.0, last, so that the blocks see the bundles just installed (`store.managed-block` Rule 9). It deletes nothing. It is re-runnable, also after `.cortex/` is gone: a re-run keeps the recorded date, runs Rule 18 again, and rewrites the blocks.
 10. **Never dropped.** Pending proposals (`S-NNN` whose status is pending, `G-NNN`) go to `now/proposals.md`. Each is one item: a heading `## <id>: <first line>`, then `until: <apply date + 30 days>`, then `status: pending decision`, then its full text. They also appear in the report's `pending decision` list. What happens when they expire unreviewed is specified in `store.freshness` Rule 2.
 11. **The 3.x commands leave a 4.0 store alone.** When `cortex/cortex.json` exists with a 4.0 `schemaVersion`:
-   - **Before acceptance** (`migration.accepted` is `null`), the 3.x `cortex sync` and `cortex init` never write the `CLAUDE.md` or `AGENTS.md` managed block. They print `managed block owned by the 4.0 store (cortex/); left untouched`, and otherwise behave as before on `.cortex/`.
-   - **After acceptance, or on a 4.0 store with no `migration` field** (a fresh `cortex store init`), they refuse. They exit with their existing refusal codes (`init` 2, `sync` 3) and the message `this project uses the 4.0 store (cortex/); use cortex store init or cortex store map`, and write nothing. Otherwise a scheduled `sync` would reinstall the hooks and skills that Rule 18 removed.
+   - **Before acceptance** (`migration.accepted` is `null`), `cortex init` never writes the `CLAUDE.md` or `AGENTS.md` managed block. It prints `managed block owned by the 4.0 store (cortex/); left untouched`, and otherwise behaves as before on `.cortex/`.
+   - **After acceptance, or on a 4.0 store with no `migration` field** (a fresh `cortex store init`), `cortex init` refuses, with exit 2 and the message `this project uses the 4.0 store (cortex/); use cortex store init or cortex store map`, and writes nothing.
+   - **`cortex sync`** no longer has a 3.x path (amendment 2026-11-04). `core-cli.sync` Rule 16 decides what it does in each of these states.
 
    These are the only changes this spec makes to the 3.x code path. A sync can protect a foreign project only once the installed `cortex` binary carries this rule: no foreign project is accepted before that.
 12. **Insight is dropped by decision** (2026-10-14; schema S9.3). The 3.x inferred code summaries are neither migrated nor kept: `insight/anatomy/**`, `insight/concepts/**`, the insight graph with its indexes (`insight/{graph,tags,clusters,reverse-index,ledger}.json`), and the scoped layout's `insight/scopes/**`. Each file is one entry with disposition `dropped by decision`, so coverage still reaches 100%.
@@ -210,11 +211,11 @@ Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's
 - **When** `cortex migrate --apply` runs
 - **Then** `now/proposals.md` contains its full text with an `until:` 30 days after the apply date, and the report lists it under `pending decision`
 
-### 3.x sync and init leave the 4.0 block untouched
+### 3.x init leaves the 4.0 block untouched
 
 - **Given** an applied migration that is not yet accepted (`cortex/cortex.json` at 4.0 with `migration.accepted: null`, and a hand-written v4.0 block in `CLAUDE.md`) and the 3.x store still present
-- **When** the 3.x `cortex sync` runs, and then `cortex init` runs
-- **Then** the `CLAUDE.md` and `AGENTS.md` blocks are byte-identical to before, and each command prints that the block is owned by the 4.0 store
+- **When** `cortex init` runs
+- **Then** the `CLAUDE.md` and `AGENTS.md` blocks are byte-identical to before, and it prints that the block is owned by the 4.0 store
 
 ### Accept switches the blocks and deletes nothing
 
@@ -368,11 +369,11 @@ All of these use the foreign fixture (`writeForeignStore`). It holds a 3.3 confi
   - the output lists `cortex-loop` as `unmodified`, `cortex-archive-ingest` and `cortex-loop-hygiene` as `modified or unmarked`, both payloads for this root and no other, and `project skills to adjust: 1`;
   - no file under `.claude/skills/`, the tasks folder or `.cortex/` was deleted.
 
-### 3.x init and sync refuse after acceptance
+### 3.x init refuses after acceptance
 
 - **Given** an accepted migration, and separately a fresh `cortex store init` project with no `.cortex/`
-- **When** the 3.x `cortex sync` runs, and then `cortex init`
-- **Then** `sync` exits 3 and `init` exits 2, each with the 4.0 message, and `.claude/`, `CLAUDE.md` and `.cortex/` are byte-identical
+- **When** `cortex init` runs
+- **Then** it exits 2 with the 4.0 message, and `.claude/`, `CLAUDE.md` and `.cortex/` are byte-identical
 
 ## Acceptance Criteria: project skills (amendment 2026-11-04)
 
@@ -461,12 +462,6 @@ These use an accepted store with fixture bundles under `.claude/skills/`.
 - **Given** an applied migration with a `specflow/` folder, and a package holding `specflow-spec`
 - **When** `cortex migrate --accept` runs once
 - **Then** `.claude/skills/specflow-spec/SKILL.md` exists, and the `CLAUDE.md` block holds the two stage 2 lines of `store.managed-block` Rule 11
-
-### Accept can write its output to a file
-
-- **Given** an accepted project with one listed bundle
-- **When** `cortex migrate --accept --report out.txt` runs
-- **Then** `out.txt` holds the same text as stdout, including the `project skills to adjust` section
 
 ### Retired bundles and cortex-migrate are left out of the scan
 
