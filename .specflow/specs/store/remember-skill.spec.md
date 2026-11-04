@@ -132,6 +132,6 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 
 ### The write gate stands alone
 
-- **Given** this spec and the SKILL.md
-- **When** they are searched for `store-v4-awareness`
-- **Then** neither names it
+- **Given** the SKILL.md text
+- **When** its write gate is read
+- **Then** it states the gate in full and cites no other spec
