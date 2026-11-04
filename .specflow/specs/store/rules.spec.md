@@ -1,6 +1,6 @@
 ---
 id: store.rules
-status: implemented
+status: implementing
 depends_on:
   - store.layout
 implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.business.md
@@ -24,6 +24,7 @@ The user's rules live one per file in `world/rules/`, each with an `applies_when
 3. `check.applies-when` (warning, deterministic): 6–60 words; it starts with `The agent`, `The user`, `A session`, `When`, `Before`, `After` or `While`; it contains none of `about`, `related to`, `regarding`, `anything to do with`. The value `always` is exempt.
 4. `alwaysRules(store)` returns the rules whose `applies_when` is `always`, ordered by filename, for `store.map`.
 5. Nothing in 4.0 pushes a rule. This spec adds no hook.
+6. **Inferred rules (4.0 batch; OPEN for the owner).** A rule whose `source` starts `cortex-learn@`, `cortex-fresh@` or `cortex-quality@` was inferred by a scheduled task (schema S4). `check.rule` errors unless its `verified` ends `(inferred)`.
 
 ## Acceptance Criteria
 
@@ -68,3 +69,21 @@ The user's rules live one per file in `world/rules/`, each with an `applies_when
 - **Given** two rules, one with `applies_when: always`
 - **When** `alwaysRules` is called
 - **Then** it returns only that one, with its full text
+
+### A task's inferred rule must say so
+
+- **Given** `world/rules/x.md` with `source: cortex-learn@2026-11-04` and `verified: 2026-11-04 (observed)`
+- **When** the store is validated
+- **Then** `check.rule` errors on that file
+
+### A task's rule marked inferred passes
+
+- **Given** the same file with `verified: 2026-11-04 (inferred)`
+- **When** the store is validated
+- **Then** `check.rule` reports nothing for it
+
+### A user's rule is unaffected
+
+- **Given** a rule with `source: user@2026-11-04` and `verified: 2026-11-04 (told)`
+- **When** the store is validated
+- **Then** `check.rule` reports nothing for it

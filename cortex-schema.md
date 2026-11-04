@@ -1586,7 +1586,7 @@ End every substantive answer with an explicit confidence and what would change y
 | `applies_when` | yes | One sentence describing a **situation** the agent is in, written for a matcher. The literal value `always` marks a hard rule that MAP lists in full (S8). |
 | `scope` | yes | non-empty subset of `user-message`, `agent-answer`, `action`, `session-end` |
 | `match` | no | `{ commands: [<regex>], paths: [<glob>] }`: exact patterns, checked before any classifier |
-| `source` | yes | `<who>@<YYYY-MM-DD>`. Rules come only from the user or from an approved proposal. A rule an agent infers (from onboarding, a review or the code) is filed as a proposal in `now/proposals.md` (S6), never directly in `world/rules/`. |
+| `source` | yes | `<who>@<YYYY-MM-DD>`. Rules come from the user, from an approved proposal, or from a scheduled task. A scheduled task may write a rule it inferred straight to `world/rules/`, with `source: cortex-<task>@<date>` (`cortex-learn`, `cortex-fresh`, `cortex-quality`) and `verified: <date> (inferred)`, so a reader can tell it from a rule the user stated (OPEN: the owner sees this line at G2). Any other agent's inferred rule (from onboarding, a review or the code) is filed as a proposal in `now/proposals.md` (S6), never directly in `world/rules/`. |
 
 - **The body is the rule text,** imperative and complete, so it can be pushed verbatim.
 - **Description lint** (`check.applies-when`, a warning; the lint is deterministic):
