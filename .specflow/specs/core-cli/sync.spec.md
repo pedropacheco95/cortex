@@ -89,10 +89,10 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     - not in the package: `skills: <name> is missing from the package; not installed`.
 20. **Blocks.** It runs `cortex store map`, which writes `MAP.md` and both blocks, and prints its lines. Text outside the blocks stays untouched (`store.managed-block`).
 21. **Git hooks.** When `git config core.hooksPath` is `.githooks`, it does what `cortex hooks install` does and prints `hooks: refreshed .githooks`. When it is anything else and `specflow/` exists, it installs nothing and prints `hooks: not installed; run cortex hooks install`. Turning a refusing check on in a repository stays a separate act. Outside a git repository it prints `hooks: not a git repository; skipped`.
-22. **Tasks. OPEN: the owner has not decided how tasks install (sitting item 4).** Draft: sync calls `registerTasks({ projectRoot, home, appSupportDir, isDesktopAppRunning })` (`core-cli.tasks-register`), all four injected through `SyncOptions`. If the Desktop app is running, it does not call it and prints `tasks: the Desktop app is running; not registered. Quit it and run cortex tasks register`. If it is closed, it prints what `registerTasks` reports. A failed registration prints `tasks: not registered: <its message>`. Neither case changes sync's exit code.
+22. **Tasks. OPEN: the owner has not decided how tasks install (sitting item 4).** Draft: sync calls `registerTasks({ projectRoot, home, appSupportDir, isDesktopAppRunning })` once (`core-cli.tasks-register` Rule 17), all four injected through `SyncOptions`, and prints the returned `message` on one line. Whatever the `outcome`, including `app-running`, sync's exit code does not change.
 23. **Project skills.** It prints the `project skills to adjust` section of `store.migrate` Rule 18 step 5, from the same code.
 24. **Validation and exit.** It runs `cortex store validate`. Exit 0 when that reports no errors; otherwise it prints them and exits 1. Warnings do not fail sync.
-25. **`--dry-run`** writes nothing and registers nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:`, `hooks:` and `tasks:` line prefixed `would: `, and the Rule 23 section unprefixed, and it exits 0 without validating. On a project Rule 16 refuses, it refuses the same way.
+25. **`--dry-run`** writes nothing and registers nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:` and `hooks:` line prefixed `would: `, then `would: register tasks`, and the Rule 23 section unprefixed, and it exits 0 without validating. On a project Rule 16 refuses, it refuses the same way.
 26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md`, `.githooks/` and what `registerTasks` writes. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
 
 ## Acceptance Criteria
@@ -380,19 +380,19 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 
 - **Given** `isDesktopAppRunning` returning true
 - **When** `cortex sync` runs
-- **Then** `registerTasks` is not called, the Rule 22 line is printed, and it exits 0
+- **Then** the output has `Scheduled tasks not registered: the Claude Desktop app is open. Quit it and run cortex tasks register.` and it exits 0
 
 ### Tasks register when the app is closed (open)
 
 - **Given** `isDesktopAppRunning` returning false and a test registry
 - **When** `cortex sync` runs
-- **Then** `registerTasks` was called with the injected roots, and the output carries its report
+- **Then** `registerTasks` was called once with the injected roots, and the output has its `message`
 
 ### A failed registration does not fail sync (open)
 
 - **Given** `isDesktopAppRunning` returning false and no registry
 - **When** `cortex sync` runs
-- **Then** the output has `tasks: not registered:` and it exits 0
+- **Then** the output has the message of the `no-registry` outcome and it exits 0
 
 ### Project skills are listed
 
