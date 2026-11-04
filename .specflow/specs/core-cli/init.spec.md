@@ -50,6 +50,13 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 
 19. **Entry point (B-026).** The package bin reaches the dispatcher whenever it is executed, directly or through any chain of symlinks. The "run only when executed, not when imported" test compares the resolved real path of `process.argv[1]` with the module's own file path, and never compares a string suffix. The same applies to every module with its own executable guard (`src/hooks/cli.ts`, `src/schema/cli.ts`). This must land before `cortex check` ships: a check that silently does nothing reads as a pass.
 
+20. **The verb is retired at 4.0.** The `init` verb no longer sets up a project. Whatever flags follow it, it writes nothing, in the project or under `~/.claude/`, prints one line to stderr and exits 2 (Rule 18's code for "nothing ran"). The project is the first non-flag argument, else the current directory. Checked in this order:
+    - `cortex/cortex.json` exists: `cortex init: retired — this project already has a store; update it with cortex sync. Nothing was written.`
+    - `.cortex/cortex.config.json` exists: `cortex init: retired — this project is on the 3.x store; migrate it with cortex migrate. Nothing was written.`
+    - otherwise: `cortex init: retired — set up a new project with cortex store init, then cortex sync. Nothing was written.`
+
+    The usage text's closing line becomes ``Run `cortex store init` to set up a project; `cortex --help` prints this text.`` `init` stays in the verb list so the pointer can be found. Rules 1 to 17 now describe the exported `init()` function only. It stays in `src/cli/init.ts` because tests build 3.x fixtures with it, and no CLI path reaches it. This rule wins over them. A 3.x project created now would be one `cortex sync` refuses and whose skills no longer ship.
+
 ## Acceptance Criteria
 
 ### `--help` prints usage and writes nothing
@@ -262,6 +269,42 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Given** the symlink, a repository with `specflow/`, and `src/a.ts` staged alone
 - **When** `<tmp>/bin/cortex check --commit-msg <file>` is executed
 - **Then** the exit code is 1 and stderr carries the rule (a) line
+
+### init on a new project points at the store and writes nothing
+
+- **Given** an empty directory and `HOME` pointing at an empty temp home
+- **When** `cortex init --no-llm --yes` runs
+- **Then** it exits 2, stderr has `cortex init: retired — set up a new project with cortex store init, then cortex sync. Nothing was written.`, and nothing is created in the directory or under `$HOME/.claude/`
+
+### init on a 4.0 project points at sync
+
+- **Given** a project with `cortex/cortex.json`, also with a `.cortex/` folder
+- **When** `cortex init` runs
+- **Then** it exits 2 with the `update it with cortex sync` line, and no file changed
+
+### init on a 3.x project points at migrate
+
+- **Given** a project with `.cortex/cortex.config.json` only
+- **When** `cortex init --force` runs
+- **Then** it exits 2 with the `migrate it with cortex migrate` line, and no file changed
+
+### init reads a named target
+
+- **Given** an empty current directory and `<tmp>/p` holding `cortex/cortex.json`
+- **When** `cortex init <tmp>/p` runs
+- **Then** it exits 2 with the `update it with cortex sync` line
+
+### The usage text points at store init
+
+- **Given** any directory
+- **When** `cortex --help` runs
+- **Then** stdout carries ``Run `cortex store init` to set up a project`` and still lists `init`
+
+### The two commands set up a working project
+
+- **Given** an empty git repository
+- **When** `cortex store init` and then `cortex sync` run
+- **Then** both exit 0, `cortex/MAP.md` and the `CLAUDE.md` block exist, and the final skill set is in `.claude/skills/`
 
 ## Notes
 
