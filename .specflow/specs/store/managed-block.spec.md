@@ -50,7 +50,7 @@ Amendment 2026-11-04 (Specflow): the quick path has no skills. What it knows abo
 
     A git hook (`.githooks/commit-msg`) checks every commit. It runs no tests. It refuses:
 
-    - a commit that changes code or config (anything outside `specflow/`, tests, `.githooks/` and `.md` files) without changing a test;
+    - a commit that changes code or config (anything outside `specflow/`, `cortex/`, tests, `.githooks/` and `.md` files) without changing a test;
     - a commit that changes a spec's rules or criteria together with code or config. Commit the spec change on its own,
       before or after the code;
     - a commit that changes the text of an existing rule or criterion without a trailer

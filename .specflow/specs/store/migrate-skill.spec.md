@@ -53,7 +53,7 @@ governs:
    A person runs `--apply` after reading the decisions.
 8. **The skill-adjust step** (2026-11-04; owner decision). Every other skill in a project that names a retired skill or the old store is checked and adjusted if needed. This step runs after a person has run `cortex migrate --accept`, on the list it printed, and it comes after the plan steps in the SKILL.md. If `migration.accepted` is not set, the skill stops and says so.
 9. **Steps, in order:**
-   1. read the `project skills to adjust` section of `.cortex-migrate/accept.txt`; if that file is missing or older than the last edit, ask the person to run `cortex migrate --accept --report .cortex-migrate/accept.txt`, and wait;
+   1. read the `project skills to adjust` section of `.cortex-migrate/accept.txt`; if that file is missing, ask the person to run `cortex migrate --accept --report .cortex-migrate/accept.txt`, and wait;
    2. read each listed file in full, and every mention in it;
    3. decide each mention by Rule 10, using Rule 11's table;
    4. make the edits, changing only the words the decision needs;
