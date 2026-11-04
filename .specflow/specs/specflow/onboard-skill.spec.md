@@ -32,20 +32,20 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 1. **Bundle.** The bundle is `skills/specflow-onboard/SKILL.md`, mirrored byte for byte to `.claude/skills/specflow-onboard/SKILL.md`. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, and `store.migrate` Rule 18 step 2 installs it. Its tier in `TIERS` is **B**, and its required trigger phrases are `onboard this codebase` and `port mode`.
 2. **Description**, exactly: `Bring existing work under the specs. Port mode: turn business specs into promises and tag every test. Onboard mode: write specs from code. Proposals for approval. "onboard this codebase", "port mode".`
-3. **Working folder.** `cortex specs port` leaves its report in `.cortex-port/report.md` and `.cortex-port/report.json`. Port-mode proposals live in `.cortex-port/`: `promises/<area>/<name>.md` (one draft per business spec), `tagging/<area>.md` (one table per test folder), `decisions.md` (what the person decided). Onboard-mode work lives in `.cortex-port/onboard/<concern>/`.
+3. **Working folder.** `cortex specs port` leaves its report in `.cortex-port/report.md` and `.cortex-port/report.json`. Port-mode proposals live in `.cortex-port/`: `promises/` (one draft per business spec, at the path it will take), `tagging/<area>.jsonl` (`specflow.port` Rule 12), `decisions.md` (what the person decided). Onboard-mode work lives in `.cortex-port/onboard/<concern>/`.
 4. **Agents.** Every spawned agent is awaited before its output is used (`specflow.review-skill` Rule 6). Work is split so that one agent reads one area or one test folder.
 5. **Mode choice.** A `specflow/` tree with a `.cortex-port/report.json` means port mode. A project with no `specflow/` means onboard mode. If `.specflow/` still exists and `specflow/` does not, the skill stops and says: `Run cortex specs port first.`
 
 ### Port mode
 
-6. **Promise conversion.** For each business spec under `specflow/promises/`, an agent drafts one short owner-level promise that keeps every commitment the business spec makes and drops journey and metric detail. The draft is written to `.cortex-port/promises/`, carrying `id: P-<AREA>-<n>`, `title`, `status`, and a `## Outcome` section. Each impl spec's `implements:` link gives its `serves:` value, mechanically: frontmatter `serves: [P-…]` with exactly one entry, per spec and not per criterion. The reasoning a business spec holds that belongs to no promise is listed for `cortex/world/decisions/`, not dropped. This is the one text rewrite of a port.
-7. **Tagging pass.** Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Each test gets exactly one proposal row in `.cortex-port/tagging/<area>.md`, in this order of preference:
-   - **tag**: the criterion id(s) it proves;
-   - **new criterion**: no criterion matches, so propose its text and the spec it belongs in;
-   - **delete**: only when the person-visible behaviour is not wanted, with the reason.
+6. **Promise conversion.** `specflow.port` Rule 11 and schema S12.1 say what the output must be. For each business spec under `specflow/promises/`, an agent drafts one promise of at most 40 lines, with frontmatter `id` (`P-<AREA>-<n>`), `title` and `status`, a `#` title, and a `## Outcome` section. It keeps every commitment the business spec makes, including what the product does not promise, and drops journey and metric detail. The draft goes in `.cortex-port/promises/`. Each impl spec's `implements:` link gives its frontmatter `serves: [<promise id>]`, mechanically, one entry per spec. Reasoning that belongs to no promise is listed for `cortex/world/decisions/`, not dropped. This is the one text rewrite of a port.
+7. **Tagging pass.** `specflow.port` Rule 12 gives the line format. Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Each case gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl`, with `file`, `name`, `line`, `action` and `reason`. Its `action` is, in this order of preference:
+   - `tag`: with `criterion`, the criterion it proves;
+   - `new-criterion`: no criterion matches, so it gives the `title` and the `spec` it belongs in;
+   - `delete`: only when the behaviour is not wanted, with the reason.
 
-   A row reads `<file> › <test name> | tag|new-criterion|delete | <ids or text> | <one-line reason>`. A test the agent cannot place is proposed as **new criterion**, never left out and never proposed for deletion for lack of a match.
-8. **Approval, then application.** The skill shows the person the counts per area and the rows that are not plain tags. Nothing is applied without the person's approval, per repository; approval may be per area. The person's decisions go in `.cortex-port/decisions.md`. The main session then applies approved rows: a promise replaces its business spec; `serves:` links are added; a tag goes at the start of the test name, or as `@pytest.mark.criterion("CRIT-ID")` in pytest; new criteria are added in commits of their own. Applying a tag changes a test's name and nothing else in it.
+   A test the agent cannot place is proposed as `new-criterion`, never left out and never proposed for deletion for lack of a match. The pass is finished when `cortex specs port --verify` exits 0, and the skill runs that before asking for approval.
+8. **Approval, then application.** The skill shows the person the counts per area and the lines that are not plain tags. Nothing is applied without the person's approval, per repository; approval may be per area. The person's decisions go in `.cortex-port/decisions.md`. The main session then applies approved rows: a promise replaces its business spec; `serves:` is added to each spec and its `implements:` removed; a tag goes at the start of the test name, or as `@pytest.mark.criterion("CRIT-ID")` in pytest; new criteria are added in commits of their own. Applying a tag changes a test's name and nothing else in it.
 9. **Going live.** When `specflow/INDEX.md` shows `Untagged tests: 0` (`.untagged` empty in `cortex specs index --json`), the skill says so and tells the person that rules (b) and (c) can be switched on in the `specflow.rules` key of `cortex/cortex.json`, an owner-approved edit. It never switches them on, and it never reports them live while an untagged test remains. A criterion still without a test stays `unverified`; that is the honest starting state.
 
 ### Onboard mode
@@ -90,19 +90,19 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 - **Given** the SKILL.md text
 - **When** it is read
-- **Then** it names `.cortex-port/report.json`, `.cortex-port/promises/`, `.cortex-port/tagging/` and `.cortex-port/decisions.md`, and says onboard mode uses the exclude file, never `.gitignore`
+- **Then** it names `.cortex-port/report.json`, `.cortex-port/promises/`, `.cortex-port/tagging/<area>.jsonl` and `.cortex-port/decisions.md`, and says onboard mode uses the exclude file, never `.gitignore`
 
 ### A promise keeps every commitment
 
 - **Given** the SKILL.md text
 - **When** its promise step is read
-- **Then** it says the draft keeps every commitment, names `id: P-<AREA>-<n>` and `## Outcome`, derives one frontmatter `serves:` entry per spec from `implements:`, and sends leftover reasoning to `cortex/world/decisions/`
+- **Then** it says the draft keeps every commitment and is at most 40 lines, names `P-<AREA>-<n>`, `title` and `## Outcome`, derives one frontmatter `serves:` entry per spec from `implements:`, says `implements:` is then removed, and sends leftover reasoning to `cortex/world/decisions/`
 
 ### Every untagged test gets one proposal
 
 - **Given** the SKILL.md text
 - **When** its tagging step is read
-- **Then** it says every untagged test gets exactly one row, in the order tag, new criterion, delete, gives the row format, and says a test with no match proposes a new criterion
+- **Then** it says every untagged test gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl` with the Rule 7 fields, in the order `tag`, `new-criterion`, `delete`, says a test with no match proposes `new-criterion`, and says `cortex specs port --verify` must exit 0 before approval is asked
 
 ### Deletion is the last resort
 
