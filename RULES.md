@@ -32,13 +32,17 @@ Don't add Linux or Windows code paths.
 
 **Why:** the scheduling backend constraint keeps v1 scope shippable.
 
-## 6. Hooks warn-never-block, are pure Node.js file I/O, and make no network calls — with one measured exception.
+## 6. Session hooks warn-never-block, are pure Node.js file I/O, and make no network calls — with one measured exception. The git commit and push check is a separate class and may refuse.
 
 A hook may surface a warning but must never fail, block, or stall a session. **The one exception:** the Read-deferral gate of `hooks.pre-read-writeback` Rule 7 — `hooks.readDefer`, default **off**, one `deny` per session per file (the second Read of that file always proceeds), never for a spec, rule, decision, evidence file, the schema or scaffolding, never in a scheduled session, capped at 25 deferrals per session, fail-open on every path (any failure inside the rule falls through to the ordinary payload), and shipped for **measurement** (`pulse.usage` Rule 13, "Read deferrals"), not as policy. No other hook, and no other decision of that hook, may deny, ask, or exit non-zero.
 
 **Why:** a hook must never break or slow the user's session. The exception exists to measure, once and reversibly, whether a summary can stand in for a read; if the proceed-rate says it cannot, the exception is removed, not widened.
 
-**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): there is no exception. A 4.0 store has no Read-deferral gate, so no hook may deny, ask, or exit non-zero.
+**The git check** (`specflow.check`, `specflow.git-hooks`). "Hook" above means a Claude Code session hook. `cortex check`, run by the git `commit-msg` and `pre-push` hooks, may refuse a commit or a push, and nothing else may: the git `pre-commit`, `pre-merge-commit` and `post-commit` hooks stay warn-only. The check is deterministic, runs no tests, and makes no LLM or network call.
+
+**Why:** on the bench, every refusal was followed by a correct commit. A git refusal stops a commit, not a session, and its message says how to proceed.
+
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): there is no exception for session hooks. A 4.0 store has no Read-deferral gate, so no session hook may deny, ask, or exit non-zero. The git check above is unaffected.
 
 ## 7. Loops and pulse write ONLY to `.cortex/pulse/` and propose changes for human approval.
 
@@ -46,7 +50,14 @@ They never mutate compass/anatomy/atlas/specs directly. Sole exception: the test
 
 **Why:** the persistence layer stays a curated artefact.
 
-**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): loops write proposals only to `cortex/now/proposals.md`, each item with an `until:` date (schema S6), and never edit `cortex/code/`, `cortex/world/` or the specs directly. `history/` is append-only (S7); the sanctioned writes are `cortex store expire` moving expired `now/` items into `history/changes/`, and the `cortex-remember` skill filing a fact the user or the session supplied, with its readback line. The test-runner exception is unchanged.
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): loops write proposals only to `cortex/now/proposals.md`, each item with an `until:` date (schema S6), and never edit `cortex/code/`, `cortex/world/` or the specs directly. `history/` is append-only (S7); the sanctioned writes are `cortex store expire` moving expired `now/` items into `history/changes/`, and the `cortex-remember` skill filing a fact the user or the session supplied, with its readback line. The three scheduled tasks have these further sanctioned writes (OPEN: for the owner at G2):
+- `cortex-learn`: a user rule carrying a verbatim quote, to `world/rules/`; facts by the `cortex-remember` steps; one new `history/sources/<date>-session-<id>.md` per mined session.
+- `cortex store amendments --apply`: one new `history/changes/<date>-spec-amendments.md`.
+- `cortex-fresh`: `cortex store expire --apply`; one new `history/changes/<date>-fresh.md`.
+- `cortex-quality`: one new `history/measurements/<date>-quality.md`; items in `now/`.
+- All three: their own item in `now/cortex-tasks.md`.
+
+No task edits an existing `code/` or `world/` file, except a rule update by `cortex-learn` when the user corrected that rule in a quote. The test-runner exception is unchanged; if the test-runner is retired, this sentence goes with it.
 
 ## 8. Every artefact carries YAML frontmatter conforming to the schema.
 

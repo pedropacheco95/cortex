@@ -1,6 +1,6 @@
 ---
 id: core-cli.init
-status: implemented
+status: implementing
 depends_on:
   - schema.validator
   - anatomy.scanner
@@ -41,12 +41,14 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 10. **CLAUDE.md managed block (schema §8).** Insert or update the `<!-- cortex:start -->…<!-- cortex:end -->` block, creating `CLAUDE.md` if absent. Content outside the markers is never modified. Re-running updates only the block (idempotent). **3.4 fifth revision (brief §1.1, §5).** The block is rendered by `claudeMdBlock(projectName, config)` from the §8 template and the project's `cortex.config.json`: (a) the protocol paragraph names the non-implementer roles — the pinned sentence *"This applies more, not less, to sessions that dispatch, review or plan rather than edit: everything reaches them as a claim, and `compass/` is where claims are checked."*; (b) one **placement paragraph**, generated, replaces any split guidance: `**Placement:** durable knowledge lives in \`.cortex/\` (tracked, except \`atlas/sources/\`, \`pulse/\` and archived raw sources).` followed by ` \`<placement.localNotesDir>\` is local and untracked: notes there do not travel — promote them into \`.cortex/\` instead of tracking the directory.` when `placement.localNotesDir` is set (schema §10.1), and by ` This repository is public: compass and atlas carry pointers, never hosts, ports or account ids (RULES.md rule 20).` when `visibility.repo` is `public`, or ` Repository visibility is unknown — set \`visibility.repo\` in \`cortex.config.json\`.` when it is `unknown`; (c) the two-sentence insight mandate ("Before substantive work on any file, query its insight entry… This is not optional.") is **removed** from the template — the 3.3 second-revision note already recorded its removal on measured non-compliance, and the template never followed. `check.claude-md` is unchanged (markers and version only); the paragraph text is pinned by this spec's tests.
 11. **Hooks registration (schema §5).** Merge the hook entries into `.claude/settings.json`, creating it if absent and preserving all unrelated keys. The PreRead hook entry is written iff `cortex.config.json` `hooks.preRead` is true. The result must satisfy `check.hook-config`.
 12. **Git post-commit hook.** If the project is a git repo: install the anatomy-refresh-fast invocation into `.git/hooks/post-commit`, **appending** to an existing hook file rather than replacing it (and making it executable). If not a git repo: skip with a notice.
-13. **Desktop scheduled-task payloads (design §13 step 12; corrected by B-009).** Write one `~/.claude/scheduled-tasks/<scoped-task-name>/SKILL.md` per scheduled bundle — names project-scoped per schema §9.1 and `core-cli.task-scoping` (plain `<slug>-<canonical>` with hash fallback on collision, ownership marker stamped; recognition, preserve, and overwrite logic all match only this project's tasks) — the **five bundles** of schema §9.1 at 3.0 (`daily`, `weekly-curation`, `weekly-quality`, `test-runner`, `monthly-review`) — each `name`/`description` frontmatter plus the prompt body invoking the bundle's member loop skills in sequence, per schema §9-adjacent conventions. **These SKILL.md directories are prompt payloads only, not registration**: the Desktop app never scans `~/.claude/scheduled-tasks/` — its registry is its own in-memory-per-launch `scheduled-tasks.json`. Registration happens **in a Claude Desktop session via the `cortex-register-tasks` skill** (the app's own `mcp__scheduled-tasks__*` tools; `cortex tasks register` is only the guarded, app-closed direct-write fallback — spec `core-cli.tasks-register`). After writing payloads, init runs the read-only `registrationStatus` check against the registry (registry-not-found tolerated — the app may never have run) and, when any of the five is unregistered, prints a clearly-formatted instruction block: open this folder in Claude Desktop (new session), say `run cortex-register-tasks`, then confirm with `cortex tasks verify`. When all five are registered it prints the all-registered one-liner instead. Idempotent: existing task files are overwritten only with `--force`, otherwise left in place.
+13. **Desktop scheduled-task payloads (design §13 step 12; corrected by B-009).** Write one `~/.claude/scheduled-tasks/<scoped-task-name>/SKILL.md` per scheduled bundle — names project-scoped per schema §9.1 and `core-cli.task-scoping` (plain `<slug>-<canonical>` with hash fallback on collision, ownership marker stamped; recognition, preserve, and overwrite logic all match only this project's tasks) — the **five bundles** of schema §9.1 at 3.0 (`daily`, `weekly-curation`, `weekly-quality`, `test-runner`, `monthly-review`) — each `name`/`description` frontmatter plus the prompt body invoking the bundle's member loop skills in sequence, per schema §9-adjacent conventions. **These SKILL.md directories are prompt payloads only, not registration**: the Desktop app never scans `~/.claude/scheduled-tasks/` — its registry is its own in-memory-per-launch `scheduled-tasks.json`. Registration happens **in a Claude Desktop session via the `cortex-register-tasks` skill** (the app's own `mcp__scheduled-tasks__*` tools; `cortex tasks register` is only the guarded, app-closed direct-write fallback — spec `core-cli.tasks-register`). **At 4.0** there are three tasks (`core-cli.tasks-register`), the skill is retired, and the instruction block in this rule and Rule 15 reads: quit the Desktop app fully, then run `cortex tasks register`. After writing payloads, init runs the read-only `registrationStatus` check against the registry (registry-not-found tolerated — the app may never have run) and, when any of the five is unregistered, prints a clearly-formatted instruction block: open this folder in Claude Desktop (new session), say `run cortex-register-tasks`, then confirm with `cortex tasks verify`. When all five are registered it prints the all-registered one-liner instead. Idempotent: existing task files are overwritten only with `--force`, otherwise left in place.
 14. **Self-validation.** After all steps, run `schema.validator` over the project. Init succeeds (exit 0) only if the report is conformant (zero errors); otherwise it prints the violations and exits 1. Warnings do not fail init.
 15. **Summary.** Print a summary naming every change made: files indexed (and how many purposes were filled inline vs left flagged), skills installed, preferences drafted, hooks registered, git hook state, scheduled task payloads written, CLAUDE.md updated, migrations performed, spec-tree state — plus the Rule 13 registration status: the open-Desktop-and-run-`cortex-register-tasks` instruction block when any task is unregistered (registry missing counts as all unregistered), or the all-registered one-liner otherwise (B-009 final mechanism). Exit codes: 0 success (including a degraded purpose pass, Rule 6), 1 self-validation failure, 2 preflight refusal, 3 complete-but-unauthenticated (Rule 6).
 16. **No silent destruction.** Every write to a pre-existing file is a merge or an append; the only overwrites are `--force`-gated. This rule wins over any step above if they conflict.
 17. **`--partial` mode.** With `--partial`, init writes a bundle payload (Rule 13) **only if every member-loop skill its prompt invokes is present** in the project's `.claude/skills/`; bundles missing any member skill are skipped, and the summary names each skipped bundle and the missing member skill it needs. All other init behaviour is unchanged: `.cortex/` skeleton, scanner run, purpose pass, hooks registered, CLAUDE.md updated, git hook installed. This makes init usable while Cortex itself is under construction (loops land incrementally) and covers the v1.x case of users disabling optional loops. The task→skill mapping is owned by the task definitions themselves — each declares the skill(s) its prompt invokes. **Default (non-partial) mode is unchanged:** all five bundle payloads are written regardless of member-skill presence — a bundle member firing without its skill degrades politely in the Desktop session, and the bundle's other members are failure-isolated from it — but the summary warns which written bundles currently lack a member skill and names `--partial` as the honest opt-in.
 18. **Invocation gate (B-018).** Init runs **only** when the first CLI argument is the literal verb `init`, and the dispatcher strips that verb before parsing init's own flags and target (today the verb is kept out of the target only by an `indexOf(-1) + 1 === 0` accident in the positional filter — B-018 chain step 3). Every other path prints the **usage text** — the verb list the `src/cli/cli.ts` file-header docblock already carries, which is the single source so the two cannot drift — to **stdout** and exits **2** having written nothing, in the project or under `~/.claude/`: any first argument no verb branch matched (a mistyped verb, with or without sub-arguments; `--version`/`-v` included until a version verb is specified), `--help`, `-h`, and a bare `cortex` with no arguments. The usage text's first line names the unrecognised argument when there was one. This is the "unrecognised input is a usage error, never a silent fallback" contract `core-cli.init-profile` Rule 2 fixed one level down for `--profile`, applied at the verb level; it generalises Rule 1's exit-2 refusal rather than contradicting it. Source: B-018 (filed 2026-09-15 — `cortex --help` in an empty directory scaffolded a project and wrote five scheduled-task payloads into the user's home, exit 0). Owner decision recorded here: `--help` exits 2 like every other non-verb (B-018's proposed fix suggested 0; the lead chose one code for "nothing ran"), and bare `cortex` is **not** an init alias.
+
+19. **Entry point (B-026).** The package bin reaches the dispatcher whenever it is executed, directly or through any chain of symlinks. The "run only when executed, not when imported" test compares the resolved real path of `process.argv[1]` with the module's own file path, and never compares a string suffix. The same applies to every module with its own executable guard (`src/hooks/cli.ts`, `src/schema/cli.ts`). This must land before `cortex check` ships: a check that silently does nothing reads as a pass.
 
 ## Acceptance Criteria
 
@@ -224,6 +226,42 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Given** a git repo whose `.git/hooks/post-commit` already contains `echo existing`
 - **When** `cortex init --no-llm` runs
 - **Then** the hook file still contains `echo existing`, followed by the cortex anatomy-refresh-fast invocation, and remains executable
+
+### Symlinked bin runs a verb
+
+- **Given** a symlink `<tmp>/bin/cortex` → `dist/cli/cli.js`
+- **When** `<tmp>/bin/cortex validate <valid fixture>` is executed as a child process
+- **Then** stdout carries the validator report and the exit code is 0
+
+### Symlinked bare bin gets usage
+
+- **Given** the same symlink
+- **When** it is executed with no arguments
+- **Then** stdout carries the Rule 18 usage text and the exit code is 2
+
+### A chain of symlinks reaches the dispatcher
+
+- **Given** `<tmp>/a` → `<tmp>/b` → `dist/cli/cli.js`
+- **When** `<tmp>/a validate <valid fixture>` is executed
+- **Then** stdout carries the validator report and the exit code is 0
+
+### Symlinked hook and schema entry points run
+
+- **Given** symlinks to the built `src/hooks/cli.ts` and `src/schema/cli.ts` modules
+- **When** each is executed with a valid command
+- **Then** each does its work and neither exits 0 having written nothing
+
+### Importing the module does not run it
+
+- **Given** a script that imports `dist/cli/cli.js`
+- **When** the script runs
+- **Then** the dispatcher does not run and no usage text is printed
+
+### A refusal survives a symlinked bin
+
+- **Given** the symlink, a repository with `specflow/`, and `src/a.ts` staged alone
+- **When** `<tmp>/bin/cortex check --commit-msg <file>` is executed
+- **Then** the exit code is 1 and stderr carries the rule (a) line
 
 ## Notes
 

@@ -610,7 +610,7 @@ Do you want the counter in state/ or at the pulse root?
 
 ### 4.6 Developer specs — `.specflow/specs/**/*.spec.md`
 
-From the dev-spec template. **Required (leaf):** `id` (matches path), `status` (enum `draft|implementing|implemented`), `implements` (exactly one `path` to a business spec). **Required (all):** `id`, `status`. **Optional:** `depends_on` (list<id> — dev-spec IDs), `governed_by` (list<id> — compass rule IDs, design §8.4), `governs` (list<glob> — project files this spec governs; v2.0 fed anatomy's `spec_links` column; anatomy is removed at v3.0 and this role moves to insight's **Connections** section instead, design §5.10, addendum A1.6. **Semantics are deliberately identical to the compass-rule `governs` field (§4.1)** — same glob syntax, project-root-relative resolution, 0 on-disk matches → `warning`. The only divergence is optionality: required on rules because a rule without governed files is meaningless, optional on dev specs because a draft spec may legitimately precede the files it governs), `provenance` (list<{derives_from: path}> — this spec's derivation from an archive document or a Claude Code session; optional, absence means "authored directly"; §6, addendum A6). **Domain/capability specs:** `implements` is optional; `depends_on` allowed on capability specs.
+From the dev-spec template. **Required (leaf):** `id` (matches path), `status` (enum `draft|implementing|implemented|retired`; `retired` means the spec no longer describes the system and is kept as a record), `implements` (exactly one `path` to a business spec). **Required (all):** `id`, `status`. **Optional:** `depends_on` (list<id> — dev-spec IDs), `governed_by` (list<id> — compass rule IDs, design §8.4), `governs` (list<glob> — project files this spec governs; v2.0 fed anatomy's `spec_links` column; anatomy is removed at v3.0 and this role moves to insight's **Connections** section instead, design §5.10, addendum A1.6. **Semantics are deliberately identical to the compass-rule `governs` field (§4.1)** — same glob syntax, project-root-relative resolution, 0 on-disk matches → `warning`. The only divergence is optionality: required on rules because a rule without governed files is meaningless, optional on dev specs because a draft spec may legitimately precede the files it governs), `provenance` (list<{derives_from: path}> — this spec's derivation from an archive document or a Claude Code session; optional, absence means "authored directly"; §6, addendum A6). **Domain/capability specs:** `implements` is optional; `depends_on` allowed on capability specs.
 
 ```yaml
 ---
@@ -626,7 +626,7 @@ Body sections (design §8.1): Intent, Entities (READS/WRITES/CREATES — referen
 
 ### 4.7 Business specs — `.specflow/specs-business/**/*.business.md`
 
-**Required:** `id` (`<domain>.<outcome-slug>`, bare, globally unique), `status` (enum `draft|implementing|implemented`), `implemented_by` (list<path> to dev specs). **Optional:** `depends_on` (list<id> — business-spec IDs), `provenance` (list<{derives_from: path}> — this spec's derivation from an archive document or a Claude Code session; optional, absence means "authored directly"; §6, addendum A6).
+**Required:** `id` (`<domain>.<outcome-slug>`, bare, globally unique), `status` (enum `draft|implementing|implemented|retired`), `implemented_by` (list<path> to dev specs). **Optional:** `depends_on` (list<id> — business-spec IDs), `provenance` (list<{derives_from: path}> — this spec's derivation from an archive document or a Claude Code session; optional, absence means "authored directly"; §6, addendum A6).
 
 ```yaml
 ---
@@ -637,7 +637,7 @@ implemented_by:
 ---
 ```
 
-Body sections: Outcome, Who This Is For, User Journey, Business Rules, Success Metrics, Out of Scope, Notes. **No schemas, APIs, or Given/When/Then** (business-spec template). **Status policy (Policy A, mechanical).** A business spec's `status` is `implemented` when **every** dev spec in its `implemented_by:` list has `status: implemented`; until then it stays `draft`/`implementing`. A business spec whose implementers are all implemented but whose own status lags is flagged by `check.business-status` (warning). *Policy B — "implemented when a passing journey test exists" — is the v1.1 target once the test-runner loop ships; Policy A is deliberately the weaker, mechanically-available stand-in until then.*
+Body sections: Outcome, Who This Is For, User Journey, Business Rules, Success Metrics, Out of Scope, Notes. **No schemas, APIs, or Given/When/Then** (business-spec template). **Status policy (Policy A, mechanical).** A business spec's `status` is `implemented` when **every** dev spec in its `implemented_by:` list has `status: implemented`; until then it stays `draft`/`implementing`. A business spec whose implementers are all implemented but whose own status lags is flagged by `check.business-status` (warning). The check ignores `retired` implementers, and a business spec whose implementers are all `retired` is not flagged. *Policy B — "implemented when a passing journey test exists" — is the v1.1 target once the test-runner loop ships; Policy A is deliberately the weaker, mechanically-available stand-in until then.*
 
 **Validated by** `check.business-spec`: `id` matches path and is globally unique; `implemented_by` paths resolve and are symmetric (§6); body contains no fenced code / HTTP-verb / `Given`-`When`-`Then` markers → `warning` (drift into dev territory); if `provenance` present, each entry resolves per `check.provenance` (§6, addendum A6).
 
@@ -1317,6 +1317,8 @@ test-runner's writer/verifier code path and bug-triage's fill-only classificatio
 
 ### 9.1 Desktop scheduled-task naming (project scoping)
 
+**At 4.0** there are three tasks, `learn` (daily), `fresh` and `quality` (weekly), not the five bundles below. `core-cli.tasks-register` owns their names and cadence; the naming rules here still apply.
+
 `~/.claude/scheduled-tasks/` is one global namespace per user, so every Cortex-managed task name MUST be project-scoped. The default form is plain:
 
 ```
@@ -1479,6 +1481,7 @@ Contents:
 - S9 Configuration, versioning and migration
 - S10 Commit trailers
 - S11 Validator checks (4.0)
+- S12 Specflow
 
 ## S1. The store layout
 
@@ -1602,7 +1605,7 @@ End every substantive answer with an explicit confidence and what would change y
 
   | Field | Required | Shape |
   |---|---|---|
-  | `kind` | yes | open enum: `change-request` \| `decision-change` \| `other`; new values produce a `warning`, not an `error` |
+  | `kind` | yes | open enum: `change-request` \| `decision-change` \| `spec-amendment` \| `other`; new values produce a `warning`, not an `error` |
   | `status` | yes | free string; for `change-request`, the 3.x intent statuses are kept verbatim (`open`, `reconciled`, …) |
   | `decision` | no | path of the `world/decisions/` file this event changed |
   | `spec` | no | dev or business spec id or path |
@@ -1610,7 +1613,7 @@ End every substantive answer with an explicit confidence and what would change y
 
 - **Status transitions** (2026-10-19). In a `history/changes/` file, `status` is the one field that may change after the first commit. Each transition appends one line at the end of the body, `- <YYYY-MM-DD>: <from> → <to>, <reason>`, and nothing else in the file changes except an appended `## Correction` section (S7).
 - **Lineage:** code → commit trailers (S10) → dev spec → business spec → change → source.
-- **Specs stay in Specflow's trees.** 4.0 does not touch them. Specs hold what the system should do; decisions hold the current answer to a question and why.
+- **Specs stay in Specflow's trees.** The store does not touch them (S12 holds their format). Specs hold what the system should do; decisions hold the current answer to a question and why.
 
 ## S6. `now/`: volatile items
 
@@ -1673,8 +1676,8 @@ End every substantive answer with an explicit confidence and what would change y
 ### S8.3 Managed blocks
 
 - **Markers:** `<!-- cortex:start v4.0 -->` … `<!-- cortex:end -->`, the same idiom as Part I §8. One block per file, and content outside the block is never touched.
-- **`CLAUDE.md`:** the block holds a two-line pointer and the line `@cortex/MAP.md`.
-- **`AGENTS.md`:** the block holds a copy of MAP's content, since Codex does not follow `@` includes.
+- **`CLAUDE.md`:** the block holds a two-line pointer, the line `@cortex/MAP.md`, and, when the project has a `specflow/` folder, the `## Specs` section (`store.managed-block`).
+- **`AGENTS.md`:** the block holds a copy of MAP's content, since Codex does not follow `@` includes, and, when the project has a `specflow/` folder, the same `## Specs` section after it.
 - **`cortex store map`** regenerates `MAP.md` and both blocks, and `check.map-fresh` warns when they are stale.
 
 ## S9. Configuration, versioning and migration
@@ -1688,6 +1691,7 @@ End every substantive answer with an explicit confidence and what would change y
 - **`schemaVersion` is required.**
 - **`migration`** (optional): `{ "from": "3.4", "accepted": "YYYY-MM-DD" | null }`, written by `cortex migrate --apply` (`accepted: null`) and `--accept`. A 4.0 store **without** this field (a fresh `cortex store init` in a project with no `.cortex/`) counts as accepted. Until it is accepted, the managed blocks stay at 3.x (S8.3).
 - **`visibility`** keeps its Part I §10.1 meaning and its RULES.md rule 20 duty, applied to `cortex/world/` and `cortex/code/` instead of `compass/` and `atlas/`. `repo` is `public`, `private` or `unknown`. A migrated store carries `unknown` when the 3.x config never recorded it and `--visibility` was not given.
+- **`specflow`** (optional): the Specflow settings, S12.6.
 - **Unknown keys** produce a `warning`.
 - **The 3.x keys `hooks`, `pulse`, `harness`, `loop` and `profile` do not exist in 4.0.** Migration lists them as retired.
 
@@ -1755,8 +1759,9 @@ End every substantive answer with an explicit confidence and what would change y
 |---|---|---|
 | `Spec:` | spec id | The spec the commit implements or changes. |
 | `Source:` | `history/sources/…` path or `history/changes/…` path | Where the ask came from. |
+| `Specflow-Amends:` | `<spec-id>#<item> — <reason>` | The commit changes or removes existing spec text. `<item>` is `rule-<n>` or a criterion id, with no spaces. The separator is an em dash, `-` or `--`, and the reason is required. One trailer per item. |
 
-Both are optional and repeatable. A trailer that names a spec id or path that does not exist produces a `warning` (`check.trailers`, over the last 50 commits).
+All are optional and repeatable, except that `specflow.check` rule (e) requires `Specflow-Amends:` for each amendment. A trailer that names a spec id or path that does not exist produces a `warning` (`check.trailers`, over the last 50 commits).
 
 ## S11. Validator checks (4.0)
 
@@ -1783,3 +1788,164 @@ They run through `cortex store validate`. A check that errors makes the command 
 | `check.trailers` | warning | S10 |
 
 - **`cortex validate` on a 4.0 project** (2026-10-19). When `cortex/cortex.json` exists and `.cortex/cortex.config.json` does not, `cortex validate` runs the checks above and Part I's spec-tree checks: `check.overview-present`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec` and `check.xref-symmetry`. A `governed_by` id that is an alias of a `cortex/` file resolves. Exit codes are as in Part I. When both stores exist, `cortex validate` validates the 3.x store as before.
+
+## S12. Specflow
+
+Added to the 4.0 draft for the G2 sitting (2026-11-04). A project is under Specflow when it has a `specflow/` folder. Until `specflow.port` runs, its specs stay in Part I §2. Behaviour is in the `specflow.*` dev specs; this section holds formats only. These additions are optional and backward-compatible, so §10.2 would call them a MINOR change; they are folded into 4.0 because 4.0's Part II is approved as a whole (plan A13).
+
+### S12.1 Layout
+
+```
+specflow/
+  INDEX.md                  # generated, never edited
+  constants.md              # optional, at any folder level
+  promises/<area>/<slug>.md
+  impl/<area>/<leaf>.spec.md
+```
+
+- **Implementation specs** keep §4.6's frontmatter and body. They gain `serves: [<promise id>]`, exactly one entry, which replaces `implements:` after promise conversion. Before it, `implements:` stays and may point at a `.business.md` file under `promises/`.
+- **Promises** are short, owner-level statements, outside the test check. They count as recorded owner decisions for the stop rule. Frontmatter: `id` (`P-<AREA>-<n>`, where `<AREA>` is the uppercased first folder), `status`. Body: a `#` title and at most 40 lines, stating what the product promises and what it does not.
+- Every folder keeps its `_overview.md` (§7.3).
+
+### S12.2 Criterion ids
+
+A criterion is a heading one level below the Acceptance Criteria heading: `###` under `##`, `####` under `###`. It reads `<ID>: <title>`. `<ID>` matches `[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-[0-9]+` and is unique across the tree. A new id is the spec id, uppercased, with each run of other characters replaced by `-`, then `-<n>`: `core-cli.init` gives `CORE-CLI-INIT-3`. Numbers are assigned upward and never reordered.
+
+Tests cite criteria by tag:
+
+| Runner | Tag |
+|---|---|
+| `vitest`, `jest`, `node` | `[ID]` or `[ID, ID]` at the start of the `it` or `test` name |
+| `pytest` | `@pytest.mark.criterion("ID")`, one or more ids, directly above the test |
+
+### S12.3 `specflow/INDEX.md`
+
+Generated by `cortex specs index`. Its order:
+
+```markdown
+# Specs index
+
+GENERATED by `cortex specs index`. Never edit by hand.
+
+Promises: <n> · specs: <n> · criteria: <n> · tagged: <n> · unverified: <n>
+Untagged tests: <n>
+
+## Promises
+
+### <promise id>: <title>
+
+`<path>`
+
+- spec **<spec id>** (`<path>`)
+  - **<criterion id>** <title> · unverified
+    - test: `<file>` › <name> (skipped)
+
+## Specs without a promise
+## Specs without criterion ids
+## Constants
+## Untagged tests
+## Tags naming no criterion
+```
+
+- ` · unverified` appears when no non-skipped case carries the id. ` (skipped)` appears on a skipped case.
+- Before promise conversion, a `### <path>` entry stands for each business spec.
+- `## Constants` lines read `` - `NAME` = `value` · `<file>` ``.
+- `## Untagged tests` holds one line per file: `` - `<file>`: <n> ``.
+- The file has no date. The same tree gives the same bytes.
+
+### S12.4 `constants.md`
+
+```markdown
+---
+constants:
+  REFUND_DAYS: 30
+  REFUSAL_TEXT: "Refund refused"
+---
+
+# Constants: billing
+```
+
+- Names match `[A-Z][A-Z0-9_]*`. Values are scalars.
+- The file lives at the lowest folder under `specflow/` covering every spec that uses the constant.
+- A spec names one as `const:NAME` and sees its own folder's constants and its ancestors', never a child's or a sibling's.
+
+### S12.5 `cortex specs index --json`
+
+```json
+{
+  "counts": { "promises": 0, "specs": 0, "criteria": 0, "tagged": 0, "unverified": 0, "untagged": 0 },
+  "promises": [{ "id": "", "title": "", "file": "" }],
+  "specs": [{ "id": "", "file": "", "status": "", "serves": "", "criteria": [
+    { "id": "", "title": "", "unverified": false,
+      "tests": [{ "file": "", "name": "", "line": 0, "skipped": false }] }
+  ] }],
+  "constants": [{ "name": "", "value": "", "file": "" }],
+  "untagged": [{ "file": "", "name": "", "line": 0 }],
+  "orphanTags": [{ "id": "", "file": "", "name": "", "line": 0 }]
+}
+```
+
+### S12.6 The `specflow` key in `cortex/cortex.json`
+
+```json
+"specflow": {
+  "tests": [{ "runner": "vitest", "include": ["tests/**/*.test.ts"], "exclude": [] }],
+  "rules": { "b": "off", "c": "off" },
+  "since": "<commit hash>",
+  "literals": { "ignore": [] },
+  "testCommand": "pnpm test"
+}
+```
+
+| Key | Required | Shape | Meaning |
+|---|---|---|---|
+| `tests` | yes, once ported | list of `{ runner, include, exclude }` | `runner` is `vitest`, `jest`, `node` or `pytest`; `include` and `exclude` are repo-relative globs. Which files hold test cases. |
+| `rules` | no | `b`, `c`: `off`, `warn` or `refuse` | Absent means `off`. Other letters are ignored. |
+| `since` | no | commit hash | Written by `cortex hooks install`. Range mode skips it and its ancestors. |
+| `literals.ignore` | no | list of strings | Values `lint.literal` skips. |
+| `testCommand` | no | string | How to run the suite, for the quality task. Core never runs it. Absent means quality reports `no test command configured` and skips that step. |
+
+**Generic test patterns.** Besides `tests`, the check's path class `test` (`specflow.check` Rule 3) also covers these, so a fixture or a snapshot counts as a test change:
+- any path with a folder named `test`, `tests`, `__tests__`, `test-int`, `e2e`, `fixtures`, `__fixtures__`, `mocks`, `__mocks__` or `__snapshots__`;
+- `*.test.*` and `*.spec.*`, except `.md`;
+- `*.snap`, `test_*.py`, `*_test.py`, `conftest.py`, `pytest.ini`;
+- `vitest`, `jest`, `playwright`, `cypress`, `karma` and `ava` config files; `.mocharc*`, `.c8rc*`, `.nycrc*`.
+
+### S12.7 Records and checks
+
+- **Check records:** `<git-common-dir>/specflow/events.jsonl` and `amendments.jsonl` (`specflow.check` Rule 18). They are not tracked.
+- **Port working folder:** `.cortex-port/`, excluded through `.git/info/exclude`: `report.md`, `report.json`, `promises/`, `tagging.jsonl` (`specflow.port`).
+- **`cortex check` rules** are cited as `rule (a)` to `rule (g)`. `check.*` stays the validator's namespace.
+
+| Rule | Name | Level | Label |
+|---|---|---|---|
+| (a) | code-needs-test | refuses | measured |
+| (b) | test-needs-tag | config | new |
+| (c) | criterion-needs-test | config; at most warns at commit, refuses in range mode | new |
+| (d) | spec-commit-alone | refuses | measured |
+| (e) | amend-needs-trailer | refuses | measured as a record, new as a refusal |
+| (f) | touched-criteria | warns | new |
+| (g) | stale-literal | warns | new |
+
+- **`cortex specs lint` checks:**
+
+| Check | Level |
+|---|---|
+| `lint.layout`, `lint.criterion-id`, `lint.tests-config`, `lint.rules-early`, `lint.orphan-tag`, `lint.constant-unresolved`, `lint.constant-shadow` | error |
+| `lint.body`, `lint.entity-table`, `lint.criterion-then`, `lint.orphan`, `lint.promise-size`, `lint.hooks-installed`, `lint.constant-unused`, `lint.constant-placement`, `lint.literal` | warning |
+
+`lint.criterion-id` is a warning for a spec with no ids at all, and `lint.tests-config` is a warning for an include matching no file. It also runs Part I's spec-tree checks over `specflow/` (`specflow.lint` Rule 2).
+
+### S12.8 Commands added at 4.0
+
+| Command | Spec |
+|---|---|
+| `cortex check --commit-msg <file>`, `--range <base>..<head>`, `--pre-push` | `specflow.check` |
+| `cortex hooks install` | `specflow.git-hooks` |
+| `cortex specs index [--staged] [--json]` | `specflow.index` |
+| `cortex specs port [--dry-run] [--ticket-pattern <regex>] [--verify]` | `specflow.port` |
+| `cortex specs lint [--json] [--fix]` | `specflow.lint` |
+| `cortex specs view [--out <file>] [--title <text>]` | `specflow.viewer` |
+| `cortex tasks collect <learn\|fresh\|quality> [--json] [--out <dir>] [--today YYYY-MM-DD]` | `loops.learn-task`, `loops.fresh-task`, `loops.quality-task` |
+| `cortex tasks heartbeat <learn\|fresh\|quality> [--today YYYY-MM-DD]` | the same |
+| `cortex store amendments [--apply] [--today YYYY-MM-DD]` | `loops.learn-task` |
