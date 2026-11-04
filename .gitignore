@@ -27,3 +27,8 @@ coverage/
 # Local working notes — session plans and handoffs, not part of the repo
 plans_and_handoffs/
 cortex/history/sources/raw/
+
+# local secrets — never commit
+.secrets
+# local working documents (brainstorms, plans, results) — never commit
+drafts/
