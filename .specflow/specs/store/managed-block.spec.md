@@ -33,7 +33,7 @@ Amendment 2026-11-04 (Specflow): the quick path has no skills. What it knows abo
 6. Before a project's migration is accepted (`store.migrate`), `cortex store map` does not touch a block whose version is 3.x. It writes `MAP.md` only and prints `managed block left at v3.x until migration is accepted`.
 7. `check.map-fresh` also warns when a 4.0 block differs from what would be written. What would be written follows Rules 8 and 9, so a block goes stale when `specflow/` or the `specflow-spec` bundle appears.
 8. **When the section appears.** The `## Specs` section is written when a directory `specflow/` exists at the project root. Without one, the block is exactly as Rules 2 and 3 give it, with no section.
-9. **Its two stages.** Stage 1 is the text of Rule 10. Stage 2 is that text followed by the two lines of Rule 11. Stage 2 applies when `.claude/skills/specflow-spec/SKILL.md` exists at the project root, and stage 1 otherwise. There is no flag or phase setting: installing the skill (`store.migrate` Rule 18 step 2) and rerunning `cortex store map` is what moves a project to stage 2.
+9. **Its two stages.** Stage 1 is the text of Rule 10. Stage 2 is that text, one blank line, and the two paragraphs of Rule 11. `src/store/managed-block.ts` exports them as `SPECS_SECTION_STAGE1` (string) and `SPECS_SECTION_STAGE2` (a two-item array). Stage 2 applies when `.claude/skills/specflow-spec/SKILL.md` exists at the project root, and stage 1 otherwise. There is no flag or phase setting: installing the skill (`store.migrate` Rule 18 step 2) and rerunning `cortex store map` is what moves a project to stage 2.
 10. **Stage 1 text**, exactly:
     ```
     ## Specs
@@ -141,15 +141,21 @@ Each of these builds a fixture project with an accepted 4.0 store.
 
 ### The owner's lines are the plan's lines
 
-- **Given** the exported block text
-- **When** it is searched
-- **Then** it contains the three owner paragraphs of Rule 10 and the two of Rule 11, each byte for byte on a single line
+- **Given** `SPECS_SECTION_STAGE1` and `SPECS_SECTION_STAGE2`
+- **When** they are split on newlines
+- **Then** the last three non-empty lines of `SPECS_SECTION_STAGE1` are the last three paragraphs of Rule 10, and the two items of `SPECS_SECTION_STAGE2` are the paragraphs of Rule 11, each byte for byte
 
 ### A new folder or skill makes the block stale
 
 - **Given** a 4.0 block written at stage 1
 - **When** `.claude/skills/specflow-spec/SKILL.md` is added and `check.map-fresh` runs
 - **Then** it warns that the block differs, and after `cortex store map` it no longer warns
+
+### A new `specflow/` folder makes the block stale
+
+- **Given** a 4.0 block with no section
+- **When** a `specflow/` folder is added and `check.map-fresh` runs
+- **Then** it warns that the block differs
 
 ### A 3.x block is still left alone
 

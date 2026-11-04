@@ -27,7 +27,7 @@ Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's
 
 ## Entities
 
-- **READS:** `.cortex/**` (including gitignored `pulse/` and `atlas/sources/`), `git ls-files .cortex`, an optional plan file and the digest files it names, an optional redact file; with `--accept`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/skills/*`, and `<home>/.claude/scheduled-tasks/*/SKILL.md` (`<home>` is the user's home directory; tests pass their own, as `tasks-register` does).
+- **READS:** `.cortex/**` (including gitignored `pulse/` and `atlas/sources/`), `git ls-files .cortex`, an optional plan file and the digest files it names, an optional redact file; with `--accept`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/skills/*`, `<package>/skills/*`, and `<home>/.claude/scheduled-tasks/*/SKILL.md` (`<home>` is the user's home directory and `<package>` the package root; tests pass their own of each, as `tasks-register` does for `<home>`: `retireLegacySystem` takes both).
 - **WRITES:** the report (stdout, or `--report <file>`); with `--apply`, `cortex/**` and the `.gitignore` line; with `--accept`, the managed blocks, `cortex/cortex.json` `migration.accepted`, the hook entries in `.claude/settings.json` and `.claude/settings.local.json` (removal only), and the 4.0 bundles under `.claude/skills/` (Rule 18 step 2's list, new installs and their markers only).
 - **NEVER WRITES:** anything under `.cortex/`, any scheduled-task payload, or a 3.x skill bundle.
 - **NEVER DELETES:** any file.
@@ -75,7 +75,7 @@ Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's
 6. **Coverage report** (markdown, or `--json`): the no-loss lines (Rule 16) and the visibility line (Rule 17) in its header; totals by disposition; a table of every entry (ref, disposition, target, flags, provenance refs resolved/total); the `review` list; the `pending decision` list with each proposal's first line; the `dropped by decision` section (Rule 12); the `unresolved provenance` section (Rule 13); the `redactions` section (Rule 14, refs and counts only, never the original text); the retired threads by id and status; the `unmapped` list; the retired 3.x config keys; the visibility findings on migrated text; the `undecided` list by folder, with counts (Rule 16); the `digested` list (ref → target → digest file); the plan's folder keys with the count each decided; the `concept definitions` (each concept file's ref and first definition line); the `files` line and the `gitignored only` list (Rule 15); and the command to remove `.cortex/` after acceptance. Every printed removal command is `git rm -r -q --ignore-unmatch <paths> && rm -rf <paths>`, because 3.x insight and pulse files are often untracked.
 7. **Dry run is the default.** Without `--apply`, nothing is written except the report file if `--report` is given.
 8. **`--apply`** refuses (exit 1, nothing written) while any entry is unmapped, while any file is undecided (Rule 16), or while any file a migrated entry accounts for would not be written (Rule 15). Otherwise it writes `cortex/` (refusing if `cortex/` exists with files not written by a previous apply of the same inputs), runs `cortex store map` (which leaves a 3.x block alone), and then runs `cortex store validate`, printing its result. It is re-runnable: the same inputs give a byte-identical tree.
-9. **`--accept`** requires a previous `--apply`. It records `"migration": { "from": "<3.x version>", "accepted": "<date>" }` in `cortex/cortex.json` and rewrites the managed blocks to 4.0. It then retires the 3.x system around the store (Rule 18). It deletes nothing. It is re-runnable, also after `.cortex/` is gone: a re-run keeps the recorded date, rewrites the blocks, and runs Rule 18 again.
+9. **`--accept`** requires a previous `--apply`. It records `"migration": { "from": "<3.x version>", "accepted": "<date>" }` in `cortex/cortex.json`, retires the 3.x system around the store (Rule 18), and then rewrites the managed blocks to 4.0, last, so that the blocks see the bundles just installed (`store.managed-block` Rule 9). It deletes nothing. It is re-runnable, also after `.cortex/` is gone: a re-run keeps the recorded date, runs Rule 18 again, and rewrites the blocks. With `--report <file>`, it also writes the text it prints to that file.
 10. **Never dropped.** Pending proposals (`S-NNN` whose status is pending, `G-NNN`) go to `now/proposals.md`. Each is one item: a heading `## <id>: <first line>`, then `until: <apply date + 30 days>`, then `status: pending decision`, then its full text. They also appear in the report's `pending decision` list. What happens when they expire unreviewed is specified in `store.freshness` Rule 2.
 11. **The 3.x commands leave a 4.0 store alone.** When `cortex/cortex.json` exists with a 4.0 `schemaVersion`:
    - **Before acceptance** (`migration.accepted` is `null`), the 3.x `cortex sync` and `cortex init` never write the `CLAUDE.md` or `AGENTS.md` managed block. They print `managed block owned by the 4.0 store (cortex/); left untouched`, and otherwise behave as before on `.cortex/`.
@@ -109,18 +109,18 @@ Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's
     - When the 3.x config has no `visibility.repo`, or has `unknown`, the report header says `repo: unknown (checked as public)` and runs the public-repo checks.
     - `--visibility public|private` overrides the 3.x value, for the report and for the `cortex/cortex.json` that `--apply` writes. Without it, `--apply` writes the 3.x value, or `unknown`.
     - When `--apply` runs with visibility findings on a public or unknown repo and no `--redact`, it prints `<n> visibility findings would be committed to a public (or unknown-visibility) repository; review them, or rerun with --redact <file>`. It does not block.
-18. **Accept retires the 3.x system around the store.** After Rule 9's block switch, `--accept`:
+18. **Accept retires the 3.x system around the store.** Before Rule 9's block switch, `--accept`:
     1. **Hooks.** It removes from `.claude/settings.json` and `.claude/settings.local.json` every hook entry whose command starts with `cortex hook `, and drops any matcher group or event left empty. Every other key and entry stays. A changed file is written as 2-space JSON with a trailing newline, and the output says the file's formatting may have changed. A file with no such entry is not written.
-    2. **4.0 bundles.** It installs the bundles a migrated project needs day to day (`cortex-migrate` is read from the package, Rule 3): `cortex-remember`, `cortex-learn`, `cortex-fresh`, `cortex-quality`, `verification-before-completion`, `specflow-spec`, `specflow-review`, `specflow-onboard`. Each goes into `.claude/skills/<name>/` with a `.cortex-installed.json` marker. A bundle of that name that already exists with different content is left alone and listed, on every run, so a re-run never overwrites a project's edit. A bundle the package does not hold yet is listed as missing and skipped.
+    2. **4.0 bundles.** It installs the bundles a migrated project needs day to day (`cortex-migrate` is read from the package, Rule 3): `cortex-remember`, `cortex-learn`, `cortex-fresh`, `cortex-quality`, `verification-before-completion`, `specflow-spec`, `specflow-review`, `specflow-onboard`. Each goes into `.claude/skills/<name>/` with a `.cortex-installed.json` marker. A bundle of that name that already exists with different content is left alone, on every run, so a re-run never overwrites a project's edit; the output line is `skills: .claude/skills/<name> exists with different content; left alone`. A bundle the package does not hold yet is skipped, with the line `skills: <name> is missing from the package; not installed`.
     3. **Superseded bundles.** It lists, and never deletes, the 3.x bundles that 4.0 supersedes in `.claude/skills/`: every name on the retired list of step 5, as a bundle of that name. Each is labelled `unmodified` (its marker's hash matches its content) or `modified or unmarked: check before removing`, and the output ends with one removal command.
     4. **Scheduled tasks.** It lists, and never touches, the payload folders under `<home>/.claude/scheduled-tasks/` whose `SKILL.md` carries `<!-- cortex-project-root: <this project's absolute path> -->`. They are selected by that marker, never by name. The output says to disable each in the Claude Code Desktop app before deleting its folder.
     5. **Project skills that name what is gone.** It scans every other bundle under `.claude/skills/` and lists each one holding a term below.
-       - **The retired list** (one constant): `cortex-archive-ingest`, `cortex-extract-insight`, `cortex-ingest`, `cortex-loop`, `cortex-register-tasks`, every `cortex-loop-*`, every `cortex-pulse-*`, and the 16 skills `specflow-brainstorm`, `specflow-bugs`, `specflow-deep-onboard`, `specflow-develop`, `specflow-entry`, `specflow-ingest`, `specflow-intent-reconcile`, `specflow-lint`, `specflow-new-project`, `specflow-onboard-codebase`, `specflow-plan`, `specflow-receive-review`, `specflow-request-review`, `specflow-spec-editor`, `specflow-tests`, `specflow-viewer`.
+       - **The retired list** (`RETIRED_SKILL_NAMES`, exported from `src/store/migrate/system.ts`; the two patterns are the literal entries `cortex-loop-*` and `cortex-pulse-*`): `cortex-archive-ingest`, `cortex-extract-insight`, `cortex-ingest`, `cortex-loop`, `cortex-register-tasks`, every `cortex-loop-*`, every `cortex-pulse-*`, and the 16 skills `specflow-brainstorm`, `specflow-bugs`, `specflow-deep-onboard`, `specflow-develop`, `specflow-entry`, `specflow-ingest`, `specflow-intent-reconcile`, `specflow-lint`, `specflow-new-project`, `specflow-onboard-codebase`, `specflow-plan`, `specflow-receive-review`, `specflow-request-review`, `specflow-spec-editor`, `specflow-tests`, `specflow-viewer`.
        - **Matching.** A retired name matches as a whole token: the characters on either side are not letters, digits, `-` or `_`. So `specflow-spec` and `specflow-onboard` match nothing, and `specflow-spec-editor` matches only itself. The two path terms, `.cortex/` and `.specflow/`, match as plain substrings, so `specflow/` and `.cortex-migrate/` do not match.
        - **The port does not change the scan.** Before and after `cortex specs port`, the term is `.specflow/`, which covers `.specflow/specs/` and `.specflow/specs-business/`. A scan after the port still lists a skill that kept the old path; what differs is what the skill may do about it (`store.migrate-skill` Rule 11).
-       - **Files.** It reads `SKILL.md` and every other file under the bundle that holds no NUL byte in its first 8,000 bytes, except the marker. A symbolic link is not followed, and is listed as `<bundle>: symlink, not read`.
+       - **Files.** It reads `SKILL.md` and every other file under the bundle that holds no NUL byte in its first 8,000 bytes, except the marker. A symbolic link, as a bundle or inside one, is not followed. It gets the line `- <path under .claude/skills/>: symlink, not read`, and does not count in n.
        - **Left out of the scan:** retired bundles (step 3), `cortex-migrate`, and any bundle of step 2 identical to the package's copy. A step 2 bundle that differs is scanned.
-       - **Output.** `project skills to adjust: <n>`, then one line per file, sorted: `- <bundle>/<file>: <term>, <term>`, with the terms in the order above. When n is above 0, it ends with `Adjust them with the skill-adjust step of <packaged path of cortex-migrate's SKILL.md>`. This is listing only: Core never edits a project skill.
+       - **Output.** `project skills to adjust: <n>`, then one line per file, sorted: `- <bundle>/<file>: <term>, <term>`, with the terms in the order of the retired list, then `.cortex/`, then `.specflow/`. n counts files. When n is above 0, it ends with `Adjust them with the skill-adjust step of <packaged path of cortex-migrate's SKILL.md>`. This is listing only: Core never edits a project skill.
 19. **Unknown archive folders, tests, and other non-knowledge files.** The default for `archive/<other>/**` is the review flag "move it out of `.cortex/` before removing `.cortex/`". A non-markdown file can be rescued only as raw or as a digest (Rule 3), so code and tests never land verbatim in `world/` or `code/`.
 
 ## Acceptance Criteria
@@ -386,7 +386,7 @@ These use an accepted store with fixture bundles under `.claude/skills/`.
 
 ### Accept installs the day-to-day bundles
 
-- **Given** an applied migration whose package holds all eight bundles of Rule 18 step 2
+- **Given** an applied migration and a test package root holding all eight bundles of Rule 18 step 2
 - **When** `cortex migrate --accept` runs
 - **Then** each is under `.claude/skills/` with a marker, and `cortex-migrate` is not
 
@@ -394,13 +394,13 @@ These use an accepted store with fixture bundles under `.claude/skills/`.
 
 - **Given** an accepted project whose `.claude/skills/specflow-review/SKILL.md` differs from the package's
 - **When** `cortex migrate --accept` runs
-- **Then** the file is byte-identical, and the output says the bundle exists with different content and was left alone
+- **Then** the file is byte-identical, and the output has `skills: .claude/skills/specflow-review exists with different content; left alone`
 
 ### A bundle the package lacks is skipped
 
 - **Given** a package with no `specflow-spec`
 - **When** `cortex migrate --accept` runs
-- **Then** it exits 0 and the output says `specflow-spec` is missing from the package and not installed
+- **Then** it exits 0 and the output has `skills: specflow-spec is missing from the package; not installed`
 
 ### The retired specflow bundles are listed, not deleted
 
@@ -448,10 +448,46 @@ These use an accepted store with fixture bundles under `.claude/skills/`.
 
 - **Given** a project bundle holding a PNG, and a `.claude/skills/linked` that is a symbolic link
 - **When** `cortex migrate --accept` runs
-- **Then** it exits 0, the PNG is not read as a match, and the output has `linked: symlink, not read`
+- **Then** it exits 0, the PNG is not read as a match, and the output has `- linked: symlink, not read`
 
 ### Core edits no project skill
 
 - **Given** listed project bundles
 - **When** `cortex migrate --accept` runs
 - **Then** every listed file is byte-identical, and the output ends the section by naming the packaged `cortex-migrate` skill path
+
+### Accept ends at the right block stage
+
+- **Given** an applied migration with a `specflow/` folder, and a package holding `specflow-spec`
+- **When** `cortex migrate --accept` runs once
+- **Then** `.claude/skills/specflow-spec/SKILL.md` exists, and the `CLAUDE.md` block holds the two stage 2 lines of `store.managed-block` Rule 11
+
+### Accept can write its output to a file
+
+- **Given** an accepted project with one listed bundle
+- **When** `cortex migrate --accept --report out.txt` runs
+- **Then** `out.txt` holds the same text as stdout, including the `project skills to adjust` section
+
+### Retired bundles and cortex-migrate are left out of the scan
+
+- **Given** a `specflow-develop` bundle naming `.cortex/`, a `cortex-migrate` bundle naming `.cortex/`, and a marker file holding the text `.cortex/` in a project bundle with no other mention
+- **When** `cortex migrate --accept` runs
+- **Then** the output has `project skills to adjust: 0` and no `Adjust them` line
+
+### A step 2 bundle the package lacks is scanned
+
+- **Given** a package with no `specflow-review`, and an installed `specflow-review` naming `specflow-plan`
+- **When** `cortex migrate --accept` runs
+- **Then** that bundle's file is listed
+
+### Lines and terms are ordered
+
+- **Given** bundles `b` and `a`, and `a/SKILL.md` naming `.specflow/x`, `.cortex/y` and `specflow-plan`
+- **When** `cortex migrate --accept` runs
+- **Then** `a`'s line comes first and reads `- a/SKILL.md: specflow-plan, .cortex/, .specflow/`
+
+### A symlink inside a bundle is listed, not counted
+
+- **Given** a bundle whose `refs` is a symbolic link, and no other mention
+- **When** `cortex migrate --accept` runs
+- **Then** the output has `project skills to adjust: 0` and a `symlink, not read` line for that path

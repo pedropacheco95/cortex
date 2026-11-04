@@ -34,18 +34,22 @@ Two jobs need agents and a person's approval, and both start from work that alre
 2. **Description**, exactly: `Bring existing work under the specs. Port mode: turn business specs into promises and tag every test. Onboard mode: write specs from code. Proposals for approval. "onboard this codebase", "port mode".`
 3. **Working folder.** `cortex specs port` leaves its report in `.cortex-port/report.md` and `.cortex-port/report.json`. Port-mode proposals live in `.cortex-port/`: `promises/` (one draft per business spec, at the path it will take), `tagging/<area>.jsonl` (`specflow.port` Rule 12), `decisions.md` (what the person decided). Onboard-mode work lives in `.cortex-port/onboard/<concern>/`.
 4. **Agents.** Every spawned agent is awaited before its output is used (`specflow.review-skill` Rule 6). Work is split so that one agent reads one area or one test folder.
-5. **Mode choice.** A `specflow/` tree with a `.cortex-port/report.json` means port mode. A project with no `specflow/` means onboard mode. If `.specflow/` still exists and `specflow/` does not, the skill stops and says: `Run cortex specs port first.`
+5. **Mode choice**, checked in this order:
+   1. `.specflow/` exists and `specflow/` does not: the skill stops and says `Run cortex specs port first.`
+   2. `specflow/` and `.cortex-port/report.json` exist: port mode.
+   3. `specflow/` exists with no report: the skill asks the person which mode they mean.
+   4. Neither folder exists: onboard mode.
 
 ### Port mode
 
-6. **Promise conversion.** `specflow.port` Rule 11 and schema S12.1 say what the output must be. For each business spec under `specflow/promises/`, an agent drafts one promise of at most 40 lines, with frontmatter `id` (`P-<AREA>-<n>`), `title` and `status`, a `#` title, and a `## Outcome` section. It keeps every commitment the business spec makes, including what the product does not promise, and drops journey and metric detail. The draft goes in `.cortex-port/promises/`. Each impl spec's `implements:` link gives its frontmatter `serves: [<promise id>]`, mechanically, one entry per spec. Reasoning that belongs to no promise is listed for `cortex/world/decisions/`, not dropped. This is the one text rewrite of a port.
+6. **Promise conversion.** `specflow.port` Rule 11 and schema S12.1 say what the output must be. For each business spec under `specflow/promises/`, an agent drafts one promise of at most 40 lines, with frontmatter `id` (`P-<AREA>-<n>`: `<AREA>` is the uppercased first folder, `<n>` counts the area's promises from 1, in path order), `title` and `status`, a `#` title, and a `## Outcome` section. It keeps every commitment the business spec makes, including what the product does not promise, and drops journey and metric detail. The draft goes in `.cortex-port/promises/`. Each impl spec's `implements:` link gives its frontmatter `serves: [<promise id>]`, mechanically, one entry per spec. Reasoning that belongs to no promise is listed for `cortex/world/decisions/`, not dropped. This is the one text rewrite of a port.
 7. **Tagging pass.** `specflow.port` Rule 12 gives the line format. Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Each case gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl`, with `file`, `name`, `line`, `action` and `reason`. Its `action` is, in this order of preference:
    - `tag`: with `criterion`, the criterion it proves;
    - `new-criterion`: no criterion matches, so it gives the `title` and the `spec` it belongs in;
    - `delete`: only when the behaviour is not wanted, with the reason.
 
    A test the agent cannot place is proposed as `new-criterion`, never left out and never proposed for deletion for lack of a match. The pass is finished when `cortex specs port --verify` exits 0, and the skill runs that before asking for approval.
-8. **Approval, then application.** The skill shows the person the counts per area and the lines that are not plain tags. Nothing is applied without the person's approval, per repository; approval may be per area. The person's decisions go in `.cortex-port/decisions.md`. The main session then applies approved rows: a promise replaces its business spec; `serves:` is added to each spec and its `implements:` removed; a tag goes at the start of the test name, or as `@pytest.mark.criterion("CRIT-ID")` in pytest; new criteria are added in commits of their own. Applying a tag changes a test's name and nothing else in it.
+8. **Approval, then application.** The skill shows the person the counts per area and the lines that are not plain tags. Nothing is applied without the person's approval, per repository; approval may be per area. The person's decisions go in `.cortex-port/decisions.md`. The main session then applies approved rows: a promise replaces its business spec; `serves:` is added to each spec and its `implements:` removed; a tag goes at the start of the test name (`[CRIT-ID]`, or `[A-1, B-2]` for several), or as `@pytest.mark.criterion("CRIT-ID")` in pytest, one marker per id; new criteria are added in commits of their own. Applying a tag adds that name prefix or marker and nothing else.
 9. **Going live.** When `specflow/INDEX.md` shows `Untagged tests: 0` (`.untagged` empty in `cortex specs index --json`), the skill says so and tells the person that rules (b) and (c) can be switched on in the `specflow.rules` key of `cortex/cortex.json`, an owner-approved edit. It never switches them on, and it never reports them live while an untagged test remains. A criterion still without a test stays `unverified`; that is the honest starting state.
 
 ### Onboard mode
@@ -53,12 +57,12 @@ Two jobs need agents and a person's approval, and both start from work that alre
 10. **Untested.** The SKILL.md says, at the top of this mode: `This mode has not been tested. It runs on a client repository only after a blind run on one area of a repository has been reviewed.` It asks the person to confirm that before it starts on a repository.
 11. **Steps, in order:**
     1. a **splitter** agent divides the codebase into concerns;
-    2. for each concern, **two independent elephants** each write a spec from the code, neither seeing the other's output;
+    2. for each concern, **two independent elephants** each write a spec draft from the code into `.cortex-port/onboard/<concern>/`, neither seeing the other's output. An elephant here is a spawned agent with the concern and the code. It writes rules and criteria as `specflow.spec-skill` Rule 5 steps 2 and 3 say, and it does not run that skill: it names no test, and it commits nothing;
     3. a **reconciler** per concern keeps what both agree on, and lists every disagreement as an open question in the spec;
     4. a **goldfish** per concern reviews the reconciled spec in spec mode (`specflow.review-skill`);
     5. the person resolves the open questions and findings;
     6. **a test per retained criterion**: each is tagged with its criterion, and a criterion left without a test shows `unverified`.
-12. **Owner lines.** A disagreement between elephants is never settled by the reconciler. The rule of `specflow.spec-skill` Rule 8 applies to a run told the user can't answer.
+12. **Owner lines.** A disagreement between elephants is never settled by the reconciler. In a run told the user can't answer, the main session decides each open question as `specflow.spec-skill` Rule 8 says.
 
 ## Acceptance Criteria
 
@@ -84,7 +88,7 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 - **Given** the SKILL.md text
 - **When** it is read
-- **Then** it states the Rule 5 conditions and contains `Run cortex specs port first.`
+- **Then** it states the four Rule 5 cases in order, contains `Run cortex specs port first.`, and says the skill asks when `specflow/` exists with no report
 
 ### Proposals stay outside the repository's history
 
@@ -120,7 +124,7 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 - **Given** the SKILL.md text
 - **When** it is read
-- **Then** it shows `[CRIT-ID]` at the start of a test name and `@pytest.mark.criterion("CRIT-ID")`, and says a tag changes nothing else in the test
+- **Then** it shows `[CRIT-ID]`, `[A-1, B-2]` and `@pytest.mark.criterion("CRIT-ID")` with one marker per id, and says a tag adds that prefix or marker and nothing else
 
 ### The skill never switches on rules (b) and (c)
 
@@ -132,7 +136,7 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 - **Given** the SKILL.md text
 - **When** it is read
-- **Then** it says every spawned agent is awaited before its output is used
+- **Then** it says every spawned agent is awaited before its output is used, and that one agent reads one area or one test folder
 
 ### Onboard mode is marked untested
 
@@ -144,4 +148,10 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 - **Given** the SKILL.md text
 - **When** its onboard section is read
-- **Then** it names, in this order: splitter, two independent elephants per concern, reconciler, goldfish per concern, the person, and a test per retained criterion, and it says disagreements become open questions
+- **Then** it names, in this order: splitter, two independent elephants per concern, reconciler, goldfish per concern, the person, and a test per retained criterion; it says an elephant writes into `.cortex-port/onboard/<concern>/` and commits nothing
+
+### The reconciler settles nothing
+
+- **Given** the SKILL.md text
+- **When** its onboard section is read
+- **Then** it says a disagreement becomes an open question, the reconciler never settles it, and the main session decides only in a run told the user can't answer

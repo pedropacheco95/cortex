@@ -24,15 +24,15 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
 ## Entities
 
 - **READS:** the request, `specflow/INDEX.md`, the specs and code it touches, `constants.md` files, `specflow/promises/**`, `cortex/world/decisions/**`, and a spec-request item in `now/proposals.md` when it starts from one.
-- **WRITES:** files under `specflow/impl/`, `constants.md` files, and one commit holding only those; it removes the spec-request item it started from.
-- **NEVER WRITES:** code, test code, `specflow/INDEX.md`, or a plan file.
+- **WRITES:** files under `specflow/impl/`, `constants.md` files, and one commit holding only those and the regenerated `specflow/INDEX.md`; in a separate commit, the removal of the spec-request item it started from.
+- **NEVER WRITES:** code, test code, or a plan file. `specflow/INDEX.md` is never edited by hand: it comes from the pre-commit hook, or from `cortex specs index` where no hook is installed.
 
 ## Rules
 
 1. **Bundle.** The bundle is `skills/specflow-spec/SKILL.md`, mirrored byte for byte to `.claude/skills/specflow-spec/SKILL.md`. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, so the 3.x `init` and `sync` never install it, and `store.migrate` Rule 18 step 2 installs it. Its tier in `TIERS` is **B**, and its required trigger phrases are `spec this`, `brainstorm` and `plan this`.
 2. **Description**, exactly: `Turn a request that no criterion covers, or that touches more than one spec, into a spec: invariant criteria, constants, a named test per criterion, waves. Code-free. "spec this", "brainstorm", "plan this".`
-3. **The Iron Law**, exactly: `NO CRITERION WITHOUT A NAMED TEST, AND NO CODE IN THIS SESSION`, followed by the draft's two-sentence line that a reading under which the law does not apply is the violation.
-4. **When to use.** A request creates a behaviour no criterion covers, or touches more than one spec, or the person says "spec this". The output is the spec, which is the design document. There is no plan file, no code and no test code. In a project with no `specflow/` folder, the skill creates `specflow/impl/` and `specflow/promises/` and runs `cortex specs index` at the end.
+3. **The Iron Law**, exactly: `NO CRITERION WITHOUT A NAMED TEST, AND NO CODE IN THIS SESSION`, followed by: `Violating the letter of this law is violating the spirit. If you find yourself constructing a reading under which this does not apply to your case, that construction is the violation.`
+4. **When to use.** A request creates a behaviour no criterion covers, or touches more than one spec, or the person says "spec this". The output is the spec, which is the design document. There is no plan file, no code and no test code. In a project with no `specflow/` folder, the skill creates `specflow/impl/<area>/` by writing the spec there, and runs `cortex specs index` before committing.
 5. **Steps, in order:**
    1. **Check for a conflict.** Compare the request with the `Rules` and `Not this spec` lines of every spec it touches, `specflow/promises/**`, and `cortex/world/decisions/**`. On a conflict, apply Rule 7.
    2. **Find what holds today.** From `specflow/INDEX.md` and `grep`, list every spec and criterion the request touches. Read the code: for each behaviour the request changes, find what produces it today and what depends on it. Write both in the spec's *Today* section with file paths.
@@ -43,14 +43,23 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
    7. **Record open questions and decisions.** Anything the request leaves open goes under *Open questions* with the options. In an interactive session, stop and ask. Rule 8 covers a run told the user can't answer.
    8. **Commit the spec alone.** Spec files only, in their own commit, with a `Specflow-Amends:` trailer for every existing rule or criterion whose text changed. Then stop this skill and run `specflow-review` before any code is written.
 6. **Constants.** A constant lives in a `constants.md`, in the `constants:` map of its frontmatter, at the lowest folder under `specflow/` that covers every spec using it. A spec sees its own folder's constants and its ancestors', never a child's or a sibling's. A criterion refers to one as `const:NAME`. The draft's `constants:` block in the spec and its `### Constants` section are not used.
-7. **Owner decisions stop the work.** The SKILL.md carries this sentence verbatim: `If the request contradicts a rule, a 'Not this spec' line or a recorded decision the owner made, do not build it: write the spec with the conflict as an open question and stop.` Promises count as recorded owner decisions. The stop has no exception in any run.
+7. **Owner decisions stop the work.** The SKILL.md carries this sentence verbatim: `If the request contradicts a rule, a 'Not this spec' line or a recorded decision the owner made, do not build it: write the spec with the conflict as an open question and stop.` Promises count as recorded owner decisions. The stop has no exception in any run. The spec holding the conflict is committed by step 8, with the conflict under *Open questions*; `specflow-review` is not run and no wave is started.
 8. **Nobody to ask.** The SKILL.md carries this sentence verbatim: `If you were told the user can't answer during this run, don't wait: decide, write the decision and its reason under Open questions in the spec, and continue. This never applies to a conflict with a recorded owner decision; that always stops.` Such a run goes on to `specflow-review`, resolves its findings by `specflow.review-skill` Rule 7, and develops wave by wave. An interactive session always asks.
 9. **Starting from a spec request.** When the input is a `Spec request:` item from `now/proposals.md` (`store.remember-skill` Rule 11), the quoted ask is the request, and the spec's *Today* section cites the item's `source:`. Once the spec is committed, the skill removes the item and says which spec holds the ask. An ask refused under Rule 7 keeps its item.
 10. **Amending a criterion.** The skill edits an existing criterion's text directly and commits it alone with its trailer. It never edits a test. Where rule (c) is live, that commit gets a warning, not a refusal; the wave that follows changes the tagged test on the same branch, and `cortex check --range` holds the branch to it (`specflow.check` Rule 19).
 11. **Spec shape.** A new spec goes in `specflow/impl/<area>/<leaf>.spec.md`. Its frontmatter carries `serves: [<promise id>]` with exactly one entry; a project whose promises are not converted yet uses `implements:` instead (schema S12.1). The SKILL.md shows this shape:
     ```
+    ---
+    id: <area>.<leaf>
+    status: draft
+    serves: [<promise id>]
+    ---
+
     ### Rules
     1. …
+
+    ### Not this spec
+    - <what this spec deliberately does not do>
 
     ### Today
     - <behaviour> is produced by `<file>:<symbol>`; stated again in `<file>`; pinned by `<test file>`.
@@ -68,7 +77,7 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
     - <question> — options: … — decision (if taken): … because …
     ```
 12. **After review.** The owner resolves the findings, and the main session then develops wave by wave under the `## Specs` rules. Each wave is ordinary quick-path work. The skill names no implementer agent and no required per-wave review.
-13. **Rationalizations.** The SKILL.md keeps the draft's table, with its constant row saying "one constant, in `constants.md`, referenced by name".
+13. **Rationalizations.** The SKILL.md has a `## Rationalizations` table with these four thoughts, each answered: `The change is small, I can just write the code.`, `The value is obvious, I will write it in each criterion.`, `I know what the code does, no need to read it.`, `I will name the tests later.` The answer to the second says one constant, in `constants.md`, referenced by name.
 
 ## Acceptance Criteria
 
@@ -118,7 +127,7 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
 
 - **Given** the SKILL.md text
 - **When** it is read
-- **Then** it says no plan file, no code and no test code, and names neither a fresh implementer nor a mandatory per-wave review
+- **Then** it says no plan file, no code and no test code, and does not contain `fresh implementer`, `per-wave` or `diff review`
 
 ### A criterion amendment commits alone
 
@@ -142,4 +151,22 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
 
 - **Given** the SKILL.md text
 - **When** it is searched
-- **Then** it names `specflow/INDEX.md` and `specflow/impl/`, and does not contain `specs/INDEX.md` outside that path or `.specflow/`
+- **Then** it names `specflow/INDEX.md` and `specflow/impl/`, and does not match `(?<!specflow/)specs/` or contain `.specflow/`
+
+### The spec shape is shown
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** its shape block shows `serves:`, `### Rules`, `### Not this spec`, `### Today`, `### Acceptance Criteria`, `test:`, `### Waves` and `### Open questions`, in that order
+
+### A conflict is committed but not reviewed
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it says a spec holding an owner-decision conflict is committed with the conflict under *Open questions*, and that `specflow-review` and the waves do not follow
+
+### The rationalizations are kept
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it has the four thoughts of Rule 13, and the answer on constants names `constants.md`

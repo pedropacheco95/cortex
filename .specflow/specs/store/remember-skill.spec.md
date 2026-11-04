@@ -14,7 +14,7 @@ governs:
 
 ## Intent
 
-Writing must be as cheap as reading (vision §2). When the user says "remember this", or explains something the store doesn't hold, the agent files it in exactly one place by MAP's placement procedure and shows where in one visible line, so the user can correct it. This is the one 4.0 skill. It is agentic; Core only validates the result.
+Writing must be as cheap as reading (vision §2). When the user says "remember this", or explains something the store doesn't hold, the agent files it in exactly one place by MAP's placement procedure and shows where in one visible line, so the user can correct it. This is the 4.0 skill for filing facts. It is agentic; Core only validates the result.
 
 ## Rules
 
@@ -117,6 +117,12 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 - **Given** the SKILL.md text
 - **When** its source digest section is read
 - **Then** it says the skill does not reconcile the ask and does not run specflow-spec itself
+
+### A digest with no asks files no item
+
+- **Given** the SKILL.md text
+- **When** its source digest section is read
+- **Then** it says a digest with no asks files no spec request
 
 ### The Rule 2 steps and description are unchanged
 

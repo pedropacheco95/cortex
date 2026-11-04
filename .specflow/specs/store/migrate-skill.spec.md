@@ -18,7 +18,7 @@ governs:
 
 ## Entities
 
-- **READS:** the `cortex migrate --json` report, the `.cortex/` files it names, and `cortex/MAP.md` when it exists (for the kind → folder table).
+- **READS:** the `cortex migrate --json` report, `.cortex-migrate/accept.txt` in the skill-adjust step, the `.cortex/` files it names, and `cortex/MAP.md` when it exists (for the kind → folder table).
 - **WRITES:** under `.cortex-migrate/` only: `report.json`, `plan.json`, `decisions.md`, and `digests/*.md`. It adds `.cortex-migrate/` to the repository's exclude file (`git rev-parse --git-path info/exclude`), never to `.gitignore`.
 - **WRITES, in the skill-adjust step only:** the files `store.migrate` Rule 18 step 5 lists under `.claude/skills/`, and `.cortex-migrate/skill-edits.md`.
 - **NEVER WRITES:** `.cortex/`, `cortex/`, `.gitignore`, `CLAUDE.md`, or any commit.
@@ -53,7 +53,7 @@ governs:
    A person runs `--apply` after reading the decisions.
 8. **The skill-adjust step** (2026-11-04; owner decision). Every other skill in a project that names a retired skill or the old store is checked and adjusted if needed. This step runs after a person has run `cortex migrate --accept`, on the list it printed, and it comes after the plan steps in the SKILL.md. If `migration.accepted` is not set, the skill stops and says so.
 9. **Steps, in order:**
-   1. run nothing that changes the list: read the `project skills to adjust` section of the latest `--accept` output, asking the person to re-run `--accept` if that output is not at hand;
+   1. read the `project skills to adjust` section of `.cortex-migrate/accept.txt`; if that file is missing or older than the last edit, ask the person to run `cortex migrate --accept --report .cortex-migrate/accept.txt`, and wait;
    2. read each listed file in full, and every mention in it;
    3. decide each mention by Rule 10, using Rule 11's table;
    4. make the edits, changing only the words the decision needs;
@@ -83,7 +83,7 @@ governs:
     | `.specflow/specs-business/` | `specflow/promises/` |
 
     A skill replacement applies only when `.claude/skills/<replacement>/SKILL.md` exists, a `cortex specs` or `cortex tasks` one only when the installed `cortex` prints that command in its usage, and a `specflow/` one only when `specflow/` exists at the root, which is after `cortex specs port`. Otherwise the mention is `open` with the reason `replacement not there yet`, and a later re-run of `--accept` and this step picks it up.
-12. **This step changes no project file outside the listed ones.** A bundle's `.cortex-installed.json` marker is never edited, so an edited bundle shows as `modified or unmarked`, which is true.
+12. **This step changes no project file outside the listed ones.** A bundle's `.cortex-installed.json` marker is never edited, so an edited bundle no longer matches its marker or the package's copy, and a later `--accept` leaves it alone.
 
 ## Acceptance Criteria
 
@@ -129,7 +129,7 @@ governs:
 
 - **Given** the SKILL.md text
 - **When** that section is read
-- **Then** it names, in this order: the `project skills to adjust` list, reading each file, deciding each mention, editing, `.cortex-migrate/skill-edits.md`, and showing the person
+- **Then** it names, in this order: `.cortex-migrate/accept.txt` with the `--report` command for the person, reading each file, deciding each mention, editing, `.cortex-migrate/skill-edits.md`, and showing the person
 
 ### The three decisions are stated
 
@@ -139,9 +139,9 @@ governs:
 
 ### The replacement table is complete
 
-- **Given** the SKILL.md text and the retired list of `store.migrate` Rule 18 step 5
-- **When** each retired name and pattern is looked up
-- **Then** the table has a row for it, plus rows for `.cortex/`, `.specflow/specs/` and `.specflow/specs-business/`
+- **Given** the SKILL.md text and `RETIRED_SKILL_NAMES`
+- **When** each entry is looked up as literal text, the patterns as `cortex-loop-*` and `cortex-pulse-*`
+- **Then** the table has a row holding it, plus rows for `.cortex/`, `.specflow/specs/` and `.specflow/specs-business/`
 
 ### A replacement must exist first
 
