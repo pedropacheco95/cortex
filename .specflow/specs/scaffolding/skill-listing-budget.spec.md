@@ -1,6 +1,6 @@
 ---
 id: scaffolding.skill-listing-budget
-status: implemented
+status: draft
 depends_on: []
 implements: ../../specs-business/scaffolding/assistant-reaches-for-cortex-instead-of-guessing.business.md
 governed_by:
@@ -48,7 +48,8 @@ determines whether a description can be short: **whether it is the bundle's only
 
 1. **Resident cost is `name` + `description`, and nothing else.** The body is free until
    invocation. Measurement, budget, and every ceiling in this spec refer to that sum, in
-   characters, with tokens estimated at chars/4 for reporting only.
+   characters, with tokens estimated at chars/4 for reporting only. A bundle whose frontmatter
+   carries `disable-model-invocation: true` is not in the listing, so its resident cost is zero.
 
 2. **The ceiling is set by dispatch, not by importance.** A bundle that some other prompt names
    **by name** does not depend on its description to be reached, so its description can be
@@ -58,7 +59,7 @@ determines whether a description can be short: **whether it is the bundle's only
    bundles inline in its prompt bodies) and `specflow-entry`'s routing table (plus sibling
    skill bodies).
 
-3. **Four tiers.**
+3. **Five tiers.**
    - **Tier A — name-dispatched: ≤ 120 chars.** Description says what the skill does plus two
      or three trigger phrases, and nothing else.
    - **Tier B — cold-phrasing entry point: ≤ 250 chars.** Nothing names it; the description is
@@ -74,6 +75,11 @@ determines whether a description can be short: **whether it is the bundle's only
      (`loops.cortex-loop-bundle` Rule 3). Its description exists only so the listing can name
      it, and it makes no attempt to be matched: no trigger phrases, no PROACTIVELY, no
      phrasings. The name is the entire routing signal.
+   - **Tier E — typed-only: no ceiling, resident cost zero.** Its frontmatter carries
+     `disable-model-invocation: true`, so neither its name nor its description enters the
+     listing, and only a typed `/<name>` runs it. It suits a skill run once per project or once
+     per migration: `cortex-register-tasks` and `cortex-migrate` (P15). No prompt can dispatch
+     a Tier E skill, so anything pointing at one gives the typed command.
 
    **Why Tier D is not just a smaller Tier B.** Automatic routing is a *cost* for these
    bundles, not a benefit: a skill that regenerates a client-facing site, that spawns three
@@ -97,15 +103,16 @@ determines whether a description can be short: **whether it is the bundle's only
 6. **Every routed bundle carries pinned trigger phrases.** Tiers A, B, and C declare the
    phrases a human would plausibly type to reach them, and the guard fails if a rewrite drops
    one. A description may be rewritten freely; it may not become unreachable. Phrases are
-   checked case-insensitively as substrings. **Tier D declares none, and the guard fails a
-   Tier D bundle that has any** — a pinned phrase would re-create the automatic routing the
-   tier exists to remove.
+   checked case-insensitively as substrings. **Tiers D and E declare none, and the guard fails
+   a bundle of either tier that has any** — a pinned phrase would re-create the automatic
+   routing the tier exists to remove, and Tier E has no listing to match.
 
 7. **The guard measures every bundle by default.** It reports `name` + `description` per
    bundle, totals, and a diff against a git ref, and it exits non-zero when any bundle exceeds
    its tier's ceiling, loses a pinned phrase, or has no tier assignment at all. A bundle with
    no declared tier is a failure, not a default — an unclassified bundle is how a new
-   description sprawls unnoticed.
+   description sprawls unnoticed. A Tier E bundle counts as zero in the total. The guard fails
+   a Tier E bundle without the header, and a bundle with the header in any other tier.
 
 8. **The two skill trees stay identical.** `skills/` is the source; `.claude/skills/` is this
    repo's own installed mirror. A description edit lands in both, byte-identical, in the same
@@ -142,6 +149,15 @@ determines whether a description can be short: **whether it is the bundle's only
 - **When** the guard runs
 - **Then** it exits non-zero and reports that Tier D declares no phrases
 
+### A typed-only bundle costs nothing and needs its header
+
+- **Given** `skills/cortex-register-tasks/SKILL.md` and `skills/cortex-migrate/SKILL.md`, assigned
+  Tier E, each carrying `disable-model-invocation: true`
+- **When** the guard measures them
+- **Then** each counts as 0 in the total and neither is tested against a ceiling
+- **And given** the header removed from one, the guard exits non-zero and names that bundle
+- **And given** the header added to a Tier A bundle, the guard exits non-zero and names that bundle
+
 ### `specflow-entry` is exempt and is not shrunk
 
 - **Given** `skills/specflow-entry/SKILL.md`
@@ -151,9 +167,9 @@ determines whether a description can be short: **whether it is the bundle's only
 
 ### The guard covers every bundle without a flag
 
-- **Given** the 31 bundles under `skills/`
+- **Given** every bundle under `skills/`, 10 once Round 2 lands
 - **When** the guard runs with no arguments
-- **Then** all 31 appear in its output and its total equals the sum of the per-bundle values
+- **Then** all of them appear in its output and its total equals the sum of the per-bundle values
 
 ### An unclassified bundle fails the guard
 
@@ -221,3 +237,4 @@ determines whether a description can be short: **whether it is the bundle's only
   names them, so the description is their only routing signal. This spec makes that
   discriminator explicit and applies it to both halves of the tree instead of hard-coding two
   exceptions.
+- **Specflow batch, 2026-11-04, closed by the G2 sitting.** Rule 1, Rule 3 (Tier E), Rule 6 and Rule 7 change for P15, and `TIERS` in `scripts/measure-skill-descriptions.mjs` changes with them. `cortex-learn`, `cortex-fresh` and `cortex-quality` join at Tier D: dispatched by name from a task payload or typed, the route `loops.cortex-loop-bundle` Rule 3 admitted. `specflow-spec`, `specflow-review` and `specflow-onboard` join at Tier B (`specflow.spec-skill`, `specflow.review-skill`, `specflow.onboard-skill`); `specflow-review`'s pinned phrases include `here is the feedback`, the way into checking a received review. Each skill leaving the package leaves `TIERS` in the same change, since the guard fails a classified bundle not on disk. Three Tier D entries cost more resident characters than the one `cortex-loop` entry they replace, against the 4.0 listing's far smaller set. **10 skills ship, and 8 are in the listing:** Tier B `cortex-remember`, `specflow-spec`, `specflow-review`, `specflow-onboard`; Tier A `verification-before-completion`; Tier D `cortex-learn`, `cortex-fresh`, `cortex-quality`. `cortex-register-tasks` (from Tier A) and `cortex-migrate` (from Tier B) move to Tier E and cost nothing; their pinned phrases go, and `cortex-migrate`'s `>` description becomes a single quoted line (Rule 5).

@@ -12,9 +12,9 @@ The deterministic Node.js CLI binary surface — every `cortex` command — with
 
 - `core-cli.sync` — the standing repair/upgrade path for a project that already has `.cortex/`: CLAUDE.md managed-block repair, localisation-aware `_index.md` refresh, skill-bundle upgrade (unmodified-silent, user-modified-preserved), hooks merge, git hook, scheduled-task payload refresh, self-validation, summary — factoring the same scaffolding steps init uses, with a version gate that defers to `cortex migrate` on a MAJOR schema lag instead of half-upgrading.
 
-- `core-cli.task-scoping` — project-scoped scheduled-task names (schema §9.1: plain `<slug>-<canonical>` with a path-hash fallback on collision, ownership marker, five canonical bundle names), project-scoped recognition in init/--partial, and the `cortex tasks rename` migration across every prior naming generation.
+- `core-cli.task-scoping` — project-scoped scheduled-task names (schema §9.1: plain `<slug>-<canonical>` with a path-hash fallback on collision, ownership marker, canonical task names per roster (4.0: `learn`, `fresh`, `quality`)), project-scoped recognition in init/--partial, and the `cortex tasks rename` migration across every prior naming generation.
 
-- `core-cli.tasks-register` — `cortex tasks plan` / `register` / `verify`: the authoritative registration plan the `cortex-register-tasks` skill consumes (the primary, in-Desktop-session mechanism via the app's own `mcp__scheduled-tasks__*` tools), the guarded app-closed direct-write fallback into the app's `scheduled-tasks.json` (cadence table, backup, atomic write, foreign entries preserved, refuses while the app runs), and verification against silent registry loss (B-009 resolution, final mechanism).
+- `core-cli.tasks-register` — `cortex tasks plan` / `register` / `verify` / `heartbeat`: the three 4.0 tasks, their cadence table and payloads, and the five-bundle roster a store not yet accepted keeps; the `cortex-register-tasks` skill registers through the app's own tools in a Desktop session, and `register` is the fallback that writes the registry with the app fully quit and refuses otherwise, with no override.
 
 _Planned coverage (not yet written):_
 

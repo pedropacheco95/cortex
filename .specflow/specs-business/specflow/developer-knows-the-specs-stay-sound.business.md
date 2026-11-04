@@ -5,6 +5,7 @@ implemented_by:
   - ../../specs/loops/lint-scheduled.spec.md
   - ../../specs/loops/verify-scheduled.spec.md
   - ../../specs/specflow/reorg.spec.md
+  - ../../specs/loops/quality-task.spec.md
 ---
 
 # The developer knows the specs and their tests stay sound — without checking
@@ -37,9 +38,11 @@ Developers running spec-first projects under Cortex, where the spec tree is the 
 
 ## Out of Scope
 
-- Running the tests — that is the test-runner's outcome; these passes check existence and structure.
+- Fixing a failing test. The weekly quality task runs the suite and reports failures on a 4.0 store; the daily passes on a 3.x store check existence and structure only.
 - Fixing what they find.
 
 ## Notes
+
+- On a 4.0 store the passes are weekly, in `loops.quality-task`, and a structural break can also be caught at commit by `cortex check`. "Daily" above and in the metrics describes a 3.x store. The same task also reviews a rotation of specs against the code and looks for working behaviour no spec describes; both only propose.
 
 - These are the scheduled versions of checks that already exist interactively; the outcome here is the cadence and the paper trail, not new judgment.

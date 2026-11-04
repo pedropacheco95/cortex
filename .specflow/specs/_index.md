@@ -12,7 +12,7 @@
 - `hooks/` — Claude Code hooks and the git post-commit hook
 - `scaffolding/` — CLAUDE.md and `_index.md` prompt templates
 - `pulse/` — the Hygiene and Distil self-maintenance loops
-- `loops/` — the Cortex loops and shared loop infrastructure (scheduled as five task bundles; `loops.skill-suggest` superseded — folded into `pulse.distil`)
+- `loops/` — the 4.0 scheduled tasks (`loops.learn-task`, `loops.fresh-task`, `loops.quality-task`), the 3.x Cortex loops and shared loop infrastructure (3.x: five task bundles; `loops.skill-suggest` superseded — folded into `pulse.distil`); retirements in `loops/_retirements.md`
 - `constellation/` — the read-only graph compiler and renderer
 - `specflow/` — the absorbed spec-and-test lineage
 - `insight/` — the ungated codebase-understanding layer (v3: L1 pass, storage contract, query CLI, extraction skill, refresh loops, session-observe)
@@ -43,6 +43,9 @@ Current edges (`A → depends on B`):
 - `atlas.ingest-skill` → `core-cli.init`, `schema.validator`
 - `pulse.review-cli` → `core-cli.init`, `schema.validator`
 - `loops.session-reading` → `schema.validator`
+- `loops.learn-task` → `loops.session-reading`, `store.remember-skill`, `store.rules`, `store.layout`, `core-cli.tasks-register`
+- `loops.fresh-task` → `store.freshness`, `store.validate`, `store.rules`, `store.remember-skill`, `core-cli.tasks-register`
+- `loops.quality-task` → `loops.session-reading`, `loops.learn-task`, `store.remember-skill`, `specflow.index`, `specflow.lint`, `specflow.review-skill`, `core-cli.tasks-register`
 - `loops.writer-verifier` → `core-cli.init`, `schema.validator`
 - `pulse.hygiene` → `core-cli.init`, `schema.validator`, `anatomy.scanner`
 - `loops.rule-decay` / `loops.atlas-staleness` / `loops.onboarding-drift` → `core-cli.init`, `schema.validator`
