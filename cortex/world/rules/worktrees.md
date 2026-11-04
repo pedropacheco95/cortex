@@ -9,6 +9,7 @@ scope:
   - action
 match: { commands: ["git worktree", "git checkout -b", "git switch -c"], paths: [] }
 aliases: [worktree, worktrees, git-worktree]
+source: user@2026-10-21
 ---
 
 # Worktrees

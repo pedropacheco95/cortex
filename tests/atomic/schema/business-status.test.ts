@@ -7,11 +7,12 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import * as os from 'os';
 import { checkBusinessStatus } from '../../../src/schema/checks/bizspec.js';
 import { validate } from '../../../src/schema/validate.js';
 
-const VALID_FIXTURE = path.resolve('/Users/pedropacheco1/Documents/Projetos/cortex/tests/fixtures/valid');
+const VALID_FIXTURE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'fixtures', 'valid');
 const BIZ_REL = path.join('.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
 const DEV_REL = path.join('.specflow', 'specs', 'schema', 'validator.spec.md');
 
