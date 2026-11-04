@@ -50,14 +50,7 @@ They never mutate compass/anatomy/atlas/specs directly. Sole exception: the test
 
 **Why:** the persistence layer stays a curated artefact.
 
-**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): loops write proposals only to `cortex/now/proposals.md`, each item with an `until:` date (schema S6), and never edit `cortex/code/`, `cortex/world/` or the specs directly. `history/` is append-only (S7); the sanctioned writes are `cortex store expire` moving expired `now/` items into `history/changes/`, and the `cortex-remember` skill filing a fact the user or the session supplied, with its readback line. The three scheduled tasks have these further sanctioned writes (OPEN: for the owner at G2):
-- `cortex-learn`: a user rule carrying a verbatim quote, to `world/rules/`; facts by the `cortex-remember` steps; one new `history/sources/<date>-session-<id>.md` per mined session.
-- `cortex store amendments --apply`: one new `history/changes/<date>-spec-amendments.md`.
-- `cortex-fresh`: `cortex store expire --apply`; one new `history/changes/<date>-fresh.md`.
-- `cortex-quality`: one new `history/measurements/<date>-quality.md`; items in `now/`.
-- All three: their own item in `now/cortex-tasks.md`.
-
-No task edits an existing `code/` or `world/` file, except a rule update by `cortex-learn` when the user corrected that rule in a quote. The test-runner exception is unchanged; if the test-runner is retired, this sentence goes with it.
+**At schema 4.0** (`cortex-schema.md` Part II; in force for a project once its migration is accepted, `store.migrate`; until then the text above governs its 3.x store): loops write proposals only to `cortex/now/proposals.md`, each item with an `until:` date (schema S6), and never edit `cortex/code/`, `cortex/world/` or the specs directly. `history/` is append-only (S7); the sanctioned writes are `cortex store expire` moving expired `now/` items into `history/changes/`, and the `cortex-remember` skill filing a fact the user or the session supplied, with its readback line. The three scheduled tasks (`learn`, `fresh`, `quality`) are wider than other loops: they may write anywhere in `cortex/`, within the store's own format rules, `history/` staying append-only (S7). They never edit specs or code directly: a change to a spec stays a proposal in `now/proposals.md`. The test-runner exception is unchanged; if the test-runner is retired, this sentence goes with it.
 
 ## 8. Every artefact carries YAML frontmatter conforming to the schema.
 

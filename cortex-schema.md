@@ -1947,6 +1947,7 @@ constants:
 | `cortex specs port [--dry-run] [--ticket-pattern <regex>] [--verify]` | `specflow.port` |
 | `cortex specs lint [--json] [--fix]` | `specflow.lint` |
 | `cortex specs view [--out <file>] [--title <text>]` | `specflow.viewer` |
+| `cortex sync` on an accepted 4.0 store: the update route, which also removes old skills | `core-cli.sync` |
 | `cortex tasks collect <learn\|fresh\|quality> [--json] [--out <dir>] [--today YYYY-MM-DD]`; for learn also `--all`, `--now <ISO datetime>`; for quality also `--flags <dir> --base <sha>` | `loops.learn-task`, `loops.fresh-task`, `loops.quality-task` |
 | `cortex tasks heartbeat <learn\|fresh\|quality> [--today YYYY-MM-DD]` | the same |
 | `cortex store amendments [--apply] [--json] [--today YYYY-MM-DD]` | `loops.learn-task` |
