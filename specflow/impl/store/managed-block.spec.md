@@ -162,3 +162,9 @@ Each of these builds a fixture project with an accepted 4.0 store.
 - **Given** a `specflow/` folder, a `<!-- cortex:start v3.4 -->` block and a migration that is not accepted
 - **When** `cortex store map` runs
 - **Then** `CLAUDE.md` is byte-identical
+
+### STORE-MANAGED-BLOCK-15: The hook sentence is true where no hook is installed
+
+- **Given** `SPECS_SECTION_STAGE1`
+- **When** its lines are read
+- **Then** one line is `` If `core.hooksPath` is `.githooks`, a git hook checks every commit. It runs no tests. It refuses: ``, because `core.hooksPath` is not cloned, and no line claims the check runs unconditionally
