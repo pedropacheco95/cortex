@@ -48,6 +48,8 @@ Two jobs need agents and a person's approval, and both start from work that alre
    - `new-criterion`: no criterion matches, so it gives the `title` and the `spec` it belongs in;
    - `delete`: only when the behaviour is not wanted, with the reason.
 
+   A `tag` is proposed only after reading the test body against the criterion, never from a test's name or its place in the file: a wrong tag makes rule (c) trust the wrong thing. Its `reason` says in a few words what the body proves that the criterion requires. A tag may name a criterion in any live spec, inside the slice or not.
+
    A test the agent cannot place is proposed as `new-criterion`, never left out and never proposed for deletion for lack of a match. No line names a retired spec's criterion; a test that proves only a retired spec's behaviour proposes `delete` and names that spec in `reason` (`specflow.port` Rules 12 and 15). The pass is finished when `cortex specs port --verify` exits 0, and the skill runs that before asking for approval. A run the person limits to a slice says so in its counts, and it is finished when `cortex specs port --verify` lists none of that slice's files.
 8. **Approval, then application.** The skill shows the person the counts per area and the lines that are not plain tags. Nothing is applied without the person's approval, per repository; approval may be per area. The person's decisions go in `.cortex-port/decisions.md`. The main session then applies approved rows: a promise replaces its business spec; `serves:` is added to each spec and its `implements:` removed; a tag goes at the start of the test name (`[CRIT-ID]`, or `[A-1, B-2]` for several), or as `@pytest.mark.criterion("CRIT-ID")` in pytest, one marker per id; new criteria are added in commits of their own. Applying a tag adds that name prefix or marker and nothing else.
 9. **Going live.** When `specflow/INDEX.md` shows `Untagged tests: 0` (`.untagged` empty in `cortex specs index --json`), the skill says so and tells the person that rules (b) and (c) can be switched on in the `specflow.rules` key of `cortex/cortex.json`, an owner-approved edit. It never switches them on, and it never reports them live while an untagged test remains. A criterion still without a test stays `unverified`; that is the honest starting state.
@@ -185,3 +187,21 @@ Two jobs need agents and a person's approval, and both start from work that alre
 - **Given** the SKILL.md text
 - **When** its tagging step is read
 - **Then** it says a run limited to a slice says so in its counts, and is finished when `--verify` lists none of that slice's files
+
+### A tag is proposed only after reading the test body
+
+- **Given** the SKILL.md text
+- **When** its tagging step is read
+- **Then** it says a `tag` comes only from reading the test body against the criterion, never from the name or place of a test
+
+### A tag's reason says what the test proves
+
+- **Given** the SKILL.md text
+- **When** its tagging step is read
+- **Then** it says what a `tag` line's `reason` holds
+
+### A tag may name a criterion outside the slice
+
+- **Given** the SKILL.md text
+- **When** its tagging step is read
+- **Then** it says a tag may name a criterion in any live spec

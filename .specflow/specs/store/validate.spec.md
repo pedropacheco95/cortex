@@ -120,3 +120,9 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 - **Given** a commit in the last 50 with `Specflow-Amends: nope.nothing#rule-1 — x`
 - **When** the store is validated
 - **Then** `check.trailers` warns naming `nope.nothing`
+
+### A Spec: trailer resolves under specflow/
+
+- **Given** a ported project with one `Spec:` trailer naming a spec under `specflow/impl/` and one naming nothing
+- **When** `cortex store validate` runs
+- **Then** `check.trailers` warns once, on the one naming nothing

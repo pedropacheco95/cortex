@@ -531,3 +531,9 @@ These use an accepted store with fixture bundles under `.claude/skills/`.
 - **Given** a `.claude/settings.json` holding no `cortex hook` entry
 - **When** `cortex migrate --accept` runs
 - **Then** the file is byte-identical
+
+### A bug without affects takes its area from its specs
+
+- **Given** an open bug with no `affects` and a `specs` entry under `billing`
+- **When** `cortex migrate` runs
+- **Then** its target is `code/billing/<slug>.md` (schema S9.3)
