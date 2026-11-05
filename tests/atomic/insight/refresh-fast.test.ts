@@ -67,7 +67,7 @@ function makeProject(label: string): { root: string; baseline: string } {
 }
 
 describe('fast tier: a commit flags the right files, no LLM, ledger untouched (spec AC 1)', () => {
-  it('a real change to src/a.ts is flagged; untouched src/b.ts is not; ledger.json byte-identical', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-1] a real change to src/a.ts is flagged; untouched src/b.ts is not; ledger.json byte-identical', async () => {
     const { root } = makeProject('flags');
     const ledgerPath = path.join(root, '.cortex', 'insight', 'ledger.json');
     const ledgerBefore = fs.readFileSync(ledgerPath, 'utf-8');
@@ -82,7 +82,7 @@ describe('fast tier: a commit flags the right files, no LLM, ledger untouched (s
     expect(fs.readFileSync(ledgerPath, 'utf-8')).toBe(ledgerBefore);
   });
 
-  it('a formatting-only commit is ruled out by the structural filter — nothing flagged', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-2] a formatting-only commit is ruled out by the structural filter — nothing flagged', async () => {
     const { root } = makeProject('cosmetic');
     fs.writeFileSync(path.join(root, 'src', 'a.ts'), 'export function a()\n{\n    return 1;\n}\n', 'utf-8');
     gitCommitAll(root, 'reformat a');
@@ -187,7 +187,7 @@ describe('fast tier: rebuilds the recall index before its ledger gate (spec Rule
     return root;
   }
 
-  it('no ledger: the index exists with subjects["R-001"].decided naming the decision, exit 0, no worklist', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-10] no ledger: the index exists with subjects["R-001"].decided naming the decision, exit 0, no worklist', async () => {
     const root = makeUnextractedProject('recall-rebuild');
     expect(await runInsightRefreshFast(root)).toBe(0);
     const indexPath = path.join(root, '.cortex', 'recall-index.json');
@@ -197,7 +197,7 @@ describe('fast tier: rebuilds the recall index before its ledger gate (spec Rule
     expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', INSIGHT_WORKLIST_FILE))).toBe(false);
   });
 
-  it('the recall compiler throws: exit 0, one hook-errors.md entry naming insight-refresh-fast and the recall index', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-10] the recall compiler throws: exit 0, one hook-errors.md entry naming insight-refresh-fast and the recall index', async () => {
     const root = makeUnextractedProject('recall-throws');
     recallStub.fail = new Error('recall boom');
     try {

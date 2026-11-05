@@ -127,7 +127,7 @@ async function apiInsight(query = '?preset=insight'): Promise<{ status: number; 
 }
 
 describe('composeInsightPreset: counts, dashed edges, clustering', () => {
-  it('returns the expected file/element/concept/cluster counts', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-2] returns the expected file/element/concept/cluster counts', async () => {
     const { status, body } = await apiInsight();
     expect(status).toBe(200);
     expect(body.counters.files).toBe(2);
@@ -138,7 +138,7 @@ describe('composeInsightPreset: counts, dashed edges, clustering', () => {
     expect(body.counters.droppedRefs).toBe(1);
   });
 
-  it('every edge is marked dashed, carries confidence + evidence, and dangling endpoints are dropped', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-2] every edge is marked dashed, carries confidence + evidence, and dangling endpoints are dropped', async () => {
     const { body } = await apiInsight();
     expect(body.edges).toHaveLength(2);
     for (const e of body.edges) {
@@ -149,7 +149,7 @@ describe('composeInsightPreset: counts, dashed edges, clustering', () => {
     expect(body.edges.some((e) => e.to === 'file:src/fixture/missing.ts')).toBe(false);
   });
 
-  it('groups: one synthetic top-level "insight" group whose children are the declared clusters plus cluster:uncategorized', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-2] groups: one synthetic top-level "insight" group whose children are the declared clusters plus cluster:uncategorized', async () => {
     const { body } = await apiInsight();
     expect(body.groups).toHaveLength(1);
     expect(body.groups[0]?.id).toBe('insight');
@@ -157,14 +157,14 @@ describe('composeInsightPreset: counts, dashed edges, clustering', () => {
     expect(childIds).toEqual(['cluster:alpha', 'cluster:beta', 'cluster:uncategorized']);
   });
 
-  it('a node absent from every cluster is placed under cluster:uncategorized, never dropped', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-2] a node absent from every cluster is placed under cluster:uncategorized, never dropped', async () => {
     const { body } = await apiInsight();
     const b = body.nodes.find((n) => n.id === 'file:src/fixture/b.ts');
     expect(b).toBeDefined();
     expect(b?.group).toBe('cluster:uncategorized');
   });
 
-  it('file nodes carry Purpose + a cliPointer; concept nodes carry an excerpt + touching files; element nodes carry owningFile + range', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-3] file nodes carry Purpose + a cliPointer; concept nodes carry an excerpt + touching files; element nodes carry owningFile + range', async () => {
     const { body } = await apiInsight();
     const a = body.nodes.find((n) => n.id === 'file:src/fixture/a.ts');
     expect(a?.purpose).toContain('clustered file');
@@ -181,7 +181,7 @@ describe('composeInsightPreset: counts, dashed edges, clustering', () => {
 });
 
 describe('composeInsightPreset: absent/empty insight is an honest empty result, never an error', () => {
-  it('a project with no .cortex/insight/ at all → 200, empty sets, emptyHint set', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-4] a project with no .cortex/insight/ at all → 200, empty sets, emptyHint set', async () => {
     const bare = makeTmpDir('spec-insight-preset-bare');
     extraDirs.push(bare);
     makeCortexProject(bare);
@@ -194,10 +194,10 @@ describe('composeInsightPreset: absent/empty insight is an honest empty result, 
     expect(body.nodes).toEqual([]);
     expect(body.edges).toEqual([]);
     expect(body.groups).toEqual([]);
-    expect(body.emptyHint).toContain('cortex-extract-insight');
+    expect(body.emptyHint).toBe('no insight extracted yet');
   });
 
-  it('never depends on constellation.json existing (no curated map, insight present) → still composes', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-5] never depends on constellation.json existing (no curated map, insight present) → still composes', async () => {
     const noMap = makeTmpDir('spec-insight-preset-nomap');
     extraDirs.push(noMap);
     insightFixture(noMap); // writes insight/ but we never call compile() here
@@ -221,7 +221,7 @@ describe('composeInsightPreset: curated presets stay byte-unaffected by insight 
     expect(first.equals(second)).toBe(true);
   });
 
-  it('serving the insight preset writes nothing to disk (Rule 6, R-001)', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-6] serving the insight preset writes nothing to disk (Rule 6, R-001)', async () => {
     const mapPath = path.join(root, '.cortex', 'constellation.json');
     const before = fs.readFileSync(mapPath, 'utf-8');
     await apiInsight();
@@ -232,7 +232,7 @@ describe('composeInsightPreset: curated presets stay byte-unaffected by insight 
 });
 
 describe('composeInsightPreset: deterministic responses', () => {
-  it('identical insight files + identical request → byte-identical response', async () => {
+  it('[CONSTELLATION-INSIGHT-PRESET-V3-7] identical insight files + identical request → byte-identical response', async () => {
     const r1 = await fetch(`${base}/api/constellation?preset=insight`);
     const b1 = Buffer.from(await r1.arrayBuffer());
     const r2 = await fetch(`${base}/api/constellation?preset=insight`);

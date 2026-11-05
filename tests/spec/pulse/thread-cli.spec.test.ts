@@ -79,7 +79,7 @@ async function gatedErrors(root: string): Promise<string[]> {
 // ---------------------------------------------------------------------------
 
 describe('Promote to a decision drafts a schema-valid file', () => {
-  it('writes the §4.3 decision with INFERRED confidence and the trail as provenance, then answers the thread', async () => {
+  it('[PULSE-THREADS-16] writes the §4.3 decision with INFERRED confidence and the trail as provenance, then answers the thread', async () => {
     const root = tmp('decision');
     seedSpecFile(root, '.specflow/specs/pulse/usage.spec.md', 'pulse.usage'); // the thread's bears_on must resolve once the draft carries it (3.4)
     const s1 = threadCitation('s1', USER);
@@ -117,7 +117,7 @@ describe('Promote to a decision drafts a schema-valid file', () => {
     expect(await gatedErrors(root)).toEqual([]);
   });
 
-  it('a title over 80 characters is cut to 80 and JSON-quoted', async () => {
+  it('[PULSE-THREADS-16] a title over 80 characters is cut to 80 and JSON-quoted', async () => {
     const root = tmp('decision-long');
     const long = 'Decision: '.repeat(12).trim(); // 119 chars
     seedThreads(root, [makeThread({ id: 'T-001', body: long })]);
@@ -147,7 +147,7 @@ describe('Promote to a bug requires a type and resolvable `affects`', () => {
     ]);
   }
 
-  it('refuses without --type (exit 2, nothing written), then drafts B-018 with the resolvable affects', async () => {
+  it('[PULSE-THREADS-17] refuses without --type (exit 2, nothing written), then drafts B-018 with the resolvable affects', async () => {
     const root = tmp('bug');
     seed(root);
     const before = snapshotTree(root);
@@ -223,7 +223,7 @@ describe('Promote to a bug requires a type and resolvable `affects`', () => {
     expect(readThread(root, 'T-008')?.status).toBe('open');
   });
 
-  it('the bug id is the next after the highest on disk, with a bare-id or unpadded filename tolerated', async () => {
+  it('[SCHEMA-ID-REGISTRY-3] the bug id is the next after the highest on disk, with a bare-id or unpadded filename tolerated', async () => {
     const root = tmp('bug-next-id');
     seedBug(root, 'B-003', 'a');
     seedBug(root, 'B-1002', 'b');
@@ -239,7 +239,7 @@ describe('Promote to a bug requires a type and resolvable `affects`', () => {
 // ---------------------------------------------------------------------------
 
 describe('Promote refuses unknown targets, and never clobbers', () => {
-  it('compass/rules exits 2; atlas/evidence on a question thread exits 2 naming the kind; decisions succeeds once and then exits 1 on the existing target', async () => {
+  it('[PULSE-THREADS-18] compass/rules exits 2; atlas/evidence on a question thread exits 2 naming the kind; decisions succeeds once and then exits 1 on the existing target', async () => {
     const root = tmp('refusals');
     seedThreads(root, [makeThread({ id: 'T-009', body: 'Keep the counter under state/' })]);
 
@@ -277,7 +277,7 @@ describe('Promote refuses unknown targets, and never clobbers', () => {
     expect(snapshotTree(root)).toEqual(afterPromote);
   });
 
-  it('an open thread whose decision target already exists is refused and stays open', async () => {
+  it('[PULSE-THREADS-18] an open thread whose decision target already exists is refused and stays open', async () => {
     const root = tmp('clobber-open');
     seedThreads(root, [makeThread({ id: 'T-001', body: 'Keep the counter under state/' })]);
     fs.mkdirSync(decisionsDir(root), { recursive: true });
@@ -344,7 +344,7 @@ describe('Rule 11 — `cortex thread` is dispatched by the CLI entry under the p
     expect(fs.existsSync(path.join(pulseDir, '.suggestion-counter'))).toBe(false);
   });
 
-  it('run([thread, close, …]) forwards the flags and exits with the verb’s code', async () => {
+  it('[PULSE-THREADS-15] run([thread, close, …]) forwards the flags and exits with the verb’s code', async () => {
     const root = tmp('cli-close');
     seedThreads(root, [makeThread({ id: 'T-001' })]);
     process.chdir(root);
@@ -360,7 +360,7 @@ describe('Rule 11 — `cortex thread` is dispatched by the CLI entry under the p
 // ---------------------------------------------------------------------------
 
 describe('Promote to evidence drafts a schema-valid file from a measurement finding', () => {
-  it('T-007 (finding, measurement, two cited sessions with records) → the §4.3 evidence file, the thread answered, every gated check clean', async () => {
+  it('[ATLAS-EVIDENCE-9] T-007 (finding, measurement, two cited sessions with records) → the §4.3 evidence file, the thread answered, every gated check clean', async () => {
     const root = tmp('evidence');
     seedSpecFile(root, '.specflow/specs/pulse/usage.spec.md', 'pulse.usage');
     const s1 = threadCitation('s1', USER);
@@ -426,7 +426,7 @@ describe('Promote to evidence drafts a schema-valid file from a measurement find
     expect(readThread(root, 'T-012')?.status).toBe('open');
   });
 
-  it('the four refusals of the AC leave threads and filesystem unchanged and name the kind, --finding, or --bears-on', async () => {
+  it('[ATLAS-EVIDENCE-10] the four refusals of the AC leave threads and filesystem unchanged and name the kind, --finding, or --bears-on', async () => {
     const root = tmp('evidence-refusals');
     seedThreads(root, [
       makeThread({ id: 'T-008', kind: 'question', body: 'Should the counter live under state/?' }),
@@ -472,7 +472,7 @@ function registryText(root: string): string {
 }
 
 describe('Promote allocates through the registry', () => {
-  it('a registry ending `B-019 x` and T-008 → B-020-<slug>.md, the registry\'s last line is `B-020 <slug>`, and check.id-registry is clean', async () => {
+  it('[SCHEMA-ID-REGISTRY-10] a registry ending `B-019 x` and T-008 → B-020-<slug>.md, the registry\'s last line is `B-020 <slug>`, and check.id-registry is clean', async () => {
     const root = tmp('registry-alloc');
     seedBug(root, 'B-019', 'x'); // the registry's last line has its file (an initialised project)
     touchProjectFile(root, 'src/a.ts');
@@ -490,7 +490,7 @@ describe('Promote allocates through the registry', () => {
     expect(await gatedErrors(root)).toEqual([]);
   });
 
-  it('the registry wins over the files on disk: B-003 and B-1002 on disk plus a registry line B-2000 → B-2001', async () => {
+  it('[SCHEMA-ID-REGISTRY-1] the registry wins over the files on disk: B-003 and B-1002 on disk plus a registry line B-2000 → B-2001', async () => {
     const root = tmp('registry-max');
     seedBug(root, 'B-003', 'a');
     seedBug(root, 'B-1002', 'b');
@@ -502,7 +502,7 @@ describe('Promote allocates through the registry', () => {
     expect(registryText(root).endsWith('\nB-2000 reserved\nB-2001 do-you-want-the-counter-in-state-or-at-the-pulse-root\n')).toBe(true);
   });
 
-  it('with no registry, promote creates it from the files on disk first and then appends (a pre-registry project never falls back to the old scheme)', async () => {
+  it('[SCHEMA-ID-REGISTRY-3] with no registry, promote creates it from the files on disk first and then appends (a pre-registry project never falls back to the old scheme)', async () => {
     const root = tmp('registry-absent');
     seedBug(root, 'B-017', 'x');
     touchProjectFile(root, 'src/a.ts');
@@ -532,7 +532,7 @@ describe('Promote allocates through the registry', () => {
 });
 
 describe('Promote stamps the draft', () => {
-  it('in a repo whose head is 2b217df… the drafted frontmatter carries found_at_commit: 2b217df, and check.bug accepts it', async () => {
+  it('[COMPASS-BUG-CURRENCY-6] in a repo whose head is 2b217df… the drafted frontmatter carries found_at_commit: 2b217df, and check.bug accepts it', async () => {
     const root = tmp('stamp');
     fakeGit(root, SHA_MAIN);
     touchProjectFile(root, 'src/a.ts');
@@ -550,7 +550,7 @@ describe('Promote stamps the draft', () => {
     expect(await gatedErrors(root)).toEqual([]);
   });
 
-  it('in a non-git directory the draft has no found_at_commit key and still passes check.bug', async () => {
+  it('[COMPASS-BUG-CURRENCY-6] in a non-git directory the draft has no found_at_commit key and still passes check.bug', async () => {
     const root = tmp('no-stamp');
     touchProjectFile(root, 'src/a.ts');
     seedThreads(root, [makeThread({ id: 'T-010', kind: 'finding', bears_on: ['src/a.ts'], body: 'Layer drift in a\n**Kind:** conclusion\n**Source:** a session' })]);

@@ -60,20 +60,6 @@ describe('AC: an over-ceiling description fails the guard', () => {
   });
 });
 
-describe('AC: specflow-entry is exempt from any ceiling', () => {
-  it('applies no ceiling to Tier C', () => {
-    expect(TIER_CEILING.C).toBeNull();
-    const row = { bundle: 'specflow-entry', after: 1130, description: 'add a feature', tier: 'C' };
-    expect(evaluate([row], { 'specflow-entry': ['add a feature'] })).toEqual([]);
-  });
-
-  it('still checks Tier C for its pinned phrases', () => {
-    const row = { bundle: 'specflow-entry', after: 1130, description: 'nothing pinned here', tier: 'C' };
-    const failures = evaluate([row], { 'specflow-entry': ['add a feature'] });
-    expect(failures).toHaveLength(1);
-    expect(failures[0]).toContain('add a feature');
-  });
-});
 
 describe('AC: a dropped trigger phrase fails the guard', () => {
   it('names the lost phrase', () => {

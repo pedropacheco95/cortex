@@ -7,7 +7,6 @@ depends_on:
   - core-cli.init
 governs:
   - "src/pulse/distil.ts"
-  - "skills/cortex-loop/references/distil.md"
 implements: ../../promises/loops/developer-benefits-from-what-past-sessions-taught.business.md
 governed_by:
   - R-001
@@ -33,7 +32,7 @@ Distil's judgment carries **two lenses** over the same corpus. The primary **rul
 
 ## Rules
 
-1. **Two deterministic halves, three entry modes.** `--collect` extracts messages since last run into `pulse/state/session-corpus.json` (the single session corpus — formerly shared with the retired `skill-suggest`, now distil's alone; design §11.5). `--propose <candidates.json>` deterministically filters and writes proposals. Bare `cortex pulse-distil` = collect → spawn the Claude CLI headless for pattern judgment (the `core-cli.init` Rule 6 subprocess boundary; same failure semantics: `--no-llm`/absent/timeout → degrade with notice, auth → named) → propose. The scheduled task's skill (`skills/cortex-loop/references/distil.md`, shipped) runs collect, performs the judgment **itself** (it already is a Claude session — no nested subprocess), then runs propose.
+1. **Two deterministic halves, three entry modes.** `--collect` extracts messages since last run into `pulse/state/session-corpus.json` (the single session corpus — formerly shared with the retired `skill-suggest`, now distil's alone; design §11.5). `--propose <candidates.json>` deterministically filters and writes proposals. Bare `cortex pulse-distil` = collect → spawn the Claude CLI headless for pattern judgment (the `core-cli.init` Rule 6 subprocess boundary; same failure semantics: `--no-llm`/absent/timeout → degrade with notice, auth → named) → propose. The scheduled task's skill runs collect, performs the judgment **itself** (it already is a Claude session — no nested subprocess), then runs propose. The package no longer ships that skill (`cortex-loop`, P12); a 3.x project keeps its installed copy until it migrates.
 2. **Candidate shape (the judgment output contract):** JSON list of `{pattern, occurrences, sessionIds, proposedTarget, proposedText, confidence}`. Propose validates the shape; malformed candidates are skipped and counted in the report.
 3. **Deterministic filters in propose, in order:** (a) `occurrences >= distilThresholdN`; (b) not covered — `proposedText` (normalised) already present in cerebrum → dropped as covered; (c) not suppressed — a pattern whose normalised text matches an unexpired `dismissed.md` entry's recorded text is not re-proposed (design §10.3 rejection memory). Dropped counts appear in the report by reason.
 4. **S-id allocation** via `pulse/state/suggestion-counter` (schema §4.5): monotonic, never reused, shared with every proposing loop.
@@ -112,6 +111,6 @@ Distil's judgment carries **two lenses** over the same corpus. The primary **rul
 ## Notes
 
 - The end-to-end acceptance path (proposal → `pulse-accept` → cerebrum) is covered by `pulse.review-cli`'s tests; this spec owns production of valid §4.5 sections.
-- The judgment prompt/skill body instructs conservative extraction (design §10.3: one-offs filtered, evidence cited) — prompt content is pinned by string assertions on the shipped SKILL.md, same convention as `atlas.ingest-skill`.
+- The judgment prompt/skill body instructs conservative extraction (design §10.3: one-offs filtered, evidence cited). Its string assertions left with the shipped skill (P12).
 - **Judgment call:** Rule 9's observations-trail lens reuses `distilThresholdN` rather than introducing a second threshold config key. Schema §4.10.11 explicitly leaves the exact recurrence number to this spec ("may differ from the digest's display threshold") without mandating a new key exist — reusing the existing, already-tunable threshold keeps one number instead of two doing the same job (both are "how much recurrence counts as real"), and avoids a config key whose only difference from `distilThresholdN` would need its own justification.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

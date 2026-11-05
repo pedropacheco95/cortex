@@ -1,15 +1,13 @@
 ---
 about: Single-pass onboarding still writes root proposed-notes.md and corrections.md
 permanence: changing
-verified: "2026-07-03 (observed)"
+verified: "2026-11-05 (observed)"
 origin:
   - migrated:compass/bugs/B-004-onboard-scratch-homes-unredirected.md@d7ed910
-need:
-  - skills/specflow-onboard-codebase/SKILL.md
+  - commit:72800ad
 aliases:
   - B-004
   - B-004-onboard-scratch-homes-unredirected
-status: open
 ---
 
 # B-004 — Single-pass onboarding scratch homes unredirected
@@ -32,3 +30,5 @@ affects:
   - skills/specflow-onboard-codebase/SKILL.md
 proposed_fix: "Extend specflow.cortex-awareness Rule 1's onboard row with the two §8.5 output homes (proposed-notes.md and corrections.md -> .cortex/pulse/), redirect the four body references in the onboard bundle (lines naming the root homes), sync package and local copies, and add the matching prohibition-style regression assertions to tests/atomic/specflow/awareness.test.ts."
 ```
+
+Fixed: 2026-11-05, 72800ad (removed `skills/specflow-onboard-codebase/`, the only file with the bug; `specflow-onboard` replaces it).

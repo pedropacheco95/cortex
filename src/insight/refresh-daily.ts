@@ -270,7 +270,7 @@ export function collectDaily(root: string, now: Date = new Date()): CollectDaily
   const absRoot = path.resolve(root);
   const ledger = readLedger(absRoot);
   if (ledger === null) {
-    throw new Error('no .cortex/insight/ledger.json — run the initial extraction (cortex-extract-insight) first');
+    throw new Error('no .cortex/insight/ledger.json — there is nothing to refresh');
   }
   const registry = readScopeRegistry(absRoot);
   const graph = readGraph(absRoot);
@@ -669,7 +669,7 @@ export async function runRefreshDaily(root = '.', opts: RefreshDailyOptions = {}
     const r = collectDaily(absRoot, now);
     console.log(
       `cortex loop-insight-refresh --daily: worklist collected (${r.l2 + r.l3 + r.triage} file(s) due); ` +
-        `the triage/re-extraction middle runs in the cortex-loop-insight-refresh-daily skill — ` +
+        `the triage/re-extraction middle runs in a Claude session — ` +
         `worklist retained at .cortex/pulse/state/${DAILY_WORKLIST_FILE}.`,
     );
     return 0;

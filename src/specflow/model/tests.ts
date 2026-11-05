@@ -10,7 +10,7 @@ export interface TestCase {
   line: number;
   skipped: boolean;
   tags: string[];
-  /** A name built at run time with no static tag: counted, not a case (Rule 5). */
+  /** A name built at run time with no static tag: untagged, and named by its source (Rule 5). */
   dynamic?: boolean;
   /** The case's source, whitespace collapsed: what the check compares. */
   body?: string;
@@ -188,7 +188,7 @@ export function scanJsCases(file: string, src: string): TestCase[] {
           const tags = tagsOf(name?.text ?? '');
           cases.push({
             file,
-            name: name?.text ?? '',
+            name: name?.text ?? '(built name)',
             line: lineAt(start),
             skipped: word.startsWith('x') || mods.includes('skip') || mods.includes('todo') || parens.includes(true),
             tags,

@@ -10,7 +10,6 @@ governed_by:
   - R-001
 governs:
   - "src/pulse/hygiene.ts"
-  - "skills/cortex-loop/references/hygiene.md"
 ---
 
 # Hygiene Loop
@@ -31,7 +30,7 @@ governs:
 
 ## Rules
 
-1. **Command + bundle.** `cortex pulse-hygiene` runs the sweep; the package ships `skills/cortex-loop/references/hygiene.md` instructing scheduled runs to invoke the CLI and read the result (making the `hygiene` scheduled task registrable under `--partial`).
+1. **Command.** `cortex pulse-hygiene` runs the sweep. The package no longer ships the `cortex-loop` skill that told scheduled runs to invoke it (P12); a 3.x project keeps its installed copy until it migrates.
 2. **Deterministic checks (v1 set):** (a) orphan local branches — unmerged, no commits in 30 days; (b) stale open PRs via `gh` when on PATH, else the section reads "skipped — gh unavailable"; (c) anatomy drift — `files.md` rows whose file is gone, and on-disk files missing from anatomy; (d) cerebrum dead references — rule `source:`/`governs:` targets that no longer resolve (reuse the validator's resolution logic, don't reimplement); (e) spec/anatomy orphans — dev specs whose `governs` matches nothing; (f) aged TODO/FIXME comments (count + locations). Thresholds are engineering-call constants noted in the report footer.
 3. **Always-write (schema §4.5).** Every run overwrites the report with a fresh `generated`; a clean project yields explicit "No findings this cycle." sections.
 4. **Report shape.** One `##` section per check with concrete findings ("thing, problem, suggested next step") — no scores. Footer names skipped checks (gh absent, drop-off detection deferred) and the thresholds used.

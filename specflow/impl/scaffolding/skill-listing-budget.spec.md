@@ -55,24 +55,19 @@ determines whether a description can be short: **whether it is the bundle's only
    **by name** does not depend on its description to be reached, so its description can be
    minimal. A bundle that nothing names can only be reached by a human's unprompted phrasing
    matching its description, so it must keep trigger surface. The two dispatchers in this
-   repo are `SCHEDULED_TASKS` (`src/cli/templates.ts`, which names the eleven loop/pulse
-   bundles inline in its prompt bodies) and `specflow-entry`'s routing table (plus sibling
-   skill bodies).
+   repo are the task payloads (`storeV4TaskSkillMd`, `src/cli/templates.ts`, which name the three
+   task skills) and sibling skill bodies.
 
-3. **Five tiers.**
+3. **Four tiers.**
    - **Tier A — name-dispatched: ≤ 120 chars.** Description says what the skill does plus two
      or three trigger phrases, and nothing else.
    - **Tier B — cold-phrasing entry point: ≤ 250 chars.** Nothing names it; the description is
      the only routing signal, so it carries real trigger surface.
-   - **Tier C — `specflow-entry`: exempt.** It is the mandatory gate on *arbitrary* phrasing in
-     every spec-managed project, and every Tier A assignment depends on it firing and routing
-     by name. Cutting the router to fund the routed is not a saving.
    - **Tier D — callable-only: ≤ 60 chars, no trigger phrases.** A skill nobody should be
      routed *into* by a description matching a sentence. It is reached by one of two explicit
      namings: the developer decides to run it and types `/<name>`, or **a prompt Cortex itself
-     authors names it** — the scheduled-task payloads in `src/cli/templates.ts` name
-     `cortex-loop` and the reference file for the member they are running
-     (`loops.cortex-loop-bundle` Rule 3). Its description exists only so the listing can name
+     authors names it** — the task payloads in `src/cli/templates.ts` name `cortex-learn`,
+     `cortex-fresh` and `cortex-quality`. Its description exists only so the listing can name
      it, and it makes no attempt to be matched: no trigger phrases, no PROACTIVELY, no
      phrasings. The name is the entire routing signal.
    - **Tier E — typed-only: no ceiling, resident cost zero.** Its frontmatter carries
@@ -82,8 +77,7 @@ determines whether a description can be short: **whether it is the bundle's only
      a Tier E skill, so anything pointing at one gives the typed command.
 
    **Why Tier D is not just a smaller Tier B.** Automatic routing is a *cost* for these
-   bundles, not a benefit: a skill that regenerates a client-facing site, that spawns three
-   parallel onboarding passes, or that runs a scheduled maintenance loop, should never fire
+   bundles, not a benefit: a skill that runs a scheduled maintenance task should never fire
    because a sentence happened to match. Removing
    the trigger surface is the point, and the token saving is a consequence. A Tier D bundle is
    therefore never promoted to Tier B to "make it easier to find" — being hard to trip is the
@@ -100,7 +94,7 @@ determines whether a description can be short: **whether it is the bundle's only
    the author for a paragraph that costs every session. A single quoted line makes the length
    legible in the diff.
 
-6. **Every routed bundle carries pinned trigger phrases.** Tiers A, B, and C declare the
+6. **Every routed bundle carries pinned trigger phrases.** Tiers A and B declare the
    phrases a human would plausibly type to reach them, and the guard fails if a rewrite drops
    one. A description may be rewritten freely; it may not become unreachable. Phrases are
    checked case-insensitively as substrings. **Tiers D and E declare none, and the guard fails
@@ -118,26 +112,31 @@ determines whether a description can be short: **whether it is the bundle's only
    repo's own installed mirror. A description edit lands in both, byte-identical, in the same
    change.
 
+9. **The shipped set is ten bundles.** `skills/` holds `FINAL_BUNDLES` (`src/store/migrate/system.ts`)
+   and `cortex-migrate`, and no other directory with a `SKILL.md`. No shipped bundle has a name
+   in `RETIRED_SKILL_NAMES`. `.claude/skills/` holds the same ten, plus `coordinate-sessions`,
+   which this repository keeps for itself and the package does not ship.
+
 ## Acceptance Criteria
 
 ### SCAFFOLDING-SKILL-LISTING-BUDGET-1: A name-dispatched bundle fits Tier A
 
-- **Given** `skills/specflow-bugs/SKILL.md`, whose name is referenced from other skill bodies
+- **Given** `skills/verification-before-completion/SKILL.md`, whose name is referenced from other skill bodies
 - **When** the guard measures it
 - **Then** `name` + `description` is at most 120 characters
 - **And** the description still contains its pinned trigger phrases
 
 ### SCAFFOLDING-SKILL-LISTING-BUDGET-2: A cold-phrasing entry point keeps its surface
 
-- **Given** `skills/specflow-new-project/SKILL.md`, whose name no other prompt references and
-  which a developer reaches by describing a product idea rather than by naming it
+- **Given** `skills/specflow-spec/SKILL.md`, which a developer reaches by describing the work
+  rather than by naming it
 - **When** the guard measures it
 - **Then** `name` + `description` is at most 250 characters
 - **And** the description still contains its pinned trigger phrases
 
 ### SCAFFOLDING-SKILL-LISTING-BUDGET-3: A callable-only bundle carries no trigger surface
 
-- **Given** `skills/specflow-viewer/SKILL.md`, assigned Tier D
+- **Given** `skills/cortex-learn/SKILL.md`, assigned Tier D
 - **When** the guard measures it
 - **Then** `name` + `description` is at most 60 characters
 - **And** the description contains no trigger phrasings, no "PROACTIVELY", and no quoted
@@ -158,16 +157,9 @@ determines whether a description can be short: **whether it is the bundle's only
 - **And given** the header removed from one, the guard exits non-zero and names that bundle
 - **And given** the header added to a Tier A bundle, the guard exits non-zero and names that bundle
 
-### SCAFFOLDING-SKILL-LISTING-BUDGET-6: `specflow-entry` is exempt and is not shrunk
-
-- **Given** `skills/specflow-entry/SKILL.md`
-- **When** the guard measures it
-- **Then** no ceiling is applied to it
-- **And** its description is unchanged from the revision preceding this spec
-
 ### SCAFFOLDING-SKILL-LISTING-BUDGET-7: The guard covers every bundle without a flag
 
-- **Given** every bundle under `skills/`, 10 once Round 2 lands
+- **Given** the 10 bundles under `skills/`
 - **When** the guard runs with no arguments
 - **Then** all of them appear in its output and its total equals the sum of the per-bundle values
 
@@ -202,8 +194,23 @@ determines whether a description can be short: **whether it is the bundle's only
 - **When** `skills/<b>/SKILL.md` and `.claude/skills/<b>/SKILL.md` are compared
 - **Then** they are byte-identical
 
+### SCAFFOLDING-SKILL-LISTING-BUDGET-13: The package ships exactly the ten
+
+- **Given** `skills/`
+- **When** its directories holding a `SKILL.md` are listed
+- **Then** they are `FINAL_BUNDLES` and `cortex-migrate`, and nothing else
+- **And** none of them has a name in `RETIRED_SKILL_NAMES`
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-14: The mirror holds the same ten
+
+- **Given** `.claude/skills/`
+- **When** its directories are listed
+- **Then** they are the ten shipped bundles and `coordinate-sessions`, and nothing else
+- **And** every file in each of the ten is byte-identical to the file in `skills/`, with no strays on either side, `.cortex-installed.json` aside
+
 ## Notes
 
+- **Round 2 removal, 2026-11-05 (P12, P15).** The 19 bundles the plan retires left `skills/` and the mirror. Tier C went with `specflow-entry`, its only member, and criterion 6 went with it; ids are not reused. Criteria 1 to 3 moved to bundles that still ship, and Rule 9 and criteria 13 and 14 pin the set. The Intent and the measurements below are the record of the 31-bundle listing.
 - **Measured baseline (2026-08-05, pre-change):** `cortex-*` 14 bundles / 1,586 chars ≈ 397
   tok; `specflow-*` + `verification-before-completion` 17 bundles / 14,486 chars ≈ 3,622 tok;
   total 16,071 chars ≈ 4,018 tok. **Measured after implementation: 4,426 chars ≈ 1,107 tok**

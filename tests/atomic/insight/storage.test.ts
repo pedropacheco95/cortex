@@ -90,13 +90,13 @@ const CLUSTERS: ClustersFileV3 = {
 // ---------------------------------------------------------------------------
 
 describe('node-id grammar', () => {
-  it('accepts file:/element:/concept: forms', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] accepts file:/element:/concept: forms', () => {
     expect(isNodeId('file:src/auth/session.ts')).toBe(true);
     expect(isNodeId('element:src/auth/session.ts#validateToken')).toBe(true);
     expect(isNodeId('concept:authentication')).toBe(true);
   });
 
-  it('rejects the v2 constellation-borrowed grammar and malformed ids', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] rejects the v2 constellation-borrowed grammar and malformed ids', () => {
     expect(isNodeId('spec:insight.cli')).toBe(false);
     expect(isNodeId('anatomy:src/x.ts')).toBe(false);
     expect(isNodeId('file:')).toBe(false);
@@ -120,7 +120,7 @@ describe('node-id grammar', () => {
 // ---------------------------------------------------------------------------
 
 describe('closed enums', () => {
-  it('edge_type, confidence tiers, and tag kinds match the schema enums', () => {
+  it('[INSIGHT-STORAGE-FORMAT-11] edge_type, confidence tiers, and tag kinds match the schema enums', () => {
     expect([...EDGE_TYPES]).toEqual(['imports', 'calls', 'semantically-similar-to', 'implements-concept', 'co-clustered']);
     expect([...CONFIDENCE_TIERS]).toEqual(['structural', 'stated', 'inferred', 'ambiguous']);
     expect([...TAG_KINDS]).toEqual(['concern', 'technology', 'pattern', 'layer', 'domain-term']);
@@ -139,33 +139,33 @@ describe('closed enums', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseGraphV3', () => {
-  it('accepts a well-formed graph (object and string form)', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] accepts a well-formed graph (object and string form)', () => {
     expect(parseGraphV3(GRAPH).ok).toBe(true);
     expect(parseGraphV3(JSON.stringify(GRAPH)).ok).toBe(true);
   });
 
-  it('AC: an edge with empty evidence is an error', () => {
+  it('[INSIGHT-STORAGE-FORMAT-10] AC: an edge with empty evidence is an error', () => {
     const bad = { ...GRAPH, edges: [{ ...GRAPH.edges[0]!, evidence: '   ' }] };
     const result = parseGraphV3(bad);
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('evidence');
   });
 
-  it('AC: edge_type outside the closed enum is rejected', () => {
+  it('[INSIGHT-STORAGE-FORMAT-11] AC: edge_type outside the closed enum is rejected', () => {
     const bad = { ...GRAPH, edges: [{ ...GRAPH.edges[0]!, edge_type: 'related-to' }] };
     const result = parseGraphV3(bad);
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('edge_type');
   });
 
-  it('AC: a float confidence is rejected — tiers only', () => {
+  it('[INSIGHT-STORAGE-FORMAT-11] AC: a float confidence is rejected — tiers only', () => {
     const bad = { ...GRAPH, edges: [{ ...GRAPH.edges[0]!, confidence: 0.85 }] };
     const result = parseGraphV3(bad);
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('confidence');
   });
 
-  it('rejects v2-grammar node ids and a missing built_at_commit', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] rejects v2-grammar node ids and a missing built_at_commit', () => {
     const bad = {
       ...GRAPH,
       built_at_commit: undefined,
@@ -178,7 +178,7 @@ describe('parseGraphV3', () => {
     expect(joined).toContain('built_at_commit');
   });
 
-  it('AC: no embedding/vector/similarity field is permitted', () => {
+  it('[INSIGHT-STORAGE-FORMAT-12] AC: no embedding/vector/similarity field is permitted', () => {
     const bad = { ...GRAPH, edges: [{ ...GRAPH.edges[0]!, similarity: 0.93 }] };
     const result = parseGraphV3(bad);
     expect(result.ok).toBe(false);
@@ -193,18 +193,18 @@ describe('parseGraphV3', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseTagsV3', () => {
-  it('accepts a well-formed tags file', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] accepts a well-formed tags file', () => {
     expect(parseTagsV3(TAGS).ok).toBe(true);
   });
 
-  it('rejects an assignment referencing a tag absent from the vocabulary', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] rejects an assignment referencing a tag absent from the vocabulary', () => {
     const bad = { ...TAGS, assignments: { 'file:src/auth/session.ts': ['jwt'] } };
     const result = parseTagsV3(bad);
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('vocabulary');
   });
 
-  it('rejects a tag kind outside the enum and a malformed assignment key', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] rejects a tag kind outside the enum and a malformed assignment key', () => {
     const bad = {
       ...TAGS,
       vocabulary: [{ tag: 'authentication', kind: 'vibe' }],
@@ -219,11 +219,11 @@ describe('parseTagsV3', () => {
 });
 
 describe('parseClustersV3', () => {
-  it('accepts a well-formed clusters file', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] accepts a well-formed clusters file', () => {
     expect(parseClustersV3(CLUSTERS).ok).toBe(true);
   });
 
-  it('rejects a bad cluster id, empty rationale, and missing scope', () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] rejects a bad cluster id, empty rationale, and missing scope', () => {
     const bad = {
       ...CLUSTERS,
       clusters: [{ id: 'auth-core', label: 'x', members: [], rationale: ' ', scope: '' }],
@@ -258,11 +258,11 @@ const REVERSE: ReverseIndexFile = {
 };
 
 describe('parseLedger', () => {
-  it('AC: the staleness ledger matches the contract', () => {
+  it('[INSIGHT-STORAGE-FORMAT-7] AC: the staleness ledger matches the contract', () => {
     expect(parseLedger(LEDGER).ok).toBe(true);
   });
 
-  it('rejects a bad hash and a bad extraction_level', () => {
+  it('[INSIGHT-STORAGE-FORMAT-7] rejects a bad hash and a bad extraction_level', () => {
     const bad = {
       ...LEDGER,
       entries: { 'src/x.ts': { source_sha256: 'nope', built_at_commit: '9f2c1ab', extraction_level: 4 } },
@@ -276,7 +276,7 @@ describe('parseLedger', () => {
 });
 
 describe('parseReverseIndex', () => {
-  it('AC: resolves a changed file to its referencing concepts/edges', () => {
+  it('[INSIGHT-STORAGE-FORMAT-8] AC: resolves a changed file to its referencing concepts/edges', () => {
     const result = parseReverseIndex(REVERSE);
     expect(result.ok).toBe(true);
     const refs = result.value?.referenced_by['element:src/auth/session.ts#validateToken'];
@@ -313,7 +313,7 @@ scopes:
 `;
 
 describe('parseScopeRegistry', () => {
-  it('AC: a well-formed registry conforms, and shared_by inverts depends_on', () => {
+  it('[INSIGHT-STORAGE-FORMAT-5] AC: a well-formed registry conforms, and shared_by inverts depends_on', () => {
     const result = parseScopeRegistry(REGISTRY_YAML);
     expect(result.ok).toBe(true);
     expect(Object.keys(result.value?.scopes ?? {})).toEqual(['auth', 'notifications']);
@@ -329,7 +329,7 @@ describe('parseScopeRegistry', () => {
     expect(result.value?.built_at_commit).toBe('8449872');
   });
 
-  it('AC: a depends_on cycle is an error', () => {
+  it('[INSIGHT-STORAGE-FORMAT-6] AC: a depends_on cycle is an error', () => {
     const cyclic = `schemaVersion: "3.0"
 built_at_commit: 9f2c1ab
 scopes:
@@ -345,7 +345,7 @@ scopes:
     expect(result.errors?.join(' ')).toContain('cycle');
   });
 
-  it('rejects an undeclared depends_on id and a missing path', () => {
+  it('[INSIGHT-STORAGE-FORMAT-5] rejects an undeclared depends_on id and a missing path', () => {
     const bad = `schemaVersion: "3.0"
 built_at_commit: 9f2c1ab
 scopes:
@@ -359,7 +359,7 @@ scopes:
     expect(joined).toContain('path');
   });
 
-  it('asymmetric shared_by is a warning, not a parse error', () => {
+  it('[INSIGHT-STORAGE-FORMAT-5] asymmetric shared_by is a warning, not a parse error', () => {
     const asym = `schemaVersion: "3.0"
 built_at_commit: 9f2c1ab
 scopes:
@@ -489,7 +489,7 @@ describe('writeInsightJson — the crashed-refresh shrink guard', () => {
     };
   }
 
-  it('AC: a write that would shrink the graph is refused without force, allowed with it', () => {
+  it('[INSIGHT-STORAGE-FORMAT-13] AC: a write that would shrink the graph is refused without force, allowed with it', () => {
     const p = tmpFile('graph.json');
     expect(writeInsightJson(p, 'graph', bigGraph(40)).written).toBe(true);
 

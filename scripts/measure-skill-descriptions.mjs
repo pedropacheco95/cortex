@@ -37,54 +37,33 @@ const CHARS_PER_TOKEN = 4;
  * Per-tier ceiling on `name` + `description`, in characters
  * (`scaffolding.skill-listing-budget` Rule 3). `null` means exempt.
  *
- *   A — name-dispatched. Some other prompt names the bundle (SCHEDULED_TASKS'
- *       prompt bodies, specflow-entry's routing table, a sibling skill body), so
+ *   A — name-dispatched. Some other prompt names the bundle (a task payload or a
+ *       sibling skill body), so
  *       the description is not what makes it reachable.
  *   B — cold-phrasing entry point. Nothing names it; the description is the only
  *       routing signal, so it keeps real trigger surface.
  *   E — typed-only. Carries `disable-model-invocation: true`, so it is not in the
  *       listing and costs nothing; only a typed `/<name>` runs it.
- *   C — specflow-entry. The mandatory gate on arbitrary phrasing; every Tier A
- *       assignment depends on it firing, so it is not shrunk to fund them.
  *   D — callable-only. Never routed into by a description matching a sentence.
  *       Reached by one of two explicit namings: the developer types `/<name>`, or
  *       a prompt Cortex itself authors names it (the scheduled-task payloads in
- *       templates.ts name `cortex-loop`). It declares NO trigger phrases —
+ *       templates.ts name `cortex-learn`, `cortex-fresh` and `cortex-quality`). It declares NO trigger phrases —
  *       removing the trigger surface is the point, and the tokens are a
  *       consequence.
  */
-export const TIER_CEILING = { A: 120, B: 250, C: null, D: 60, E: null };
+export const TIER_CEILING = { A: 120, B: 250, D: 60, E: null };
 
 /** Every shipped bundle's tier. An unlisted bundle is a failure, not a default (Rule 7). */
 export const TIERS = {
-  'cortex-archive-ingest': 'A',
-  'cortex-extract-insight': 'A',
-  'cortex-loop': 'D',
   'cortex-learn': 'D',
   'cortex-fresh': 'D',
   'cortex-quality': 'D',
   'cortex-register-tasks': 'E',
   'cortex-migrate': 'E',
   'cortex-remember': 'B',
-  'specflow-brainstorm': 'A',
-  'specflow-bugs': 'A',
-  'specflow-deep-onboard': 'D',
-  'specflow-develop': 'A',
-  'specflow-entry': 'C',
-  'specflow-ingest': 'A',
-  'specflow-intent-reconcile': 'A',
-  'specflow-lint': 'A',
-  'specflow-new-project': 'B',
   'specflow-onboard': 'B',
-  'specflow-onboard-codebase': 'A',
-  'specflow-plan': 'A',
-  'specflow-receive-review': 'A',
-  'specflow-request-review': 'B',
   'specflow-review': 'B',
   'specflow-spec': 'B',
-  'specflow-spec-editor': 'A',
-  'specflow-tests': 'A',
-  'specflow-viewer': 'D',
   'verification-before-completion': 'A',
 };
 
@@ -94,46 +73,20 @@ export const TIERS = {
  * substrings.
  */
 export const REQUIRED_TRIGGERS = {
-  // The three human-invoked-only bundles (no scheduled bundle names them in its
-  // prompt body) carry broader surface, because the description is their ONLY
-  // routing signal.
-  'cortex-archive-ingest': ['transcript', 'rfp', 'brief', 'contract', 'add this to project memory'],
-  'cortex-extract-insight': ['extract insight', 'refresh', 'map this codebase'],
-
-  // Tier A — reachable because specflow-entry's routing table or a sibling body
-  // names them, so two or three phrases is the whole surface they need.
-  'specflow-brainstorm': ['I want to add', 'how should we approach'],
-  'specflow-bugs': ['is broken', 'why does', 'triage'],
-  'specflow-develop': ['implement this spec', 'build this slice'],
-  'specflow-ingest': ['the client sent this', 'ingest this'],
-  'specflow-intent-reconcile': ['pin this ask', 'did the spec keep it'],
-  'specflow-lint': ['lint specs', 'validate the spec tree'],
-  'specflow-onboard-codebase': ['onboard this codebase'],
-  'specflow-plan': ['plan this', 'break this down', 'what are the steps'],
-  'specflow-receive-review': ['here is the feedback'],
-  'specflow-spec-editor': ['update the spec', 'add this criterion'],
-  'specflow-tests': ['write tests', 'generate tests from specs'],
+  // Tier A — reachable because a sibling body names them, so two or three phrases
+  // is the whole surface they need.
   'verification-before-completion': ['evidence gate', 'claiming work done'],
 
   // Tier B — nothing names them, so the description is the only way in.
   'cortex-remember': ['remember this', 'from now on'],
-  'specflow-new-project': ['new project', 'start a new', 'I want to build'],
-  'specflow-request-review': ['review this', 'review the diff', 'code review'],
   'specflow-spec': ['spec this', 'brainstorm', 'plan this'],
   'specflow-review': ['review the spec', 'review this diff', 'here is the feedback'],
   'specflow-onboard': ['onboard this codebase', 'port mode'],
 
-  // Tier C — the gate on arbitrary phrasing. Not shrunk; phrases pinned anyway so
-  // a future edit cannot quietly cost it its routing.
-  'specflow-entry': ['add a feature', 'fix this bug', 'change this behavior', 'what does X do'],
-
   // Tiers D and E declare none, and are asserted to have none — see the check below.
-  'cortex-loop': [],
   'cortex-learn': [],
   'cortex-fresh': [],
   'cortex-quality': [],
-  'specflow-deep-onboard': [],
-  'specflow-viewer': [],
   'cortex-register-tasks': [],
   'cortex-migrate': [],
 };

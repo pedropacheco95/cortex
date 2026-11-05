@@ -51,7 +51,7 @@ afterEach(() => {
 
 // ===========================================================================
 describe('check (a): orphan local branches', () => {
-  it('flags an unmerged branch whose last commit is 40 days old, with its age', async () => {
+  it('[PULSE-HYGIENE-4] flags an unmerged branch whose last commit is 40 days old, with its age', async () => {
     const root = tmp('branch-orphan');
     writeAt(root, 'a.txt', 'a\n');
     gitInitRepo(root);
@@ -113,7 +113,7 @@ describe('check (a): orphan local branches', () => {
 
 // ===========================================================================
 describe('check (b): stale open PRs via gh', () => {
-  it('degrades to "skipped — gh unavailable" when the binary is absent', async () => {
+  it('[PULSE-HYGIENE-5] degrades to "skipped — gh unavailable" when the binary is absent', async () => {
     const root = tmp('gh-absent');
     const section = await checkStalePrs(root, path.join(root, 'no-such-gh'));
     expect(section.skipped).toBe('skipped — gh unavailable');
@@ -173,7 +173,7 @@ describe('check (c): insight drift — ledger entries whose source vanished', ()
     writeAt(root, 'src/a.ts', 'export {};\n');
     const section = await checkInsightDrift(root);
     expect(section.skipped).toBe(
-      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)',
+      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing)',
     );
     expect(section.findings).toEqual([]);
   });
@@ -197,7 +197,7 @@ describe('check (c): insight drift — ledger entries whose source vanished', ()
 
 // ===========================================================================
 describe('check (d): compass dead references (validator resolution logic)', () => {
-  it('names a rule whose source points at a deleted file, with the dead path', async () => {
+  it('[PULSE-HYGIENE-3] names a rule whose source points at a deleted file, with the dead path', async () => {
     const root = tmp('compass-source');
     writeAt(root, 'src/app.ts', 'export {};\n');
     writeAt(
@@ -337,7 +337,7 @@ describe('retention: cleanStaleReadLedgers prunes aged pulse/state/reads/ ledger
 describe('Rule 8a: expireThreads flips open threads past their expiry to expired, in place', () => {
   const NOW = Date.parse('2026-09-15T12:00:00.000Z');
 
-  it('expires the open thread past its expiry with every other line byte-identical; future and non-open threads untouched', () => {
+  it('[PULSE-HYGIENE-7] expires the open thread past its expiry with every other line byte-identical; future and non-open threads untouched', () => {
     const root = tmp('threads-expire');
     const t1 = threadRawFixture({ id: 'T-001', status: 'open', expires: '2026-08-01T00:00:00Z' });
     const t2 = threadRawFixture({ id: 'T-002', status: 'open', expires: '2026-09-16T12:00:00.000Z' });
@@ -400,7 +400,7 @@ describe('Rule 8b/c: cleanStaleSessionRecords deletes aged records, their scratc
     return abs;
   }
 
-  it('deletes old.json with scratch/old/ and gone.last.json; keeps the fresh trio; returns the three counts', () => {
+  it('[PULSE-HYGIENE-8] deletes old.json with scratch/old/ and gone.last.json; keeps the fresh trio; returns the three counts', () => {
     const root = tmp('records-mixed');
     const oldRecord = writeRecord(root, 'old', STALE);
     const oldScratch = writeScratch(root, 'old', STALE);

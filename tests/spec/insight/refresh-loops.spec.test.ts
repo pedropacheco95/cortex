@@ -91,7 +91,7 @@ function walk(dir: string, out2: string[] = []): string[] {
 }
 
 describe('AC: three-tier round-trip — fast flags, daily reconciles, full blesses', () => {
-  it('runs the full cycle through the CLI verbs against a real git fixture', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-1, INSIGHT-REFRESH-LOOPS-5] runs the full cycle through the CLI verbs against a real git fixture', async () => {
     const { root, baseline } = makeProject('roundtrip');
     process.chdir(root);
 
@@ -141,7 +141,7 @@ describe('AC: three-tier round-trip — fast flags, daily reconciles, full bless
 });
 
 describe('AC: loop-write invariant — every write under .cortex/insight/ + pulse artefacts (RULES 7)', () => {
-  it('a full daily cycle writes nothing gated and emits no proposal', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-9] a full daily cycle writes nothing gated and emits no proposal', async () => {
     const { root } = makeProject('invariant');
     process.chdir(root);
     // Gated fixtures to watch.
@@ -184,9 +184,9 @@ describe('AC: CLI dispatch — tiers required, v2 verbs retired', () => {
     expect(err.join('\n')).toContain('exactly one of --fast, --daily, or --full');
   });
 
-  it('loop-insight-gaps is retired with a pointer to cortex-loop-session-observe', async () => {
+  it('loop-insight-gaps is retired with a pointer to cortex loop-session-observe', async () => {
     expect(await run(['loop-insight-gaps', '--collect'])).toBe(1);
-    expect(err.join('\n')).toContain('cortex-loop-session-observe');
+    expect(err.join('\n')).toContain('cortex loop-session-observe');
   });
 
   it('--fast dispatches identically to insight-refresh-fast (exit 0, hook-safe, even on a bare dir)', async () => {
@@ -213,7 +213,7 @@ describe('AC: CLI dispatch — tiers required, v2 verbs retired', () => {
 });
 
 describe('AC: scheduled-task registration matches the fast/daily/full split (spec AC 10)', () => {
-  it('daily + full run inside the daily/weekly-quality bundles; fast does not; the v2 pair + anatomy deep-refresh stay deregistered', () => {
+  it('[INSIGHT-REFRESH-LOOPS-11] daily + full run inside the daily/weekly-quality bundles; fast does not; the v2 pair + anatomy deep-refresh stay deregistered', () => {
     // v3.0 consolidation: the standalone insight-refresh registrations are
     // retired — the daily tier rides the `daily` bundle, the full tier rides
     // `weekly-quality`. The fast tier remains the git hook, never a task.
@@ -239,7 +239,7 @@ describe('AC: scheduled-task registration matches the fast/daily/full split (spe
     expect(RETIRED_CANONICAL_TASK_NAMES).toContain('cortex-loop-insight-refresh-full');
   });
 
-  it('the daily and weekly-quality bundle prompts invoke the refresh skills and cortex-extract-insight by name', () => {
+  it('[INSIGHT-REFRESH-LOOPS-11] the daily and weekly-quality bundle prompts invoke the refresh skills and cortex-extract-insight by name', () => {
     // Both refresh tiers now live in `cortex-loop` as reference files
     // (loops.cortex-loop-bundle) — the bundle declares the skill and the body
     // names the reference, so both halves are still pinned.

@@ -73,7 +73,7 @@ const REPORT_REL = path.join('.cortex', 'pulse', 'reports', 'hygiene.md');
 
 // ===========================================================================
 describe('AC: Always-writes, even when clean', () => {
-  it('a clean project yields kind/generated/loop and six "No findings this cycle." sections', async () => {
+  it('[PULSE-HYGIENE-1] a clean project yields kind/generated/loop and six "No findings this cycle." sections', async () => {
     const root = makeCleanProject('clean');
     const t1 = new Date('2026-07-01T10:00:00.000Z');
     const code = await runHygiene(root, { ghBin: emptyGhStub(), now: t1 });
@@ -86,7 +86,7 @@ describe('AC: Always-writes, even when clean', () => {
     expect(report.body.match(/No findings this cycle\./g)).toHaveLength(6);
   });
 
-  it('every run overwrites with a fresh generated (schema §4.5 always-write)', async () => {
+  it('[PULSE-HYGIENE-1] every run overwrites with a fresh generated (schema §4.5 always-write)', async () => {
     const root = makeCleanProject('rewrite');
     const gh = emptyGhStub();
     await runHygiene(root, { ghBin: gh, now: new Date('2026-07-01T10:00:00.000Z') });
@@ -127,14 +127,14 @@ describe('AC: Insight drift — vanished ledger entries flagged, unextracted fil
     await runHygiene(root, { ghBin: emptyGhStub() });
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
     expect(body).toContain(
-      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)',
+      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing)',
     );
   });
 });
 
 // ===========================================================================
 describe('AC: Compass dead reference caught', () => {
-  it('names the rule and the dead source path', async () => {
+  it('[PULSE-HYGIENE-3] names the rule and the dead source path', async () => {
     const root = makeCleanProject('compass');
     writeAt(
       root,
@@ -150,7 +150,7 @@ describe('AC: Compass dead reference caught', () => {
 
 // ===========================================================================
 describe('AC: Orphan branch flagged', () => {
-  it('names the 40-day-old unmerged branch with its age', async () => {
+  it('[PULSE-HYGIENE-4] names the 40-day-old unmerged branch with its age', async () => {
     const root = makeCleanProject('branch');
     gitRun(root, ['checkout', '-b', 'stale-work', '--quiet']);
     writeAt(root, 'stale.txt', 's\n');
@@ -170,7 +170,7 @@ describe('AC: Orphan branch flagged', () => {
 
 // ===========================================================================
 describe('AC: gh absence degrades to a notice', () => {
-  it('via the real CLI with gh genuinely absent from PATH: skipped-with-reason, exit 0', async () => {
+  it('[PULSE-HYGIENE-5] via the real CLI with gh genuinely absent from PATH: skipped-with-reason, exit 0', async () => {
     const root = makeCleanProject('gh-absent');
     // A PATH holding only git — gh is absent for every child process.
     const realGit = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf-8' }).trim();
@@ -200,7 +200,7 @@ describe('AC: Only the report is written', () => {
     return changed.sort();
   }
 
-  it('a full-tree snapshot differs only by pulse/reports/hygiene.md', async () => {
+  it('[PULSE-HYGIENE-6] a full-tree snapshot differs only by pulse/reports/hygiene.md', async () => {
     const root = makeCleanProject('only-report');
     const before = snapshotTree(root);
     await runHygiene(root, { ghBin: emptyGhStub() });
@@ -208,7 +208,7 @@ describe('AC: Only the report is written', () => {
     expect(diffTrees(before, after)).toEqual([REPORT_REL]);
   });
 
-  it('with Rule 7/8 work to do, the diff is exactly the report, the expired thread, and the aged deletions', async () => {
+  it('[PULSE-HYGIENE-6] with Rule 7/8 work to do, the diff is exactly the report, the expired thread, and the aged deletions', async () => {
     const root = makeCleanProject('only-report-rule8');
     const stale = new Date(Date.parse('2026-09-15T00:00:00.000Z') - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000) /* anchored to the fixed now, not the wall clock */;
     const age = (abs: string): void => fs.utimesSync(abs, stale, stale);
@@ -238,7 +238,7 @@ describe('AC: Only the report is written', () => {
 
 // ===========================================================================
 describe('AC: An open thread past its expiry is expired in place', () => {
-  it('T-001 becomes expired with every other line byte-identical; T-002/T-003 untouched; all three remain; the section reports 1 expired', async () => {
+  it('[PULSE-HYGIENE-7] T-001 becomes expired with every other line byte-identical; T-002/T-003 untouched; all three remain; the section reports 1 expired', async () => {
     const root = makeCleanProject('thread-expiry');
     const t1 = threadRawFixture({ id: 'T-001', status: 'open', expires: '2026-08-01T00:00:00Z' });
     const t2 = threadRawFixture({ id: 'T-002', status: 'open', expires: '2026-09-16T00:00:00Z' });
@@ -272,7 +272,7 @@ describe('AC: An open thread past its expiry is expired in place', () => {
 
 // ===========================================================================
 describe('AC: Old session records and their scratch copies are deleted together', () => {
-  it('old.json, scratch/old/ and gone.last.json go; the fresh trio stays; the section reports 1 record, 1 scratch directory, 1 companion', async () => {
+  it('[PULSE-HYGIENE-8] old.json, scratch/old/ and gone.last.json go; the fresh trio stays; the section reports 1 record, 1 scratch directory, 1 companion', async () => {
     const root = makeCleanProject('record-retention');
     const stale = new Date(Date.parse('2026-09-15T00:00:00.000Z') - (SESSION_RECORD_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000) /* anchored to the fixed now, not the wall clock */;
     const age = (abs: string): string => {
@@ -308,7 +308,7 @@ describe('AC: Old session records and their scratch copies are deleted together'
 
 // ===========================================================================
 describe('AC: Nothing to expire reports the empty line', () => {
-  it('no threads/, sessions/ or scratch/ directory → the exact empty line, exit 0, and the footer names the window', async () => {
+  it('[PULSE-HYGIENE-9] no threads/, sessions/ or scratch/ directory → the exact empty line, exit 0, and the footer names the window', async () => {
     const root = makeCleanProject('nothing-to-expire');
     for (const d of ['threads', 'sessions', 'scratch']) {
       expect(fs.existsSync(path.join(root, '.cortex', 'pulse', d))).toBe(false);

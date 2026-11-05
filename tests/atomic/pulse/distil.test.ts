@@ -98,7 +98,7 @@ function cand(over: Partial<CandidateShape> & Record<string, unknown> = {}): Rec
 
 // ===========================================================================
 describe('Collect is project-scoped and windowed', () => {
-  it('the corpus holds only the newer session of THIS project (sibling and pre-last-run excluded)', () => {
+  it('[PULSE-DISTIL-1] the corpus holds only the newer session of THIS project (sibling and pre-last-run excluded)', () => {
     const root = makeProject('collect');
     const home = tmp('collect-home');
     const lastRun = new Date('2026-06-20T00:00:00Z');
@@ -135,7 +135,7 @@ describe('Collect is project-scoped and windowed', () => {
 
 // ===========================================================================
 describe('Threshold filter honours config', () => {
-  it('with distilThresholdN: 3, only the occurrences-3 candidate proposes; one counted below-threshold', () => {
+  it('[PULSE-DISTIL-2] with distilThresholdN: 3, only the occurrences-3 candidate proposes; one counted below-threshold', () => {
     const root = makeProject('threshold', { pulse: { distilThresholdN: 3 } });
     const counts = proposeFromCandidates(root, [
       cand({ pattern: 'twice only', occurrences: 2 }),
@@ -152,7 +152,7 @@ describe('Threshold filter honours config', () => {
 
 // ===========================================================================
 describe('Covered and dismissed candidates dropped', () => {
-  it('a candidate already in environment.md and one matching an unexpired dismissal are counted by reason', () => {
+  it('[PULSE-DISTIL-3] a candidate already in environment.md and one matching an unexpired dismissal are counted by reason', () => {
     const root = makeProject('covered-dismissed');
     fs.writeFileSync(
       path.join(root, '.cortex', 'compass', 'environment.md'),
@@ -216,7 +216,7 @@ loop: cortex-init
 
 // ===========================================================================
 describe('Ids allocated from the shared counter, provenance attached', () => {
-  it('counter at 7 + two passing candidates → S-008 and S-009 with distil provenance; counter reads 9', () => {
+  it('[PULSE-DISTIL-4] counter at 7 + two passing candidates → S-008 and S-009 with distil provenance; counter reads 9', () => {
     const root = makeProject('ids');
     fs.writeFileSync(pulsePath(root, path.join('state', 'suggestion-counter')), '7', 'utf-8');
     proposeFromCandidates(root, [
@@ -257,7 +257,7 @@ Old proposed text.
 \`\`\`
 `;
 
-  it('a still-pending S-008 whose pattern recurs is carried forward with its id and Source', () => {
+  it('[PULSE-DISTIL-5] a still-pending S-008 whose pattern recurs is carried forward with its id and Source', () => {
     const root = makeProject('carry');
     fs.writeFileSync(pulsePath(root, 'suggestions.md'), PRIOR, 'utf-8');
     fs.writeFileSync(pulsePath(root, path.join('state', 'suggestion-counter')), '8', 'utf-8');
@@ -292,7 +292,7 @@ Old proposed text.
 
 // ===========================================================================
 describe('Subprocess degradation', () => {
-  it('no claude binary and no --no-llm → exit 0, report states the skip, collect output retained', async () => {
+  it('[PULSE-DISTIL-6] no claude binary and no --no-llm → exit 0, report states the skip, collect output retained', async () => {
     const root = makeProject('degrade');
     const home = tmp('degrade-home');
     writeTranscript(home, root, 'sess-1', ['use pnpm please']);
@@ -358,7 +358,7 @@ Keep me.
 
 // ===========================================================================
 describe('Only pulse files written', () => {
-  it('a full bare run touches only suggestions.md, .session-corpus.json, .distil-last-run, .suggestion-counter', async () => {
+  it('[PULSE-DISTIL-10] a full bare run touches only suggestions.md, .session-corpus.json, .distil-last-run, .suggestion-counter', async () => {
     const root = makeProject('blast');
     const home = tmp('blast-home');
     fs.writeFileSync(path.join(root, '.cortex', 'compass', 'environment.md'), '# Environment\n', 'utf-8');
@@ -452,60 +452,12 @@ describe('Always-write: a quiet week still writes the report', () => {
 // The shipped SKILL.md bundle — prompt content pinned by string assertions
 // (spec Notes; same convention as atlas.ingest-skill).
 // ===========================================================================
-describe('Shipped skills/cortex-loop/references/distil.md is pinned', () => {
-  const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-  const SKILL_PATH = path.join(PKG_ROOT, 'skills', 'cortex-loop', 'references', 'distil.md');
-  const raw = fs.readFileSync(SKILL_PATH, 'utf-8');
-  const parsed = matter(raw);
-  const body = parsed.content;
-
-  it('ships as a cortex-loop reference the dispatch table names', () => {
-    expect(fs.existsSync(SKILL_PATH)).toBe(true);
-    // Merged into `cortex-loop` (spec loops.cortex-loop-bundle) — a reference
-    // file carries no frontmatter; the parent's dispatch table is what names it.
-    const parent = fs.readFileSync(path.join(PKG_ROOT, 'skills', 'cortex-loop', 'SKILL.md'), 'utf-8');
-    expect(parent).toContain('references/distil.md');
-  });
-
-  it('instructs: run --collect, judge IN-SESSION (never a nested claude, never bare), scratchpad JSON, run --propose', () => {
-    expect(body).toContain('cortex pulse-distil --collect');
-    expect(body).toContain('.cortex/pulse/state/session-corpus.json');
-    expect(body).toMatch(/in this session/i);
-    expect(body).toMatch(/never spawn a nested\s+`claude` subprocess/i);
-    expect(body).toMatch(/never run bare `cortex pulse-distil`/i);
-    expect(body).toContain('scratchpad');
-    expect(body).toContain('cortex pulse-distil --propose');
-  });
-
-  it('pins the workflow-mining lens (folded-in skill-suggest): workflow-shaped patterns become skill-proposal candidates', () => {
-    expect(body).toMatch(/workflow-mining lens/i);
-    expect(body).toMatch(/retired skill-suggest loop/i);
-    expect(body).toContain('"type": "skill-proposal"');
-    expect(body).toMatch(/\*\*Type:\*\*\s+skill-proposal/);
-  });
-
-  it('pins the candidate JSON contract and conservative extraction', () => {
-    for (const field of ['"pattern"', '"occurrences"', '"sessionIds"', '"proposedTarget"', '"proposedText"', '"confidence"']) {
-      expect(body).toContain(field);
-    }
-    expect(body).toMatch(/conservative/i);
-    expect(body).toMatch(/one-offs are filtered/i);
-    expect(body).toMatch(/cites? the session ids/i);
-  });
-
-  it('pins the propose-don\'t-mutate boundary', () => {
-    expect(body).toMatch(/never mutate anything outside `\.cortex\/pulse\/`/i);
-    expect(body).toMatch(/never write into\s*`\.cortex\/compass\/`/i);
-    expect(body).toContain('cortex pulse-list');
-    expect(body).toContain('cortex pulse-accept');
-  });
-});
 
 // ===========================================================================
 // Workflow-mining lens (folded-in skill-suggest, v3.0) — skill-proposal type
 // ===========================================================================
 describe('Workflow-mining lens: skill-proposal candidates ride the same propose path', () => {
-  it('a skill-proposal candidate writes a **Type:** skill-proposal section targeting a NEW .claude/skills/ file, draft byte-exact', () => {
+  it('[PULSE-DISTIL-8] a skill-proposal candidate writes a **Type:** skill-proposal section targeting a NEW .claude/skills/ file, draft byte-exact', () => {
     const root = makeProject('skill-lens');
     const draft = '---\nname: release-notes\n---\n\nSteps:\n\n```bash\npnpm build\n```\n';
     const counts = proposeFromCandidates(root, [

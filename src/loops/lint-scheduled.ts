@@ -91,7 +91,7 @@ export async function runLintScheduled(root = '.', opts: LintRunOptions = {}): P
     '',
     'Substance: the schema validator\'s spec-tree checks over `.specflow/specs/`, `.specflow/specs-business/`, and ' +
       '`tests/scenario/specs/`. Exit 0 clean or dirty — this report is the daily record; `cortex validate` is the ' +
-      'CI gate. The interactive `specflow-lint` skill remains the deep path.',
+      'CI gate. `cortex specs lint` is the deep path.',
   );
 
   writePulseReport(absRoot, LINT_REPORT_FILE, 'pulse-lint-report', 'cortex-loop-specflow-lint', now.toISOString(), lines.join('\n'));

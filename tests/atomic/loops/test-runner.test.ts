@@ -518,19 +518,6 @@ describe('classification gate', () => {
 // ---------------------------------------------------------------------------
 
 describe('shipped bundle (Rule 10)', () => {
-  const skillPath = path.join(REPO_ROOT, 'skills', 'cortex-loop', 'references', 'test-runner.md');
-
-  it('skills/cortex-loop/references/test-runner.md exists and drives the collect → classify-in-session → fix-stage flow', () => {
-    const raw = fs.readFileSync(skillPath, 'utf-8');
-    expect(raw).toContain('Reference for `cortex-loop`');
-    expect(raw).toContain('cortex loop-test-runner --collect');
-    expect(raw).toContain('cortex loop-test-runner --fix-stage');
-    expect(raw).toContain('specflow-bugs');
-    expect(raw).toContain('never spawn a nested `claude` subprocess');
-    expect(raw).toContain('not-one-of-the-seven');
-    for (const t of BUG_TYPES) expect(raw).toContain(t);
-  });
-
   it('the scheduled test-runner task requires exactly this skill and names it verbatim in its body', () => {
     const task = SCHEDULED_TASKS.find((t) => t.name === 'test-runner');
     expect(task).toBeDefined();

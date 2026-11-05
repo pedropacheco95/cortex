@@ -147,7 +147,7 @@ export function applyPreset(constellation: Constellation, preset: string, domain
 // absent/empty insight data — an honest empty result, not an error.
 // ===========================================================================
 
-export const INSIGHT_EMPTY_HINT = 'no insight extracted yet — run cortex-extract-insight';
+export const INSIGHT_EMPTY_HINT = 'no insight extracted yet';
 
 export interface InsightPresetNode {
   id: string;

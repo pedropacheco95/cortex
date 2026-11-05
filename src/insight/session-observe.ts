@@ -1049,7 +1049,7 @@ export async function runSessionObserve(root = '.', opts: SessionObserveOptions 
       `cortex loop-session-observe: ${r.sessions} unobserved session(s) in the worklist ` +
         `(${r.alreadyObserved} already observed; corpus ${r.corpusReused ? `refreshed, ${r.corpusAppended} appended` : 'collected'}) — ` +
         `worklist at .cortex/pulse/state/${SESSION_OBSERVE_WORKLIST_FILE}.` +
-        (opts.collect ? '' : ' The observation judgment runs in the cortex-loop-session-observe skill.'),
+        (opts.collect ? '' : ' The observation judgment runs in a Claude session.'),
     );
     return 0;
   } catch (err) {

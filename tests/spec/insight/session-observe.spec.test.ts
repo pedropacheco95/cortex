@@ -141,7 +141,7 @@ function gatedClean(root: string): boolean {
 
 // ---------------------------------------------------------------------------
 describe('AC: an ungated codebase observation enriches the right file with provenance', () => {
-  it('lands in ## Insights with a claude-sessions trailer; no pulse proposal; compass/atlas untouched', () => {
+  it('[INSIGHT-SESSION-OBSERVE-1] lands in ## Insights with a claude-sessions trailer; no pulse proposal; compass/atlas untouched', () => {
     const root = collected('ungated');
     const abs = path.join(root, RETRY_ENTRY_REL);
     fs.writeFileSync(
@@ -163,7 +163,7 @@ describe('AC: an ungated codebase observation enriches the right file with prove
 });
 
 describe('AC: an ungated observation lands in Query pointers when it is navigation guidance', () => {
-  it('a ## Query pointers append with the same session provenance passes the audit', () => {
+  it('[INSIGHT-SESSION-OBSERVE-2] a ## Query pointers append with the same session provenance passes the audit', () => {
     const root = collected('query-pointers');
     const abs = path.join(root, RETRY_ENTRY_REL);
     fs.appendFileSync(
@@ -198,7 +198,7 @@ describe('AC: extraction-owned sections are never touched by this loop', () => {
     },
   );
 
-  it('a clean Insights/Query-pointers-only write leaves the other sections byte-identical', () => {
+  it('[INSIGHT-SESSION-OBSERVE-3] a clean Insights/Query-pointers-only write leaves the other sections byte-identical', () => {
     const root = collected('owned-clean');
     const abs = path.join(root, RETRY_ENTRY_REL);
     const before = fs.readFileSync(abs, 'utf-8');
@@ -221,7 +221,7 @@ describe('AC: extraction-owned sections are never touched by this loop', () => {
 });
 
 describe('AC: a gated convention becomes a compass-targeted proposal, never a direct write', () => {
-  it('emits an S-NNN rule-candidate section targeting a Core-computed .cortex/compass/rules/R-NNN file; compass itself is unchanged', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-10, INSIGHT-SESSION-OBSERVE-11] emits an S-NNN rule-candidate section targeting a Core-computed .cortex/compass/rules/R-NNN file; compass itself is unchanged', async () => {
     const root = collected('rule');
     const proposals = path.join(root, 'proposals.json');
     fs.writeFileSync(
@@ -257,7 +257,7 @@ describe('AC: a gated convention becomes a compass-targeted proposal, never a di
     expect(violations.filter((v) => v.severity === 'error')).toEqual([]);
   });
 
-  it('round-trips through pulse-accept: creates a schema-valid R-NNN rule file against an empty rules/ dir', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] round-trips through pulse-accept: creates a schema-valid R-NNN rule file against an empty rules/ dir', async () => {
     const root = collected('rule-accept');
     const proposals = path.join(root, 'proposals.json');
     fs.writeFileSync(
@@ -287,7 +287,7 @@ describe('AC: a gated convention becomes a compass-targeted proposal, never a di
     expect(violations.filter((v) => v.severity === 'error')).toEqual([]);
   });
 
-  it('two rule-candidates in one apply batch get distinct, non-colliding R-NNN ids', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] two rule-candidates in one apply batch get distinct, non-colliding R-NNN ids', async () => {
     const root = collected('rule-two');
     const proposals = path.join(root, 'proposals.json');
     fs.writeFileSync(
@@ -319,7 +319,7 @@ describe('AC: a gated convention becomes a compass-targeted proposal, never a di
 });
 
 describe('AC: a decision becomes an atlas-targeted proposal, never a direct write', () => {
-  it('emits an S-NNN decision-candidate section targeting .cortex/atlas/decisions/ with reasoning + session provenance', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-12] emits an S-NNN decision-candidate section targeting .cortex/atlas/decisions/ with reasoning + session provenance', async () => {
     const root = collected('decision');
     const proposals = path.join(root, 'proposals.json');
     fs.writeFileSync(
@@ -350,7 +350,7 @@ describe('AC: a decision becomes an atlas-targeted proposal, never a direct writ
 });
 
 describe('AC: a dismissed candidate is not re-proposed', () => {
-  it('an unexpired dismissed.md entry matching the candidate suppresses it', () => {
+  it('[INSIGHT-SESSION-OBSERVE-14] an unexpired dismissed.md entry matching the candidate suppresses it', () => {
     const root = collected('dismissed');
     const expires = new Date(NOW.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     fs.writeFileSync(
@@ -415,7 +415,7 @@ describe('AC: distil and session-observe do not double-propose the same pattern'
 });
 
 describe('AC: the loop never writes gated content directly under any classification', () => {
-  it('a run with all three routes: direct writes only under insight/ + pulse/; gated changes exist only as pending proposals', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-21] a run with all three routes: direct writes only under insight/ + pulse/; gated changes exist only as pending proposals', async () => {
     const root = collected('all-routes', ['sess-1', 'sess-2']);
     // Route 1 — ungated enrichment, written directly.
     const abs = path.join(root, RETRY_ENTRY_REL);
@@ -500,7 +500,7 @@ function proposals(root: string, doc: unknown): string {
 }
 
 describe('AC: collect refreshes a stale corpus with sessions newer than its generated stamp', () => {
-  it('old-1 stays, new-1 is appended, generated advances, since + distil-last-run untouched, worklist lists new-1', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-16] old-1 stays, new-1 is appended, generated advances, since + distil-last-run untouched, worklist lists new-1', async () => {
     const root = makeProject('refresh');
     const home = tmp('refresh-home');
     writeCorpusAt(root, CORPUS_T, [{ id: 'old-1' }]);
@@ -523,7 +523,7 @@ describe('AC: collect refreshes a stale corpus with sessions newer than its gene
     expect(worklist?.corpus_appended).toBe(1);
   });
 
-  it('an old-1 transcript rewritten after generated is replaced in place, never duplicated', () => {
+  it('[INSIGHT-SESSION-OBSERVE-16] an old-1 transcript rewritten after generated is replaced in place, never duplicated', () => {
     const root = makeProject('refresh-upsert');
     const home = tmp('refresh-upsert-home');
     writeCorpusAt(root, CORPUS_T, [{ id: 'old-1' }]);
@@ -536,7 +536,7 @@ describe('AC: collect refreshes a stale corpus with sessions newer than its gene
 });
 
 describe('AC: every corpus session carries a deterministic kind, and older corpora still load', () => {
-  it('skill preamble and <scheduled-task> sessions are scheduled; prose is interactive — in corpus and worklist', () => {
+  it('[INSIGHT-SESSION-OBSERVE-17] skill preamble and <scheduled-task> sessions are scheduled; prose is interactive — in corpus and worklist', () => {
     const root = makeProject('kind');
     const home = tmp('kind-home');
     writeSessionTranscript(home, root, 'skill-run', [skillBaseDirUserTurn()], OLDER);
@@ -548,7 +548,7 @@ describe('AC: every corpus session carries a deterministic kind, and older corpo
     expect(Object.fromEntries((readObserveWorklist(root)?.sessions ?? []).map((s) => [s.id, s.kind]))).toEqual(expected);
   });
 
-  it('a pre-existing corpus without kind loads with every session treated as interactive', () => {
+  it('[INSIGHT-SESSION-OBSERVE-17] a pre-existing corpus without kind loads with every session treated as interactive', () => {
     const root = makeProject('kind-legacy');
     writeCorpusAt(root, CORPUS_T, [{ id: 'sess-a' }, { id: 'sess-b' }]);
     const r = collectObserve(root, { now: NOW, home: tmp('kind-legacy-home') });
@@ -558,7 +558,7 @@ describe('AC: every corpus session carries a deterministic kind, and older corpo
 });
 
 describe('AC: the worklist lists interactive sessions before scheduled ones', () => {
-  it('human-1, human-2, sched-1, sched-2 — interactive first, corpus order preserved within each kind', () => {
+  it('[INSIGHT-SESSION-OBSERVE-18] human-1, human-2, sched-1, sched-2 — interactive first, corpus order preserved within each kind', () => {
     const root = makeProject('order');
     writeCorpusAt(root, CORPUS_T, [
       { id: 'sched-1', kind: 'scheduled' },
@@ -572,7 +572,7 @@ describe('AC: the worklist lists interactive sessions before scheduled ones', ()
 });
 
 describe('AC: apply advances observed-state only for claimed sessions', () => {
-  it('{observed: [sess-1]} marks sess-1 observed, sess-2 gets attempts 1, report says so, next collect lists sess-2', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-19] {observed: [sess-1]} marks sess-1 observed, sess-2 gets attempts 1, report says so, next collect lists sess-2', async () => {
     const root = collected('claim', ['sess-1', 'sess-2']);
     process.chdir(root);
     const code = await run(['loop-session-observe', '--apply', '--proposals', proposals(root, { observed: ['sess-1'], candidates: [] })]);
@@ -588,7 +588,7 @@ describe('AC: apply advances observed-state only for claimed sessions', () => {
     expect(readObserveWorklist(root)?.sessions.map((s) => s.id)).toEqual(['sess-2']);
   });
 
-  it('the legacy bare array, and plain --apply with no file, claim every worklist session', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-19] the legacy bare array, and plain --apply with no file, claim every worklist session', async () => {
     const arrayRoot = collected('claim-array', ['sess-1', 'sess-2']);
     applyObserve(arrayRoot, { now: NOW, proposalsFile: proposals(arrayRoot, []) });
     expect(readObserveState(arrayRoot).observed).toEqual(['sess-1', 'sess-2']);
@@ -601,7 +601,7 @@ describe('AC: apply advances observed-state only for claimed sessions', () => {
 });
 
 describe('AC: an unclaimed session expires after three unclaimed applies', () => {
-  it('after two applies: attempts 2, still in the worklist; after the third: observed, attempts dropped, report note', () => {
+  it('[INSIGHT-SESSION-OBSERVE-20] after two applies: attempts 2, still in the worklist; after the third: observed, attempts dropped, report note', () => {
     const root = makeProject('expire');
     const cycle = () => {
       writeCorpus(root, ['sess-stuck']);
@@ -632,7 +632,7 @@ describe('CLI dispatch (spec Rule 1 / core surface)', () => {
     expect(await run(['loop-session-observe', '--collect'])).toBe(0);
     expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', SESSION_OBSERVE_WORKLIST_FILE))).toBe(true);
     expect(await run(['loop-session-observe'])).toBe(0);
-    expect(out.join('\n')).toContain('cortex-loop-session-observe skill');
+    expect(out.join('\n')).toContain('runs in a Claude session');
     expect(await run(['loop-session-observe', '--collect', '--apply'])).toBe(1);
     expect(await run(['loop-session-observe', '--apply', '--proposals'])).toBe(1);
   });

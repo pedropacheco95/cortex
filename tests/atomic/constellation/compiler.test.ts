@@ -308,7 +308,7 @@ describe('edges: the §6 citation graph, one kind per producing field (Rule 5)',
     expect(c.edges.filter((e) => ['spec_links', 'governs', 'covers'].includes(e.kind))).toEqual([]);
   });
 
-  it('the symmetric implements/implemented_by pair dedupes to ONE implements edge', async () => {
+  it('[CONSTELLATION-COMPILER-4] the symmetric implements/implemented_by pair dedupes to ONE implements edge', async () => {
     const root = tmp('dedup');
     fullFixture(root);
     const c = await compile(root);
@@ -344,7 +344,7 @@ describe('edges: the §6 citation graph, one kind per producing field (Rule 5)',
     expect(c.counters.droppedRefs).toBe(0);
   });
 
-  it('never emits import/export edges from the insight graph (design §12.7)', async () => {
+  it('[CONSTELLATION-COMPILER-8] never emits import/export edges from the insight graph (design §12.7)', async () => {
     const root = tmp('imports');
     fullFixture(root);
     fs.mkdirSync(path.join(root, '.cortex', 'insight'), { recursive: true });
@@ -365,7 +365,7 @@ describe('edges: the §6 citation graph, one kind per producing field (Rule 5)',
 });
 
 describe('dangling refs dropped and counted (Rule 6)', () => {
-  it('unresolvable targets produce no edge and increment counters.droppedRefs per reference', async () => {
+  it('[CONSTELLATION-COMPILER-7] unresolvable targets produce no edge and increment counters.droppedRefs per reference', async () => {
     const root = tmp('dangling');
     makeCortexProject(root);
     writeRule(
@@ -395,7 +395,7 @@ describe('bears_on edges — node-shaped refs only (Rule 10, 3.4)', () => {
     fs.writeFileSync(path.join(root, 'src', 'pulse', 'usage.ts'), 'export {};\n');
   }
 
-  it('rule → rule:, id → spec:, domain → atlas:; a missing bug id is dropped and counted; path/concept/clause emit nothing and count nothing', async () => {
+  it('[CONSTELLATION-COMPILER-10] rule → rule:, id → spec:, domain → atlas:; a missing bug id is dropped and counted; path/concept/clause emit nothing and count nothing', async () => {
     const root = tmp('bears-on');
     bearsOnFixture(root);
     writeAtlas(
@@ -496,7 +496,7 @@ describe('counters (Rule 8)', () => {
 });
 
 describe('determinism (Rule 7)', () => {
-  it('two compilations of identical input are byte-identical after removing the generated line', async () => {
+  it('[CONSTELLATION-COMPILER-9] two compilations of identical input are byte-identical after removing the generated line', async () => {
     const root = tmp('determinism');
     fullFixture(root);
     await compile(root);
@@ -519,7 +519,7 @@ describe('determinism (Rule 7)', () => {
 });
 
 describe('missing surfaces are tolerated (Rule 9)', () => {
-  it('a bare directory with no .cortex/ compiles to three empty groups with schemaVersion fallback', async () => {
+  it('[CONSTELLATION-COMPILER-11] a bare directory with no .cortex/ compiles to three empty groups with schemaVersion fallback', async () => {
     const root = tmp('bare');
     const c = await compile(root);
     expect(c.schemaVersion).toBe('1.0');
@@ -531,7 +531,7 @@ describe('missing surfaces are tolerated (Rule 9)', () => {
     expect(fs.existsSync(constellationPath(root))).toBe(true);
   });
 
-  it('a specs-only project compiles: the orphan spec node is emitted, other groups stay empty', async () => {
+  it('[CONSTELLATION-COMPILER-11] a specs-only project compiles: the orphan spec node is emitted, other groups stay empty', async () => {
     const root = tmp('specs-only');
     makeCortexProject(root);
     writeDevSpec(root, 'schema/validator.spec.md', `id: schema.validator\nstatus: draft`);

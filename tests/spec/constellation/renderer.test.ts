@@ -143,7 +143,7 @@ async function api(query: string): Promise<{ status: number; body: Constellation
 
 describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton', () => {
   it(
-    'serveConstellation prints http://127.0.0.1:<port> and the socket is bound to 127.0.0.1 only',
+    '[CONSTELLATION-RENDERER-1] serveConstellation prints http://127.0.0.1:<port> and the socket is bound to 127.0.0.1 only',
     async () => {
       const lines: string[] = [];
       const s = await serveConstellation(root, 0, (l) => lines.push(l));
@@ -155,7 +155,7 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
     TEST_TIMEOUT,
   );
 
-  it('GET / returns HTML with the canvas, the chrome landmarks, and a switcher naming exactly the four presets', async () => {
+  it('[CONSTELLATION-RENDERER-1] GET / returns HTML with the canvas, the chrome landmarks, and a switcher naming exactly the four presets', async () => {
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
@@ -176,7 +176,7 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
     expect(html.match(/data-preset="/g)).toHaveLength(4); // exactly four, no extras
   });
 
-  it('is self-contained: no external <script src>, and the only external resource is the Google Fonts <link>', async () => {
+  it('[CONSTELLATION-RENDERER-1] is self-contained: no external <script src>, and the only external resource is the Google Fonts <link>', async () => {
     const html = await (await fetch(`${base}/`)).text();
     // Zero external scripts — all logic (incl. the embedded lod.ts functions) is inline.
     expect(html).not.toMatch(/<script\b[^>]*\bsrc=/i);
@@ -194,7 +194,7 @@ describe('AC renderer.1: server starts, binds localhost, serves the SPA skeleton
 // ===========================================================================
 
 describe('AC renderer.2: default preset returns the full compiled map', () => {
-  it('exactly N nodes, E edges, and the §4.9 top-level keys', async () => {
+  it('[CONSTELLATION-RENDERER-2] exactly N nodes, E edges, and the §4.9 top-level keys', async () => {
     const { status, body } = await api('?preset=default');
     expect(status).toBe(200);
     expect(Object.keys(body).sort()).toEqual(['counters', 'edges', 'generated', 'groups', 'nodes', 'schemaVersion']);
@@ -214,7 +214,7 @@ describe('AC renderer.2: default preset returns the full compiled map', () => {
 // ===========================================================================
 
 describe('AC renderer.3 (v3): retired presets are rejected like any unknown preset', () => {
-  it('?preset=anatomy-only, ?preset=knowledge-only → 400 naming the four valid presets', async () => {
+  it('[CONSTELLATION-RENDERER-3] ?preset=anatomy-only, ?preset=knowledge-only → 400 naming the four valid presets', async () => {
     for (const retired of ['anatomy-only', 'knowledge-only']) {
       const { status, body } = await api(`?preset=${retired}`);
       expect(status).toBe(400);
@@ -228,7 +228,7 @@ describe('AC renderer.3 (v3): retired presets are rejected like any unknown pres
 // ===========================================================================
 
 describe('AC renderer.4: orphans lens surfaces only disconnected nodes', () => {
-  it('contains the edge-less compass:preferences.md, not the connected spec:schema.validator; edges empty', async () => {
+  it('[CONSTELLATION-RENDERER-4] contains the edge-less compass:preferences.md, not the connected spec:schema.validator; edges empty', async () => {
     // Fixture sanity: preferences.md truly has zero edges; the validator spec has some.
     expect(
       compiled.edges.some((e) => e.from === 'compass:preferences.md' || e.to === 'compass:preferences.md'),
@@ -255,7 +255,7 @@ describe('AC renderer.4: orphans lens surfaces only disconnected nodes', () => {
 // ===========================================================================
 
 describe('AC renderer.5: domain lens is parameterized and exact', () => {
-  it('domain=schema → only spec-dev/spec-business nodes whose id domain segment is schema', async () => {
+  it('[CONSTELLATION-RENDERER-5] domain=schema → only spec-dev/spec-business nodes whose id domain segment is schema', async () => {
     const { status, body } = await api('?preset=domain&domain=schema');
     expect(status).toBe(200);
     expect(body.nodes.map((n) => n.id).sort()).toEqual(['business:schema.trust', 'spec:schema.validator']);
@@ -264,13 +264,13 @@ describe('AC renderer.5: domain lens is parameterized and exact', () => {
     }
   });
 
-  it('missing domain parameter → 400', async () => {
+  it('[CONSTELLATION-RENDERER-5] missing domain parameter → 400', async () => {
     const { status, body } = await api('?preset=domain');
     expect(status).toBe(400);
     expect(body.error).toMatch(/domain/);
   });
 
-  it('domain=nonexistent → 200 with empty nodes and edges (honest empty lens)', async () => {
+  it('[CONSTELLATION-RENDERER-5] domain=nonexistent → 200 with empty nodes and edges (honest empty lens)', async () => {
     const { status, body } = await api('?preset=domain&domain=nonexistent');
     expect(status).toBe(200);
     expect(body.nodes).toEqual([]);
@@ -283,7 +283,7 @@ describe('AC renderer.5: domain lens is parameterized and exact', () => {
 // ===========================================================================
 
 describe('AC renderer.6: unknown preset rejected', () => {
-  it('?preset=pretty → 400 naming the four valid presets', async () => {
+  it('[CONSTELLATION-RENDERER-6] ?preset=pretty → 400 naming the four valid presets', async () => {
     const { status, body } = await api('?preset=pretty');
     expect(status).toBe(400);
     for (const name of PRESET_NAMES) expect(body.error).toContain(name);
@@ -296,7 +296,7 @@ describe('AC renderer.6: unknown preset rejected', () => {
 
 describe('AC renderer.7: missing map reported plainly', () => {
   it(
-    'no .cortex/constellation.json → 404 telling the user to run cortex scan',
+    '[CONSTELLATION-RENDERER-7] no .cortex/constellation.json → 404 telling the user to run cortex scan',
     async () => {
       const bare = makeTmpDir('spec-renderer-nomap');
       extraDirs.push(bare);
@@ -319,7 +319,7 @@ describe('AC renderer.7: missing map reported plainly', () => {
 
 describe('AC renderer.8: serving is read-only', () => {
   it(
-    'a request sequence across all presets creates, modifies, and deletes nothing under the project root',
+    '[CONSTELLATION-RENDERER-8] a request sequence across all presets creates, modifies, and deletes nothing under the project root',
     async () => {
       const before = snapshotTree(root);
       await fetch(`${base}/`);
@@ -345,7 +345,7 @@ describe('AC renderer.8: serving is read-only', () => {
 // ===========================================================================
 
 describe('AC renderer.9: deterministic responses', () => {
-  it('the same query twice over an unchanged constellation.json → byte-identical bodies', async () => {
+  it('[CONSTELLATION-RENDERER-9] the same query twice over an unchanged constellation.json → byte-identical bodies', async () => {
     for (const query of ['?preset=default', '?preset=orphans', '?preset=domain&domain=schema']) {
       const first = Buffer.from(await (await fetch(`${base}/api/constellation${query}`)).arrayBuffer());
       const second = Buffer.from(await (await fetch(`${base}/api/constellation${query}`)).arrayBuffer());

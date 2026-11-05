@@ -559,6 +559,24 @@ describe('specflow.check: the log', () => {
 describe('specflow.check: rule (b)', () => {
   const config = (b: string) => ({ rules: { b } });
 
+  it('[SPECFLOW-CHECK-91] An added case with a built name and no static tag is judged', () => {
+    const root = repo(config('refuse'));
+    stage(root, { 'tests/a.test.ts': "\nit(`${x} pays`, f);\n" });
+    const r = run(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('tests/a.test.ts:2 › ${x} pays');
+
+    const tagged = repo(config('refuse'));
+    stage(tagged, { 'tests/a.test.ts': "it(`[BILLING-REFUNDS-3] ${x} pays`, f);\n" });
+    expect(run(tagged).code).toBe(0);
+
+    const old = repo();
+    commit(old, { 'tests/a.test.ts': "it(`${x} pays`, f);\n" });
+    commit(old, { 'cortex/cortex.json': JSON.stringify({ schemaVersion: '4.0', specflow: { rules: { b: 'refuse' }, tests: [{ runner: 'vitest', include: ['tests/**/*.test.ts'] }] } }) });
+    stage(old, { 'tests/a.test.ts': "const help = 1;\nit(`${x} pays`, f);\n" });
+    expect(run(old).code).toBe(0);
+  });
+
   it('[SPECFLOW-CHECK-24] An untagged changed test is refused when rule (b) is on', () => {
     const root = repo(config('refuse'));
     stage(root, { 'tests/a.test.ts': "it('adds up', f);\n" });

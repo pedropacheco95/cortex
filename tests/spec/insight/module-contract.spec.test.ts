@@ -54,7 +54,7 @@ describe('AC: init scaffolds the insight module committed', () => {
     expect(fs.existsSync(path.join(root, '.cortex', 'insight', 'concepts', '_index.md'))).toBe(false);
   });
 
-  it('.gitignore does NOT list .cortex/insight/ (committed, not gitignored)', () => {
+  it('[INSIGHT-MODULE-CONTRACT-1] .gitignore does NOT list .cortex/insight/ (committed, not gitignored)', () => {
     const gitignore = path.join(root, '.gitignore');
     const lines = fs.existsSync(gitignore)
       ? fs.readFileSync(gitignore, 'utf-8').split('\n').map((l) => l.trim())
@@ -77,13 +77,13 @@ describe('AC: init scaffolds the insight module committed', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: insight/_index.md states the ungated trust model (v3 locked template, §7.4)', () => {
-  it('names insight as ungated and inferred-not-curated', () => {
+  it('[INSIGHT-MODULE-CONTRACT-2] names insight as ungated and inferred-not-curated', () => {
     expect(INSIGHT_INDEX_TEMPLATE.toLowerCase()).toContain('ungated');
     expect(INSIGHT_INDEX_TEMPLATE).toContain('Inferred, not');
     expect(INSIGHT_INDEX_TEMPLATE).toContain('the gated layer wins');
   });
 
-  it('references the v3 cortex insight verbs as the query surface', () => {
+  it('[INSIGHT-MODULE-CONTRACT-2] references the v3 cortex insight verbs as the query surface', () => {
     expect(INSIGHT_INDEX_TEMPLATE).toContain('cortex insight file <path>');
     expect(INSIGHT_INDEX_TEMPLATE).toContain('cortex insight concept <name>');
     expect(INSIGHT_INDEX_TEMPLATE).toContain('cortex insight element <query>');

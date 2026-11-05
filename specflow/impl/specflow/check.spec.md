@@ -47,7 +47,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    - An **amendment** is a changed or removed item. A commit that edits a rule and inserts another still needs the trailer for the edited rule's base number.
    - **A retired spec has no items.** A spec with `status: retired` in both the base and the staged tree is never judged, so correcting a record needs no trailer. A commit that sets `status: retired` removes every item the spec had, and a commit that clears it adds them. So retiring a spec cannot share a commit with code (Rule 9).
 6. **Rule (a) code-needs-test.** A commit with a `code` path and no `test` path is refused. Measured. Always on.
-7. **Rule (b) test-needs-tag.** Each test case added or changed in the commit must carry a tag naming a criterion that resolves in the staged tree. A case changed means its title or body differs from the base after collapsing whitespace. A helper or import change changes no case. A case passes when at least one of its tags resolves, and each other tag on it that resolves to nothing is a warning whatever the level, unless (b) is `off`. New. Controlled by `specflow.rules.b`.
+7. **Rule (b) test-needs-tag.** Each test case added or changed in the commit must carry a tag naming a criterion that resolves in the staged tree. A case changed means its title or body differs from the base after collapsing whitespace. A helper or import change changes no case. A case whose name is built at run time (`specflow.index` Rule 5) is judged the same way and named by file and line. A case passes when at least one of its tags resolves, and each other tag on it that resolves to nothing is a warning whatever the level, unless (b) is `off`. New. Controlled by `specflow.rules.b`.
 8. **Rule (c) criterion-needs-test.** Each changed criterion needs a test tagged with it, added or changed. Added and removed criteria are not judged. Text is compared as in Rule 5, so whitespace and emphasis edits never fire it. New, reasoned and not run. Controlled by `specflow.rules.c`.
    - **In `--commit-msg` mode** it can see only one commit, so it never refuses. It passes silently when the tagged test changed in this commit or in `HEAD`, and otherwise warns. During an amend, `HEAD` is the commit being amended. A spec committed ahead of its code is normal.
    - **In range mode** it judges the range as a whole and refuses when no commit in the range changed a test tagged with that criterion, printing `specflow: REFUSED (range)` after the commit blocks.
@@ -636,6 +636,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** 22 criteria `BILLING-REFUNDS-10` to `BILLING-REFUNDS-31` each tagged in `tests/b.test.ts`, which imports `src/a.ts`, and `src/a.ts` and `tests/c.test.ts` staged
 - **When** the check runs
 - **Then** stderr carries `… and 2 more`
+
+### SPECFLOW-CHECK-91: An added case with a built name and no static tag is judged
+
+- **Given** `specflow.rules.b` is `refuse`, a staged new case with a `${}` name, and separately one starting with a static tag, and one left unchanged
+- **When** the check runs
+- **Then** the first exits 1 naming its file and line, and the other two exit 0
 
 ## Notes
 

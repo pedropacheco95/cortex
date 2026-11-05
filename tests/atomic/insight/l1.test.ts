@@ -44,7 +44,7 @@ describe('L1 import graph', () => {
   });
   afterAll(() => cleanTmp(root));
 
-  it('produces importer->imported edges resolved to repo-relative paths', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-1] produces importer->imported edges resolved to repo-relative paths', async () => {
     const out = await runL1(root);
     expect(out.graph.edges).toEqual([
       { from: 'src/a.ts', to: 'src/b.ts' },
@@ -55,7 +55,7 @@ describe('L1 import graph', () => {
     ]);
   }, TEST_TIMEOUT);
 
-  it('records per-file exports, resolved imports, sizes, and module structure', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-1] records per-file exports, resolved imports, sizes, and module structure', async () => {
     const out = await runL1(root);
     const a = out.files.find((f) => f.path === 'src/a.ts');
     expect(a).toBeDefined();
@@ -70,7 +70,7 @@ describe('L1 import graph', () => {
     expect(srcModule?.files).toContain('src/c.ts');
   }, TEST_TIMEOUT);
 
-  it('resolves NodeNext ./x.js specs to ./x.ts sources', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-1] resolves NodeNext ./x.js specs to ./x.ts sources', async () => {
     const nn = makeTmp('nodenext');
     try {
       write(nn, 'src/user.ts', "import { db } from './db.js';\nexport const user = db;\n");
@@ -102,7 +102,7 @@ describe('L1 centrality', () => {
   });
   afterAll(() => cleanTmp(root));
 
-  it('ranks the imported-by-many file top', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-3] ranks the imported-by-many file top', async () => {
     const out = await runL1(root);
     // in-degree 4: imported by a, b, c and re-exported by the index barrel
     // (hub files are excluded from the ranking, but their edges still count).
@@ -110,7 +110,7 @@ describe('L1 centrality', () => {
     expect(out.centrality[0]?.inDegree).toBe(4);
   }, TEST_TIMEOUT);
 
-  it('excludes mechanical hubs (index barrel, named barrel, README) from centrality but keeps them in the file list', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-3] excludes mechanical hubs (index barrel, named barrel, README) from centrality but keeps them in the file list', async () => {
     const out = await runL1(root);
     const centralityPaths = out.centrality.map((c) => c.path);
     expect(centralityPaths).not.toContain('src/index.ts');
@@ -156,7 +156,7 @@ describe('L1 triage', () => {
   });
   afterAll(() => cleanTmp(root));
 
-  it('excludes skip-list, sensitive, binary, oversized, and ignored paths from the file list with reasons', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-2] excludes skip-list, sensitive, binary, oversized, and ignored paths from the file list with reasons', async () => {
     const out = await runL1(root, { maxFileBytes: 400 });
     const filePaths = out.files.map((f) => f.path);
     expect(filePaths).toEqual(['.gitignore', 'src/a.ts']);
@@ -176,7 +176,7 @@ describe('L1 triage', () => {
     expect(byPath.get('.claude/')).toBe('skip-list');
   }, TEST_TIMEOUT);
 
-  it('lists skipped paths in sorted total order', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-4] lists skipped paths in sorted total order', async () => {
     const out = await runL1(root, { maxFileBytes: 400 });
     const paths = out.skipped.map((s) => s.path);
     expect(paths).toEqual([...paths].sort());
@@ -198,7 +198,7 @@ describe('L1 entry points', () => {
   });
   afterAll(() => cleanTmp(root));
 
-  it('flags package.json bin/main (dist->src mapped) and well-known names', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-1] flags package.json bin/main (dist->src mapped) and well-known names', async () => {
     const out = await runL1(root);
     const flag = (p: string) => out.files.find((f) => f.path === p)?.entryPoint;
     expect(flag('src/cli/run.ts')).toBe(true); // bin dist/cli/run.js -> src/cli/run.ts
@@ -223,7 +223,7 @@ describe('L1 determinism', () => {
   });
   afterAll(() => cleanTmp(root));
 
-  it('two runs on unchanged input serialize byte-identically, with no timestamps', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-4] two runs on unchanged input serialize byte-identically, with no timestamps', async () => {
     const first = serializeL1(await runL1(root));
     const second = serializeL1(await runL1(root));
     expect(second).toBe(first);
@@ -233,7 +233,7 @@ describe('L1 determinism', () => {
     expect(first).not.toContain(root);
   }, TEST_TIMEOUT);
 
-  it('serialized arrays are path-sorted', async () => {
+  it('[INSIGHT-L1-STRUCTURAL-4] serialized arrays are path-sorted', async () => {
     const out = await runL1(root);
     const filePaths = out.files.map((f) => f.path);
     expect(filePaths).toEqual([...filePaths].sort());
@@ -251,7 +251,7 @@ describe('L1 smoke on this repo', () => {
   const repoRoot = path.resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
   it(
-    'completes, produces >0 files and >0 edges, sorted output, no skip-listed paths included',
+    '[INSIGHT-L1-STRUCTURAL-1, INSIGHT-L1-STRUCTURAL-2] completes, produces >0 files and >0 edges, sorted output, no skip-listed paths included',
     async () => {
       const out = await runL1(repoRoot);
       expect(out.files.length).toBeGreaterThan(0);
