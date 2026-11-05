@@ -271,6 +271,73 @@ describe('specflow.git-hooks: real commits', () => {
     expect(r.stderr).not.toContain('INDEX');
   });
 
+  it('An amend with -m is judged whole', () => {
+    const root = installed();
+    write(root, 'src/a.ts', 'x');
+    write(root, 'tests/a.test.ts', 'y');
+    git(root, ['add', '-A']);
+    expect(git(root, ['commit', '-q', '-m', 'one']).code).toBe(0);
+    const spec = 'specflow/impl/billing/refunds.spec.md';
+    fs.appendFileSync(path.join(root, spec), '\n### BILLING-REFUNDS-2: B\n\n- **Then** ok\n');
+    git(root, ['add', '-A']);
+    const r = git(root, ['commit', '--amend', '-m', 'one and a spec']);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain('rule (d)');
+  });
+
+  it('Commit -C HEAD is not an amend', () => {
+    const root = installed();
+    write(root, 'src/a.ts', 'x');
+    write(root, 'tests/a.test.ts', 'y');
+    git(root, ['add', '-A']);
+    expect(git(root, ['commit', '-q', '-m', 'one']).code).toBe(0);
+    write(root, 'src/d.ts', 'x');
+    git(root, ['add', '-A']);
+    const r = git(root, ['commit', '-C', 'HEAD']);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain('rule (a)');
+  });
+
+  it('A failed amend leaves nothing for the next commit', () => {
+    const root = installed();
+    write(root, 'src/a.ts', 'x');
+    write(root, 'tests/a.test.ts', 'y');
+    git(root, ['add', '-A']);
+    expect(git(root, ['commit', '-q', '-m', 'one']).code).toBe(0);
+    const failed = spawnSync('git', ['commit', '--amend'], { cwd: root, encoding: 'utf-8', env: { ...env(), GIT_EDITOR: 'false' } });
+    expect(failed.status).not.toBe(0);
+    write(root, 'src/d.ts', 'x');
+    git(root, ['add', '-A']);
+    expect(git(root, ['commit', '-m', 'code only']).code).not.toBe(0);
+  });
+
+  it('An amend of a clean merge is judged as a merge', () => {
+    const root = installed();
+    git(root, ['checkout', '-q', '-b', 'side']);
+    write(root, 'src/side.ts', 'x');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '--no-verify', '-m', 'side']);
+    git(root, ['checkout', '-q', 'main']);
+    write(root, 'README.md', 'x');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '-m', 'main']);
+    expect(git(root, ['merge', '-q', '--no-ff', '--no-edit', 'side']).code).toBe(0);
+    expect(git(root, ['commit', '-q', '--amend', '--no-edit']).code).toBe(0);
+  });
+
+  it('An amend of the first commit is not judged', () => {
+    const root = tmpRepo('first');
+    git(root, ['init', '-q', '-b', 'main']);
+    git(root, ['config', 'user.email', 't@example.com']);
+    git(root, ['config', 'user.name', 'T']);
+    write(root, 'specflow/impl/billing/refunds.spec.md', '---\nid: billing.refunds\nstatus: draft\n---\n\n## Rules\n\n1. One.\n');
+    write(root, 'src/a.ts', 'x');
+    install(root);
+    git(root, ['add', '-A']);
+    expect(git(root, ['commit', '-q', '-m', 'first']).code).toBe(0);
+    expect(git(root, ['commit', '-q', '--amend', '--no-edit']).code).toBe(0);
+  });
+
   it('A real commit is refused through the hook', () => {
     const root = installed();
     const before = head(root);

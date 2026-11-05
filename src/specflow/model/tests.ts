@@ -18,7 +18,12 @@ export interface TestCase {
 
 const collapse = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
-const CASE_MODIFIERS = new Set(['skip', 'todo', 'only', 'concurrent', 'sequential', 'fails', 'each']);
+const CASE_WORDS = new Set(['it', 'test', 'xit', 'xtest', 'fit']);
+const CASE_MODIFIERS = new Set(['skip', 'todo', 'only', 'concurrent', 'sequential', 'fails', 'failing', 'each', 'for', 'skipIf', 'runIf']);
+/** Modifiers called first, whose result takes the name: `it.each(rows)('name', …)`. */
+const CURRIED = new Set(['each', 'for', 'skipIf', 'runIf']);
+/** Curried modifiers that expand the case, so an untagged name is only counted. */
+const EXPANDING = new Set(['each', 'for']);
 const REGEX_MAY_FOLLOW = '(,=:[!&|?{};\n';
 
 function tagsOf(name: string): string[] {
@@ -169,13 +174,14 @@ export function scanJsCases(file: string, src: string): TestCase[] {
       const chain = (m as RegExpExecArray)[0];
       i += chain.length;
       const [word = '', ...mods] = chain.split('.');
-      const each = mods.includes('each');
+      const each = mods.some((x) => CURRIED.has(x));
+      const expands = mods.some((x) => EXPANDING.has(x));
       const taggedEach = each && src[skipGap(src, i)] === '`';
       if (prev !== '.' && (src[skipGap(src, i)] === '(' || taggedEach)) {
         if (word === 'describe' && (mods.includes('skip') || mods.includes('todo'))) {
           nextParenSkips = true;
         }
-        if ((word === 'it' || word === 'test') && mods.every((x) => CASE_MODIFIERS.has(x))) {
+        if (CASE_WORDS.has(word) && mods.every((x) => CASE_MODIFIERS.has(x))) {
           const open = skipGap(src, i);
           const nameCall = each ? skipGap(src, taggedEach ? skipTemplate(src, open) : skipCall(src, open)) : open;
           const name = src[nameCall] === '(' ? nameAt(src, skipGap(src, nameCall + 1)) : null;
@@ -184,9 +190,9 @@ export function scanJsCases(file: string, src: string): TestCase[] {
             file,
             name: name?.text ?? '',
             line: lineAt(start),
-            skipped: mods.includes('skip') || mods.includes('todo') || parens.includes(true),
+            skipped: word.startsWith('x') || mods.includes('skip') || mods.includes('todo') || parens.includes(true),
             tags,
-            dynamic: tags.length === 0 && (name === null || name.built || each),
+            dynamic: tags.length === 0 && (name === null || name.built || expands),
             body: collapse(src.slice(start, src[nameCall] === '(' ? skipCall(src, nameCall) : nameCall)),
           });
         }

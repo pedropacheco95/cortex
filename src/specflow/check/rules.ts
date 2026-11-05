@@ -17,7 +17,11 @@ function named(list: string[]): string {
 /** Valid `Specflow-Amends:` trailers as `<spec-id>#<item>` (schema S10). */
 export function amendTrailers(message: string): Map<string, string> {
   const found = new Map<string, string>();
-  for (const line of message.split('\n')) {
+  const text = message.split(/^# -+ >8 -+$/m)[0] as string;
+  const kept = text.split('\n').filter((l) => !l.startsWith('#')).join('\n').trim();
+  const paragraphs = kept.split(/\n\s*\n/);
+  if (paragraphs.length < 2) return found; // a trailer follows the subject
+  for (const line of (paragraphs[paragraphs.length - 1] as string).split('\n')) {
     const m = /^Specflow-Amends:\s*(\S+#\S+)\s+(?:—|--|-)\s+\S/.exec(line);
     if (m) found.set(m[1] as string, line);
   }
@@ -49,7 +53,7 @@ export function judge(
   if (items.length > 0 && code.length > 0) {
     refusals.push({
       letter: 'd',
-      line: `- rule (d) spec-commit-alone: changes spec rules or criteria (${named(items.map(itemName))}) together with code or config (${named(code)}). Commit the spec change on its own, before or after the code.`,
+      line: `- rule (d) spec-commit-alone: changes spec rules or criteria (${named([...new Set(items.map(itemName))])}) together with code or config (${named(code)}). Commit the spec change on its own, before or after the code.`,
     });
   }
   const trailers = amendTrailers(message);

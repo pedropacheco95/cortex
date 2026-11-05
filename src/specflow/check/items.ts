@@ -1,5 +1,5 @@
 /** Rule items of a spec and how they changed (specflow.check Rule 5). */
-import { frontmatter, headings, parseCriteria } from '../model/spec.js';
+import { fencedLines, frontmatter, headings, parseCriteria } from '../model/spec.js';
 import type { Tree } from '../model/tree.js';
 
 export type Change = 'added' | 'changed' | 'removed';
@@ -33,9 +33,11 @@ export function parseRules(text: string): NumberedRule[] {
   const close = all.slice(at + 1).find((h) => h.level <= start.level);
   const end = close ? close.line : lines.length;
   const rules: NumberedRule[] = [];
+  const fenced = fencedLines(lines);
   let open: { n: number; body: string[] } | null = null;
-  for (const line of lines.slice(start.line + 1, end)) {
-    const m = /^(\d+)\.\s+(.*)$/.exec(line);
+  for (let at = start.line + 1; at < end; at += 1) {
+    const line = (lines[at] as string).replace(/\r$/, '');
+    const m = fenced.has(at) ? null : /^ {0,3}(\d+)[.)]\s+(.*)$/.exec(line);
     if (m) {
       if (open) rules.push({ n: open.n, text: normal(open.body.join('\n')) });
       open = { n: Number(m[1]), body: [m[2] as string] };
@@ -49,7 +51,10 @@ export function parseRules(text: string): NumberedRule[] {
 
 function criteriaById(text: string): Map<string, string> {
   const map = new Map<string, string>();
-  for (const c of parseCriteria(text)) if (c.id) map.set(c.id, normal(c.text));
+  for (const c of parseCriteria(text)) {
+    // A repeated id keeps every text, so an edit to either is still seen.
+    if (c.id) map.set(c.id, [map.get(c.id), normal(c.text)].filter(Boolean).join('\0'));
+  }
   return map;
 }
 
@@ -83,26 +88,32 @@ function compare(spec: string, file: string, base: string, staged: string, retir
   return found;
 }
 
+/** Files of a change set, a deleted one and an added one with the same id being one moved spec. */
+function pairFiles(paths: string[], base: Tree, staged: Tree): { file: string; before: string | null; after: string | null }[] {
+  const pairs = paths
+    .filter((file) => file.startsWith('specflow/impl/') && file.endsWith('.spec.md'))
+    .map((file) => ({ file, before: base.read(file), after: staged.read(file) }));
+  const moved = new Set<unknown>();
+  for (const gone of pairs.filter((p) => p.after === null)) {
+    const id = specId(gone.before ?? '', gone.file);
+    const landed = pairs.find((p) => p.before === null && !moved.has(p) && specId(p.after ?? '', p.file) === id);
+    if (!landed) continue;
+    moved.add(landed);
+    landed.before = gone.before;
+    moved.add(gone);
+  }
+  return pairs.filter((p) => !moved.has(p) || p.before !== null && p.after !== null);
+}
+
 /**
- * The items a change set adds, changes or removes. Specs are paired by id, so
- * moving a spec file changes no item. A spec retired on both sides has no items;
+ * The items a change set adds, changes or removes. A moved spec is compared with
+ * itself, so a move changes no item. A spec retired on both sides has no items;
  * retiring one removes them all and un-retiring adds them.
  */
 export function itemChanges(paths: string[], base: Tree, staged: Tree): ItemChange[] {
-  const pairs = new Map<string, { file: string; before: string | null; after: string | null }>();
-  for (const file of paths) {
-    if (!file.startsWith('specflow/impl/') || !file.endsWith('.spec.md')) continue;
-    const before = base.read(file);
-    const after = staged.read(file);
-    const id = specId(after ?? before ?? '', file);
-    const pair = pairs.get(id) ?? { file, before: null, after: null };
-    pair.before = pair.before ?? before;
-    pair.after = pair.after ?? after;
-    if (after !== null) pair.file = file;
-    pairs.set(id, pair);
-  }
   const found: ItemChange[] = [];
-  for (const [id, { file, before, after }] of pairs) {
+  for (const { file, before, after } of pairFiles(paths, base, staged)) {
+    const id = specId(after ?? before ?? '', file);
     const wasRetired = before !== null && frontmatter(before)['status'] === 'retired';
     const isRetired = after !== null && frontmatter(after)['status'] === 'retired';
     if (wasRetired && (isRetired || after === null)) continue;

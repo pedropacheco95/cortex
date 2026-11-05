@@ -62,9 +62,11 @@ exit 0`;
 
 const HOOKS: Record<string, string> = {
   'commit-msg': `${REFUSING_START}\ncortex check --commit-msg "$1"\n${COULD_NOT_RUN}`,
-  'prepare-commit-msg': `if [ "$2" = "commit" ] && [ "$3" = "HEAD" ]; then
-  git rev-parse HEAD > "$(git rev-parse --git-path specflow-amend)"
-fi
+  'prepare-commit-msg': `marker="$(git rev-parse --git-path specflow-amend)"
+rm -f "$marker"
+case " $(ps -o args= -p "$PPID") " in
+  *" --amend "*|*" --amen "*|*" --ame "*|*" --am "*) git rev-parse HEAD > "$marker" ;;
+esac
 exit 0`,
   'pre-commit': REFRESH_INDEX,
   'pre-merge-commit': REFRESH_INDEX,
@@ -130,7 +132,7 @@ export function installHooks(root = '.', options: InstallOptions = {}, io: Specs
     err(`specflow: core.hooksPath is already ${current}; add these hooks there by hand`);
     err('  commit-msg: cortex check --commit-msg "$1"');
     err('  pre-commit and pre-merge-commit: cortex specs index --staged');
-    err('  prepare-commit-msg: on an amend, write HEAD to $(git rev-parse --git-path specflow-amend)');
+    err('  prepare-commit-msg: delete $(git rev-parse --git-path specflow-amend), then on an amend write HEAD to it');
     err('  pre-push: cortex check --pre-push, with git\'s stdin');
     return 1;
   }

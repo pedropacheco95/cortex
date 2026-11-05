@@ -1,3 +1,4 @@
+import './safe-matter.js';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
 

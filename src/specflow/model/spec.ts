@@ -2,6 +2,7 @@
  * Parsing one spec's text (specflow.index Rules 2 to 4; specflow.check Rule 5).
  * By text only: frontmatter, the Acceptance Criteria section, numbered rules.
  */
+import '../../safe-matter.js';
 import matter from 'gray-matter';
 
 export const CRITERION_ID = /^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-[0-9]+$/;
@@ -28,14 +29,37 @@ export function frontmatter(text: string): Record<string, unknown> {
   }
 }
 
+/**
+ * Lines inside a closed code fence. A closing fence matches the opening's
+ * character and length and has nothing after it, and a fence never closed
+ * fences nothing, so a stray line cannot hide the rest of a spec.
+ */
+export function fencedLines(lines: string[]): Set<number> {
+  const fenced = new Set<number>();
+  let open: { mark: string; line: number } | null = null;
+  lines.forEach((line, i) => {
+    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    const mark = m?.[1] as string | undefined;
+    const rest = (m?.[2] ?? '').trim();
+    if (!open) {
+      if (mark && !(mark.startsWith('`') && rest.includes('`'))) open = { mark, line: i };
+      return;
+    }
+    if (mark && mark[0] === open.mark[0] && mark.length >= open.mark.length && rest === '') {
+      for (let n = open.line; n <= i; n += 1) fenced.add(n);
+      open = null;
+    }
+  });
+  return fenced;
+}
+
 /** Headings outside code fences, with their 0-based line. */
 export function headings(lines: string[]): Heading[] {
   const found: Heading[] = [];
-  let fence = false;
+  const fenced = fencedLines(lines);
   lines.forEach((line, i) => {
-    if (/^\s*(```|~~~)/.test(line)) fence = !fence;
-    if (fence) return;
-    const m = /^(#{1,6})\s+(.*?)\s*$/.exec(line);
+    if (fenced.has(i)) return;
+    const m = /^ {0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (m) found.push({ level: (m[1] as string).length, title: m[2] as string, line: i });
   });
   return found;

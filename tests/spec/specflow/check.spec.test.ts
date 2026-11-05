@@ -735,3 +735,149 @@ describe('specflow.check: rules (f) and (g)', () => {
     expect(r.err).toContain('the old value `3` is too short to search');
   });
 });
+
+describe('specflow.check: adversarial review findings', () => {
+  const edited2 = (base: string): string => base.replace('Rule two.', 'Rule two, reworded.');
+  const code = { 'src/b.ts': 'x', 'tests/b.test.ts': 'y' };
+
+  it('A js frontmatter runs nothing and the commit is still judged', () => {
+    const root = repo();
+    const planted = path.join(root, 'ran.txt');
+    stage(root, { 'specflow/impl/billing/evil.spec.md': `---js\nrequire('fs').writeFileSync(${JSON.stringify(planted)}, 'x')\n---\n`, 'src/b.ts': 'x' });
+    const r = run(root);
+    expect(fs.existsSync(planted)).toBe(false);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('rule (a)');
+  });
+
+  it('A line that only starts with a fence token hides nothing', () => {
+    const stray = BASE.replace('Why.', '```inline``` is why refunds exist.');
+    const root = repo();
+    commit(root, { [SPEC]: stray });
+    stage(root, { [SPEC]: edited2(stray), ...code });
+    expect(run(root).code).toBe(1);
+  });
+
+  it('A fence never closed hides nothing', () => {
+    const stray = BASE.replace('Why.', '```\nopen and never closed');
+    const root = repo();
+    commit(root, { [SPEC]: stray });
+    stage(root, { [SPEC]: edited2(stray), ...code });
+    expect(run(root).code).toBe(1);
+  });
+
+  it('A real fence still hides what it holds', () => {
+    const fenced = BASE.replace('Why.', '```\n## Rules\n\n1. Example.\n```');
+    const root = repo();
+    commit(root, { [SPEC]: fenced });
+    stage(root, { [SPEC]: fenced.replace('1. Example.', '1. Other.') , ...code });
+    expect(run(root).code).toBe(0);
+  });
+
+  for (const [name, form] of [
+    ['CRLF line endings', (t: string) => t.replace(/\n/g, '\r\n')],
+    ['1) numbering', (t: string) => t.replace(/^(\d)\. /gm, '$1) ')],
+    ['indented numbers', (t: string) => t.replace(/^(\d)\. /gm, '  $1. ')],
+    ['a closed heading', (t: string) => t.replace('## Rules', '## Rules ##')],
+  ] as const) {
+    it(`Rules are seen in every list form: ${name}`, () => {
+      const root = repo();
+      commit(root, { [SPEC]: form(BASE) }, `m\n\nSpecflow-Amends: billing.refunds#rule-1 — form\nSpecflow-Amends: billing.refunds#rule-2 — form\nSpecflow-Amends: billing.refunds#rule-3 — form\n`);
+      stage(root, { [SPEC]: form(edited2(BASE)), ...code });
+      const r = run(root);
+      expect(r.code).toBe(1);
+      expect(r.err).toContain('billing.refunds#rule-2');
+    });
+  }
+
+  it('Two criteria with one id do not hide an edit', () => {
+    const twin = text(['Rule one.'], ['BILLING-REFUNDS-3: First', 'BILLING-REFUNDS-3: Second']);
+    const root = repo();
+    commit(root, { [SPEC]: twin }, 'twin\n\nSpecflow-Amends: billing.refunds#retired — x\n');
+    stage(root, { [SPEC]: twin.replace('First', 'Changed'), ...code });
+    expect(run(root).code).toBe(1);
+  });
+
+  it('An added copy of a spec does not hide an edit to the original', () => {
+    const root = repo();
+    stage(root, { 'specflow/impl/billing/aaa.spec.md': BASE, [SPEC]: BASE.replace('BILLING-REFUNDS-4: Other', 'BILLING-REFUNDS-4: Edited'), ...code });
+    const r = run(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('BILLING-REFUNDS-4');
+  });
+
+  it('A rule change is named once', () => {
+    const root = repo();
+    stage(root, { [SPEC]: edited2(BASE), ...code });
+    const line = run(root).err.split('\n').find((l) => l.includes('rule (d)')) as string;
+    expect(line.match(/#rule-2/g)).toHaveLength(1);
+  });
+
+  it('A trailer counts only in the last paragraph', () => {
+    const edited = BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X');
+    for (const message of [TRAILER, `subject\n\n${TRAILER}\nmore words\n\nAnd a closing paragraph.\n`]) {
+      const root = repo();
+      stage(root, { [SPEC]: edited });
+      expect(run(root, message).code, message).toBe(1);
+    }
+  });
+
+  it('A comment after the trailers and a scissors line do not hide them', () => {
+    const root = repo();
+    stage(root, { [SPEC]: BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X') });
+    expect(run(root, `m\n\n${TRAILER}\n\n# Please enter the commit message\n# ------------------------ >8 ------------------------\ndiff\n`).code).toBe(0);
+  });
+
+  it('Every way of marking a case is read by rule (b)', () => {
+    for (const line of ["it.skipIf(false)('adds up', f);", "it.runIf(true)('adds up', f);", "it.failing('adds up', f);", "xit('adds up', f);", "fit('adds up', f);"]) {
+      const root = repo({ rules: { b: 'refuse' } });
+      stage(root, { 'tests/a.test.ts': `${line}\n` });
+      expect(run(root).code, line).toBe(1);
+    }
+  });
+
+  it('Cases with one name are told apart', () => {
+    const two = (c: string): string => `describe('a', () => { it('[BILLING-REFUNDS-3] works', () => { a(); }); });\ndescribe('b', () => { it('[BILLING-REFUNDS-3] works', () => { b(); }); });\n${c}`;
+    const root = repo({ rules: { c: 'refuse' } });
+    commit(root, { 'tests/a.test.ts': two('') });
+    git(root, 'checkout', '-q', '-b', 'work');
+    commit(root, { [SPEC]: BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X') }, `m\n\n${TRAILER}\n`);
+    commit(root, { 'src/b.ts': 'x', 'tests/a.test.ts': two('// a comment\n') });
+    expect(range(root).code).toBe(1);
+  });
+
+  it('A merge of unrelated histories is judged, not an error', () => {
+    const root = repo();
+    git(root, 'checkout', '-q', '--orphan', 'other');
+    git(root, 'rm', '-rfq', '.');
+    commit(root, { 'docs.md': 'x' });
+    git(root, 'checkout', '-q', 'main');
+    git(root, 'merge', '-q', '--no-commit', '--allow-unrelated-histories', 'other');
+    expect(run(root, 'Merge').code).toBe(0);
+  });
+
+  it('A since not in this clone warns and judges the range', () => {
+    const root = repo({ since: 'a'.repeat(40) });
+    git(root, 'checkout', '-q', '-b', 'work');
+    commit(root, { 'src/b.ts': 'x' }, 'code only');
+    const r = range(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('specflow: warning: specflow.since');
+  });
+
+  it('Removing specflow/ with code is still judged', () => {
+    const root = repo();
+    git(root, 'rm', '-rq', 'specflow');
+    stage(root, { 'src/b.ts': 'x' });
+    expect(run(root).code).toBe(1);
+  });
+
+  it('Run from a subfolder, the check finds the repository', () => {
+    const root = repo();
+    stage(root, { 'src/b.ts': 'x' });
+    const file = path.join(root, '.git', 'TEST_MSG');
+    fs.writeFileSync(file, 'm');
+    const err: string[] = [];
+    expect(check(['--commit-msg', file], path.join(root, 'src'), { stderr: (l) => err.push(l) })).toBe(1);
+  });
+});

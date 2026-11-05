@@ -53,7 +53,7 @@ function automaticMerge(root: string, first: string, heads: string[]): { tree: s
   let tree = '';
   const conflicted = new Set<string>();
   heads.forEach((head, i) => {
-    const r = spawnSync('git', ['merge-tree', '--write-tree', '--name-only', '-z', ours, head], {
+    const r = spawnSync('git', ['merge-tree', '--write-tree', '--name-only', '--allow-unrelated-histories', '-z', ours, head], {
       cwd: root,
       encoding: 'utf-8',
       maxBuffer: MAX_BUFFER,
@@ -100,12 +100,24 @@ function named(list: string[]): string {
 /** Cases added or changed between two trees, over the changed test files. */
 function changedCases(paths: string[], base: Tree, head: Tree, config: SpecflowConfig): TestCase[] {
   const only = new Set(paths);
-  const before = new Map(testCases(base, config, only).map((c) => [`${c.file}\0${c.name}`, c]));
-  return testCases(head, config, only).filter((c) => {
-    if (c.dynamic) return false;
-    const old = before.get(`${c.file}\0${c.name}`);
-    return !old || old.body !== c.body || old.tags.join() !== c.tags.join();
-  });
+  // Keyed by occurrence too: two cases may share a name in one file.
+  const keyed = (cases: TestCase[]): [string, TestCase][] => {
+    const seen = new Map<string, number>();
+    return cases.map((c) => {
+      const name = `${c.file}\0${c.name}`;
+      const n = seen.get(name) ?? 0;
+      seen.set(name, n + 1);
+      return [`${name}\0${n}`, c];
+    });
+  };
+  const before = new Map(keyed(testCases(base, config, only)));
+  return keyed(testCases(head, config, only))
+    .filter(([key, c]) => {
+      if (c.dynamic) return false;
+      const old = before.get(key);
+      return !old || old.body !== c.body || old.tags.join() !== c.tags.join();
+    })
+    .map(([, c]) => c);
 }
 
 function judgeChange(root: string, paths: string[], base: Tree, head: Tree, at: string, config: SpecflowConfig, message: string): Judged {
@@ -160,14 +172,13 @@ function testedInHead(root: string, config: SpecflowConfig): Set<string> {
   return new Set(changedCases(paths, gitTree(root, parent), gitTree(root, 'HEAD'), config).flatMap((c) => c.tags));
 }
 
-function amendBase(root: string): string | null {
-  const marker = git(root, 'rev-parse', '--git-path', 'specflow-amend').trim();
-  const file = path.resolve(root, marker);
-  if (!fs.existsSync(file)) return null;
+/** True when this commit is the amend the hook marked (Rule 4). The marker goes either way. */
+function isAmend(root: string): boolean {
+  const file = path.resolve(root, git(root, 'rev-parse', '--git-path', 'specflow-amend').trim());
+  if (!fs.existsSync(file)) return false;
   const hash = fs.readFileSync(file, 'utf-8').trim();
   fs.rmSync(file, { force: true });
-  if (hash !== git(root, 'rev-parse', 'HEAD').trim()) return null;
-  return has(root, 'HEAD^') ? 'HEAD^' : emptyTree(root);
+  return hash === git(root, 'rev-parse', 'HEAD').trim();
 }
 
 function mergeHeads(root: string): string[] {
@@ -183,16 +194,22 @@ function commitMode(root: string, messageFile: string, config: SpecflowConfig, l
     log.event({ subject, kind: 'commit', outcome: 'allowed', rules: [], warned: [], reasons: [] });
     return 0;
   }
-  const heads = mergeHeads(root);
+  // An amend replaces HEAD, so it is judged from HEAD's parents: none is a first
+  // commit, which is not judged, and several is a merge.
+  const parents = isAmend(root) ? git(root, 'rev-list', '--parents', '-n', '1', 'HEAD').trim().split(' ').slice(1) : ['HEAD'];
+  if (parents.length === 0) {
+    log.event({ subject, kind: 'commit', outcome: 'allowed', rules: [], warned: [], reasons: [] });
+    return 0;
+  }
+  const heads = parents.length > 1 ? parents.slice(1) : mergeHeads(root);
+  const first = parents[0] as string;
   const kind = heads.length > 0 ? 'merge' : 'commit';
-  let base = 'HEAD';
+  let base = first;
   let skip = new Set<string>();
   if (heads.length > 0) {
-    const merged = automaticMerge(root, 'HEAD', heads);
+    const merged = automaticMerge(root, first, heads);
     base = merged.tree;
     skip = merged.conflicted;
-  } else {
-    base = amendBase(root) ?? 'HEAD';
   }
   const paths = zList(git(root, 'diff', '--cached', '--name-only', '--no-renames', '-z', base)).filter((p) => !skip.has(p));
   const { refusals, warnings, amended, changedCriteria, testedIds } = judgeChange(root, paths, gitTree(root, base), gitTree(root, ''), '', config, message);
@@ -232,7 +249,8 @@ function judgeCommit(root: string, sha: string, config: SpecflowConfig): Judged 
 
 function rangeMode(root: string, range: string, config: SpecflowConfig, log: Log, err: (l: string) => void): number {
   const args = ['rev-list', '--reverse', range];
-  if (config.since) args.push(`^${config.since}`);
+  if (config.since && has(root, `${config.since}^{commit}`)) args.push(`^${config.since}`);
+  else if (config.since) err(`specflow: warning: specflow.since ${config.since} is not in this clone; judging the whole range`);
   const commits = git(root, ...args).split('\n').filter(Boolean);
   if (commits.length === 0) {
     err('specflow: 0 commits in range');
@@ -293,7 +311,8 @@ function prePushMode(root: string, input: string, config: SpecflowConfig, log: L
         ? spawnSync('git', ['merge-base', local, 'origin/HEAD'], { cwd: root, encoding: 'utf-8' })
         : null;
       // A first push to an empty remote has no merge base; where judging starts is the base.
-      base = merged?.status === 0 ? merged.stdout.trim() : (config.since ?? '');
+      const since = config.since && has(root, `${config.since}^{commit}`) ? config.since : '';
+      base = merged?.status === 0 ? merged.stdout.trim() : since;
       if (base === '') {
         err(`specflow: no base to compare for ${remoteRef}; nothing was checked`);
         continue;
@@ -304,7 +323,7 @@ function prePushMode(root: string, input: string, config: SpecflowConfig, log: L
   return code;
 }
 
-export function check(args: string[], root = '.', io: CheckIO = {}): number {
+export function check(args: string[], start = '.', io: CheckIO = {}): number {
   const out = io.stdout ?? ((l: string) => console.log(l));
   const err = io.stderr ?? ((l: string) => console.error(l));
   const [mode, value, extra] = args;
@@ -314,10 +333,13 @@ export function check(args: string[], root = '.', io: CheckIO = {}): number {
     out(USAGE);
     return 2;
   }
-  if (!fs.existsSync(path.join(root, 'specflow'))) {
+  const top = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: start, encoding: 'utf-8' }).stdout?.trim() || start;
+  const removedInThisCommit = spawnSync('git', ['cat-file', '-e', 'HEAD:specflow'], { cwd: top }).status === 0;
+  if (!fs.existsSync(path.join(top, 'specflow')) && !removedInThisCommit) {
     err('specflow: no specflow/ folder here; nothing was checked');
     return 0;
   }
+  const root = top;
   let log: Log | null = null;
   try {
     const common = path.resolve(root, git(root, 'rev-parse', '--git-common-dir').trim());
@@ -326,7 +348,7 @@ export function check(args: string[], root = '.', io: CheckIO = {}): number {
     if (prePush) return prePushMode(root, io.stdin ?? fs.readFileSync(0, 'utf-8'), config, log, err);
     return validRange
       ? rangeMode(root, value as string, config, log, err)
-      : commitMode(root, value as string, config, log, err);
+      : commitMode(root, path.resolve(start, value as string), config, log, err);
   } catch (e) {
     const message = (e as Error).message;
     const line = `specflow: internal error in the check (not a verdict on your change): ${message}`;

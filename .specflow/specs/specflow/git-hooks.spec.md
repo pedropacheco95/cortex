@@ -27,7 +27,7 @@ The check only works if git calls it, and a hook that silently does not run read
 1. `cortex hooks install` writes the hook files of Rules 3 to 6, makes them executable and sets repository-local `core.hooksPath` to `.githooks`. The second line of every file it writes is `# cortex-managed: cortex hooks install rewrites this file`. It prints each file written. Re-running it changes nothing and exits 0.
 2. **Existing hooks are kept.** `core.hooksPath` makes git stop reading `.git/hooks/`, so each executable hook there, `*.sample` files excepted, keeps running. A Cortex hook of the same name first runs `.git/hooks/<name>` with the same arguments and stdin, and stops with its exit code if it fails. A hook with no Cortex counterpart, such as `post-commit`, gets a passthrough file doing only that.
 3. **`commit-msg`** runs `cortex check --commit-msg "$1"`.
-4. **`prepare-commit-msg`**, when `$2` is `commit` and `$3` is `HEAD` (an amend; `git commit -c <sha>` also passes `commit`), writes `HEAD`'s hash to `$(git rev-parse --git-path specflow-amend)`, and otherwise does nothing. It always exits 0. `cortex check` reads and deletes that marker, and uses `HEAD^` as its base only when the marker equals `HEAD`.
+4. **`prepare-commit-msg`** first deletes any marker, so a failed amend leaves nothing behind. When git's own command line (`ps -o args= -p $PPID`) holds `--amend`, or an abbreviation down to `--am`, it writes `HEAD`'s hash to `$(git rev-parse --git-path specflow-amend)`, and otherwise does nothing. It always exits 0. `cortex check` reads and deletes that marker, and uses `HEAD^` as its base only when the marker equals `HEAD`.
 5. **`pre-commit` and `pre-merge-commit`** run `cortex specs index --staged`, which rewrites and stages `specflow/INDEX.md` when it differs. Their failures print a warning and exit 0: only the check may refuse (RULES.md rule 6). With no `specflow/` folder they exit 0 silently.
 6. **`pre-push`** runs `cortex check --pre-push`. For each stdin line `<local ref> <local sha> <remote ref> <remote sha>`:
    - a deletion (local sha all zeros) is skipped;
@@ -75,6 +75,36 @@ The check only works if git calls it, and a hook that silently does not run read
 - **Given** `.git/hooks/pre-rebase.sample`
 - **When** `cortex hooks install` runs
 - **Then** `.githooks/pre-rebase` does not exist
+
+### An amend with -m is judged whole
+
+- **Given** `HEAD` adds code and a test, and `git commit --amend -m x` adds a criterion
+- **When** the check runs
+- **Then** the commit is refused by rule (d)
+
+### Commit -C HEAD is not an amend
+
+- **Given** `src/d.ts` staged alone
+- **When** the check runs
+- **Then** `git commit -C HEAD` is refused by rule (a)
+
+### A failed amend leaves nothing for the next commit
+
+- **Given** an amend whose editor failed, then `src/d.ts` staged alone
+- **When** the check runs
+- **Then** `git commit -m x` is refused
+
+### An amend of a clean merge is judged as a merge
+
+- **Given** `HEAD` is a clean merge
+- **When** the check runs
+- **Then** `git commit --amend --no-edit` passes
+
+### An amend of the first commit is not judged
+
+- **Given** `HEAD` is the first commit, holding code and a spec
+- **When** the check runs
+- **Then** `git commit --amend --no-edit` passes
 
 ### A real commit is refused through the hook
 

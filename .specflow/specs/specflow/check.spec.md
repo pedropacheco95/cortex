@@ -38,11 +38,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    - `code`: everything else, config included
 
    `generated` paths are ignored by every rule.
-4. **The diff.** The commit's changes are `git diff --cached --name-only --no-renames <base>`, where `<base>` is `HEAD`. A rename counts as a delete and an add. With `git commit --amend`, `<base>` is `HEAD^` (the marker of `specflow.git-hooks` Rule 4). A repository with no `HEAD` is allowed unjudged.
-5. **Rule items.** A spec's *rules* are the numbered items under its heading titled exactly `Rules`, at any heading level. Its *criteria* are as `specflow.index` Rule 2 defines them. Text is compared after collapsing whitespace and removing `**`. Only files under `specflow/impl/` count; promises are outside the check (P7). An item is:
+4. **The diff.** The commit's changes are `git diff --cached --name-only --no-renames <base>`, where `<base>` is `HEAD`. A rename counts as a delete and an add. With `git commit --amend` (the marker of `specflow.git-hooks` Rule 4), it is judged from `HEAD`'s parents: `<base>` is the one parent, an amended merge is judged as in Rule 14, and an amended first commit is not judged. A repository with no `HEAD` is allowed unjudged.
+5. **Rule items.** A spec's *rules* are the numbered items (`1.` or `1)`, indented up to 3 spaces, CRLF or LF) under its heading titled exactly `Rules`, at any heading level. Lines inside a closed fence are not items. Its *criteria* are as `specflow.index` Rule 2 defines them. Text is compared after collapsing whitespace and removing `**`. Only files under `specflow/impl/` count; promises are outside the check (P7). An item is:
    - **A criterion** is matched by id: **added** when its id is new, **changed** when the same id has different text, **removed** when its id is gone.
+   - **A repeated criterion id** in a spec keeps every text, so an edit to either is seen.
    - **A rule** is matched by text, so renumbering alone changes nothing. A base rule whose text no longer appears anywhere in the staged list is **changed** if its base number still exists, and **removed** if not. It is always named by its base number. A staged rule whose text is not in the base is **added**. New: the bench keyed rules by number, which made every rule after an insertion an amendment.
-   - **Specs are paired by `id`,** not path, so moving a spec file changes no item.
+   - **A moved spec keeps its items:** a deleted spec file and an added one with the same `id` are one spec, so a move changes no item. Any other file is compared with itself, so an added copy hides nothing.
    - An **amendment** is a changed or removed item. A commit that edits a rule and inserts another still needs the trailer for the edited rule's base number.
    - **A retired spec has no items.** A spec with `status: retired` in both the base and the staged tree is never judged, so correcting a record needs no trailer. A commit that sets `status: retired` removes every item the spec had, and a commit that clears it adds them. So retiring a spec cannot share a commit with code (Rule 9).
 6. **Rule (a) code-needs-test.** A commit with a `code` path and no `test` path is refused. Measured. Always on.
@@ -53,13 +54,13 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    - **Limit:** the refusal comes at push, not at commit. In a repository that rarely pushes it arrives late, after many commits; until then (c) is a warning only.
    - **OPEN:** that commit mode never refuses (c) is a recommendation awaiting the owner, who also decides the `pre-push` hook. The plan's wording was "refuses".
 9. **Rule (d) spec-commit-alone.** A commit with any added, changed or removed rule or criterion and any `code` path is refused. Edits to other sections of a spec (Intent, Notes) may share a commit with code. Measured. Always on.
-10. **Rule (e) amend-needs-trailer.** Each amendment needs a `Specflow-Amends:` trailer in the commit message that names it exactly: `<spec-id>#rule-<n>` or `<spec-id>#<criterion-id>`, with a non-empty reason (schema S10). An added item needs none (A14). One trailer `<spec-id>#retired` covers every item a commit removes by retiring that spec. Measured as a record; the refusal is new. Always on.
+10. **Rule (e) amend-needs-trailer.** Each amendment needs a `Specflow-Amends:` trailer in the commit message that names it exactly: `<spec-id>#rule-<n>` or `<spec-id>#<criterion-id>`, with a non-empty reason (schema S10). A trailer is a line of the message's last paragraph, and never the subject; `#` lines and anything below a scissors line are not read. An added item needs none (A14). One trailer `<spec-id>#retired` covers every item a commit removes by retiring that spec. Measured as a record; the refusal is new. Always on.
 11. **Rule (f) touched-criteria.** For each `code` path, the check lists the criteria whose tagged test files statically reach it, by following relative imports transitively from each tagged test file (JS and TS `import`, `export … from`, `require`; Python `import` and `from … import`, resolved against the test file's folder and the repository root). Unresolved imports are skipped. It lists at most 20 criteria and then `… and <n> more`. New. Warns only, in commit mode and in each range block. Needs tags, so it lists nothing where no test is tagged.
 12. **Rule (g) stale-literal.** For each constant whose value changed in a `constants.md`, the check lists tracked files outside `specflow/` that still hold the old value as a whole word (`git grep -w -F`), at most 20. An old value shorter than 2 characters is not searched, and the warning says so. New. Warns only.
 13. **Rule levels.** Rules (a), (d), (e) always refuse and (f), (g) always warn. `specflow.rules.b` and `.c` take `off`, `warn` or `refuse`, and an absent key means `off` (A11). The config cannot turn off a measured rule. The lint rule `lint.rules-early` guards turning (b) or (c) on early.
 14. **Merge commits.** In `--commit-msg` mode, when `MERGE_HEAD` exists, the check judges only what the merge adds beyond the automatic merge: the staged tree against the `git merge-tree --write-tree` result of merging each `MERGE_HEAD` in turn, minus files that conflicted. A conflict resolution is not judged. A clean merge therefore passes.
-15. **Range mode.** Commits come from `git rev-list --reverse <base>..<head>`, leaving out `specflow.since` and its ancestors when that key is set (`specflow.git-hooks` Rule 10): commits made before the hooks existed are never judged. Each non-merge commit is judged against its first parent, using its own message. A merge commit is judged as in Rule 14, from its parents. Rule (c) then runs once over the whole range. Output has one block per commit with a verdict, headed by its short hash and subject. Each block ends `specflow: allowed (<short hash>)` or the refusal. An empty range prints `specflow: 0 commits in range` to stderr and exits 0. Range mode exits 1 if any commit is refused.
-16. **No `specflow/` folder.** `cortex/cortex.json` is read from the working tree in every mode. With no `specflow/` folder, the check prints `specflow: no specflow/ folder here; nothing was checked` to stderr and exits 0. It never passes silently.
+15. **Range mode.** Commits come from `git rev-list --reverse <base>..<head>`, leaving out `specflow.since` and its ancestors when that key is set (`specflow.git-hooks` Rule 10): commits made before the hooks existed are never judged. A `since` not in this clone warns, and the whole range is judged. Each non-merge commit is judged against its first parent, using its own message. A merge commit is judged as in Rule 14, from its parents. Rule (c) then runs once over the whole range. Output has one block per commit with a verdict, headed by its short hash and subject. Each block ends `specflow: allowed (<short hash>)` or the refusal. An empty range prints `specflow: 0 commits in range` to stderr and exits 0. Range mode exits 1 if any commit is refused.
+16. **No `specflow/` folder.** The check runs from the repository's top level, wherever it is called. `cortex/cortex.json` is read from the working tree in every mode. With no `specflow/` folder in the working tree or in `HEAD`, the check prints `specflow: no specflow/ folder here; nothing was checked` to stderr and exits 0. It never passes silently.
 17. **Messages.** Verdicts go to stderr. A refusal prints `specflow: REFUSED (<commit|merge commit|<short hash>|range>)` and then one line per refused rule, exactly as in the table below. A warning prints `specflow: warning: <text>`. At most 8 paths or items are named, then ` …`.
 
     | Rule | Line |
@@ -375,6 +376,102 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** a `cortex/cortex.json` that does not parse
 - **When** `--commit-msg` runs
 - **Then** it exits 2, stderr starts `specflow: internal error in the check (not a verdict on your change):`, and `events.jsonl` gains a line with `outcome` `error`
+
+### A js frontmatter runs nothing and the commit is still judged
+
+- **Given** a staged spec opening `---js`, with code that would write a file, and `src/a.ts` with no test
+- **When** the check runs
+- **Then** it exits 1 with the rule (a) line, and the file was not written
+
+### A line that only starts with a fence token hides nothing
+
+- **Given** a spec whose Intent has a line opening ```` ```inline``` ````, and a reworded rule with code and a test
+- **When** the check runs
+- **Then** it exits 1
+
+### A fence never closed hides nothing
+
+- **Given** a spec with a fence that never closes, and a reworded rule below it with code and a test
+- **When** the check runs
+- **Then** it exits 1
+
+### A real fence still hides what it holds
+
+- **Given** a numbered line inside a closed fence changed, with code and a test
+- **When** the check runs
+- **Then** it exits 0
+
+### Two criteria with one id do not hide an edit
+
+- **Given** a spec with two criteria sharing an id, the first edited, with code and a test
+- **When** the check runs
+- **Then** it exits 1
+
+### An added copy of a spec does not hide an edit to the original
+
+- **Given** an added copy of a spec staged with an edit to the original, code and a test
+- **When** the check runs
+- **Then** it exits 1 naming the edited criterion
+
+### A rule change is named once
+
+- **Given** a reworded rule with code and a test
+- **When** the check runs
+- **Then** the rule (d) line names it once
+
+### A trailer counts only in the last paragraph
+
+- **Given** a `Specflow-Amends:` line as the subject, and another inside a body paragraph
+- **When** the check runs
+- **Then** each is refused by rule (e)
+
+### A comment after the trailers and a scissors line do not hide them
+
+- **Given** a message with its trailer, then `#` lines and a scissors line
+- **When** the check runs
+- **Then** it exits 0
+
+### Every way of marking a case is read by rule (b)
+
+- **Given** `specflow.rules.b` is `refuse` and a staged untagged case using `it.skipIf(…)`, `it.runIf(…)`, `it.failing`, `xit` or `fit`
+- **When** the check runs
+- **Then** each exits 1
+
+### Cases with one name are told apart
+
+- **Given** `specflow.rules.c` is `refuse`, two cases with one name, and a range that only adds a comment outside them
+- **When** the check runs
+- **Then** the range is refused by rule (c)
+
+### A merge of unrelated histories is judged, not an error
+
+- **Given** a merge of unrelated histories in progress, adding only docs
+- **When** the check runs
+- **Then** it exits 0
+
+### A since not in this clone warns and judges the range
+
+- **Given** a `specflow.since` that is not in the clone, and a code-only commit in the range
+- **When** the check runs
+- **Then** it warns and exits 1
+
+### Removing specflow/ with code is still judged
+
+- **Given** `specflow/` removed and `src/b.ts` staged
+- **When** the check runs
+- **Then** it exits 1
+
+### Run from a subfolder, the check finds the repository
+
+- **Given** `src/b.ts` staged and the check run from `src/`
+- **When** the check runs
+- **Then** it exits 1
+
+### Rules are seen in every list form
+
+- **Given** a spec in CRLF, with `1)` numbering, with indented numbers, or with a closed `## Rules ##` heading, and a reworded rule with code and a test
+- **When** the check runs
+- **Then** each exits 1 naming the rule
 
 ### Bad arguments are a usage error
 
