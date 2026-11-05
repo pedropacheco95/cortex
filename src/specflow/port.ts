@@ -135,6 +135,10 @@ function refusal(root: string): string | { layout: Layout } {
     if (fs.existsSync(path.join(root, t))) return `${t}/ already exists`;
   }
   if (!fs.existsSync(path.join(root, 'cortex/cortex.json'))) return 'no cortex/cortex.json; run cortex store init first';
+  const store = JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf-8')) as { migration?: { accepted?: unknown } };
+  if (store.migration?.accepted === null && fs.existsSync(path.join(root, '.cortex/cortex.config.json'))) {
+    return 'the migration is not accepted; finish it with cortex migrate --accept first';
+  }
   const dirty = git(root, 'status', '--porcelain', '--', layout.dev, layout.business, ...(layout.staleIndex ? [layout.staleIndex] : []));
   if (dirty.trim() !== '') return `uncommitted changes under the spec tree:\n${dirty.trimEnd()}`;
   return { layout };

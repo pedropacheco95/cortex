@@ -291,6 +291,20 @@ describe('specflow.git-hooks: real commits', () => {
     expect(r.stderr).toContain('specflow: cortex not found on PATH');
   });
 
+  it('A cortex too old for the hooks says what to do', () => {
+    const root = installed();
+    const old = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-old-'));
+    write(old, 'cortex', '#!/bin/sh\necho "Usage: cortex <verb> [options]"\nexit 2\n', 0o755);
+    write(root, 'README.md', 'x');
+    git(root, ['add', '-A']);
+    const before = head(root);
+    const r = spawnSync('git', ['commit', '-m', 'x'], { cwd: root, encoding: 'utf-8', env: { ...env(false), PATH: `${old}:${env(false)['PATH']}` } });
+    fs.rmSync(old, { recursive: true, force: true });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain('specflow: the check could not run (exit 2).');
+    expect(head(root)).toBe(before);
+  });
+
   it('A failed INDEX refresh does not stop a commit', () => {
     const root = installed();
     const fake = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-fake-'));
@@ -445,4 +459,109 @@ describe('specflow.git-hooks: push', () => {
     git(root, ['push', '-q', 'origin', 'main']);
     expect(fs.readFileSync(path.join(root, 'seen'), 'utf-8')).toContain('refs/heads/main');
   });
+});
+
+describe('specflow.check Rule 19: the commit order table', () => {
+  const SPEC = 'specflow/impl/billing/refunds.spec.md';
+  const body = (crit: string, extra = ''): string =>
+    `---\nid: billing.refunds\nstatus: draft\n---\n\n## Intent\n\nWhy.${extra}\n\n## Rules\n\n1. One.\n\n## Acceptance Criteria\n\n${crit}`;
+  const A = '### BILLING-REFUNDS-1: A\n\n- **Then** ok\n';
+  const A2 = '### BILLING-REFUNDS-1: A changed\n\n- **Then** ok\n';
+  const B = '\n### BILLING-REFUNDS-2: B\n\n- **Then** ok\n';
+  const NEW = '\n### BILLING-REFUNDS-3: C\n\n- **Then** ok\n';
+  const AMEND = 'amend\n\nSpecflow-Amends: billing.refunds#BILLING-REFUNDS-1 — why\n';
+  const T1 = (n: number): string => `it('[BILLING-REFUNDS-1] t', () => { v(${n}); });\n`;
+  const T2 = (n: number): string => `it('[BILLING-REFUNDS-2] u', () => { v(${n}); });\n`;
+
+  function table(): string {
+    const root = repo();
+    write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', specflow: { rules: { b: 'refuse', c: 'refuse' }, tests: [{ runner: 'vitest', include: ['tests/**/*.test.ts'] }] } }));
+    write(root, SPEC, body(A + B));
+    write(root, 'tests/a.test.ts', T1(0));
+    write(root, 'tests/b.test.ts', T2(0));
+    write(root, 'src/a.ts', '0');
+    install(root);
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '--no-verify', '-m', 'base']);
+    git(root, ['commit', '-q', '--no-verify', '--allow-empty', '-m', 'so HEAD changed no test']);
+    git(root, ['checkout', '-q', '-b', 'work']);
+    return root;
+  }
+  function attempt(root: string, files: Record<string, string>, message = 'c'): { code: number | null; stderr: string } {
+    for (const [f, t] of Object.entries(files)) write(root, f, t);
+    git(root, ['add', '-A']);
+    return git(root, ['commit', '-m', message]);
+  }
+  const check = (root: string): { status: number | null; stderr: string } =>
+    spawnSync(path.join(bin, 'cortex'), ['check', '--range', 'main..HEAD'], { cwd: root, encoding: 'utf-8', env: env() });
+
+  it('The commit order table holds in real commits', () => {
+    const commit = (name: string, run: (root: string) => void): void => {
+      const root = table();
+      try {
+        run(root);
+      } catch (e) {
+        (e as Error).message = `${name}: ${(e as Error).message}`;
+        throw e;
+      }
+    };
+    commit('new behaviour', (r) => {
+      expect(attempt(r, { [SPEC]: body(A + B + NEW) }).code).toBe(0);
+      expect(attempt(r, { 'src/a.ts': '1', 'tests/c.test.ts': "it('[BILLING-REFUNDS-3] w', f);\n" }).code).toBe(0);
+      expect(check(r).status).toBe(0);
+    });
+    commit('test first', (r) => {
+      expect(attempt(r, { [SPEC]: body(A2 + B), 'tests/a.test.ts': T1(1) }, AMEND).code).toBe(0);
+      expect(attempt(r, { 'src/a.ts': '1', 'tests/a.test.ts': T1(2) }).code).toBe(0);
+    });
+    commit('test first, one test only', (r) => {
+      expect(attempt(r, { [SPEC]: body(A2 + B), 'tests/a.test.ts': T1(1) }, AMEND).code).toBe(0);
+      const second = attempt(r, { 'src/a.ts': '1' });
+      expect(second.code).not.toBe(0);
+      expect(second.stderr).toContain('rule (a)');
+    });
+    commit('code first', (r) => {
+      expect(attempt(r, { 'src/a.ts': '1', 'tests/a.test.ts': T1(1) }).code).toBe(0);
+      const spec = attempt(r, { [SPEC]: body(A2 + B) }, AMEND);
+      expect(spec.code).toBe(0);
+      expect(spec.stderr).not.toContain('criterion text changed');
+    });
+    commit('spec first', (r) => {
+      const spec = attempt(r, { [SPEC]: body(A2 + B) }, AMEND);
+      expect(spec.code).toBe(0);
+      expect(spec.stderr).toContain('criterion text changed with no tagged test changed yet');
+      expect(attempt(r, { 'src/a.ts': '1', 'tests/a.test.ts': T1(1) }).code).toBe(0);
+      expect(check(r).status).toBe(0);
+    });
+    commit('tagged test never changed', (r) => {
+      expect(attempt(r, { [SPEC]: body(A2 + B) }, AMEND).stderr).toContain('no tagged test changed yet');
+      expect(attempt(r, { 'src/a.ts': '1', 'tests/b.test.ts': T2(1) }).code).toBe(0);
+      const range = check(r);
+      expect(range.status).toBe(1);
+      expect(range.stderr).toContain('rule (c)');
+    });
+    commit('everything at once', (r) => {
+      const all = attempt(r, { [SPEC]: body(A2 + B), 'src/a.ts': '1', 'tests/a.test.ts': T1(1) }, AMEND);
+      expect(all.code).not.toBe(0);
+      expect(all.stderr).toContain('rule (d)');
+    });
+    commit('code only', (r) => {
+      const only = attempt(r, { 'src/a.ts': '1' });
+      expect(only.code).not.toBe(0);
+      expect(only.stderr).toContain('rule (a)');
+    });
+    commit('install or turn a rule on', (r) => {
+      const config = JSON.parse(fs.readFileSync(path.join(r, 'cortex/cortex.json'), 'utf-8'));
+      config.specflow.rules.b = 'warn';
+      expect(attempt(r, { 'cortex/cortex.json': JSON.stringify(config) }).code).toBe(0);
+    });
+    commit('amendment without a trailer', (r) => {
+      const none = attempt(r, { [SPEC]: body(A2 + B) });
+      expect(none.code).not.toBe(0);
+      expect(none.stderr).toContain('rule (e)');
+    });
+    commit('reword Intent with code', (r) => {
+      expect(attempt(r, { [SPEC]: body(A + B, ' More.'), 'src/a.ts': '1', 'tests/a.test.ts': T1(1) }).code).toBe(0);
+    });
+  }, 60_000);
 });

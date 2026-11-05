@@ -120,8 +120,8 @@ function firstOf(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-export function testCases(tree: Tree, config: SpecflowConfig): TestCase[] {
-  const runners = selectTestFiles(tree.list(), config.tests ?? []);
+export function testCases(tree: Tree, config: SpecflowConfig, only?: Set<string>): TestCase[] {
+  const runners = selectTestFiles(only ? [...only] : tree.list(), config.tests ?? []);
   const files = [...runners.keys()].sort();
   tree.prefetch?.(files);
   const cases: TestCase[] = [];

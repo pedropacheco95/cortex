@@ -1,6 +1,6 @@
 ---
 id: specflow.check
-status: implementing
+status: implemented
 depends_on:
   - specflow.index
   - core-cli.init
@@ -55,7 +55,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 9. **Rule (d) spec-commit-alone.** A commit with any added, changed or removed rule or criterion and any `code` path is refused. Edits to other sections of a spec (Intent, Notes) may share a commit with code. Measured. Always on.
 10. **Rule (e) amend-needs-trailer.** Each amendment needs a `Specflow-Amends:` trailer in the commit message that names it exactly: `<spec-id>#rule-<n>` or `<spec-id>#<criterion-id>`, with a non-empty reason (schema S10). An added item needs none (A14). One trailer `<spec-id>#retired` covers every item a commit removes by retiring that spec. Measured as a record; the refusal is new. Always on.
 11. **Rule (f) touched-criteria.** For each `code` path, the check lists the criteria whose tagged test files statically reach it, by following relative imports transitively from each tagged test file (JS and TS `import`, `export … from`, `require`; Python `import` and `from … import`, resolved against the test file's folder and the repository root). Unresolved imports are skipped. It lists at most 20 criteria and then `… and <n> more`. New. Warns only. Needs tags, so it lists nothing where no test is tagged.
-12. **Rule (g) stale-literal.** For each constant whose value changed in a `constants.md`, the check lists tracked files outside `specflow/` that still hold the old value as a whole word (`git grep -w -F`), at most 20. An old value shorter than 3 characters is not searched, and the warning says so. New. Warns only.
+12. **Rule (g) stale-literal.** For each constant whose value changed in a `constants.md`, the check lists tracked files outside `specflow/` that still hold the old value as a whole word (`git grep -w -F`), at most 20. An old value shorter than 2 characters is not searched, and the warning says so. New. Warns only.
 13. **Rule levels.** Rules (a), (d), (e) always refuse and (f), (g) always warn. `specflow.rules.b` and `.c` take `off`, `warn` or `refuse`, and an absent key means `off` (A11). The config cannot turn off a measured rule. The lint rule `lint.rules-early` guards turning (b) or (c) on early.
 14. **Merge commits.** In `--commit-msg` mode, when `MERGE_HEAD` exists, the check judges only what the merge adds beyond the automatic merge: the staged tree against the `git merge-tree --write-tree` result of merging each `MERGE_HEAD` in turn, minus files that conflicted. A conflict resolution is not judged. A clean merge therefore passes.
 15. **Range mode.** Commits come from `git rev-list --reverse <base>..<head>`, leaving out `specflow.since` and its ancestors when that key is set (`specflow.git-hooks` Rule 10): commits made before the hooks existed are never judged. Each non-merge commit is judged against its first parent, using its own message. A merge commit is judged as in Rule 14, from its parents. Rule (c) then runs once over the whole range. Output has one block per commit with a verdict, headed by its short hash and subject. Each block ends `specflow: allowed (<short hash>)` or the refusal. An empty range prints `specflow: 0 commits in range` to stderr and exits 0. Range mode exits 1 if any commit is refused.

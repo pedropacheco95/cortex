@@ -36,7 +36,7 @@ The check only works if git calls it, and a hook that silently does not run read
    - a remote sha not known locally (a force-push over commits never fetched) is treated as a new remote ref.
 
    **OPEN:** this hook is not in the plan; the owner decides it with `specflow.check` Rule 8.
-7. **Missing binary.** Every hook that calls `cortex` first tests `command -v cortex`. If it is absent, `commit-msg` and `pre-push` print `specflow: cortex not found on PATH; the check cannot run. Install it, or use --no-verify and say so.` and exit 1. `pre-commit` and `pre-merge-commit` print a warning and exit 0. A check that cannot run never reads as a pass.
+7. **Missing binary.** Every hook that calls `cortex` first tests `command -v cortex`. If it is absent, `commit-msg` and `pre-push` print `specflow: cortex not found on PATH; the check cannot run. Install it, or use --no-verify and say so.` and exit 1. `pre-commit` and `pre-merge-commit` print a warning and exit 0. A check that cannot run never reads as a pass. When `cortex check` exits 2 or above (an internal error, or a `cortex` too old to know the verb), `commit-msg` and `pre-push` add `specflow: the check could not run (exit <n>). If cortex is older than these hooks, update it and try again; or use --no-verify and say so.` and exit with that code.
 8. **A hooks path already set.** If `core.hooksPath` is set to anything other than `.githooks`, the command changes nothing, prints `specflow: core.hooksPath is already <value>; add these hooks there by hand`, lists what each hook must call, and exits 1.
 9. **Limit.** The `pre-push` check runs only when something is pushed, so in a repository that rarely pushes its refusal arrives late: a commit made with `--no-verify`, or a rule (c) gap, can sit unnoticed for many commits. `cortex check --range` can be run at any time to see it sooner.
 10. **Where judging starts.** On first install, the command writes `specflow.since` to `cortex/cortex.json`: the hash of `HEAD` at that moment. A later install leaves it unchanged, and `cortex sync`'s hook refresh (`core-cli.sync` Rule 21) never writes it, since sync writes nothing else under `cortex/`. Range mode skips that commit and its ancestors, because commits made before the hooks existed were never held to the rules. A repository with no commit gets no `since`, and neither does one with no `cortex/cortex.json`; the install still succeeds.
@@ -87,6 +87,12 @@ The check only works if git calls it, and a hook that silently does not run read
 - **Given** the hooks are installed and `PATH` holds no `cortex`
 - **When** `git commit -m x` runs
 - **Then** git exits non-zero and stderr carries `specflow: cortex not found on PATH`
+
+### A cortex too old for the hooks says what to do
+
+- **Given** the hooks are installed and a `cortex` on `PATH` that prints usage and exits 2 for every verb
+- **When** `git commit -m x` runs
+- **Then** git exits non-zero, no commit is created, and stderr carries `specflow: the check could not run (exit 2).`
 
 ### A failed INDEX refresh does not stop a commit
 

@@ -12,7 +12,11 @@ export interface TestCase {
   tags: string[];
   /** A name built at run time with no static tag: counted, not a case (Rule 5). */
   dynamic?: boolean;
+  /** The case's source, whitespace collapsed: what the check compares. */
+  body?: string;
 }
+
+const collapse = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
 const CASE_MODIFIERS = new Set(['skip', 'todo', 'only', 'concurrent', 'sequential', 'fails', 'each']);
 const REGEX_MAY_FOLLOW = '(,=:[!&|?{};\n';
@@ -183,6 +187,7 @@ export function scanJsCases(file: string, src: string): TestCase[] {
             skipped: mods.includes('skip') || mods.includes('todo') || parens.includes(true),
             tags,
             dynamic: tags.length === 0 && (name === null || name.built || each),
+            body: collapse(src.slice(start, src[nameCall] === '(' ? skipCall(src, nameCall) : nameCall)),
           });
         }
       }
@@ -235,12 +240,19 @@ export function scanPytestCases(file: string, src: string): TestCase[] {
           if (!d.startsWith('@pytest.mark.criterion')) continue;
           for (const m of d.matchAll(/["']([^"']+)["']/g)) tags.push(m[1] as string);
         }
+        let last = n + 1;
+        while (last < lines.length) {
+          const next = lines[last] as string;
+          if (next.trim() !== '' && next.length - next.trimStart().length <= indent) break;
+          last += 1;
+        }
         cases.push({
           file,
           name,
           line: n + 1,
           skipped: decorators.some((d) => /^@pytest\.mark\.skip(if)?\b/.test(d)),
           tags,
+          body: collapse(lines.slice(n, last).join('\n')),
         });
       }
       scopes.push({ indent, isClass: false });

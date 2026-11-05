@@ -36,6 +36,7 @@ function stdinShim(name: string, command: string): string {
     'fi',
     REFUSING_START,
     `printf '%s\\n' "$input" | ${command}`,
+    COULD_NOT_RUN,
     '',
   ].join('\n');
 }
@@ -44,6 +45,12 @@ const REFUSING_START = `if ! command -v cortex >/dev/null 2>&1; then
   echo "${NOT_FOUND}" >&2
   exit 1
 fi`;
+
+const COULD_NOT_RUN = `code=$?
+if [ "$code" -ge 2 ]; then
+  echo "specflow: the check could not run (exit $code). If cortex is older than these hooks, update it and try again; or use --no-verify and say so." >&2
+fi
+exit $code`;
 
 const REFRESH_INDEX = `[ -d specflow ] || exit 0
 if ! command -v cortex >/dev/null 2>&1; then
@@ -54,7 +61,7 @@ cortex specs index --staged || echo "specflow: warning: specflow/INDEX.md was no
 exit 0`;
 
 const HOOKS: Record<string, string> = {
-  'commit-msg': `${REFUSING_START}\nexec cortex check --commit-msg "$1"`,
+  'commit-msg': `${REFUSING_START}\ncortex check --commit-msg "$1"\n${COULD_NOT_RUN}`,
   'prepare-commit-msg': `if [ "$2" = "commit" ] && [ "$3" = "HEAD" ]; then
   git rev-parse HEAD > "$(git rev-parse --git-path specflow-amend)"
 fi

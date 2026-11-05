@@ -6,9 +6,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync, spawnSync } from 'child_process';
-import { type SpecflowConfig, readConfig } from '../model/model.js';
+import { type SpecflowConfig, buildModel, readConfig, testCases } from '../model/model.js';
+import type { TestCase } from '../model/tests.js';
 import { type Tree, gitTree, workTree } from '../model/tree.js';
 import { classifier } from './classify.js';
+import { staleLiterals } from './constants.js';
+import { touchedCriteria } from './imports.js';
 import { itemChanges } from './items.js';
 import { Log } from './log.js';
 import { type Refusal, amendTrailers, judge, trailerFor } from './rules.js';
@@ -71,21 +74,85 @@ function automaticMerge(root: string, first: string, heads: string[]): { tree: s
   return { tree, conflicted };
 }
 
-interface Judged {
-  refusals: Refusal[];
-  amended: { spec: string; file: string; item: string; change: string; trailer: string }[];
+interface Warning {
+  letter: string;
+  text: string;
 }
 
-function judgeChange(paths: string[], base: Tree, head: Tree, config: SpecflowConfig, message: string): Judged {
+interface Judged {
+  refusals: Refusal[];
+  warnings: Warning[];
+  amended: { spec: string; file: string; item: string; change: string; trailer: string }[];
+  /** Criteria whose text changed, and the ids of tests added or changed: rule (c)'s two sides. */
+  changedCriteria: string[];
+  testedIds: Set<string>;
+}
+
+const MAX_TOUCHED = 20;
+const MAX_NAMED = 8;
+const level = (config: SpecflowConfig, letter: string): string => config.rules?.[letter] ?? 'off';
+
+function named(list: string[]): string {
+  const shown = list.slice(0, MAX_NAMED).join(', ');
+  return list.length > MAX_NAMED ? `${shown} …` : shown;
+}
+
+/** Cases added or changed between two trees, over the changed test files. */
+function changedCases(paths: string[], base: Tree, head: Tree, config: SpecflowConfig): TestCase[] {
+  const only = new Set(paths);
+  const before = new Map(testCases(base, config, only).map((c) => [`${c.file}\0${c.name}`, c]));
+  return testCases(head, config, only).filter((c) => {
+    if (c.dynamic) return false;
+    const old = before.get(`${c.file}\0${c.name}`);
+    return !old || old.body !== c.body || old.tags.join() !== c.tags.join();
+  });
+}
+
+function judgeChange(root: string, paths: string[], base: Tree, head: Tree, at: string, config: SpecflowConfig, message: string): Judged {
   const classOf = classifier(config.tests ?? []);
   const items = itemChanges(paths, base, head);
   const trailers = amendTrailers(message);
+  const refusals = judge(paths, classOf, items, message);
+  const warnings: Warning[] = [];
+  const cases = changedCases(paths, base, head, config);
+  const code = paths.filter((p) => classOf(p) === 'code');
+  const b = level(config, 'b');
+  const model = b !== 'off' || code.length > 0 ? buildModel(head, config) : null;
+
+  if (b !== 'off' && model) {
+    const known = new Set(model.specs.flatMap((s) => s.criteria.map((c) => c.id)));
+    const bad = cases.filter((c) => !c.tags.some((t) => known.has(t))).map((c) => `${c.file} › ${c.name}`);
+    if (bad.length > 0 && b === 'refuse') {
+      refusals.push({ letter: 'b', line: `- rule (b) test-needs-tag: test case without a resolving criterion tag: ${named(bad)}. Start its name with [CRIT-ID]; see specflow/INDEX.md.` });
+    } else if (bad.length > 0) {
+      warnings.push({ letter: 'b', text: `test case without a resolving criterion tag: ${named(bad)}` });
+    }
+  }
+  if (model && code.length > 0) {
+    const touched = touchedCriteria(code, model, head);
+    if (touched.length > 0) {
+      const shown = touched.slice(0, MAX_TOUCHED).join(', ');
+      const more = touched.length > MAX_TOUCHED ? ` … and ${touched.length - MAX_TOUCHED} more` : '';
+      warnings.push({ letter: 'f', text: `this change touches criteria: ${shown}${more}` });
+    }
+  }
+  for (const text of staleLiterals(root, paths, base, head, at)) warnings.push({ letter: 'g', text });
   return {
-    refusals: judge(paths, classOf, items, message),
+    refusals,
+    warnings,
     amended: items
       .filter((i) => i.change !== 'added')
       .map((i) => ({ spec: i.spec, file: i.file, item: i.item, change: i.change, trailer: trailerFor(i, trailers) ?? '' })),
+    changedCriteria: items.filter((i) => i.change === 'changed' && !i.item.startsWith('rule-')).map((i) => i.item),
+    testedIds: new Set(cases.flatMap((c) => c.tags)),
   };
+}
+
+/** The tagged tests `HEAD` itself changed: rule (c) in commit mode looks one commit back. */
+function testedInHead(root: string, config: SpecflowConfig): Set<string> {
+  const parent = has(root, 'HEAD^') ? 'HEAD^' : emptyTree(root);
+  const paths = zList(git(root, 'diff', '--name-only', '--no-renames', '-z', parent, 'HEAD'));
+  return new Set(changedCases(paths, gitTree(root, parent), gitTree(root, 'HEAD'), config).flatMap((c) => c.tags));
 }
 
 function amendBase(root: string): string | null {
@@ -123,19 +190,28 @@ function commitMode(root: string, messageFile: string, config: SpecflowConfig, l
     base = amendBase(root) ?? 'HEAD';
   }
   const paths = zList(git(root, 'diff', '--cached', '--name-only', '--no-renames', '-z', base)).filter((p) => !skip.has(p));
-  const { refusals, amended } = judgeChange(paths, gitTree(root, base), gitTree(root, ''), config, message);
+  const { refusals, warnings, amended, changedCriteria, testedIds } = judgeChange(root, paths, gitTree(root, base), gitTree(root, ''), '', config, message);
+  if (level(config, 'c') !== 'off' && changedCriteria.length > 0) {
+    const inHead = testedInHead(root, config);
+    const open = changedCriteria.filter((id) => !testedIds.has(id) && !inHead.has(id));
+    if (open.length > 0) {
+      warnings.push({ letter: 'c', text: `criterion text changed with no tagged test changed yet: ${named(open)}. The range check refuses this if the change ends without one.` });
+    }
+  }
+  for (const w of warnings) err(`specflow: warning: ${w.text}`);
+  const warned = warnings.map((w) => w.letter);
   if (refusals.length > 0) {
     err(`specflow: REFUSED (${kind === 'merge' ? 'merge commit' : 'commit'})`);
     for (const r of refusals) err(r.line);
-    log.event({ subject, kind, outcome: 'refused', rules: refusals.map((r) => r.letter), warned: [], reasons: refusals.map((r) => r.line) });
+    log.event({ subject, kind, outcome: 'refused', rules: refusals.map((r) => r.letter), warned, reasons: refusals.map((r) => r.line) });
     return 1;
   }
-  log.event({ subject, kind, outcome: 'allowed', rules: [], warned: [], reasons: [] });
+  log.event({ subject, kind, outcome: 'allowed', rules: [], warned, reasons: warnings.map((w) => w.text) });
   for (const a of amended) log.amendment({ subject, ...a });
   return 0;
 }
 
-function judgeCommit(root: string, sha: string, config: SpecflowConfig): Refusal[] {
+function judgeCommit(root: string, sha: string, config: SpecflowConfig): Judged {
   const parents = git(root, 'rev-list', '--parents', '-n', '1', sha).trim().split(' ').slice(1);
   const message = git(root, 'log', '-1', '--format=%B', sha);
   let base = parents[0] ?? emptyTree(root);
@@ -146,7 +222,7 @@ function judgeCommit(root: string, sha: string, config: SpecflowConfig): Refusal
     skip = merged.conflicted;
   }
   const paths = zList(git(root, 'diff', '--name-only', '--no-renames', '-z', base, sha)).filter((p) => !skip.has(p));
-  return judgeChange(paths, gitTree(root, base), gitTree(root, sha), config, message).refusals;
+  return judgeChange(root, paths, gitTree(root, base), gitTree(root, sha), sha, config, message);
 }
 
 function rangeMode(root: string, range: string, config: SpecflowConfig, log: Log, err: (l: string) => void): number {
@@ -158,11 +234,16 @@ function rangeMode(root: string, range: string, config: SpecflowConfig, log: Log
     return 0;
   }
   let refused = false;
+  const changed = new Set<string>();
+  const tested = new Set<string>();
   for (const sha of commits) {
     const short = git(root, 'rev-parse', '--short', sha).trim();
     const subject = git(root, 'log', '-1', '--format=%s', sha).trim();
     err(`${short} ${subject}`);
-    const refusals = judgeCommit(root, sha, config);
+    const { refusals, warnings, changedCriteria, testedIds } = judgeCommit(root, sha, config);
+    for (const id of changedCriteria) changed.add(id);
+    for (const id of testedIds) tested.add(id);
+    for (const w of warnings) err(`specflow: warning: ${w.text}`);
     if (refusals.length > 0) {
       refused = true;
       err(`specflow: REFUSED (${short})`);
@@ -175,9 +256,22 @@ function rangeMode(root: string, range: string, config: SpecflowConfig, log: Log
       kind: 'range',
       outcome: refusals.length > 0 ? 'refused' : 'allowed',
       rules: refusals.map((r) => r.letter),
-      warned: [],
+      warned: warnings.map((w) => w.letter),
       reasons: refusals.map((r) => r.line),
     });
+  }
+  const c = level(config, 'c');
+  const open = [...changed].filter((id) => !tested.has(id));
+  if (c !== 'off' && open.length > 0) {
+    const text = `criterion text changed with no tagged test changed: ${named(open)}. Change the test that proves it.`;
+    if (c === 'refuse') {
+      refused = true;
+      err('specflow: REFUSED (range)');
+      err(`- rule (c) criterion-needs-test: ${text}`);
+      log.event({ subject: range, kind: 'range', outcome: 'refused', rules: ['c'], warned: [], reasons: [text] });
+    } else {
+      err(`specflow: warning: ${text}`);
+    }
   }
   return refused ? 1 : 0;
 }

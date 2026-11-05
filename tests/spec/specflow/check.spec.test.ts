@@ -539,3 +539,181 @@ describe('specflow.check: the log', () => {
     expect(r.err).toContain('specflow: warning:');
   });
 });
+
+describe('specflow.check: rule (b)', () => {
+  const config = (b: string) => ({ rules: { b } });
+
+  it('An untagged changed test is refused when rule (b) is on', () => {
+    const root = repo(config('refuse'));
+    stage(root, { 'tests/a.test.ts': "it('adds up', f);\n" });
+    const r = run(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('- rule (b) test-needs-tag: test case without a resolving criterion tag: tests/a.test.ts › adds up.');
+  });
+
+  it('A tag that resolves passes rule (b)', () => {
+    const root = repo(config('refuse'));
+    stage(root, { 'tests/a.test.ts': "it('[BILLING-REFUNDS-3] adds up', f);\n" });
+    expect(run(root).code).toBe(0);
+  });
+
+  it('A tag naming no criterion is refused', () => {
+    const root = repo(config('refuse'));
+    stage(root, { 'tests/a.test.ts': "it('[BILLING-REFUNDS-99] adds up', f);\n" });
+    const r = run(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('rule (b)');
+  });
+
+  it('A helper change is not a changed case', () => {
+    const root = repo();
+    commit(root, { 'tests/a.test.ts': "const help = 1;\nit('old', f);\n" });
+    commit(root, { 'cortex/cortex.json': JSON.stringify({ schemaVersion: '4.0', specflow: { rules: { b: 'refuse' }, tests: [{ runner: 'vitest', include: ['tests/**/*.test.ts'] }] } }) });
+    stage(root, { 'tests/a.test.ts': "const help = 2;\nit('old', f);\n" });
+    expect(run(root).code).toBe(0);
+  });
+
+  it('a changed case body counts, whitespace does not', () => {
+    const root = repo();
+    commit(root, { 'tests/a.test.ts': "it('old', () => { a(); });\n" });
+    commit(root, { 'cortex/cortex.json': JSON.stringify({ schemaVersion: '4.0', specflow: { rules: { b: 'refuse' }, tests: [{ runner: 'vitest', include: ['tests/**/*.test.ts'] }] } }) });
+    stage(root, { 'tests/a.test.ts': "it('old', () => {\n  a();\n});\n" });
+    expect(run(root).code).toBe(0);
+    stage(root, { 'tests/a.test.ts': "it('old', () => { b(); });\n" });
+    expect(run(root).code).toBe(1);
+  });
+
+  it('Rule (b) is off by default', () => {
+    const root = repo();
+    stage(root, { 'tests/a.test.ts': "it('adds up', f);\n" });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).not.toContain('rule (b)');
+    expect(r.err).not.toContain('tests/a.test.ts');
+  });
+
+  it('Rule (b) at warn does not refuse', () => {
+    const root = repo(config('warn'));
+    stage(root, { 'tests/a.test.ts': "it('adds up', f);\n" });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('specflow: warning: test case without a resolving criterion tag: tests/a.test.ts › adds up');
+  });
+});
+
+describe('specflow.check: rule (c)', () => {
+  const on = { rules: { c: 'refuse' } };
+  const edited = BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: Thirty');
+  const msg = `m\n\n${TRAILER}\n`;
+
+  it('A changed criterion with no test warns at commit', () => {
+    const root = repo(on);
+    stage(root, { [SPEC]: edited });
+    const r = run(root, msg);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('specflow: warning: criterion text changed with no tagged test changed yet: BILLING-REFUNDS-3.');
+  });
+
+  it('A test changed in HEAD settles rule (c) at commit', () => {
+    const root = repo(on);
+    commit(root, { 'src/a.ts': 'x', 'tests/a.test.ts': "it('[BILLING-REFUNDS-3] x', f);\n" });
+    stage(root, { [SPEC]: edited });
+    const r = run(root, msg);
+    expect(r.code).toBe(0);
+    expect(r.err).not.toContain('criterion text changed');
+  });
+
+  it('A whitespace edit does not fire rule (c)', () => {
+    const root = repo(on);
+    stage(root, { [SPEC]: BASE.replace('- **Then** ok', '- **Then**\n  ok') });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toBe('');
+  });
+
+  it('A range with no tagged test change is refused by rule (c)', () => {
+    const root = repo(on);
+    git(root, 'checkout', '-q', '-b', 'work');
+    commit(root, { [SPEC]: edited }, msg);
+    commit(root, { 'src/a.ts': 'x', 'tests/a.test.ts': "it('other', f);\n" });
+    const r = range(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('- rule (c) criterion-needs-test: criterion text changed with no tagged test changed: BILLING-REFUNDS-3.');
+  });
+
+  it('A range with the tagged test later in the branch passes rule (c)', () => {
+    const root = repo(on);
+    git(root, 'checkout', '-q', '-b', 'work');
+    commit(root, { [SPEC]: edited }, msg);
+    commit(root, { 'src/a.ts': 'x', 'tests/a.test.ts': "it('[BILLING-REFUNDS-3] x', f);\n" });
+    expect(range(root).code).toBe(0);
+  });
+
+  it('rule (c) off says nothing at commit or in a range', () => {
+    const root = repo();
+    git(root, 'checkout', '-q', '-b', 'work');
+    commit(root, { [SPEC]: edited }, msg);
+    const r = range(root);
+    expect(r.code).toBe(0);
+    expect(r.err).not.toContain('criterion text changed');
+  });
+});
+
+describe('specflow.check: rules (f) and (g)', () => {
+  it('Touched criteria are listed through imports', () => {
+    const root = repo();
+    commit(root, {
+      'src/a.ts': 'export const a = 1;\n',
+      'src/b.ts': "import { a } from './a.js';\nexport const b = a;\n",
+      'tests/b.test.ts': "import { b } from '../src/b.js';\nit('[BILLING-REFUNDS-3] x', f);\n",
+    });
+    stage(root, { 'src/a.ts': 'export const a = 2;\n', 'tests/other.test.ts': "it('y', f);\n" });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('specflow: warning: this change touches criteria: BILLING-REFUNDS-3');
+  });
+
+  it('A Python import counts', () => {
+    const root = repo({ tests: [{ runner: 'pytest', include: ['**/test_*.py'] }] });
+    commit(root, {
+      'backend/app/pay.py': 'x = 1\n',
+      'backend/tests/test_a.py': 'from backend.app.pay import x\n\n@pytest.mark.criterion("BILLING-REFUNDS-3")\ndef test_a():\n    pass\n',
+    });
+    stage(root, { 'backend/app/pay.py': 'x = 2\n', 'backend/tests/test_b.py': 'def test_b():\n    pass\n' });
+    expect(run(root).err).toContain('BILLING-REFUNDS-3');
+  });
+
+  it('more than 20 touched criteria are cut off', () => {
+    const root = repo();
+    const ids = Array.from({ length: 22 }, (_, i) => `BILLING-REFUNDS-${i + 10}: T${i}`);
+    const cases = ids.map((c) => `it('[${c.split(':')[0]}] x', f);`).join('\n');
+    commit(root, {
+      [SPEC]: text(['Rule one.'], ids),
+      'src/a.ts': 'x',
+      'tests/b.test.ts': `import '../src/a';\n${cases}\n`,
+    });
+    stage(root, { 'src/a.ts': 'y', 'tests/c.test.ts': 'z' });
+    expect(run(root).err).toContain('… and 2 more');
+  });
+
+  const constants = (v: number): string => `---\nconstants:\n  REFUND_DAYS: ${v}\n---\n`;
+
+  it('A changed constant lists stale files', () => {
+    const root = repo();
+    commit(root, { 'specflow/impl/billing/constants.md': constants(14), 'src/a.ts': 'const d = 14;\n', 'src/b.ts': 'const d = 140;\n' });
+    stage(root, { 'specflow/impl/billing/constants.md': constants(30) });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('src/a.ts');
+    expect(r.err).not.toContain('src/b.ts');
+  });
+
+  it('A very short old value is not searched', () => {
+    const root = repo();
+    commit(root, { 'specflow/impl/billing/constants.md': constants(3) });
+    stage(root, { 'specflow/impl/billing/constants.md': constants(5) });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('the old value `3` is too short to search');
+  });
+});

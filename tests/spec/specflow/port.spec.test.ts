@@ -211,6 +211,17 @@ describe('specflow.port: refusals', () => {
     nothingMoved(root);
   });
 
+  it('An unaccepted migration is refused', () => {
+    const root = twoTree({ '.cortex/cortex.config.json': '{}' }, { config: undefined });
+    write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', migration: { from: '3.4', accepted: null } }));
+    git(root, 'add', '-A');
+    git(root, 'commit', '-q', '-m', 'x');
+    const r = port(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('cortex migrate --accept');
+    nothingMoved(root);
+  });
+
   it('A dirty source is refused', () => {
     const root = twoTree();
     write(root, DEV, 'edited');
