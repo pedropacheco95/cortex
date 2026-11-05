@@ -1,6 +1,6 @@
 ---
 id: scaffolding.coverage-map
-status: draft
+status: retired
 depends_on:
   - hooks.session-start
   - insight.storage-format

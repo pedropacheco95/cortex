@@ -1,6 +1,6 @@
 ---
 id: scaffolding.rationalization-table
-status: draft
+status: retired
 depends_on:
   - scaffolding.coverage-map
 implements: ../../specs-business/scaffolding/assistant-reaches-for-cortex-instead-of-guessing.business.md
