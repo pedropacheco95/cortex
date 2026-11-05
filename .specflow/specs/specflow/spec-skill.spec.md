@@ -43,11 +43,11 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
    7. **Record open questions and decisions.** Anything the request leaves open goes under *Open questions* with the options. In an interactive session, stop and ask. Rule 8 covers a run told the user can't answer.
    8. **Commit the spec alone.** Spec files only, in their own commit, with a `Specflow-Amends:` trailer for every existing rule or criterion whose text changed. Then stop this skill and run `specflow-review` before any code is written.
 6. **Constants.** A constant lives in a `constants.md`, in the `constants:` map of its frontmatter, at the lowest folder under `specflow/` that covers every spec using it. A spec sees its own folder's constants and its ancestors', never a child's or a sibling's. A criterion refers to one as `const:NAME`. The draft's `constants:` block in the spec and its `### Constants` section are not used.
-7. **Owner decisions stop the work.** The SKILL.md carries this sentence verbatim: `If the request contradicts a rule, a 'Not this spec' line or a recorded decision the owner made, do not build it: write the spec with the conflict as an open question and stop.` Promises count as recorded owner decisions. The stop has no exception in any run. The spec holding the conflict is committed by step 8, with the conflict under *Open questions*; `specflow-review` is not run and no wave is started.
+7. **Owner decisions stop the work.** The SKILL.md carries this sentence verbatim: `If the request contradicts a rule, a 'Not this spec' line or a recorded decision the owner made, do not build it: write the spec with the conflict as an open question and stop.` Promises count as recorded owner decisions. The stop has no exception in any run. The spec holding the conflict holds *Today* and the open question, with no criteria and no waves. It is committed by step 8, with the conflict under *Open questions*; `specflow-review` is not run and no wave is started.
 8. **Nobody to ask.** The SKILL.md carries this sentence verbatim: `If you were told the user can't answer during this run, don't wait: decide, write the decision and its reason under Open questions in the spec, and continue. This never applies to a conflict with a recorded owner decision; that always stops.` Such a run goes on to `specflow-review`, resolves its findings by `specflow.review-skill` Rule 7, and develops wave by wave. An interactive session always asks.
 9. **Starting from a spec request.** When the input is a `Spec request:` item from `now/proposals.md` (`store.remember-skill` Rule 11), the quoted ask is the request, and the spec's *Today* section cites the item's `source:`. Once the spec is committed, the skill removes the item and says which spec holds the ask. An ask refused under Rule 7 keeps its item.
 10. **Amending a criterion.** The skill edits an existing criterion's text directly and commits it alone with its trailer. It never edits a test. Where rule (c) is live, that commit gets a warning, not a refusal; the wave that follows changes the tagged test on the same branch, and `cortex check --range` holds the branch to it (`specflow.check` Rule 19).
-11. **Spec shape.** A new spec goes in `specflow/impl/<area>/<leaf>.spec.md`. Its frontmatter carries `serves: [<promise id>]` with exactly one entry; a project whose promises are not converted yet uses `implements:` instead (schema S12.1). The SKILL.md shows this shape:
+11. **Spec shape.** New criteria go in the spec that already covers the behaviour, and an `implemented` spec drops to `implementing`. A new spec goes in `specflow/impl/<area>/<leaf>.spec.md`. Its frontmatter carries `serves: [<promise id>]` with exactly one entry; a project whose promises are not converted yet uses `implements:` instead (schema S12.1). The SKILL.md shows this shape:
     ```
     ---
     id: <area>.<leaf>
@@ -177,3 +177,15 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** it contains the Rule 14 sentence byte for byte on one line, says that covers the ask of a spec request, and places the check before the spec is committed
+
+### A conflict spec holds no criteria
+
+- **Given** the SKILL.md text
+- **When** its owner section is read
+- **Then** it says a spec holding a conflict has *Today* and the open question, with no criteria and no waves
+
+### New criteria join the spec that covers the behaviour
+
+- **Given** the SKILL.md text
+- **When** its spec shape section is read
+- **Then** it says new criteria go in the spec that covers the behaviour, and an `implemented` spec drops to `implementing`

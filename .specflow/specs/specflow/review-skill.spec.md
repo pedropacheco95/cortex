@@ -29,7 +29,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 
 1. **Bundle.** The bundle is `skills/specflow-review/SKILL.md`, mirrored byte for byte to `.claude/skills/specflow-review/SKILL.md`. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, and `store.migrate` Rule 18 step 2 installs it. Its tier in `TIERS` is **B**, and its required trigger phrases are `review the spec`, `review this diff` and `here is the feedback`.
 2. **Description**, exactly: `Fresh-agent review of a spec against the code (before code, or weekly at rest) or of a diff against its criteria (on request). Read-only; findings only. "review the spec", "review this diff", "here is the feedback".`
-3. **The Iron Law**, exactly: `NO FINDING WITHOUT A CRITERION ID, A LOCATION AND A PROPOSED CHANGE`, followed by: `Violating the letter of this law is violating the spirit. If you find yourself constructing a reading under which an observation is useful without being specific, that construction is the violation.`
+3. **The Iron Law**, exactly: `NO FINDING WITHOUT A CRITERION OR SECTION, A LOCATION AND A PROPOSED CHANGE`, followed by: `Violating the letter of this law is violating the spirit. If you find yourself constructing a reading under which an observation is useful without being specific, that construction is the violation.`
 4. **What a goldfish is.** A fresh agent that receives only what this skill hands it, and never the conversation that led here. The main session spawns it (the Agent tool, a new session, or a scheduled run). A fork of the current session, or the current session reviewing its own work, does not count.
 5. **Two modes.**
    - **Spec mode**, before code and at rest. Input: the spec file path(s) and the repository root. The goldfish reads the spec, then the code the spec describes. The weekly at-rest run (`loops.quality-task`) is spec mode.
@@ -48,7 +48,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
     [<criterion id> | spec:<file>#<rule or section> | diff:<file>] <blocker | should | nit>
     <path>:<line> — <what is wrong, one sentence> — proposed: <the change, one sentence>
     ```
-    A finding with no criterion id is allowed only in diff mode, for a silent change, and carries `diff:<file>`.
+    A finding about a rule or section rather than one criterion carries `spec:<file>#<rule or section>`. In diff mode, a finding with no criterion id is allowed only for a silent change, and carries `diff:<file>`.
 11. **Rationalizations.** The SKILL.md has a `## Rationalizations` table with these four thoughts, each answered: `I wrote this spec, I can review it myself.`, `The code looks like it does this; no need to check.`, `Minor wording, not worth a finding.`, `The diff is large; I will review the main files.`
 12. **A review received from someone else** (owner decision, sitting item 9). The SKILL.md carries this sentence verbatim: `Verify each point of a review you received against the spec, a rule or the code before applying it, and reject what does not hold, with the reason.` A disagreement is settled by the spec, a rule or a command anyone can run, never by who said it or how sure they sounded. Rule 7 covers this skill's own findings; this rule covers a review from a person or another agent. Applying what holds is ordinary work, not a write of this skill.
 
@@ -100,7 +100,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 
 - **Given** the SKILL.md text
 - **When** it is read
-- **Then** it contains both lines of Rule 10, and says a finding with no criterion id is allowed only for a silent change
+- **Then** it contains both lines of Rule 10, says a finding about a rule or section carries `spec:<file>#<rule or section>`, and says that in diff mode a finding with no criterion id is allowed only for a silent change
 
 ### Resolving follows the owner's lines
 

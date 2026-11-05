@@ -48,7 +48,8 @@ consuming agent is expected to open.
    defeats every gate that lacks it.
 5. **The convention is referenced, not duplicated.** A hardened skill points at
    `skills/_conventions/hardening.md` rather than restating the recipe; the skill carries its
-   own instantiated Iron Law and table, not the meta-explanation of them.
+   own instantiated Iron Law and table, not the meta-explanation of them. A skill installed
+   at 4.0 carries no pointer: Rule 6 keeps that file out of every project, so it would be dead.
 6. **Not a skill directory, and not installed.** `skills/_conventions/` contains no `SKILL.md`
    and declares no frontmatter skill metadata. `installSkills`/`syncSkillBundles` define a
    bundle as *a directory containing a `SKILL.md`* (`listSkillBundles`, the shared enumeration
