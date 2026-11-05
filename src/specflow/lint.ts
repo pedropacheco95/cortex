@@ -82,6 +82,12 @@ function bodyFindings(s: SpecFile, add: (f: Omit<Finding, 'path'>) => void): voi
     const empty = (sectionBody(lines, 'Rules') as string[]).every((l) => l.trim() === '');
     if (!empty) add({ level: 'warning', check: 'lint.body', message: 'the Rules section has no numbered item' });
   }
+  if (headings(lines).filter((h) => h.title === 'Rules').length > 1) {
+    add({ level: 'warning', check: 'lint.body', message: 'more than one Rules heading; only the first is read' });
+  }
+  if ((sectionBody(lines, 'Rules') ?? []).some((l) => /^\s*\*\*\d+[.)]\*\*/.test(l))) {
+    add({ level: 'warning', check: 'lint.body', message: 'a bold number in Rules is not a numbered item' });
+  }
   for (const line of lines) {
     if (!line.trim().startsWith('|')) continue;
     const cells = line.split('|').map((c) => c.trim());

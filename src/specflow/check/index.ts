@@ -124,8 +124,11 @@ function judgeChange(root: string, paths: string[], base: Tree, head: Tree, at: 
   const classOf = classifier(config.tests ?? []);
   const items = itemChanges(paths, base, head);
   const trailers = amendTrailers(message);
-  const refusals = judge(paths, classOf, items, message);
+  const managed = (text: string | null): boolean => text?.includes('# cortex-managed') ?? false;
+  const refusals = judge(paths, classOf, items, message, (p) => managed(base.read(p)) && !managed(head.read(p)));
   const warnings: Warning[] = [];
+  const hooks = paths.filter((p) => classOf(p) === 'hook');
+  if (hooks.length > 0) warnings.push({ letter: 'h', text: `changes a git hook: ${named(hooks)}` });
   const cases = changedCases(paths, base, head, config);
   const code = paths.filter((p) => classOf(p) === 'code');
   const b = level(config, 'b');
@@ -323,6 +326,20 @@ function prePushMode(root: string, input: string, config: SpecflowConfig, log: L
   return code;
 }
 
+/** A bad value stops the check: a typo must not quietly mean a weaker rule (Rule 16). */
+function validConfig(config: SpecflowConfig): SpecflowConfig {
+  if (config.since !== undefined && !/^[0-9a-f]{7,40}$/.test(config.since)) {
+    throw new Error(`specflow.since is not a commit id: ${String(config.since)}`);
+  }
+  for (const letter of ['b', 'c']) {
+    const value = config.rules?.[letter];
+    if (value !== undefined && !['off', 'warn', 'refuse'].includes(value)) {
+      throw new Error(`specflow.rules.${letter} is not off, warn or refuse: ${String(value)}`);
+    }
+  }
+  return config;
+}
+
 export function check(args: string[], start = '.', io: CheckIO = {}): number {
   const out = io.stdout ?? ((l: string) => console.log(l));
   const err = io.stderr ?? ((l: string) => console.error(l));
@@ -344,7 +361,7 @@ export function check(args: string[], start = '.', io: CheckIO = {}): number {
   try {
     const common = path.resolve(root, git(root, 'rev-parse', '--git-common-dir').trim());
     log = new Log(path.join(common, 'specflow'), err);
-    const config = readConfig(workTree(root));
+    const config = validConfig(readConfig(validRange || prePush ? gitTree(root, 'HEAD') : workTree(root)));
     if (prePush) return prePushMode(root, io.stdin ?? fs.readFileSync(0, 'utf-8'), config, log, err);
     return validRange
       ? rangeMode(root, value as string, config, log, err)

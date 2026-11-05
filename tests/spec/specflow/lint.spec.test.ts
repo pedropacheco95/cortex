@@ -187,6 +187,18 @@ describe('specflow.lint: tree checks', () => {
     expect(hits(await lint(root), 'lint.body').join()).toContain('no numbered item');
   });
 
+  it('A second Rules heading is found', async () => {
+    const root = clean();
+    write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { intent: 'Why.\n\n### Rules\n\nProse about rules.' }));
+    expect(hits(await lint(root), 'lint.body').join()).toContain('only the first is read');
+  });
+
+  it('A bold number is found', async () => {
+    const root = clean();
+    write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { rules: '## Rules\n\n1. A rule.\n\n**2.** Another.\n' }));
+    expect(hits(await lint(root), 'lint.body').join()).toContain('not a numbered item');
+  });
+
   it('A field table is found', async () => {
     const root = clean();
     write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { intent: '| Field | Type |\n|---|---|\n| a | b |' }));

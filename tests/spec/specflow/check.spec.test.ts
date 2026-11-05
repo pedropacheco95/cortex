@@ -881,3 +881,56 @@ describe('specflow.check: adversarial review findings', () => {
     expect(check(['--commit-msg', file], path.join(root, 'src'), { stderr: (l) => err.push(l) })).toBe(1);
   });
 });
+
+describe('specflow.check: hooks and config', () => {
+  const MANAGED = '#!/bin/sh\n# cortex-managed: cortex hooks install rewrites this file\nexit 1\n';
+
+  it('A hook change warns', () => {
+    const root = repo();
+    commit(root, { '.githooks/pre-commit': MANAGED });
+    stage(root, { '.githooks/pre-commit': `${MANAGED}# more\n` });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('specflow: warning: changes a git hook: .githooks/pre-commit');
+  });
+
+  it('A hook losing its managed line is refused', () => {
+    const root = repo();
+    commit(root, { '.githooks/commit-msg': MANAGED });
+    stage(root, { '.githooks/commit-msg': '#!/bin/sh\nexit 0\n' });
+    const r = run(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('- rule (h) hook-managed: removes the cortex-managed line from: .githooks/commit-msg.');
+    const gone = repo();
+    commit(gone, { '.githooks/commit-msg': MANAGED });
+    git(gone, 'rm', '-q', '.githooks/commit-msg');
+    expect(run(gone).code).toBe(1);
+  });
+
+  it('A hand-written hook may change', () => {
+    const root = repo();
+    commit(root, { '.githooks/pre-rebase': 'a' });
+    stage(root, { '.githooks/pre-rebase': 'b' });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('changes a git hook');
+  });
+
+  it('Range mode reads config from HEAD', () => {
+    const root = repo();
+    git(root, 'checkout', '-q', '-b', 'work');
+    const sha = commit(root, { 'src/b.ts': 'x' }, 'code only');
+    write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', specflow: { since: sha, tests: [{ runner: 'vitest', include: ['src/**'] }] } }));
+    expect(range(root).code).toBe(1);
+  });
+
+  it('A bad config value is an internal error', () => {
+    for (const bad of [{ since: 'HEAD' }, { rules: { b: 'refused' } }]) {
+      const root = repo(bad);
+      stage(root, { 'README.md': 'x' });
+      const r = run(root);
+      expect(r.code, JSON.stringify(bad)).toBe(2);
+      expect(r.err).toContain('internal error');
+    }
+  });
+});

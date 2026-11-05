@@ -39,6 +39,7 @@ export function judge(
   classOf: (file: string) => PathClass,
   items: ItemChange[],
   message: string,
+  lostManagedLine: (file: string) => boolean,
 ): Refusal[] {
   const refusals: Refusal[] = [];
   const counted = paths.filter((p) => classOf(p) !== 'generated');
@@ -54,6 +55,13 @@ export function judge(
     refusals.push({
       letter: 'd',
       line: `- rule (d) spec-commit-alone: changes spec rules or criteria (${named([...new Set(items.map(itemName))])}) together with code or config (${named(code)}). Commit the spec change on its own, before or after the code.`,
+    });
+  }
+  const stripped = paths.filter((p) => classOf(p) === 'hook' && lostManagedLine(p));
+  if (stripped.length > 0) {
+    refusals.push({
+      letter: 'h',
+      line: `- rule (h) hook-managed: removes the cortex-managed line from: ${named(stripped)}. Restore it, or move the hook to .git/hooks/ and run cortex hooks install.`,
     });
   }
   const trailers = amendTrailers(message);

@@ -57,10 +57,10 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 10. **Rule (e) amend-needs-trailer.** Each amendment needs a `Specflow-Amends:` trailer in the commit message that names it exactly: `<spec-id>#rule-<n>` or `<spec-id>#<criterion-id>`, with a non-empty reason (schema S10). A trailer is a line of the message's last paragraph, and never the subject; `#` lines and anything below a scissors line are not read. An added item needs none (A14). One trailer `<spec-id>#retired` covers every item a commit removes by retiring that spec. Measured as a record; the refusal is new. Always on.
 11. **Rule (f) touched-criteria.** For each `code` path, the check lists the criteria whose tagged test files statically reach it, by following relative imports transitively from each tagged test file (JS and TS `import`, `export … from`, `require`; Python `import` and `from … import`, resolved against the test file's folder and the repository root). Unresolved imports are skipped. It lists at most 20 criteria and then `… and <n> more`. New. Warns only, in commit mode and in each range block. Needs tags, so it lists nothing where no test is tagged.
 12. **Rule (g) stale-literal.** For each constant whose value changed in a `constants.md`, the check lists tracked files outside `specflow/` that still hold the old value as a whole word (`git grep -w -F`), at most 20. An old value shorter than 2 characters is not searched, and the warning says so. New. Warns only.
-13. **Rule levels.** Rules (a), (d), (e) always refuse and (f), (g) always warn. `specflow.rules.b` and `.c` take `off`, `warn` or `refuse`, and an absent key means `off` (A11). The config cannot turn off a measured rule. The lint rule `lint.rules-early` guards turning (b) or (c) on early.
+13. **Rule levels.** Rules (a), (d), (e), (h) always refuse and (f), (g) always warn. `specflow.rules.b` and `.c` take `off`, `warn` or `refuse`, and an absent key means `off` (A11). The config cannot turn off a measured rule. The lint rule `lint.rules-early` guards turning (b) or (c) on early.
 14. **Merge commits.** In `--commit-msg` mode, when `MERGE_HEAD` exists, the check judges only what the merge adds beyond the automatic merge: the staged tree against the `git merge-tree --write-tree` result of merging each `MERGE_HEAD` in turn, minus files that conflicted. A conflict resolution is not judged. A clean merge therefore passes.
 15. **Range mode.** Commits come from `git rev-list --reverse <base>..<head>`, leaving out `specflow.since` and its ancestors when that key is set (`specflow.git-hooks` Rule 10): commits made before the hooks existed are never judged. A `since` not in this clone warns, and the whole range is judged. Each non-merge commit is judged against its first parent, using its own message. A merge commit is judged as in Rule 14, from its parents. Rule (c) then runs once over the whole range. Output has one block per commit with a verdict, headed by its short hash and subject. Each block ends `specflow: allowed (<short hash>)` or the refusal. An empty range prints `specflow: 0 commits in range` to stderr and exits 0. Range mode exits 1 if any commit is refused.
-16. **No `specflow/` folder.** The check runs from the repository's top level, wherever it is called. `cortex/cortex.json` is read from the working tree in every mode. With no `specflow/` folder in the working tree or in `HEAD`, the check prints `specflow: no specflow/ folder here; nothing was checked` to stderr and exits 0. It never passes silently.
+16. **No `specflow/` folder.** The check runs from the repository's top level, wherever it is called. `cortex/cortex.json` is read from the working tree in `--commit-msg` mode and from `HEAD` in range and push modes, so an unstaged edit cannot change a verdict at push. `specflow.since` must be a hexadecimal commit id and `specflow.rules.b` and `.c` must be `off`, `warn` or `refuse`; any other value is an internal error (Rule 2), never a quiet default. With no `specflow/` folder in the working tree or in `HEAD`, the check prints `specflow: no specflow/ folder here; nothing was checked` to stderr and exits 0. It never passes silently.
 17. **Messages.** Verdicts go to stderr. A refusal prints `specflow: REFUSED (<commit|merge commit|<short hash>|range>)` and then one line per refused rule, exactly as in the table below. A warning prints `specflow: warning: <text>`. At most 8 paths or items are named, then ` …`.
 
     | Rule | Line |
@@ -69,6 +69,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
     | (b) | `- rule (b) test-needs-tag: test case without a resolving criterion tag: <file> › <name>. Start its name with [CRIT-ID]; see specflow/INDEX.md.` |
     | (c) | `- rule (c) criterion-needs-test: criterion text changed with no tagged test changed: <ids>. Change the test that proves it.` |
     | (d) | `- rule (d) spec-commit-alone: changes spec rules or criteria (<items>) together with code or config (<paths>). Commit the spec change on its own, before or after the code.` |
+    | (h) | `- rule (h) hook-managed: removes the cortex-managed line from: <paths>. Restore it, or move the hook to .git/hooks/ and run cortex hooks install.` |
     | (e) | `- rule (e) amend-needs-trailer: changes existing spec text with no trailer for: <items>. Add one line each: Specflow-Amends: <spec-id>#<item> — <reason>` |
 
     Rule (c)'s commit-mode warning is `criterion text changed with no tagged test changed yet: <ids>. The range check refuses this if the change ends without one.`
@@ -92,6 +93,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
     | Reword Intent or Notes with code | {spec Intent + code + test} | passes |
 
     Every spec row with an amendment assumes its trailer is present.
+20. **Rule (h) hook-managed.** A commit changing a path under `.githooks/` gets the warning `changes a git hook: <paths>`. A file that held the `# cortex-managed` line and loses it, or is deleted, is refused: a commit must not switch the check off. Hooks are not `code`, because `cortex sync` refreshes them in commits of their own. New. Always on.
 
 ## Acceptance Criteria
 
@@ -472,6 +474,36 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** a spec in CRLF, with `1)` numbering, with indented numbers, or with a closed `## Rules ##` heading, and a reworded rule with code and a test
 - **When** the check runs
 - **Then** each exits 1 naming the rule
+
+### A hook change warns
+
+- **Given** a staged `.githooks/pre-commit` keeping its `# cortex-managed` line
+- **When** the check runs
+- **Then** it exits 0 and stderr carries a warning naming the file
+
+### A hook losing its managed line is refused
+
+- **Given** a staged `.githooks/commit-msg` that had the `# cortex-managed` line and is now `exit 0`, and separately the file deleted
+- **When** the check runs
+- **Then** each exits 1 with the rule (h) line
+
+### A hand-written hook may change
+
+- **Given** a staged edit to `.githooks/pre-rebase`, which never had the line
+- **When** the check runs
+- **Then** it exits 0 with the warning
+
+### Range mode reads config from HEAD
+
+- **Given** a code-only commit in the range, and an unstaged `specflow.since` or `specflow.tests` that would hide it
+- **When** `cortex check --range` runs
+- **Then** it exits 1
+
+### A bad config value is an internal error
+
+- **Given** `specflow.since` is `HEAD`, and separately `specflow.rules.b` is `refused`
+- **When** the check runs
+- **Then** each exits 2 with the internal error line
 
 ### Bad arguments are a usage error
 

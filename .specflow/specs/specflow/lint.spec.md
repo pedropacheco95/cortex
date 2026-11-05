@@ -28,7 +28,7 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
 2. **Carried checks.** Lint runs the existing checks over `specflow/`, unchanged in meaning: `check.overview-present`, `check.overview-shape`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec`, `check.xref-symmetry`, `check.xref-unique`, `check.xref-acyclic`, `check.xref-resolve`, with `specflow/impl` standing for the dev tree and `specflow/promises` for the business tree. When `specflow/INDEX.md` or `specflow/impl/` exists, the project is ported, and `cortex validate` runs its spec-tree checks there too, and `check.specs-index` is not run: INDEX replaces `_index.md`. A spec with `serves:` needs no `implements:`, and its `serves:` must name a promise. `check.dev-spec-governs-resolves` is not carried: `cortex validate` runs it. A `governed_by` id kept as a store alias resolves, in both commands.
 3. **New tree checks** (each deterministic):
    - `lint.layout` (error): a spec file not under `specflow/impl/<area>/` or `specflow/promises/<area>/`, a file named just `spec.md`, or a leaf spec in a folder of its own.
-   - `lint.body` (warning): a dev spec missing a non-empty Intent, Entities, Rules or Acceptance Criteria section, at level 2 or 3; a Rules section with no numbered item.
+   - `lint.body` (warning): a dev spec missing a non-empty Intent, Entities, Rules or Acceptance Criteria section, at level 2 or 3; a Rules section with no numbered item; more than one heading titled `Rules`, since only the first is read; a line opening `**1.**`, which is not a numbered item.
    - `lint.entity-table` (warning): a Markdown table whose header has both `Field` and `Type`.
    - `lint.criterion-id` (error): a heading without an id in a spec with any id; a duplicate id in the tree; an id whose prefix differs from its spec's when the spec's other ids use the Rule 3 prefix of `specflow.index`. A spec with no ids at all is a warning.
    - `lint.criterion-then` (warning): a criterion with no `Then` clause.
@@ -123,6 +123,18 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
 - **Given** a spec with no Rules section, and another with an empty `### Intent`
 - **When** `cortex specs lint` runs
 - **Then** `lint.body` reports both
+
+### A second Rules heading is found
+
+- **Given** a spec with a prose `### Rules` above its real `## Rules`
+- **When** `cortex specs lint` runs
+- **Then** `lint.body` says only the first is read
+
+### A bold number is found
+
+- **Given** a Rules section holding `**1.** text`
+- **When** `cortex specs lint` runs
+- **Then** `lint.body` says it is not a numbered item
 
 ### A field table is found
 
