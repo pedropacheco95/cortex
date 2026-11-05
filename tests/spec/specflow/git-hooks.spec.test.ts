@@ -138,6 +138,50 @@ describe('specflow.git-hooks: install', () => {
     expect(git(clone, ['status', '--porcelain']).stdout).toBe('');
   });
 
+  it('A hand-written hook stops the install', () => {
+    const root = repo();
+    git(root, ['config', 'core.hooksPath', '.githooks']);
+    write(root, '.githooks/pre-commit', '#!/bin/sh\necho mine\n', 0o755);
+    const r = install(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toEqual([
+      'specflow: .githooks/pre-commit is not a Cortex hook; nothing was changed. Move it to .git/hooks/pre-commit, where it keeps running, and run this again.',
+    ]);
+    expect(fs.readdirSync(path.join(root, '.githooks'))).toEqual(['pre-commit']);
+    expect(fs.readFileSync(path.join(root, '.githooks/pre-commit'), 'utf-8')).toContain('mine');
+  });
+
+  it('A hand-written hook stops the install with no hooks path set', () => {
+    const root = repo();
+    write(root, '.githooks/commit-msg', '#!/bin/sh\necho mine\n', 0o755);
+    expect(install(root).code).toBe(1);
+    expect(git(root, ['config', 'core.hooksPath']).code).toBe(1);
+    expect(fs.readFileSync(path.join(root, '.githooks/commit-msg'), 'utf-8')).toContain('mine');
+    expect(since(root)).toBeUndefined();
+  });
+
+  it('A passthrough does not overwrite a hand-written hook', () => {
+    const root = repo();
+    write(root, '.git/hooks/post-commit', '#!/bin/sh\n', 0o755);
+    write(root, '.githooks/post-commit', '#!/bin/sh\necho mine\n', 0o755);
+    const r = install(root);
+    expect(r.code).toBe(1);
+    expect(r.err.join('\n')).toContain('.githooks/post-commit');
+    expect(fs.readFileSync(path.join(root, '.githooks/post-commit'), 'utf-8')).toContain('mine');
+  });
+
+  it('Moving the hand-written hook lets the install finish', () => {
+    const root = repo();
+    write(root, '.githooks/pre-commit', '#!/bin/sh\ntouch moved-hook-ran\n', 0o755);
+    expect(install(root).code).toBe(1);
+    fs.renameSync(path.join(root, '.githooks/pre-commit'), path.join(root, '.git/hooks/pre-commit'));
+    expect(install(root).code).toBe(0);
+    write(root, 'README.md', 'x');
+    git(root, ['add', 'README.md']);
+    expect(git(root, ['commit', '-q', '-m', 'x']).code).toBe(0);
+    expect(fs.existsSync(path.join(root, 'moved-hook-ran'))).toBe(true);
+  });
+
   it('A hook of another name is left alone', () => {
     const root = repo();
     write(root, '.githooks/pre-rebase', '#!/bin/sh\necho mine\n', 0o755);

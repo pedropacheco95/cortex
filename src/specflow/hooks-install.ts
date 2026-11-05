@@ -109,6 +109,13 @@ export function installHooks(root = '.', options: InstallOptions = {}, io: Specs
     err('  prepare-commit-msg: on an amend, write HEAD to $(git rev-parse --git-path specflow-amend)');
     return 1;
   }
+  const handWritten = handWrittenHooks(root);
+  if (handWritten.length > 0) {
+    for (const name of handWritten) {
+      err(`specflow: ${HOOKS_DIR}/${name} is not a Cortex hook; nothing was changed. Move it to .git/hooks/${name}, where it keeps running, and run this again.`);
+    }
+    return 1;
+  }
   fs.mkdirSync(path.join(root, HOOKS_DIR), { recursive: true });
   for (const [name, text] of plannedHooks(root)) {
     const file = path.join(root, HOOKS_DIR, name);
