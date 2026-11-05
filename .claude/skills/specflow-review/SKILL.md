@@ -13,7 +13,7 @@ Violating the letter of this law is violating the spirit. If you find yourself c
 
 ## What a goldfish is
 
-A fresh agent that receives only what this skill hands it, and never the conversation that led here. The main session spawns it (the Agent tool, a new session, or a scheduled run). A fork of the current session, or the current session reviewing its own work, does not count. The goldfish reads; it never edits a spec, a test or code. Its output is a list of findings.
+A fresh agent that receives only what this skill hands it, and never the conversation that led here. The main session spawns it (the Agent tool, a new session, or a scheduled run). A fork of the current session, or the current session reviewing its own work, does not count. The goldfish reads; it never edits a spec, a test or code. Its output is a list of findings, in the file the brief names.
 
 ## Two modes
 
@@ -24,7 +24,7 @@ A fresh agent that receives only what this skill hands it, and never the convers
 ## How the main session runs it, in order
 
 1. Decide the concerns: a spec spanning more than one area is split into concerns by area.
-2. For each concern × lens, spawn one goldfish with this brief and nothing more: the mode, the input paths or ids of that concern, the repository root, the lens, and the finding format.
+2. For each concern × lens, spawn one goldfish with this brief and nothing more: the mode, the input paths or ids of that concern, the repository root, the lens, the finding format, and the file to write its findings to. Every goldfish writes its findings to a file outside the repository, which the main session names and reads: the file is the delivery, because a hand-back can fail after the agent has finished.
 3. Wait for every goldfish.
 
    Spawn every goldfish in the foreground, or wait for every one to finish, before you merge. A session that ends with a goldfish still running loses its work.

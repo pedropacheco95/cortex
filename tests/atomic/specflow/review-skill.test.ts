@@ -50,7 +50,7 @@ describe('specflow.review-skill', () => {
   it('Concern × lens splitting is kept', () => {
     expect(text).toContain('For each concern × lens, spawn one goldfish');
     for (const l of ['**Comprehension.**', '**Antagonistic.**', '**Readiness.**', '**Codebase details.**']) expect(text).toContain(l);
-    expect(text).toContain('the mode, the input paths or ids of that concern, the repository root, the lens, and the finding format');
+    expect(text).toContain('the mode, the input paths or ids of that concern, the repository root, the lens, the finding format, and the file to write its findings to');
   });
 
   it('Diff mode is optional', () => {
@@ -109,5 +109,10 @@ describe('specflow.review-skill', () => {
   it('A received review is verified before it is applied', () => {
     expect(trimmed).toContain('Verify each point of a review you received against the spec, a rule or the code before applying it, and reject what does not hold, with the reason.');
     expect(text).toContain('A disagreement is settled by the spec, a rule or a command anyone can run, never by who said it');
+  });
+
+  it('The findings file is the delivery', () => {
+    expect(text).toContain('Every goldfish writes its findings to a file outside the repository, which the main session names and reads: the file is the delivery, because a hand-back can fail after the agent has finished.');
+    expect(text.indexOf('the file is the delivery')).toBeLessThan(text.indexOf('Merge the findings'));
   });
 });

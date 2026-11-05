@@ -22,7 +22,7 @@ Never write `specflow/INDEX.md` or the `specflow.rules` key of `cortex/cortex.js
 
 ## Agents
 
-Every spawned agent is awaited before its output is used. Split the work so that one agent reads one area or one test folder.
+Every spawned agent is awaited before its output is used. Every spawned agent writes its output to a file under `.cortex-port/`, which the skill reads: the file is the delivery, because a hand-back can fail after the agent has finished. Split the work so that one agent reads one area or one test folder.
 
 ## Port mode
 
@@ -30,7 +30,7 @@ Every spawned agent is awaited before its output is used. Split the work so that
 
 **Retired specs are records.** A `status: retired` business spec gets no promise, and a retired spec gets no `serves:`. A live spec that implements a retired business spec is not converted: it keeps its `implements:`, stays `needs-edit` in the report, and the person decides where it belongs.
 
-**Tagging.** Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Every untagged test gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl`, with `file`, `name`, `line`, `action` and `reason`. Its `action` is, in this order of preference:
+**Tagging.** Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Every untagged test gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl`, with `file`, `name`, `line`, `action` and `reason`. Each agent writes its lines straight into `.cortex-port/tagging/<area>.jsonl`. Its `action` is, in this order of preference:
 
 - `tag`: with `criterion`, the criterion it proves;
 - `new-criterion`: no criterion matches, so it gives the `title` and the `spec` it belongs in;
@@ -48,7 +48,7 @@ This mode has not been tested. It runs on a client repository only after a blind
 
 Ask the person to confirm that before you start on a repository. Then, in order:
 
-1. a **splitter** agent divides the codebase into concerns;
+1. a **splitter** agent divides the codebase into concerns, in `.cortex-port/onboard/concerns.md`;
 2. for each concern, **two independent elephants** each write a spec draft from the code into `.cortex-port/onboard/<concern>/`, neither seeing the other's output. An elephant here is a spawned agent with the concern and the code. It writes rules and criteria as steps 2 and 3 of `specflow-spec` say, and it does not run that skill: it names no test, and it commits nothing;
 3. a **reconciler** per concern keeps what both agree on, and lists every disagreement as an open question in the spec;
 4. a **goldfish** per concern reviews the reconciled spec in spec mode (`specflow-review`);

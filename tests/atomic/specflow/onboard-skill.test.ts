@@ -118,4 +118,10 @@ describe('specflow.onboard-skill', () => {
     expect(onboard).toContain('A disagreement between elephants is never settled by the reconciler.');
     expect(onboard).toContain("Only in a run told the user can't answer does the main session decide");
   });
+
+  it('Every agent delivers through a file', () => {
+    expect(text).toContain('Every spawned agent writes its output to a file under `.cortex-port/`, which the skill reads: the file is the delivery, because a hand-back can fail after the agent has finished.');
+    expect(onboard).toContain('`.cortex-port/onboard/concerns.md`');
+    expect(port).toContain('Each agent writes its lines straight into `.cortex-port/tagging/<area>.jsonl`.');
+  });
 });
