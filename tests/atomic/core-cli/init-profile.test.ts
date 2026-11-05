@@ -55,14 +55,14 @@ describe('AC: no flag means specflow', () => {
     expect(readProfile(root)).toBe('specflow');
   });
 
-  it('readProfile degrades to the default rather than throwing on a malformed config', () => {
+  it('[CORE-CLI-INIT-PROFILE-12] readProfile degrades to the default rather than throwing on a malformed config', () => {
     const root = tmp('malformed');
     makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     fs.writeFileSync(path.join(root, '.cortex', 'cortex.config.json'), '{ not json', 'utf-8');
     expect(readProfile(root)).toBe('specflow');
   });
 
-  it('readProfile ignores an out-of-enum value (check.config reports it instead)', () => {
+  it('[CORE-CLI-INIT-PROFILE-12] readProfile ignores an out-of-enum value (check.config reports it instead)', () => {
     const root = tmp('bad-value');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'waterfall' } });
     expect(readProfile(root)).toBe('specflow');

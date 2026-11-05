@@ -134,7 +134,7 @@ describe('AC: a retired bundle the developer edited is preserved, not deleted', 
 });
 
 describe("AC: a developer's own skill is never touched", () => {
-  it('survives byte-identical and appears in no removal report', async () => {
+  it('[CORE-CLI-SYNC-27] survives byte-identical and appears in no removal report', async () => {
     const { root, home } = await makePreRenameProject('own', { marker: true });
     const own = path.join(skillDir(root, 'my-own-skill'), 'SKILL.md');
     const before = fs.readFileSync(own);
