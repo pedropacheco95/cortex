@@ -119,7 +119,7 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     The skill is typed, never triggered by words (`store.migrate-skill` Rule 14). Whatever the status, sync's exit code does not change.
 23. **Project skills.** It prints the `project skills to adjust` section of `store.migrate` Rule 18 step 5, from the same code.
 24. **Validation and exit.** It runs `cortex store validate`. Exit 0 when that reports no errors; otherwise it prints them and exits 1. Warnings do not fail sync.
-25. **`--dry-run`** writes nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:`, `hooks:` and payload `tasks:` line prefixed `would: `, and the Rule 22 status line and the Rule 23 section unprefixed, and it exits 0 without validating. Rule 20 and the Rule 21 refresh do not run: it prints `would: blocks: refresh MAP.md and the managed blocks` and `would: hooks: refreshed .githooks` in their place. The payload lines come from `dryRun: true`. Where Rule 16 or Rule 17's package check refuses, it refuses the same way.
+25. **`--dry-run`** writes nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:`, `hooks:` and payload `tasks:` line prefixed `would: `, and the Rule 22 status line and the Rule 23 section unprefixed, and it exits 0 without validating. Rule 20 does not run: it prints `would: blocks: refresh MAP.md and the managed blocks` in its place. Rule 21 picks its case as a real run does, with the read-only check of `specflow.git-hooks` Rule 12, and prints that case's lines; only the refresh itself does not run. The payload lines come from `dryRun: true`. Where Rule 16 or Rule 17's package check refuses, it refuses the same way.
 26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md`, `.githooks/` and what `writeTaskPayloads` writes (Rule 22), which removes nothing. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
 27. **Unedited shipped copies** (2026-11-05). `cortex init` at 3.x wrote no marker, so a missing marker does not prove a local edit. `SHIPPED_3X_HASHES`, exported from `src/store/migrate/system.ts`, maps each name that `RETIRED_SKILL_NAMES` matches, plus `cortex-register-tasks` and `verification-before-completion`, to the `hashDirectoryContent` value of every distinct version of `skills/<name>` in the history of `main` up to commit `88895ca`. A bundle whose hash, marker excluded, is in its name's list is an unedited shipped copy, whatever its marker says. The list is frozen: every copy 4.0 writes has a marker. A copy no entry matches counts as a local edit.
 
@@ -463,6 +463,12 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 - **Given** a project with an unedited retired skill and no final set
 - **When** `cortex sync --dry-run` runs
 - **Then** it exits 0, the project and the test registry are byte-identical, the output has `would: skills: removed <name>`, `would: skills: installed <name>`, `would: blocks: refresh MAP.md and the managed blocks` and `would: tasks: installed payload <scoped name>`, no payload exists under the injected home, and the `project skills to adjust` section is unprefixed
+
+### A dry run reports the hook case a real run would take
+
+- **Given** `core.hooksPath` set to `.githooks`, a `.githooks/commit-msg` carrying the `# cortex-managed` line, and `.githooks/pre-commit` without it; separately, the same path with no hook files
+- **When** `cortex sync --dry-run` runs
+- **Then** the first prints the `specflow.git-hooks` Rule 12 line and no `refreshed`, the second prints `would: hooks: not installed; run cortex hooks install`, and neither changes a file
 
 ### A second run changes nothing
 
