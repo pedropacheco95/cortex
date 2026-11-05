@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe('Cadence table shape', () => {
-  it('has exactly learn, fresh and quality with their cron, model and heartbeat', () => {
+  it('[CORE-CLI-TASKS-REGISTER-10] has exactly learn, fresh and quality with their cron, model and heartbeat', () => {
     expect(TASK_CADENCE).toEqual({
       learn: { cron: '0 2 * * *', model: 'claude-opus-5-5', heartbeatDays: 3 },
       fresh: { cron: '0 4 * * 6', model: 'claude-sonnet-5-5', heartbeatDays: 8 },
@@ -60,7 +60,7 @@ describe('Cadence table shape', () => {
 });
 
 describe('3.x payloads are unchanged', () => {
-  it('SCHEDULED_TASKS holds the five bundles and no entry names cortex-learn', () => {
+  it('[CORE-CLI-TASKS-REGISTER-17] SCHEDULED_TASKS holds the five bundles and no entry names cortex-learn', () => {
     expect(SCHEDULED_TASKS.map((t) => t.name).sort()).toEqual(
       ['daily', 'monthly-review', 'test-runner', 'weekly-curation', 'weekly-quality'],
     );
@@ -71,7 +71,7 @@ describe('3.x payloads are unchanged', () => {
 describe('Payloads dispatch one skill and state the run is unattended', () => {
   const SKILLS: Record<string, string> = { learn: 'cortex-learn', fresh: 'cortex-fresh', quality: 'cortex-quality' };
 
-  it('each body carries the unattended line and its skill, and names no other skill', () => {
+  it('[CORE-CLI-TASKS-REGISTER-18] each body carries the unattended line and its skill, and names no other skill', () => {
     expect(STORE_V4_TASKS.map((t) => t.name)).toEqual(['learn', 'fresh', 'quality']);
     for (const t of STORE_V4_TASKS) {
       expect(t.body).toContain(UNATTENDED);
@@ -83,7 +83,7 @@ describe('Payloads dispatch one skill and state the run is unattended', () => {
     }
   });
 
-  it('requiredSkills matches Rule 14', () => {
+  it('[CORE-CLI-TASKS-REGISTER-18] requiredSkills matches Rule 14', () => {
     expect(Object.fromEntries(STORE_V4_TASKS.map((t) => [t.name, t.requiredSkills]))).toEqual({
       learn: ['cortex-learn', 'cortex-remember'],
       fresh: ['cortex-fresh', 'cortex-remember'],
@@ -102,13 +102,13 @@ describe('Payloads dispatch one skill and state the run is unattended', () => {
     expect(md).not.toContain('Ground rules');
   });
 
-  it('the model of each task is the cadence table model', () => {
+  it('[CORE-CLI-TASKS-REGISTER-10] the model of each task is the cadence table model', () => {
     for (const t of STORE_V4_TASKS) expect(t.model).toBe(TASK_CADENCE[t.name]!.model);
   });
 });
 
 describe('Writing payloads leaves the registry and old tasks alone', () => {
-  it('writes the three with markers, keeps a retired dir, and never reads the registry', () => {
+  it('[CORE-CLI-TASKS-REGISTER-23] writes the three with markers, keeps a retired dir, and never reads the registry', () => {
     const fx = fixture();
     const retired = fx.dir(scopedTaskName(fx.root, 'daily'));
     seed(retired, 'old bundle\n');
@@ -128,7 +128,7 @@ describe('Writing payloads leaves the registry and old tasks alone', () => {
     expect(fs.readFileSync(registry, 'utf-8')).toBe('{"scheduledTasks":[]}\n');
   });
 
-  it('a second call returns three empty lists and changes no file', () => {
+  it('[CORE-CLI-TASKS-REGISTER-23] a second call returns three empty lists and changes no file', () => {
     const fx = fixture();
     writeTaskPayloads({ projectRoot: fx.root, home: fx.home });
     const before = snapshot(fx.home);
@@ -136,7 +136,7 @@ describe('Writing payloads leaves the registry and old tasks alone', () => {
     expect(snapshot(fx.home)).toEqual(before);
   });
 
-  it("never touches a same-slug directory another project owns", () => {
+  it("[CORE-CLI-TASK-SCOPING-2] never touches a same-slug directory another project owns", () => {
     const fx = fixture();
     const foreign = fx.dir(fx.names[0]!);
     const content = '---\nname: x\n---\n\n<!-- cortex-project-root: /some/other -->\n';
@@ -149,7 +149,7 @@ describe('Writing payloads leaves the registry and old tasks alone', () => {
 });
 
 describe('A dry run reports and writes nothing', () => {
-  it('returns the lists a real call would, and no file changes', () => {
+  it('[CORE-CLI-TASKS-REGISTER-24] returns the lists a real call would, and no file changes', () => {
     const fx = fixture();
     const [absent, stale, edited] = fx.names as [string, string, string];
     const old = 'older package payload\n';
@@ -164,7 +164,7 @@ describe('A dry run reports and writes nothing', () => {
     expect(writeTaskPayloads({ projectRoot: fx.root, home: fx.home })).toEqual(dry);
   });
 
-  it('does not write a missing marker', () => {
+  it('[CORE-CLI-TASKS-REGISTER-24] does not write a missing marker', () => {
     const fx = fixture();
     writeTaskPayloads({ projectRoot: fx.root, home: fx.home });
     fs.rmSync(path.join(fx.dir(fx.names[0]!), INSTALLED_MARKER_FILENAME));
@@ -175,7 +175,7 @@ describe('A dry run reports and writes nothing', () => {
 });
 
 describe('Unedited payloads are replaced, edited ones stay', () => {
-  it('replaces the unedited, keeps the edited, marks the unmarked current one', () => {
+  it('[CORE-CLI-TASKS-REGISTER-25] replaces the unedited, keeps the edited, marks the unmarked current one', () => {
     const fx = fixture();
     const [unedited, edited, unmarked] = fx.names as [string, string, string];
     const old = 'older package payload\n';
@@ -195,7 +195,7 @@ describe('Unedited payloads are replaced, edited ones stay', () => {
     expect(readInstalledMarker(path.join(fx.dir(unmarked), INSTALLED_MARKER_FILENAME))?.sha256).toBe(sha256Hex(current));
   });
 
-  it('a stale marker on current content is rewritten, in none of the lists', () => {
+  it('[CORE-CLI-TASKS-REGISTER-25] a stale marker on current content is rewritten, in none of the lists', () => {
     const fx = fixture();
     const name = fx.names[0]!;
     const current = storeV4TaskSkillMd(STORE_V4_TASKS[0]!, name, fx.root);
@@ -208,7 +208,7 @@ describe('Unedited payloads are replaced, edited ones stay', () => {
     expect(readInstalledMarker(path.join(fx.dir(name), INSTALLED_MARKER_FILENAME))?.sha256).toBe(sha256Hex(current));
   });
 
-  it('a payload with no marker and other content counts as a local edit', () => {
+  it('[CORE-CLI-TASKS-REGISTER-25] a payload with no marker and other content counts as a local edit', () => {
     const fx = fixture();
     const name = fx.names[0]!;
     seed(fx.dir(name), 'no marker, not current\n');

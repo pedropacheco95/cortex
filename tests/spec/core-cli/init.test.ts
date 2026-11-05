@@ -65,7 +65,7 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('.cortex/ matches the schema §1 layout with an _index.md in every directory', () => {
+  it('[CORE-CLI-INIT-5] .cortex/ matches the schema §1 layout with an _index.md in every directory', () => {
     const dirs = [
       '', 'compass', 'compass/bugs', 'compass/rules',
       'atlas', 'atlas/stakeholders', 'atlas/decisions', 'atlas/domain', 'atlas/evidence', 'atlas/sources',
@@ -86,7 +86,7 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
     expect(doc).toBeTypeOf('object');
   });
 
-  it('the recall index is compiled directly by init, after the constellation (schema §4.11, 3.4)', () => {
+  it('[RECALL-RECALL-INDEX-12] the recall index is compiled directly by init, after the constellation (schema §4.11, 3.4)', () => {
     const indexPath = path.join(root, '.cortex', 'recall-index.json');
     expect(fs.existsSync(indexPath)).toBe(true);
     const doc = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
@@ -94,12 +94,12 @@ describe('AC1: fresh init on an empty project succeeds end-to-end', () => {
     expect(doc.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
-  it('cortex.config.json declares the current schemaVersion', () => {
+  it('[CORE-CLI-INIT-5] cortex.config.json declares the current schemaVersion', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect(config.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
-  it('self-validation reports conformant and exit code is 0', async () => {
+  it('[CORE-CLI-INIT-5] self-validation reports conformant and exit code is 0', async () => {
     expect(result.exitCode).toBe(0);
     expect(result.summary).toContain('Self-validation: conformant');
     const report = await validate(root, { root });
@@ -122,7 +122,7 @@ describe('AC2: existing .cortex/ refused without --force', () => {
   });
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('exits 2 and no file in the project or fake home is created or modified', async () => {
+  it('[CORE-CLI-INIT-6] exits 2 and no file in the project or fake home is created or modified', async () => {
     const projectBefore = snapshotTree(root);
     const homeBefore = snapshotTree(home);
     const result = await init(root, { home, ...DARWIN });
@@ -146,7 +146,7 @@ describe('AC3: non-macOS platform refused', () => {
   });
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('exits 2 with a message naming macOS, and nothing is written', async () => {
+  it('[CORE-CLI-INIT-7] exits 2 with a message naming macOS, and nothing is written', async () => {
     const before = snapshotTree(root);
     const result = await init(root, { home, platform: 'linux' });
     expect(result.exitCode).toBe(2);
@@ -171,7 +171,7 @@ describe('AC4: gitignore additions are exact and idempotent', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('contains the five paths exactly once each, no anatomy line, and no bare .cortex/ line; the evidence index and recall index exist', () => {
+  it('[CORE-CLI-INIT-9] contains the five paths exactly once each, no anatomy line, and no bare .cortex/ line; the evidence index and recall index exist', () => {
     const lines = fs.readFileSync(path.join(root, '.gitignore'), 'utf-8').split('\n').map((l) => l.trim());
     for (const wanted of ['.cortex/atlas/sources/', '.cortex/pulse/', '.cortex/constellation.json', '.cortex/archive/documents/*/source.*', '.cortex/recall-index.json']) {
       expect(lines.filter((l) => l === wanted)).toHaveLength(1);
@@ -201,13 +201,13 @@ describe('AC5: CLAUDE.md content outside the managed block is preserved across t
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('contains exactly one cortex:start…cortex:end block', () => {
+  it('[CORE-CLI-INIT-10] contains exactly one cortex:start…cortex:end block', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(content.split('<!-- cortex:start').length - 1).toBe(1);
     expect(content.split('<!-- cortex:end -->').length - 1).toBe(1);
   });
 
-  it('# My Project and ## Commands are byte-identical to before', () => {
+  it('[CORE-CLI-INIT-10] # My Project and ## Commands are byte-identical to before', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(content.startsWith(original)).toBe(true);
     expect(content).toContain('# My Project');
@@ -249,30 +249,30 @@ describe('AC5b: the block names the non-implementer roles, states placement once
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(freshRoot); cleanTmp(publicRoot); cleanTmp(home); });
 
-  it('both blocks carry the pinned role sentence', () => {
+  it('[CORE-CLI-INIT-11] both blocks carry the pinned role sentence', () => {
     for (const block of [freshBlock, publicBlock]) {
       expect(unwrap(block)).toContain('This applies more, not less, to sessions that dispatch, review or plan rather than edit');
     }
   });
 
-  it('exactly one line starts **Placement:** durable knowledge lives in `.cortex/`', () => {
+  it('[CORE-CLI-INIT-11] exactly one line starts **Placement:** durable knowledge lives in `.cortex/`', () => {
     for (const block of [freshBlock, publicBlock]) {
       expect(block.split('\n').filter((l) => l.startsWith('**Placement:** durable knowledge lives in `.cortex/`'))).toHaveLength(1);
     }
   });
 
-  it("the fresh block's placement line ends with the unknown tail", () => {
+  it("[CORE-CLI-INIT-11] the fresh block's placement line ends with the unknown tail", () => {
     const para = unwrap(freshBlock.split('\n\n').find((p) => p.startsWith('**Placement:**')) ?? '');
     expect(para.endsWith('Repository visibility is unknown — set `visibility.repo` in `cortex.config.json`.')).toBe(true);
   });
 
-  it("the public block's placement line names docs/notes as local and untracked and ends (RULES.md rule 20).", () => {
+  it("[CORE-CLI-INIT-11] the public block's placement line names docs/notes as local and untracked and ends (RULES.md rule 20).", () => {
     const para = unwrap(publicBlock.split('\n\n').find((p) => p.startsWith('**Placement:**')) ?? '');
     expect(para).toContain('`docs/notes` is local and untracked: notes there do not travel — promote them into `.cortex/` instead of tracking the directory.');
     expect(para.endsWith('(RULES.md rule 20).')).toBe(true);
   });
 
-  it('neither block contains the insight mandate', () => {
+  it('[CORE-CLI-INIT-11] neither block contains the insight mandate', () => {
     for (const block of [freshBlock, publicBlock]) {
       expect(block).not.toContain('This is not optional');
       expect(block).not.toContain('Before substantive work on any file');
@@ -306,7 +306,7 @@ describe('AC6: settings.json merge preserves unrelated keys', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('cortex hook entries present; model and Stop hook unchanged', () => {
+  it('[CORE-CLI-INIT-12] cortex hook entries present; model and Stop hook unchanged', () => {
     const settings = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8'));
     expect(settings.model).toBe('opus');
     // the user's Stop entry is untouched and stays first; Cortex's own Stop row follows it
@@ -328,7 +328,7 @@ describe('AC6: settings.json merge preserves unrelated keys', () => {
     ]);
   });
 
-  it('check.hook-config passes', async () => {
+  it('[CORE-CLI-INIT-12] check.hook-config passes', async () => {
     expect(result.exitCode).toBe(0);
     const report = await validate(root, { root });
     expect(report.violations.filter((v) => v.check === 'check.hook-config')).toHaveLength(0);
@@ -432,7 +432,7 @@ The cart total is off by one cent when discounts stack.
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('creates B-001-*.md and B-002-*.md conforming to schema §4.3', () => {
+  it('[CORE-CLI-INIT-18] creates B-001-*.md and B-002-*.md conforming to schema §4.3', () => {
     const bugsDir = path.join(root, '.cortex', 'compass', 'bugs');
     const files = fs.readdirSync(bugsDir).filter((f) => /^B-\d{3}-/.test(f)).sort();
     expect(files).toHaveLength(2);
@@ -453,7 +453,7 @@ The cart total is off by one cent when discounts stack.
     expect(second['status']).toBe('open');
   });
 
-  it('root bugs.md now contains only a deprecation marker pointing at the new location', () => {
+  it('[CORE-CLI-INIT-18] root bugs.md now contains only a deprecation marker pointing at the new location', () => {
     const content = fs.readFileSync(path.join(root, 'bugs.md'), 'utf-8');
     expect(content).toContain('DEPRECATED');
     expect(content).toContain('.cortex/compass/bugs/');
@@ -475,13 +475,13 @@ describe('AC13: spec trees scaffolded only when absent', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('.specflow/specs/_index.md, .specflow/specs/_overview.md, and .specflow/specs-business/_overview.md exist as skeletons', () => {
+  it('[CORE-CLI-INIT-19] .specflow/specs/_index.md, .specflow/specs/_overview.md, and .specflow/specs-business/_overview.md exist as skeletons', () => {
     expect(fs.existsSync(path.join(root, '.specflow', 'specs', '_index.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.specflow', 'specs', '_overview.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.specflow', 'specs-business', '_overview.md'))).toBe(true);
   });
 
-  it('summary recommends specflow-onboard-codebase (and init did not run it)', () => {
+  it('[CORE-CLI-INIT-19] summary recommends specflow-onboard-codebase (and init did not run it)', () => {
     expect(result.summary).toContain('specflow-onboard-codebase');
     expect(result.exitCode).toBe(0);
   });
@@ -502,7 +502,7 @@ describe('AC13: existing .specflow/specs/ content is byte-identical after init',
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('existing .specflow/specs/ files are byte-identical and no skeleton was overlaid', () => {
+  it('[CORE-CLI-INIT-19] existing .specflow/specs/ files are byte-identical and no skeleton was overlaid', () => {
     expect(fs.readFileSync(path.join(root, '.specflow', 'specs', '_index.md'), 'utf-8')).toBe(indexContent);
     expect(fs.readFileSync(path.join(root, '.specflow', 'specs', 'notes.md'), 'utf-8')).toBe(notesContent);
     expect(fs.existsSync(path.join(root, '.specflow', 'specs', '_overview.md'))).toBe(false); // tree untouched
@@ -522,7 +522,7 @@ describe('AC14: five scheduled task bundles written to the stubbed home', () => 
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it("~/.claude/scheduled-tasks contains every dir under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
+  it("[CORE-CLI-INIT-20] ~/.claude/scheduled-tasks contains every dir under this project's scoped names (§9.1), each with scoped name + description frontmatter", () => {
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const dirs = fs.readdirSync(base);
     expect(dirs).toHaveLength(5);
@@ -541,7 +541,7 @@ describe('AC14: five scheduled task bundles written to the stubbed home', () => 
     }
   });
 
-  it('re-running without --force leaves user-modified task files untouched', async () => {
+  it('[CORE-CLI-INIT-20] re-running without --force leaves user-modified task files untouched', async () => {
     const scopedDaily = scopedTaskName(root, CANONICAL_TASK_NAMES['daily']!);
     const dailyPath = path.join(home, '.claude', 'scheduled-tasks', scopedDaily, 'SKILL.md');
     const userEdit = `---\nname: ${scopedDaily}\ndescription: USER EDITED\n---\n\nmy custom prompt\n`;
@@ -573,7 +573,7 @@ describe('AC15: --partial on a project holding the loop skills → all five task
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('~/.claude/scheduled-tasks gains exactly the five packaged bundles (scoped names, §9.1) and exit code is 0', () => {
+  it('[CORE-CLI-INIT-21] ~/.claude/scheduled-tasks gains exactly the five packaged bundles (scoped names, §9.1) and exit code is 0', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const expected = PACKAGED_LOOP_TASKS
@@ -582,7 +582,7 @@ describe('AC15: --partial on a project holding the loop skills → all five task
     expect(fs.readdirSync(base).sort()).toEqual(expected);
   });
 
-  it('.cortex/ skeleton, insight module, hooks, and CLAUDE.md block are all complete', () => {
+  it('[CORE-CLI-INIT-21] .cortex/ skeleton, insight module, hooks, and CLAUDE.md block are all complete', () => {
     expect(fs.existsSync(path.join(root, '.cortex', 'cortex.config.json'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.cortex', '_index.md'))).toBe(true);
     expect(fs.existsSync(path.join(root, '.cortex', 'insight', '_index.md'))).toBe(true);
@@ -594,7 +594,7 @@ describe('AC15: --partial on a project holding the loop skills → all five task
     expect(claudeMd).toContain('<!-- cortex:end -->');
   });
 
-  it('summary states "5 bundle payloads on disk" and skips nothing — the packaged skills cover every bundle', () => {
+  it('[CORE-CLI-INIT-21] summary states "5 bundle payloads on disk" and skips nothing — the packaged skills cover every bundle', () => {
     expect(result.summary).toContain('5 bundle payloads on disk');
     const skippedTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => PACKAGED_LOOP_SKILLS.includes(s)),
@@ -619,7 +619,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('all five bundles are written under scoped names (seeded pair adds nothing beyond the packaged set)', () => {
+  it('[CORE-CLI-INIT-22] all five bundles are written under scoped names (seeded pair adds nothing beyond the packaged set)', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     const expected = PACKAGED_LOOP_TASKS
@@ -630,7 +630,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
     expect(result.summary).toContain('5 bundle payloads on disk');
   });
 
-  it('no task is skipped — every required skill is packaged', () => {
+  it('[CORE-CLI-INIT-22] no task is skipped — every required skill is packaged', () => {
     const present = ['specflow-lint', 'specflow-tests', ...PACKAGED_LOOP_SKILLS];
     const skippedTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => present.includes(s)),
@@ -656,14 +656,14 @@ describe('AC17: default mode → all five written, no lacking-skill warning', ()
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('all task directories are written', () => {
+  it('[CORE-CLI-INIT-23] all task directories are written', () => {
     expect(result.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
     expect(fs.readdirSync(base)).toHaveLength(5);
     expect(result.summary).toMatch(/Scheduled tasks: 5 written/);
   });
 
-  it('summary carries no lacking-skill warning — every registered task has its packaged skill', () => {
+  it('[CORE-CLI-INIT-23] summary carries no lacking-skill warning — every registered task has its packaged skill', () => {
     const present = ['specflow-lint', 'specflow-tests', ...PACKAGED_LOOP_SKILLS];
     const lackingTasks = SCHEDULED_TASKS.filter(
       (t) => !t.requiredSkills.every((s) => present.includes(s)),
@@ -690,7 +690,7 @@ describe('AC18: git hook appended, not clobbered', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('hook still contains echo existing, followed by insight-refresh-fast only, and is executable', () => {
+  it('[CORE-CLI-INIT-24] hook still contains echo existing, followed by insight-refresh-fast only, and is executable', () => {
     const hookPath = path.join(root, '.git', 'hooks', 'post-commit');
     const content = fs.readFileSync(hookPath, 'utf-8');
     expect(content).toContain('echo existing');

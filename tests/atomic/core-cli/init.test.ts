@@ -44,7 +44,7 @@ describe('Rule 1: preflight', () => {
   });
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('existing .cortex/ with --force proceeds (exit 0)', async () => {
+  it('[CORE-CLI-INIT-6] existing .cortex/ with --force proceeds (exit 0)', async () => {
     const result = await init(root, { noLlm: true, force: true, home, ...DARWIN });
     expect(result.exitCode).toBe(0);
   }, TEST_TIMEOUT);
@@ -68,7 +68,7 @@ describe('Rule 1: nested-layer guard (B-013)', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(projectRoot); cleanTmp(home); });
 
-  it('targeting the .cortex layer directory itself is refused, exit 2, nothing written, names the project root', async () => {
+  it('[CORE-CLI-INIT-8] targeting the .cortex layer directory itself is refused, exit 2, nothing written, names the project root', async () => {
     const before = snapshotTree(projectRoot);
     const beforeHome = snapshotTree(home);
     const result = await init(layerDir, { noLlm: true, home, ...DARWIN });
@@ -81,7 +81,7 @@ describe('Rule 1: nested-layer guard (B-013)', () => {
     expect(snapshotTree(home)).toEqual(beforeHome);
   }, TEST_TIMEOUT);
 
-  it('--force does NOT override the nested-layer refusal', async () => {
+  it('[CORE-CLI-INIT-8] --force does NOT override the nested-layer refusal', async () => {
     const before = snapshotTree(projectRoot);
     const result = await init(layerDir, { noLlm: true, force: true, home, ...DARWIN });
     expect(result.exitCode).toBe(2);
@@ -90,7 +90,7 @@ describe('Rule 1: nested-layer guard (B-013)', () => {
     expect(snapshotTree(projectRoot)).toEqual(before);
   }, TEST_TIMEOUT);
 
-  it('a subdirectory well inside the layer (.cortex/insight) is also refused', async () => {
+  it('[CORE-CLI-INIT-8] a subdirectory well inside the layer (.cortex/insight) is also refused', async () => {
     const before = snapshotTree(projectRoot);
     const nestedTarget = path.join(layerDir, 'insight');
     const result = await init(nestedTarget, { noLlm: true, home, ...DARWIN });
@@ -101,7 +101,7 @@ describe('Rule 1: nested-layer guard (B-013)', () => {
     expect(snapshotTree(projectRoot)).toEqual(before);
   }, TEST_TIMEOUT);
 
-  it('a normal project root that merely contains a .cortex/ child is not a false positive (inits fine)', async () => {
+  it('[CORE-CLI-INIT-8] a normal project root that merely contains a .cortex/ child is not a false positive (inits fine)', async () => {
     const freshRoot = makeTmpDir('nested-nonfp-proj');
     const freshHome = makeTmpDir('nested-nonfp-home');
     try {
@@ -147,7 +147,7 @@ describe('exit codes: validation failure → 1 (exit 3 retired with the purpose 
 // Rule 2 — gitignore exactness
 // ---------------------------------------------------------------------------
 describe('Rule 2: gitignore', () => {
-  it('creates .gitignore with exactly the five paths (no .cortex/anatomy/, step 7; recall-index.json at 3.4) and never a bare .cortex/', async () => {
+  it('[CORE-CLI-INIT-9] creates .gitignore with exactly the five paths (no .cortex/anatomy/, step 7; recall-index.json at 3.4) and never a bare .cortex/', async () => {
     const root = makeTmpDir('gi-proj');
     const home = makeTmpDir('gi-home');
     try {
@@ -174,7 +174,7 @@ describe('Rule 2: gitignore', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('re-running with --force does not duplicate lines', async () => {
+  it('[CORE-CLI-INIT-9] re-running with --force does not duplicate lines', async () => {
     const root = makeTmpDir('gi2-proj');
     const home = makeTmpDir('gi2-home');
     try {
@@ -209,7 +209,7 @@ describe('Rule 3: skeleton', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('cortex.config.json carries the exact §10.1 defaults (no anatomy or insight blocks, v3.0 A10.0)', () => {
+  it('[CORE-CLI-INIT-5] cortex.config.json carries the exact §10.1 defaults (no anatomy or insight blocks, v3.0 A10.0)', () => {
     const config = JSON.parse(fs.readFileSync(path.join(root, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect(config).toEqual({
       schemaVersion: SCHEMA_VERSION,
@@ -232,7 +232,7 @@ describe('Rule 3: skeleton', () => {
     });
   });
 
-  it('every .cortex/ _index.md follows the §7.1 active-prompt shape', () => {
+  it('[CORE-CLI-INIT-5] every .cortex/ _index.md follows the §7.1 active-prompt shape', () => {
     const walk = (dir: string): string[] => {
       const found: string[] = [];
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -263,14 +263,14 @@ describe('Rule 3: skeleton', () => {
     }
   });
 
-  it('pulse/dismissed.md exists with a schema-valid pulse header', () => {
+  it('[CORE-CLI-INIT-5] pulse/dismissed.md exists with a schema-valid pulse header', () => {
     const data = matter(fs.readFileSync(path.join(root, '.cortex', 'pulse', 'dismissed.md'), 'utf-8')).data;
     expect(data['kind']).toBe('pulse-dismissed');
     expect(data['generated']).toBeTruthy();
     expect(data['loop']).toBeTruthy();
   });
 
-  it('scaffolds the pulse four-zone layout: reports/, state/, state/reads/, extraction/ pre-created, and _index.md describes all four', () => {
+  it('[CORE-CLI-INIT-5] scaffolds the pulse four-zone layout: reports/, state/, state/reads/, extraction/ pre-created, and _index.md describes all four', () => {
     const pulseDir = path.join(root, '.cortex', 'pulse');
     for (const zone of ['reports', 'state', path.join('state', 'reads'), 'extraction']) {
       const zonePath = path.join(pulseDir, zone);
@@ -283,14 +283,14 @@ describe('Rule 3: skeleton', () => {
     }
   });
 
-  it('scaffolded .specflow/specs/_index.md has the §7.2 sections', () => {
+  it('[CORE-CLI-INIT-19] scaffolded .specflow/specs/_index.md has the §7.2 sections', () => {
     const content = fs.readFileSync(path.join(root, '.specflow', 'specs', '_index.md'), 'utf-8');
     for (const section of ['Read this when:', '## Domains', '## Dependency Graph', '## Build Order']) {
       expect(content).toContain(section);
     }
   });
 
-  it('scaffolded _overview.md files have the §7.3 headings', () => {
+  it('[CORE-CLI-INIT-19] scaffolded _overview.md files have the §7.3 headings', () => {
     for (const p of [path.join(root, '.specflow', 'specs', '_overview.md'), path.join(root, '.specflow', 'specs-business', '_overview.md')]) {
       const content = fs.readFileSync(p, 'utf-8');
       expect(content).toContain('## What this is');
@@ -299,14 +299,14 @@ describe('Rule 3: skeleton', () => {
     }
   });
 
-  it('CLAUDE.md was created with the v-versioned managed block', () => {
+  it('[CORE-CLI-INIT-10] CLAUDE.md was created with the v-versioned managed block', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(content).toContain(`<!-- cortex:start v${SCHEMA_VERSION} -->`);
     expect(content).toContain('<!-- cortex:end -->');
     expect(content).toContain(`Modules present: compass, atlas, archive, insight, pulse. Schema: ${SCHEMA_VERSION}.`);
   });
 
-  it('no module-level .cortex/anatomy/ is scaffolded (retired at step 7)', () => {
+  it('[CORE-CLI-INIT-5] no module-level .cortex/anatomy/ is scaffolded (retired at step 7)', () => {
     expect(fs.existsSync(path.join(root, '.cortex', 'anatomy'))).toBe(false);
   });
 });
@@ -369,7 +369,7 @@ describe('Rule 3: archive module scaffolding', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('creates archive/_index.md, register.md, and empty documents/ + types/', () => {
+  it('[CORE-CLI-INIT-5] creates archive/_index.md, register.md, and empty documents/ + types/', () => {
     const archiveDir = path.join(root, '.cortex', 'archive');
     expect(fs.existsSync(path.join(archiveDir, '_index.md'))).toBe(true);
     expect(fs.existsSync(path.join(archiveDir, 'register.md'))).toBe(true);
@@ -379,14 +379,14 @@ describe('Rule 3: archive module scaffolding', () => {
     expect(fs.readdirSync(path.join(archiveDir, 'types'))).toEqual([]);
   });
 
-  it('archive/_index.md follows the §7.1 active-prompt shape', () => {
+  it('[CORE-CLI-INIT-5] archive/_index.md follows the §7.1 active-prompt shape', () => {
     const content = fs.readFileSync(path.join(root, '.cortex', 'archive', '_index.md'), 'utf-8');
     expect(content).toContain('Read this when:');
     expect(content).toContain("What's here:");
     expect(content).toContain('How to navigate:');
   });
 
-  it('the project self-validates clean with the freshly-scaffolded (empty) archive module', async () => {
+  it('[CORE-CLI-INIT-5] the project self-validates clean with the freshly-scaffolded (empty) archive module', async () => {
     const report = await validate(root, { root });
     const archiveViolations = report.violations.filter((v) => v.check.startsWith('check.archive'));
     expect(archiveViolations).toEqual([]);
@@ -492,7 +492,7 @@ describe('Rule 7: preferences draft', () => {
 // Rule 11 — settings.json deep-merge
 // ---------------------------------------------------------------------------
 describe('Rule 11: settings.json deep-merge', () => {
-  it('preserves deeply nested unrelated keys and existing hook arrays', async () => {
+  it('[CORE-CLI-INIT-12] preserves deeply nested unrelated keys and existing hook arrays', async () => {
     const root = makeTmpDir('merge-proj');
     const home = makeTmpDir('merge-home');
     try {
@@ -546,7 +546,7 @@ describe('Rule 11: settings.json deep-merge', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('registers the UserPromptSubmit prompt-route row once, with no matcher and no timeout, regardless of hooks.preRead (hooks.prompt-route Rule 1)', async () => {
+  it('[HOOKS-PROMPT-ROUTE-1] registers the UserPromptSubmit prompt-route row once, with no matcher and no timeout, regardless of hooks.preRead (hooks.prompt-route Rule 1)', async () => {
     const root = makeTmpDir('merge6-proj');
     const home = makeTmpDir('merge6-home');
     try {
@@ -570,7 +570,7 @@ describe('Rule 11: settings.json deep-merge', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('registers the PreToolUse Grep|Bash search-annotate row once, without a timeout, regardless of hooks.preRead (hooks.search-annotate Rule 1)', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-16] registers the PreToolUse Grep|Bash search-annotate row once, without a timeout, regardless of hooks.preRead (hooks.search-annotate Rule 1)', async () => {
     const root = makeTmpDir('merge5-proj');
     const home = makeTmpDir('merge5-home');
     try {
@@ -595,7 +595,7 @@ describe('Rule 11: settings.json deep-merge', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('registers SessionEnd (timeout: 10, no matcher) and Stop (no timeout, no matcher) exactly once each', async () => {
+  it('[HOOKS-SESSION-END-1] registers SessionEnd (timeout: 10, no matcher) and Stop (no timeout, no matcher) exactly once each', async () => {
     const root = makeTmpDir('merge4-proj');
     const home = makeTmpDir('merge4-home');
     try {
@@ -616,7 +616,7 @@ describe('Rule 11: settings.json deep-merge', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('writes the PreRead hook entry iff cortex.config.json hooks.preRead is true', async () => {
+  it('[CORE-CLI-INIT-12] writes the PreRead hook entry iff cortex.config.json hooks.preRead is true', async () => {
     const root = makeTmpDir('merge3-proj');
     const home = makeTmpDir('merge3-home');
     try {
@@ -709,7 +709,7 @@ describe('Rule 12: hook invocation constants and stripRetiredGitHookLines', () =
 });
 
 describe('Rule 12: existing v2 dual-line hook is migrated to insight-only', () => {
-  it('anatomy line dropped, user content preserved, summary says already-installed, re-run idempotent', async () => {
+  it('[CORE-CLI-INIT-24] anatomy line dropped, user content preserved, summary says already-installed, re-run idempotent', async () => {
     const root = makeTmpDir('hookmig-proj');
     const home = makeTmpDir('hookmig-home');
     try {
@@ -751,7 +751,7 @@ describe('Rule 12: existing v2 dual-line hook is migrated to insight-only', () =
     }
   }, TEST_TIMEOUT);
 
-  it('a v2 hook with only the anatomy line gets it stripped and the insight snippet appended', async () => {
+  it('[CORE-CLI-INIT-24] a v2 hook with only the anatomy line gets it stripped and the insight snippet appended', async () => {
     const root = makeTmpDir('hookmig2-proj');
     const home = makeTmpDir('hookmig2-home');
     try {
@@ -776,7 +776,7 @@ describe('Rule 12: existing v2 dual-line hook is migrated to insight-only', () =
     }
   }, TEST_TIMEOUT);
 
-  it('a fresh repo without a hook gets the insight-only hook created', async () => {
+  it('[CORE-CLI-INIT-24] a fresh repo without a hook gets the insight-only hook created', async () => {
     const root = makeTmpDir('hookmig3-proj');
     const home = makeTmpDir('hookmig3-home');
     try {
@@ -799,7 +799,7 @@ describe('Rule 12: existing v2 dual-line hook is migrated to insight-only', () =
 // Rule 13 — the five bundle names, exactly
 // ---------------------------------------------------------------------------
 describe('Rule 13: the five scheduled task bundles are exactly the design set, project-scoped (§9.1)', () => {
-  it("writes exactly the five scoped bundle names; --force overwrites only THIS project's entries", async () => {
+  it("[CORE-CLI-INIT-20] writes exactly the five scoped bundle names; --force overwrites only THIS project's entries", async () => {
     const root = makeTmpDir('tasks-proj');
     const root2 = makeTmpDir('tasks-proj2');
     const home = makeTmpDir('tasks-home');
@@ -973,7 +973,7 @@ describe('Rule 15: summary names every change and the Desktop reminder', () => {
 // Rules 13/15 — registration instruction block (B-009 final mechanism)
 // ---------------------------------------------------------------------------
 describe('Rules 13/15: register-in-Desktop instruction block vs all-registered one-liner', () => {
-  it('registry missing (app never ran) → instruction block: 5 of 5, /cortex-register-tasks, verify', async () => {
+  it('[CORE-CLI-INIT-20] registry missing (app never ran) → instruction block: 5 of 5, /cortex-register-tasks, verify', async () => {
     const root = makeTmpDir('regblock-proj');
     const home = makeTmpDir('regblock-home');
     const appSupportDir = makeTmpDir('regblock-appsupport'); // empty: no registry anywhere
@@ -995,7 +995,7 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
     }
   }, TEST_TIMEOUT);
 
-  it('all five registered in the fixture registry → all-registered one-liner, no instruction block', async () => {
+  it('[CORE-CLI-INIT-20] all five registered in the fixture registry → all-registered one-liner, no instruction block', async () => {
     const root = makeTmpDir('regok-proj');
     const home = makeTmpDir('regok-home');
     const appSupportDir = makeTmpDir('regok-appsupport');

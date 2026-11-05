@@ -80,14 +80,14 @@ afterEach(() => {
 const REQUIRED_VERBS = ['init', 'sync', 'validate', 'scan', 'insight', 'usage', 'thread', 'why', 'recall', 'hook'];
 
 describe('core-cli.init Rule 18: `--help` prints usage and writes nothing', () => {
-  it('cortex --help exits 2 with the verb list on stdout and creates nothing', async () => {
+  it('[CORE-CLI-INIT-1] cortex --help exits 2 with the verb list on stdout and creates nothing', async () => {
     const exitCode = await cortex(['--help']);
     expect(exitCode).toBe(2);
     for (const verb of REQUIRED_VERBS) expect(stdout()).toMatch(new RegExp(`\\b${verb}\\b`));
     expectNothingWritten();
   });
 
-  it('cortex -h behaves identically', async () => {
+  it('[CORE-CLI-INIT-1] cortex -h behaves identically', async () => {
     const exitCode = await cortex(['-h']);
     expect(exitCode).toBe(2);
     for (const verb of REQUIRED_VERBS) expect(stdout()).toMatch(new RegExp(`\\b${verb}\\b`));
@@ -96,7 +96,7 @@ describe('core-cli.init Rule 18: `--help` prints usage and writes nothing', () =
 });
 
 describe('core-cli.init Rule 18: a mistyped verb in a directory without .cortex/ is refused, not initialised', () => {
-  it('cortex nonsense exits 2, names the verb on the first line, writes nothing', async () => {
+  it('[CORE-CLI-INIT-2] cortex nonsense exits 2, names the verb on the first line, writes nothing', async () => {
     const exitCode = await cortex(['nonsense']);
     expect(exitCode).toBe(2);
     expect(stdout().split('\n')[0]).toContain('nonsense');
@@ -105,7 +105,7 @@ describe('core-cli.init Rule 18: a mistyped verb in a directory without .cortex/
     expectNothingWritten();
   });
 
-  it('cortex insihgt file src/x.ts exits 2, names insihgt, and never creates ./file/', async () => {
+  it('[CORE-CLI-INIT-2] cortex insihgt file src/x.ts exits 2, names insihgt, and never creates ./file/', async () => {
     const exitCode = await cortex(['insihgt', 'file', 'src/x.ts']);
     expect(exitCode).toBe(2);
     expect(stdout().split('\n')[0]).toContain('insihgt');
@@ -114,7 +114,7 @@ describe('core-cli.init Rule 18: a mistyped verb in a directory without .cortex/
     expectNothingWritten();
   });
 
-  it('--version and -v are unrecognised until a version verb is specified', async () => {
+  it('[CORE-CLI-INIT-2] --version and -v are unrecognised until a version verb is specified', async () => {
     expect(await cortex(['--version'])).toBe(2);
     expect(stdout().split('\n')[0]).toContain('--version');
     expectNothingWritten();
@@ -122,7 +122,7 @@ describe('core-cli.init Rule 18: a mistyped verb in a directory without .cortex/
 });
 
 describe('core-cli.init Rule 18: bare `cortex` prints usage and writes nothing', () => {
-  it('no arguments → exit 2, usage on stdout, nothing on disk', async () => {
+  it('[CORE-CLI-INIT-3] no arguments → exit 2, usage on stdout, nothing on disk', async () => {
     const exitCode = await cortex([]);
     expect(exitCode).toBe(2);
     for (const verb of REQUIRED_VERBS) expect(stdout()).toMatch(new RegExp(`\\b${verb}\\b`));
@@ -133,7 +133,7 @@ describe('core-cli.init Rule 18: bare `cortex` prints usage and writes nothing',
 
 describe('core-cli.init Rule 18: the explicit verb still initialises, with the verb stripped', () => {
   it(
-    'cortex init --no-llm initialises the cwd, never a directory named init',
+    '[CORE-CLI-INIT-31] cortex init --no-llm initialises the cwd, never a directory named init',
     async () => {
       const exitCode = await cortex(['init', '--no-llm']);
       expect(exitCode).toBe(0);
@@ -145,7 +145,7 @@ describe('core-cli.init Rule 18: the explicit verb still initialises, with the v
   );
 
   it(
-    'cortex init --timeout-ms 5 --profile specflow --no-llm initialises the cwd, not ./init/',
+    '[CORE-CLI-INIT-31] cortex init --timeout-ms 5 --profile specflow --no-llm initialises the cwd, not ./init/',
     async () => {
       const exitCode = await cortex(['init', '--timeout-ms', '5', '--profile', 'specflow', '--no-llm']);
       expect(exitCode).toBe(0);
@@ -158,7 +158,7 @@ describe('core-cli.init Rule 18: the explicit verb still initialises, with the v
 });
 
 describe('core-cli.init Rule 18: the usage text and the file-header docblock share one verb list', () => {
-  it('USAGE_VERBS names every verb the criteria require and the docblock lists exactly the same set', () => {
+  it('[CORE-CLI-INIT-1] USAGE_VERBS names every verb the criteria require and the docblock lists exactly the same set', () => {
     for (const verb of REQUIRED_VERBS) expect(USAGE_VERBS).toContain(verb);
     const source = fs.readFileSync(CLI_SOURCE, 'utf-8');
     const docblock = source.slice(0, source.indexOf('*/'));

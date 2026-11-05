@@ -53,7 +53,7 @@ afterEach(() => {
 });
 
 describe('An unaccepted store stays on the 3.x roster', () => {
-  it('plan and verify read the five bundles; register and heartbeat refuse and write nothing', () => {
+  it('[CORE-CLI-TASKS-REGISTER-16] plan and verify read the five bundles; register and heartbeat refuse and write nothing', () => {
     const fx = fixture(unacceptedProject);
     const plan = planTasks(fx.opts);
     expect(plan.taskCount).toBe(5);
@@ -73,7 +73,7 @@ describe('An unaccepted store stays on the 3.x roster', () => {
     expect(fs.existsSync(path.join(fx.root, 'cortex', 'now'))).toBe(false);
   });
 
-  it("a 3.x project's plan --json keeps the shape its own copy of the skill reads, and verify points at that skill", () => {
+  it("[CORE-CLI-TASKS-REGISTER-16] a 3.x project's plan --json keeps the shape its own copy of the skill reads, and verify points at that skill", () => {
     const fx = fixture(unacceptedProject);
     const plan = JSON.parse(tasksPlan(fx.opts, true).output);
     expect(Object.keys(plan).sort()).toEqual(['planVersion', 'projectRoot', 'taskCount', 'tasks']);
@@ -88,17 +88,17 @@ describe('An unaccepted store stays on the 3.x roster', () => {
     expect(last).not.toContain('cortex tasks register');
   });
 
-  it('the Rule 13 message is exact', () => {
+  it('[CORE-CLI-TASKS-REGISTER-16] the Rule 13 message is exact', () => {
     expect(NOT_ACCEPTED_MESSAGE).toBe('this project has no 4.0 tasks until its store is accepted (cortex migrate --accept)');
   });
 
-  it('a fresh 4.0 store with no migration field gets the three tasks', () => {
+  it('[CORE-CLI-TASKS-REGISTER-16] a fresh 4.0 store with no migration field gets the three tasks', () => {
     const fx = fixture((root) => writeStoreConfig(root));
     expect(taskRoster(fx.root)).toBe('store-v4');
     expect(planTasks(fx.opts).tasks.map((t) => t.canonical)).toEqual(['learn', 'fresh', 'quality']);
   });
 
-  it('no migration field beside .cortex/cortex.config.json stays on the 3.x roster', () => {
+  it('[CORE-CLI-TASKS-REGISTER-16] no migration field beside .cortex/cortex.config.json stays on the 3.x roster', () => {
     const fx = fixture((root) => {
       writeStoreConfig(root);
       fs.mkdirSync(path.join(root, '.cortex'), { recursive: true });
@@ -108,7 +108,7 @@ describe('An unaccepted store stays on the 3.x roster', () => {
     expect(planTasks(fx.opts).taskCount).toBe(5);
   });
 
-  it('a project with no store, or an unreadable one, is on the 3.x roster', () => {
+  it('[CORE-CLI-TASKS-REGISTER-16] a project with no store, or an unreadable one, is on the 3.x roster', () => {
     expect(taskRoster(fixture(() => undefined).root)).toBe('3x');
     const fx = fixture((root) => {
       fs.mkdirSync(path.join(root, 'cortex'), { recursive: true });
@@ -117,7 +117,7 @@ describe('An unaccepted store stays on the 3.x roster', () => {
     expect(taskRoster(fx.root)).toBe('3x');
   });
 
-  it.each([['[]'], ['null'], ['5'], ['{"migration":5}'], ['{"migration":null}'], ['{"migration":{"accepted":"soon"}}']])('a cortex.json of %s is on the 3.x roster', (text) => {
+  it.each([['[]'], ['null'], ['5'], ['{"migration":5}'], ['{"migration":null}'], ['{"migration":{"accepted":"soon"}}']])('[CORE-CLI-TASKS-REGISTER-16] a cortex.json of %s is on the 3.x roster', (text) => {
     const fx = fixture((root) => {
       fs.mkdirSync(path.join(root, 'cortex'), { recursive: true });
       fs.writeFileSync(path.join(root, 'cortex', 'cortex.json'), text, 'utf-8');
@@ -125,13 +125,13 @@ describe('An unaccepted store stays on the 3.x roster', () => {
     expect(taskRoster(fx.root)).toBe('3x');
   });
 
-  it('an accepted store is on the 4.0 roster', () => {
+  it('[CORE-CLI-TASKS-REGISTER-11] an accepted store is on the 4.0 roster', () => {
     expect(taskRoster(fixture().root)).toBe('store-v4');
   });
 });
 
 describe('Plan output shape', () => {
-  it('carries planVersion 3 and the three scoped entries', () => {
+  it('[CORE-CLI-TASKS-REGISTER-11] carries planVersion 3 and the three scoped entries', () => {
     const fx = fixture();
     const plan = planTasks(fx.opts);
     expect(plan.planVersion).toBe(3);
@@ -153,7 +153,7 @@ describe('Plan output shape', () => {
     }
   });
 
-  it('the text form names every scoped id with cron, model and payload path, and writes nothing', () => {
+  it('[CORE-CLI-TASKS-REGISTER-11] the text form names every scoped id with cron, model and payload path, and writes nothing', () => {
     const fx = fixture();
     const out = tasksPlan(fx.opts, false).output;
     for (const t of planTasks(fx.opts).tasks) {
@@ -164,7 +164,7 @@ describe('Plan output shape', () => {
 });
 
 describe('Messages give the typed command', () => {
-  it('plan, verify with a task missing, and register with the app running name /cortex-register-tasks', () => {
+  it('[CORE-CLI-TASKS-REGISTER-14] plan, verify with a task missing, and register with the app running name /cortex-register-tasks', () => {
     const fx = fixture();
     const outs = [
       tasksPlan(fx.opts, false).output,
@@ -179,7 +179,7 @@ describe('Messages give the typed command', () => {
 });
 
 describe('Register guard: refused while the Desktop app runs', () => {
-  it('prints the exact Rule 11 line and writes nothing', () => {
+  it('[CORE-CLI-TASKS-REGISTER-12] prints the exact Rule 11 line and writes nothing', () => {
     const fx = fixture();
     const before = fs.readFileSync(fx.registry, 'utf-8');
     const r = registerTasks({ ...fx.opts, isDesktopAppRunning: () => true });
@@ -195,7 +195,7 @@ describe('Register guard: refused while the Desktop app runs', () => {
 });
 
 describe('A missing required skill stops register', () => {
-  it('exits 1 naming specflow-review, before any write', () => {
+  it('[CORE-CLI-TASKS-REGISTER-19] exits 1 naming specflow-review, before any write', () => {
     const fx = fixture((root) => {
       writeStoreConfig(root, { accepted: '2026-11-05' });
       installRequiredSkills(root, ['specflow-review']);
@@ -210,7 +210,7 @@ describe('A missing required skill stops register', () => {
 });
 
 describe('Register leaves no payload without a marker', () => {
-  it('each payload dir holds a marker with the hash of its SKILL.md', () => {
+  it('[CORE-CLI-TASKS-REGISTER-26] each payload dir holds a marker with the hash of its SKILL.md', () => {
     const fx = fixture();
     expect(registerTasks(fx.opts).exitCode).toBe(0);
     for (const t of planTasks(fx.opts).tasks) {
@@ -222,7 +222,7 @@ describe('Register leaves no payload without a marker', () => {
 });
 
 describe('Retired scoped entries are removed', () => {
-  it('drops a 3.x bundle entry and its payload dir, this project only', () => {
+  it('[CORE-CLI-TASKS-REGISTER-4] drops a 3.x bundle entry and its payload dir, this project only', () => {
     const fx = fixture();
     const own = scopedTaskName(fx.root, 'weekly-curation');
     const ownHash = `${own.replace('-weekly-curation', '')}-abc123-other`;
@@ -245,7 +245,7 @@ describe('Retired scoped entries are removed', () => {
 });
 
 describe('Two same-named projects do not collide', () => {
-  it('the second to register takes hash-scoped names with zero overwrites', () => {
+  it('[CORE-CLI-TASK-SCOPING-2] the second to register takes hash-scoped names with zero overwrites', () => {
     const base = makeTmpDir('roster-two');
     dirs.push(base);
     const home = makeTmpDir('roster-two-home');
@@ -270,7 +270,7 @@ describe('Two same-named projects do not collide', () => {
 });
 
 describe('Verify', () => {
-  it('reports all three ok after register', () => {
+  it('[CORE-CLI-TASKS-REGISTER-8] reports all three ok after register', () => {
     const fx = fixture();
     registerTasks(fx.opts);
     const v = verifyTasks(fx.opts);
@@ -278,7 +278,7 @@ describe('Verify', () => {
     for (const t of ['learn', 'fresh', 'quality']) expect(v.output).toContain(`ok   ${t}`);
   });
 
-  it('names each failure', () => {
+  it('[CORE-CLI-TASKS-REGISTER-8] names each failure', () => {
     const fx = fixture();
     registerTasks(fx.opts);
     const e = readEntries(fx.registry);
@@ -293,7 +293,7 @@ describe('Verify', () => {
     expect(v.output).toContain('FAIL quality: registered but payload missing');
   });
 
-  it('reports cron and model drift without failing', () => {
+  it('[CORE-CLI-TASKS-REGISTER-9] reports cron and model drift without failing', () => {
     const fx = fixture();
     registerTasks(fx.opts);
     const e = readEntries(fx.registry).map((x) => ({ ...x, cronExpression: '1 1 * * *', model: 'other-model' }));
@@ -304,7 +304,7 @@ describe('Verify', () => {
     expect(v.output).toContain('[model drifted: expected "claude-opus-5-5"]');
   });
 
-  it('Verify failure points at quitting the app: the last line names both routes', () => {
+  it('[CORE-CLI-TASKS-REGISTER-15] Verify failure points at quitting the app: the last line names both routes', () => {
     const fx = fixture();
     const last = verifyTasks(fx.opts).output.trim().split('\n').pop()!;
     expect(last).toContain('/cortex-register-tasks');
@@ -313,7 +313,7 @@ describe('Verify', () => {
 });
 
 describe('Registration status follows the roster', () => {
-  it('counts the three on the 4.0 roster', () => {
+  it('[CORE-CLI-TASKS-REGISTER-27] counts the three on the 4.0 roster', () => {
     const fx = fixture();
     registerTasks(fx.opts);
     const quality = scopedTaskName(fx.root, 'quality');
@@ -324,13 +324,13 @@ describe('Registration status follows the roster', () => {
     expect(fs.readFileSync(fx.registry, 'utf-8')).toBe(before);
   });
 
-  it('no registry counts all three as unregistered', () => {
+  it('[CORE-CLI-TASKS-REGISTER-27] no registry counts all three as unregistered', () => {
     const fx = fixture();
     fs.rmSync(fx.registry);
     expect(registrationStatus(fx.opts)).toEqual({ registryFound: false, unregistered: ['learn', 'fresh', 'quality'], total: 3 });
   });
 
-  it('a project on the 3.x roster reports five bundle names', () => {
+  it('[CORE-CLI-TASKS-REGISTER-27] a project on the 3.x roster reports five bundle names', () => {
     const fx = fixture(unacceptedProject);
     const s = registrationStatus(fx.opts);
     expect(s.total).toBe(5);
@@ -341,14 +341,14 @@ describe('Registration status follows the roster', () => {
 describe('A corrupt registry never crashes the status', () => {
   const unregistered = { registryFound: false, unregistered: ['learn', 'fresh', 'quality'], total: 3 };
 
-  it.each([['not json'], ['[1, 2]'], ['null'], ['']])('%j counts every task as unregistered', (text) => {
+  it.each([['not json'], ['[1, 2]'], ['null'], ['']])('[CORE-CLI-TASKS-REGISTER-27] %j counts every task as unregistered', (text) => {
     const fx = fixture();
     fs.writeFileSync(fx.registry, text, 'utf-8');
     expect(registrationStatus(fx.opts)).toEqual(unregistered);
     expect(fs.readFileSync(fx.registry, 'utf-8')).toBe(text);
   });
 
-  it('tolerates a valid object whose entries are not records, or no list at all', () => {
+  it('[CORE-CLI-TASKS-REGISTER-27] tolerates a valid object whose entries are not records, or no list at all', () => {
     const fx = fixture();
     fs.writeFileSync(fx.registry, '{"scheduledTasks":[1,null,"x",{"id":5}]}', 'utf-8');
     expect(registrationStatus(fx.opts)).toEqual({ ...unregistered, registryFound: true });
@@ -356,7 +356,7 @@ describe('A corrupt registry never crashes the status', () => {
     expect(registrationStatus(fx.opts)).toEqual({ ...unregistered, registryFound: true });
   });
 
-  it('an unreadable registry counts as not found, and register and verify exit 1', () => {
+  it('[CORE-CLI-TASKS-REGISTER-6] an unreadable registry counts as not found, and register and verify exit 1', () => {
     const fx = fixture();
     fs.chmodSync(fx.registry, 0o000);
     try {
@@ -368,7 +368,7 @@ describe('A corrupt registry never crashes the status', () => {
     }
   });
 
-  it('a malformed registry stops register and verify, and leaves the file alone', () => {
+  it('[CORE-CLI-TASKS-REGISTER-6] a malformed registry stops register and verify, and leaves the file alone', () => {
     const fx = fixture();
     fs.writeFileSync(fx.registry, 'not json', 'utf-8');
     expect(verifyTasks(fx.opts).exitCode).toBe(1);
@@ -378,7 +378,7 @@ describe('A corrupt registry never crashes the status', () => {
 });
 
 describe('Heartbeat creates, replaces, and leaves the others alone', () => {
-  it('holds one item per task, with valid frontmatter', () => {
+  it('[CORE-CLI-TASKS-REGISTER-20] holds one item per task, with valid frontmatter', () => {
     const fx = fixture();
     const beat = (task: string, today: string): void => {
       expect(heartbeatTask({ projectRoot: fx.root, task, today }).exitCode).toBe(0);
@@ -400,14 +400,14 @@ describe('Heartbeat creates, replaces, and leaves the others alone', () => {
     expect(errors).toEqual([]);
   });
 
-  it('A missed run surfaces as an expired item', () => {
+  it('[CORE-CLI-TASKS-REGISTER-21] A missed run surfaces as an expired item', () => {
     const fx = fixture();
     heartbeatTask({ projectRoot: fx.root, task: 'learn', today: '2026-11-05' });
     const items = expiredItems(loadStore(fx.root), '2026-11-09');
     expect(items.map((i) => i.item.title)).toEqual(['learn last ran 2026-11-05']);
   });
 
-  it('an unknown task exits 2 with the usage line', () => {
+  it('[CORE-CLI-TASKS-REGISTER-28] an unknown task exits 2 with the usage line', () => {
     const fx = fixture();
     const r = heartbeatTask({ projectRoot: fx.root, task: 'daily', today: '2026-11-05' });
     expect(r.exitCode).toBe(2);
@@ -417,7 +417,7 @@ describe('Heartbeat creates, replaces, and leaves the others alone', () => {
 });
 
 describe('Rename moves nothing on a 4.0 store', () => {
-  it('prints the line, exits 0 and leaves the legacy dir', () => {
+  it('[CORE-CLI-TASK-SCOPING-6] prints the line, exits 0 and leaves the legacy dir', () => {
     const fx = fixture();
     const legacy = path.join(fx.home, '.claude', 'scheduled-tasks', 'hygiene');
     fs.mkdirSync(legacy, { recursive: true });

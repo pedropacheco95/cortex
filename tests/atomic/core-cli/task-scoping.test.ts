@@ -42,27 +42,27 @@ const CANONICALS = [
 // projectTaskSlug — §9.1 slug transformation edge cases
 // ---------------------------------------------------------------------------
 describe('projectTaskSlug: §9.1 slug transformation', () => {
-  it('lowercases and replaces spaces and underscores with dashes', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] lowercases and replaces spaces and underscores with dashes', () => {
     expect(projectTaskSlug('/tmp/My API_v2')).toBe('my-api-v2');
     expect(projectTaskSlug('/tmp/foo_bar.baz')).toBe('foo-bar-baz');
   });
 
-  it('collapses consecutive dashes and trims leading/trailing dashes', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] collapses consecutive dashes and trims leading/trailing dashes', () => {
     expect(projectTaskSlug('/tmp/--Weird__  Name--')).toBe('weird-name');
     expect(projectTaskSlug('/tmp/a---b')).toBe('a-b');
   });
 
-  it('replaces unicode characters outside [a-z0-9-]', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] replaces unicode characters outside [a-z0-9-]', () => {
     expect(projectTaskSlug('/tmp/café-app')).toBe('caf-app');
     expect(projectTaskSlug('/tmp/über_Straße')).toBe('ber-stra-e');
   });
 
-  it("all-symbols and all-unicode folder names fall back to 'project'", () => {
+  it("[CORE-CLI-TASK-SCOPING-1] all-symbols and all-unicode folder names fall back to 'project'", () => {
     expect(projectTaskSlug('/tmp/!!!***')).toBe('project');
     expect(projectTaskSlug('/tmp/日本語')).toBe('project');
   });
 
-  it('already-clean names pass through unchanged', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] already-clean names pass through unchanged', () => {
     expect(projectTaskSlug('/tmp/api')).toBe('api');
     expect(projectTaskSlug('/tmp/my-app-2')).toBe('my-app-2');
   });
@@ -72,17 +72,17 @@ describe('projectTaskSlug: §9.1 slug transformation', () => {
 // projectTaskHash — SHA256 of the resolved absolute path, first 6 hex
 // ---------------------------------------------------------------------------
 describe('projectTaskHash: SHA256-of-absolute-path first 6 hex', () => {
-  it('matches an independent SHA256 computation of the absolute path', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] matches an independent SHA256 computation of the absolute path', () => {
     const p = '/Users/me/dev/api';
     expect(projectTaskHash(p)).toBe(createHash('sha256').update(p).digest('hex').slice(0, 6));
   });
 
-  it('is stable across calls and trailing-slash spellings', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] is stable across calls and trailing-slash spellings', () => {
     expect(projectTaskHash('/tmp/x')).toBe(projectTaskHash('/tmp/x'));
     expect(projectTaskHash('/tmp/x/')).toBe(projectTaskHash('/tmp/x'));
   });
 
-  it('is 6 lowercase hex chars and differs for same-named folders in different parents', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] is 6 lowercase hex chars and differs for same-named folders in different parents', () => {
     const a = projectTaskHash('/work/api');
     const b = projectTaskHash('/personal/api');
     expect(a).toMatch(/^[0-9a-f]{6}$/);
@@ -95,14 +95,14 @@ describe('projectTaskHash: SHA256-of-absolute-path first 6 hex', () => {
 // scopedTaskName / hashScopedTaskName — assembly
 // ---------------------------------------------------------------------------
 describe('scopedTaskName: <slug>-<canonical> (plain default form)', () => {
-  it('assembles slug and canonical name, no hash', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] assembles slug and canonical name, no hash', () => {
     expect(scopedTaskName('/tmp/My Project', 'daily')).toBe('my-project-daily');
     expect(scopedTaskName('/tmp/cortex', 'daily')).toBe('cortex-daily');
   });
 });
 
 describe('hashScopedTaskName: <slug>-<hash6>-<canonical> (collision fallback / legacy grammar)', () => {
-  it('assembles slug, hash, and canonical name in order', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] assembles slug, hash, and canonical name in order', () => {
     const root = '/tmp/My Project';
     expect(hashScopedTaskName(root, 'daily')).toBe(
       `my-project-${projectTaskHash(root)}-daily`,
@@ -118,7 +118,7 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
   const payload = (name: string, root?: string): string =>
     `---\nname: ${name}\ndescription: "x"\n---\n${root ? `\n${marker(root)}\n` : ''}\nbody\n`;
 
-  it('plain dir absent → plain name', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] plain dir absent → plain name', () => {
     const base = makeTmpDir('ts-res-absent');
     try {
       expect(resolveScopedTaskName(base, '/tmp/work/api', 'daily')).toBe(
@@ -129,7 +129,7 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
     }
   });
 
-  it('plain dir marker-owned by this project → plain name', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] plain dir marker-owned by this project → plain name', () => {
     const base = makeTmpDir('ts-res-ours');
     try {
       const dir = path.join(base, 'api-daily');
@@ -144,7 +144,7 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
     }
   });
 
-  it('plain dir marker-owned by a DIFFERENT project → hash fallback', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] plain dir marker-owned by a DIFFERENT project → hash fallback', () => {
     const base = makeTmpDir('ts-res-foreign');
     try {
       const dir = path.join(base, 'api-daily');
@@ -158,7 +158,7 @@ describe('resolveScopedTaskName: plain unless the plain dir is marker-owned by a
     }
   });
 
-  it('plain dir without a marker (or without a SKILL.md) is claimed as ours — no positive mismatch, no fallback', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] plain dir without a marker (or without a SKILL.md) is claimed as ours — no positive mismatch, no fallback', () => {
     const base = makeTmpDir('ts-res-unmarked');
     try {
       const dir = path.join(base, 'api-daily');
@@ -262,14 +262,14 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
   const other = '/tmp/personal/api';
   const prefix = `${projectTaskSlug(root)}-${projectTaskHash(root)}-`;
 
-  it('accepts all fourteen of its own plain scoped names and hash-fallback names', () => {
+  it('[CORE-CLI-TASK-SCOPING-4] accepts all fourteen of its own plain scoped names and hash-fallback names', () => {
     for (const canonical of CANONICALS) {
       expect(isOwnScopedTask(root, scopedTaskName(root, canonical)), canonical).toBe(true);
       expect(isOwnScopedTask(root, hashScopedTaskName(root, canonical)), canonical).toBe(true);
     }
   });
 
-  it("rejects another project's hash-fallback names (same slug, different hash)", () => {
+  it("[CORE-CLI-TASK-SCOPING-4] rejects another project's hash-fallback names (same slug, different hash)", () => {
     for (const canonical of CANONICALS) {
       expect(
         isOwnScopedTask(root, `${projectTaskSlug(other)}-${projectTaskHash(other)}-${canonical}`),
@@ -278,7 +278,7 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
     }
   });
 
-  it("with a tasksDir, rejects a same-slug plain name whose marker names another project's root", () => {
+  it("[CORE-CLI-TASK-SCOPING-4] with a tasksDir, rejects a same-slug plain name whose marker names another project's root", () => {
     const base = makeTmpDir('ts-own-marker');
     try {
       const dir = path.join(base, 'api-daily');
@@ -298,7 +298,7 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
     }
   });
 
-  it('rejects prefix-colliding user tasks whose suffix is not a canonical name', () => {
+  it('[CORE-CLI-TASK-SCOPING-4] rejects prefix-colliding user tasks whose suffix is not a canonical name', () => {
     expect(isOwnScopedTask(root, `${prefix}daily-report`)).toBe(false);
     expect(isOwnScopedTask(root, `${prefix}daily-mine`)).toBe(false);
     expect(isOwnScopedTask(root, `${prefix}weekly`)).toBe(false); // partial canonical is not a canonical suffix
@@ -307,7 +307,7 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
     expect(isOwnScopedTask(root, 'api-weekly')).toBe(false); // partial canonical is not a canonical suffix
   });
 
-  it('rejects unscoped legacy names and non-Cortex entries', () => {
+  it('[CORE-CLI-TASK-SCOPING-4] rejects unscoped legacy names and non-Cortex entries', () => {
     expect(isOwnScopedTask(root, 'hygiene')).toBe(false);
     expect(isOwnScopedTask(root, 'daily')).toBe(false);
     expect(isOwnScopedTask(root, 'daily-report')).toBe(false);
@@ -319,7 +319,7 @@ describe('isOwnScopedTask: recognition matches only this project (spec Rule 3)',
 // tasksRename — mechanics beyond the AC walkthrough
 // ---------------------------------------------------------------------------
 describe('tasksRename: mechanics', () => {
-  it('missing tasks dir → "Nothing to rename.", exit 0', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] missing tasks dir → "Nothing to rename.", exit 0', () => {
     const home = makeTmpDir('ts-tr-none-home');
     try {
       const r = tasksRename(home, '/tmp/work/api');
@@ -330,7 +330,7 @@ describe('tasksRename: mechanics', () => {
     }
   });
 
-  it('renames a canonical-named legacy dir, rewriting the frontmatter name and stamping the ownership marker; the rest is byte-identical', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] renames a canonical-named legacy dir, rewriting the frontmatter name and stamping the ownership marker; the rest is byte-identical', () => {
     const home = makeTmpDir('ts-tr-canon-home');
     const root = makeTmpDir('ts-tr-canon-root');
     try {
@@ -356,7 +356,7 @@ describe('tasksRename: mechanics', () => {
     }
   });
 
-  it('migrateHashScopedTaskDirs: moves this project\'s <slug>-<hash6>-<canonical> dirs to plain names, stamping ownership', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] migrateHashScopedTaskDirs: moves this project\'s <slug>-<hash6>-<canonical> dirs to plain names, stamping ownership', () => {
     const home = makeTmpDir('ts-mig-home');
     const root = makeTmpDir('ts-mig-root');
     try {
@@ -384,7 +384,7 @@ describe('tasksRename: mechanics', () => {
     }
   });
 
-  it('migrateHashScopedTaskDirs: when the plain name is marker-owned by another project, the hash dir stays put (it IS the resolved name)', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] migrateHashScopedTaskDirs: when the plain name is marker-owned by another project, the hash dir stays put (it IS the resolved name)', () => {
     const home = makeTmpDir('ts-mig-coll-home');
     const parent = makeTmpDir('ts-mig-coll');
     try {
@@ -414,7 +414,7 @@ describe('tasksRename: mechanics', () => {
     }
   });
 
-  it('a legacy dir without a SKILL.md is still moved without error', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] a legacy dir without a SKILL.md is still moved without error', () => {
     const home = makeTmpDir('ts-tr-bare-home');
     const root = makeTmpDir('ts-tr-bare-root');
     try {
@@ -429,7 +429,7 @@ describe('tasksRename: mechanics', () => {
     }
   });
 
-  it('names outside the known legacy set are never touched — including Cortex-ish near-misses and scoped names', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] names outside the known legacy set are never touched — including Cortex-ish near-misses and scoped names', () => {
     const home = makeTmpDir('ts-tr-unknown-home');
     const root = makeTmpDir('ts-tr-unknown-root');
     try {
@@ -457,7 +457,7 @@ describe('tasksRename: mechanics', () => {
     }
   });
 
-  it('a plain file (not a directory) with a legacy name is left alone', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] a plain file (not a directory) with a legacy name is left alone', () => {
     const home = makeTmpDir('ts-tr-file-home');
     const root = makeTmpDir('ts-tr-file-root');
     try {

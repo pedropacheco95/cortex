@@ -51,18 +51,18 @@ afterEach(() => {
 });
 
 describe('claudeMdBlock: the role sentence (init Rule 10a)', () => {
-  it('the protocol paragraph carries the pinned sentence right after "what to read and when."', () => {
+  it('[CORE-CLI-INIT-11] the protocol paragraph carries the pinned sentence right after "what to read and when."', () => {
     const block = unwrap(claudeMdBlock('x'));
     expect(block).toContain(`prompts that tell you what to read and when. ${ROLE_SENTENCE} For "why" questions, grep \`compass/\``);
   });
 
-  it('renders identically with no config argument and with an empty config', () => {
+  it('[CORE-CLI-INIT-11] renders identically with no config argument and with an empty config', () => {
     expect(claudeMdBlock('x')).toBe(claudeMdBlock('x', {}));
   });
 });
 
 describe('claudeMdBlock: the placement paragraph (init Rule 10b, schema §8 {{PLACEMENT_TAIL}})', () => {
-  it('exactly one line starts **Placement:** and it sits between the protocol and the specs paragraphs', () => {
+  it('[CORE-CLI-INIT-11] exactly one line starts **Placement:** and it sits between the protocol and the specs paragraphs', () => {
     const block = claudeMdBlock('x');
     const lines = block.split('\n').filter((l) => l.startsWith('**Placement:**'));
     expect(lines).toHaveLength(1);
@@ -73,42 +73,42 @@ describe('claudeMdBlock: the placement paragraph (init Rule 10b, schema §8 {{PL
     expect(placementIdx).toBeLessThan(specsIdx);
   });
 
-  it('no config / empty config / repo unknown → the unknown tail', () => {
+  it('[CORE-CLI-INIT-11] no config / empty config / repo unknown → the unknown tail', () => {
     for (const config of [undefined, {}, { visibility: { repo: 'unknown' } }, { visibility: {} }]) {
       expect(placementParagraph(claudeMdBlock('x', config))).toBe(PLACEMENT_HEAD + TAIL_UNKNOWN);
     }
   });
 
-  it('repo public → the rule-20 tail, ending "(RULES.md rule 20)."', () => {
+  it('[CORE-CLI-INIT-11] repo public → the rule-20 tail, ending "(RULES.md rule 20)."', () => {
     const para = placementParagraph(claudeMdBlock('x', { visibility: { repo: 'public' } }));
     expect(para).toBe(PLACEMENT_HEAD + TAIL_PUBLIC);
     expect(para.endsWith('(RULES.md rule 20).')).toBe(true);
   });
 
-  it('repo private → no tail at all', () => {
+  it('[CORE-CLI-INIT-11] repo private → no tail at all', () => {
     expect(placementParagraph(claudeMdBlock('x', { visibility: { repo: 'private' } }))).toBe(PLACEMENT_HEAD);
   });
 
-  it('placement.localNotesDir set → the notes tail first, then the visibility tail', () => {
+  it('[CORE-CLI-INIT-11] placement.localNotesDir set → the notes tail first, then the visibility tail', () => {
     const cfg = { placement: { localNotesDir: 'docs/notes' } };
     expect(placementParagraph(claudeMdBlock('x', cfg))).toBe(PLACEMENT_HEAD + tailNotes('docs/notes') + TAIL_UNKNOWN);
     expect(placementParagraph(claudeMdBlock('x', { ...cfg, visibility: { repo: 'public' } }))).toBe(PLACEMENT_HEAD + tailNotes('docs/notes') + TAIL_PUBLIC);
     expect(placementParagraph(claudeMdBlock('x', { ...cfg, visibility: { repo: 'private' } }))).toBe(PLACEMENT_HEAD + tailNotes('docs/notes'));
   });
 
-  it('an empty or non-string localNotesDir renders no notes tail', () => {
+  it('[CORE-CLI-INIT-11] an empty or non-string localNotesDir renders no notes tail', () => {
     expect(placementParagraph(claudeMdBlock('x', { placement: { localNotesDir: '' } }))).toBe(PLACEMENT_HEAD + TAIL_UNKNOWN);
     expect(placementParagraph(claudeMdBlock('x', { placement: { localNotesDir: 7 } }))).toBe(PLACEMENT_HEAD + TAIL_UNKNOWN);
     expect(placementParagraph(claudeMdBlock('x', { placement: 'docs' }))).toBe(PLACEMENT_HEAD + TAIL_UNKNOWN);
   });
 
-  it('an out-of-enum repo value renders as unknown (check.config reports it; the block never throws)', () => {
+  it('[CORE-CLI-INIT-11] an out-of-enum repo value renders as unknown (check.config reports it; the block never throws)', () => {
     expect(placementParagraph(claudeMdBlock('x', { visibility: { repo: 'open' } }))).toBe(PLACEMENT_HEAD + TAIL_UNKNOWN);
   });
 });
 
 describe('claudeMdBlock: the insight mandate is gone (init Rule 10c)', () => {
-  it('neither "Before substantive work on any file" nor "This is not optional" appears, under any config', () => {
+  it('[CORE-CLI-INIT-11] neither "Before substantive work on any file" nor "This is not optional" appears, under any config', () => {
     for (const config of [undefined, { visibility: { repo: 'public' } }, { placement: { localNotesDir: 'n' } }]) {
       const block = claudeMdBlock('x', config);
       expect(block).not.toContain('This is not optional');
@@ -144,7 +144,7 @@ describe('claudeMdBlock: size (RULES.md rule 11)', () => {
 });
 
 describe('upsertClaudeMd reads the config from disk and check.claude-md still passes', () => {
-  it('renders the public tail from .cortex/cortex.config.json when no config is passed, and validates', () => {
+  it('[CORE-CLI-INIT-11] renders the public tail from .cortex/cortex.config.json when no config is passed, and validates', () => {
     const root = makeTmpDir('claude-md-block');
     dirs.push(root);
     const config = { schemaVersion: SCHEMA_VERSION, visibility: { repo: 'public', allow: [] }, placement: { localNotesDir: 'docs/notes' } };
@@ -161,7 +161,7 @@ describe('upsertClaudeMd reads the config from disk and check.claude-md still pa
     expect(placementParagraph(fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8').trimEnd())).toBe(PLACEMENT_HEAD);
   });
 
-  it('a missing or unparseable config renders the unknown tail and no notes directory', () => {
+  it('[CORE-CLI-INIT-11] a missing or unparseable config renders the unknown tail and no notes directory', () => {
     const root = makeTmpDir('claude-md-noconfig');
     dirs.push(root);
     expect(upsertClaudeMd(root)).toBe('created');
