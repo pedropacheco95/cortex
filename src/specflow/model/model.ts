@@ -69,7 +69,7 @@ export interface Model {
   orphanTags: (ModelTest & { id: string })[];
   retired: ModelRetired[];
   testsConfigured: boolean;
-  /** Names built at run time with no static tag: not cases (Rule 5). */
+  /** How many untagged cases have a name built at run time (Rule 5). */
   dynamicNames: number;
 }
 
@@ -158,8 +158,7 @@ export function buildModel(tree: Tree, config: SpecflowConfig = readConfig(tree)
   const promiseById = new Map(promises.map((p) => [p.id, p]));
   const promiseByFile = new Map(promises.map((p) => [p.file, p]));
 
-  const scanned = testCases(tree, config);
-  const cases = scanned.filter((c) => !c.dynamic);
+  const cases = testCases(tree, config);
   const byId = new Map<string, ModelTest[]>();
   for (const c of cases) {
     const t: ModelTest = { file: c.file, name: c.name, line: c.line, skipped: c.skipped };
@@ -224,7 +223,7 @@ export function buildModel(tree: Tree, config: SpecflowConfig = readConfig(tree)
     orphanTags: orphanTags.sort(byFirstId),
     retired: retired.sort(byFirstId),
     testsConfigured: (config.tests ?? []).length > 0,
-    dynamicNames: scanned.length - cases.length,
+    dynamicNames: cases.filter((c) => c.dynamic).length,
   };
 }
 

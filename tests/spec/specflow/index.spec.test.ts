@@ -152,9 +152,9 @@ describe('specflow.index: tags', () => {
     expect(crit(m, 'BILLING-REFUNDS-2')?.tests).toHaveLength(1);
   });
 
-  it('[SPECFLOW-INDEX-12] A name built at run time with no static tag is only counted', () => {
+  it('[SPECFLOW-INDEX-12] A name built at run time with no static tag is an untagged case', () => {
     const m = cases(base(), "it(`${x} pays`, f);\nit.each([[1, ')']])('pays %s', f);\nit(name, f);\n");
-    expect(m.untagged).toEqual([]);
+    expect(m.untagged.map((t) => t.name)).toEqual(['${x} pays', 'pays %s', '(built name)']);
     expect(m.dynamicNames).toBe(3);
   });
 
@@ -173,10 +173,10 @@ describe('specflow.index: tags', () => {
     expect(crit(m, 'BILLING-REFUNDS-1')?.tests).toEqual([]);
   });
 
-  it('[SPECFLOW-INDEX-38] every listed modifier is a case; a regex.test call and a variable name are not', () => {
+  it('[SPECFLOW-INDEX-38] every listed modifier is a case; a regex.test call is not', () => {
     const m = cases(base(), [
       "it.only('a', f);", "test.concurrent('b', f);", "it.sequential('c', f);", "test.fails('d', f);",
-      "const r = /x(/.test('e');", "it(name, f);", '',
+      "const r = /x(/.test('e');", '',
     ].join('\n'));
     expect(m.untagged.map((t) => t.name)).toEqual(['a', 'b', 'c', 'd']);
   });

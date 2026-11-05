@@ -113,7 +113,6 @@ function changedCases(paths: string[], base: Tree, head: Tree, config: SpecflowC
   const before = new Map(keyed(testCases(base, config, only)));
   return keyed(testCases(head, config, only))
     .filter(([key, c]) => {
-      if (c.dynamic) return false;
       const old = before.get(key);
       return !old || old.body !== c.body || old.tags.join() !== c.tags.join();
     })
@@ -136,7 +135,7 @@ function judgeChange(root: string, paths: string[], base: Tree, head: Tree, at: 
 
   if (b !== 'off' && model) {
     const known = new Set(model.specs.flatMap((s) => s.criteria.map((c) => c.id)));
-    const bad = cases.filter((c) => !c.tags.some((t) => known.has(t))).map((c) => `${c.file} › ${c.name}`);
+    const bad = cases.filter((c) => !c.tags.some((t) => known.has(t))).map((c) => `${c.file}${c.dynamic ? `:${c.line}` : ''} › ${c.name}`);
     const typos = cases.flatMap((c) => {
       const stray = c.tags.filter((t) => !known.has(t));
       return stray.length > 0 && stray.length < c.tags.length ? stray.map((t) => `[${t}] on ${c.file} › ${c.name}`) : [];

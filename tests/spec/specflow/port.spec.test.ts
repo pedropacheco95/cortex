@@ -408,7 +408,8 @@ describe('specflow.port: report and next steps', () => {
     const root = twoTree({ 'tests/a.test.ts': "it(`${x} pays`, f);\nit('a', f);\n" });
     port(root);
     expect(report(root).counts.dynamicNames).toBe(1);
-    expect(report(root).counts.testCases).toBe(1);
+    expect(report(root).counts.testCases).toBe(2);
+    expect(report(root).untagged.map((t: any) => t.name)).toContain('${x} pays');
     expect(read(root, '.cortex-port/report.md')).toContain('names built at run time: 1');
   });
 

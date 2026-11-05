@@ -251,8 +251,7 @@ function reportText(r: Report): string {
 
 function buildReport(root: string, layout: Layout, files: Planned[], config: SpecflowConfig, ticket: RegExp | null): Report {
   const tree = workTree(root);
-  const scanned = testCases(tree, config);
-  const cases = scanned.filter((c) => !c.dynamic);
+  const cases = testCases(tree, config);
   const testFiles = selectTestFiles(tree.list(), config.tests ?? []);
   const tests = [...testFiles.keys()].map((f) => tree.read(f) ?? '').join('\n');
   const specs = files.filter((f) => f.target.startsWith('specflow/impl/') && f.target.endsWith('.spec.md'));
@@ -274,7 +273,7 @@ function buildReport(root: string, layout: Layout, files: Planned[], config: Spe
       criteria: live.reduce((n, s) => n + parseCriteria(s.after).length, 0),
       testFiles: testFiles.size,
       testCases: cases.length,
-      dynamicNames: scanned.length - cases.length,
+      dynamicNames: cases.filter((c) => c.dynamic).length,
     },
     classes,
     specs: rows,
