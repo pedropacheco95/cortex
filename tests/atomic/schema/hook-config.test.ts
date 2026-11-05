@@ -118,7 +118,7 @@ describe('check.hook-config: degradation', () => {
 });
 
 describe('check.hook-config: SessionEnd and Stop rows (3.3 third revision, hooks.session-end Rule 1)', () => {
-  it('both present alongside the other Cortex entries → passes; an edited timeout keeps the file conformant', () => {
+  it('[HOOKS-SESSION-END-1] both present alongside the other Cortex entries → passes; an edited timeout keeps the file conformant', () => {
     const root = tmp('hc-se-pass');
     writeSettings(root, {
       ...PAIR,
@@ -163,7 +163,7 @@ describe('check.hook-config: SessionEnd and Stop rows (3.3 third revision, hooks
 });
 
 describe('check.hook-config: the PreToolUse Grep|Bash row (3.4 second revision, hooks.search-annotate Rule 1)', () => {
-  it('other Cortex entries present but the row missing → exactly one error keyed hooks.PreToolUse naming `cortex hook search-annotate`, `Grep|Bash` and `cortex sync`', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-16] other Cortex entries present but the row missing → exactly one error keyed hooks.PreToolUse naming `cortex hook search-annotate`, `Grep|Bash` and `cortex sync`', () => {
     const root = tmp('hc-sa-missing');
     writeSettings(root, { PreToolUse: [READ_PRE], PostToolUse: [READ_POST], ...SESSION_ROWS });
     const violations = checkHookConfig(root, {});
@@ -178,7 +178,7 @@ describe('check.hook-config: the PreToolUse Grep|Bash row (3.4 second revision, 
     expect(v.message).toMatch(/run `cortex sync`$/);
   });
 
-  it('is not behind hooks.preRead: with the flag false and no Read pair, the row is still required — and its presence passes', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-16] is not behind hooks.preRead: with the flag false and no Read pair, the row is still required — and its presence passes', () => {
     const missing = tmp('hc-sa-flag-off-missing');
     writeSettings(missing, {
       SessionStart: [{ hooks: [{ type: 'command', command: 'cortex hook session-start' }] }],
@@ -215,7 +215,7 @@ describe('check.hook-config: the PreToolUse Grep|Bash row (3.4 second revision, 
 describe('check.hook-config: the UserPromptSubmit row (3.4 third revision, hooks.prompt-route Rule 1)', () => {
   const WITHOUT_PROMPT = { SessionEnd: SESSION_ROWS.SessionEnd, Stop: SESSION_ROWS.Stop };
 
-  it('other Cortex entries present but the row missing → exactly one error keyed hooks.UserPromptSubmit naming `cortex hook prompt-route`, `UserPromptSubmit` and `cortex sync`', () => {
+  it('[HOOKS-PROMPT-ROUTE-1] other Cortex entries present but the row missing → exactly one error keyed hooks.UserPromptSubmit naming `cortex hook prompt-route`, `UserPromptSubmit` and `cortex sync`', () => {
     const root = tmp('hc-pr-missing');
     writeSettings(root, { ...PAIR, ...WITHOUT_PROMPT });
     const violations = checkHookConfig(root, {});
@@ -230,7 +230,7 @@ describe('check.hook-config: the UserPromptSubmit row (3.4 third revision, hooks
     expect(v.message).toMatch(/run `cortex sync`$/);
   });
 
-  it('is not behind hooks.preRead (nor hooks.readDefer): with the flag false and no Read pair, the row is still required — and its presence passes', () => {
+  it('[HOOKS-PROMPT-ROUTE-1] is not behind hooks.preRead (nor hooks.readDefer): with the flag false and no Read pair, the row is still required — and its presence passes', () => {
     const missing = tmp('hc-pr-flag-off-missing');
     writeSettings(missing, {
       SessionStart: [{ hooks: [{ type: 'command', command: 'cortex hook session-start' }] }],

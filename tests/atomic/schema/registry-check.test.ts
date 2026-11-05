@@ -51,7 +51,7 @@ function runCheck(root: string): Violation[] {
 const HEADER_LINES = REGISTRY_HEADER.split('\n').length; // entries start at HEADER_LINES + 1
 
 describe('AC: an absent registry warns only when there is something to register', () => {
-  it('rule files and no registry → one warning naming cortex sync, clause §10.4, no errors', () => {
+  it('[SCHEMA-ID-REGISTRY-9] rule files and no registry → one warning naming cortex sync, clause §10.4, no errors', () => {
     const root = tmp('absent-with-rules');
     plantFile(root, 'rules', 'R-001-a.md');
     const out = runCheck(root);
@@ -70,7 +70,7 @@ describe('AC: an absent registry warns only when there is something to register'
     expect(out[0]!.message).toContain('cortex sync');
   });
 
-  it('no rules, no bugs, no registry → silent (a fresh project); an _index.md alone is not a file to register', () => {
+  it('[SCHEMA-ID-REGISTRY-9] no rules, no bugs, no registry → silent (a fresh project); an _index.md alone is not a file to register', () => {
     const root = tmp('absent-empty');
     fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', '_index.md'), '# index\n', 'utf-8');
@@ -85,7 +85,7 @@ describe('AC: an absent registry warns only when there is something to register'
 });
 
 describe('AC: a file missing from the registry is an error naming the remedy', () => {
-  it('B-019-x.md on disk, no B-019 line → one error naming the file and `cortex id next bug`, clause §4.2', () => {
+  it('[SCHEMA-ID-REGISTRY-6] B-019-x.md on disk, no B-019 line → one error naming the file and `cortex id next bug`, clause §4.2', () => {
     const root = tmp('missing-bug');
     writeRegistry(root, ['B-018 y']);
     plantFile(root, 'bugs', 'B-018-y.md');
@@ -116,7 +116,7 @@ describe('AC: a file missing from the registry is an error naming the remedy', (
 });
 
 describe('AC: a registered id without a file is a warning, not an error', () => {
-  it('R-009 reserved and no R-009 file → one warning naming R-009 with its line number; zero errors', () => {
+  it('[SCHEMA-ID-REGISTRY-7] R-009 reserved and no R-009 file → one warning naming R-009 with its line number; zero errors', () => {
     const root = tmp('reserved');
     const abs = writeRegistry(root, ['R-001 a', 'R-009 reserved']);
     plantFile(root, 'rules', 'R-001-a.md');
@@ -129,7 +129,7 @@ describe('AC: a registered id without a file is a warning, not an error', () => 
 });
 
 describe('AC: duplicate and malformed lines are errors', () => {
-  it('B-004 a twice and R-05 short → exactly two errors: one naming both line numbers, one naming the malformed line', () => {
+  it('[SCHEMA-ID-REGISTRY-8] B-004 a twice and R-05 short → exactly two errors: one naming both line numbers, one naming the malformed line', () => {
     const root = tmp('dup-malformed');
     const abs = writeRegistry(root, ['R-05 short', 'B-004 a', 'B-004 a']);
     plantFile(root, 'bugs', 'B-004-a.md');

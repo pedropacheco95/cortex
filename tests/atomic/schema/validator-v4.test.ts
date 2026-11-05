@@ -41,7 +41,7 @@ async function exitOf(root: string): Promise<number> {
 }
 
 describe('schema.validator Rule 15: a 4.0 project', () => {
-  it('runs the store and spec-tree checks; a governed_by alias resolves', async () => {
+  it('[SCHEMA-VALIDATOR-16] runs the store and spec-tree checks; a governed_by alias resolves', async () => {
     const root = project('ok', false);
     const report = await validate(root);
     expect(report.violations.filter((v) => v.severity === 'error'), JSON.stringify(report.violations, null, 1)).toEqual([]);
@@ -56,7 +56,7 @@ describe('schema.validator Rule 15: a 4.0 project', () => {
     expect(report.violations.some((v) => v.location.key === 'governed_by' && v.severity === 'error')).toBe(true);
   });
 
-  it('an implemented_by asymmetry is a check.xref-symmetry error, exit 1', async () => {
+  it('[SCHEMA-VALIDATOR-16] an implemented_by asymmetry is a check.xref-symmetry error, exit 1', async () => {
     const root = project('asym', false);
     const biz = path.join(root, BIZ);
     fs.writeFileSync(biz, fs.readFileSync(biz, 'utf8').replace(/implemented_by:\n(\s+- [^\n]+\n)+/, 'implemented_by: []\n'));
@@ -65,7 +65,7 @@ describe('schema.validator Rule 15: a 4.0 project', () => {
     expect(await exitOf(root)).toBe(1);
   });
 
-  it('a store file without about is a check.frontmatter error with clause S11', async () => {
+  it('[SCHEMA-VALIDATOR-16] a store file without about is a check.frontmatter error with clause S11', async () => {
     const root = project('fm', false);
     writeStoreFile(root, 'code/schema/no-about.md', { permanence: 'changing', verified: '2026-10-19 (told)', origin: 'person:user@2026-10-19' });
     const report = await validate(root);
@@ -75,7 +75,7 @@ describe('schema.validator Rule 15: a 4.0 project', () => {
     expect(await exitOf(root)).toBe(1);
   });
 
-  it('with both stores present, the 3.x path runs and no S11 violation appears', async () => {
+  it('[SCHEMA-VALIDATOR-17] with both stores present, the 3.x path runs and no S11 violation appears', async () => {
     const root = project('both', true);
     writeStoreFile(root, 'code/schema/no-about.md', { permanence: 'changing', verified: '2026-10-19 (told)', origin: 'person:user@2026-10-19' });
     const report = await validate(root);

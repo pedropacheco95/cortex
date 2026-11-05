@@ -61,7 +61,7 @@ describe('check.threads: the contract file passes', () => {
 });
 
 describe('check.threads: AC "Malformed thread files are warned, never fatal"', () => {
-  it('status: maybe and no expires → exactly the enum warning and the missing-field warning, both warning severity', async () => {
+  it('[PULSE-THREADS-19] status: maybe and no expires → exactly the enum warning and the missing-field warning, both warning severity', async () => {
     const root = tmp('malformed');
     const raw = threadRawFixture({ id: 'T-010' }).replace('status: open', 'status: maybe').replace(/^expires: .*\n/m, '');
     const abs = writeLedgerFile(root, 'T-010-x.md', raw);
@@ -72,7 +72,7 @@ describe('check.threads: AC "Malformed thread files are warned, never fatal"', (
     expect(violations.find((v) => v.location.key === 'status')!.message).toContain('maybe');
   });
 
-  it('through `validate`, the warnings appear and the report stays conformant (exit code unaffected)', async () => {
+  it('[PULSE-THREADS-19] through `validate`, the warnings appear and the report stays conformant (exit code unaffected)', async () => {
     const root = path.join(os.tmpdir(), `cortex-threads-validate-${Date.now()}`);
     fs.cpSync(path.resolve('tests/fixtures/valid'), root, { recursive: true });
     dirs.push(root);

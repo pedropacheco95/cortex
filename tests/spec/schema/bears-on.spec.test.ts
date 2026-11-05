@@ -72,7 +72,7 @@ function decision(root: string, stem: string, extraYaml: string): string {
 const FIXTURE_SPEC_ID = 'schema.validator';
 
 describe('AC: check.bears-on errors on a dangling gated ref and warns on the rest', () => {
-  it('the report carries one error (R-999, rule), three warnings, nothing for the resolving spec id; conformant is false', async () => {
+  it('[SCHEMA-BEARS-ON-5] the report carries one error (R-999, rule), three warnings, nothing for the resolving spec id; conformant is false', async () => {
     const root = project('mixed');
     const file = decision(root, '2026-09-15-x', `bears_on: [R-999, "concept:nope", "schema:§99", src/gone.ts, ${FIXTURE_SPEC_ID}]`);
 
@@ -109,7 +109,7 @@ describe('AC: check.bears-on errors on a dangling gated ref and warns on the res
 });
 
 describe('AC: a malformed entry is an error on a gated carrier', () => {
-  it('each of the two files carries a check.bears-on error at key bears_on', async () => {
+  it('[SCHEMA-BEARS-ON-6] each of the two files carries a check.bears-on error at key bears_on', async () => {
     const root = project('malformed');
     const a = decision(root, '2026-09-15-a', 'bears_on: ["", "schema:§ 5"]');
     const b = decision(root, '2026-09-15-b', 'bears_on: R-001');
@@ -123,7 +123,7 @@ describe('AC: a malformed entry is an error on a gated carrier', () => {
 });
 
 describe('AC: threads and observations are not resolved by the validator', () => {
-  it('no check.bears-on violation for either file; their own checks accept the well-shaped lists', async () => {
+  it('[SCHEMA-BEARS-ON-7] no check.bears-on violation for either file; their own checks accept the well-shaped lists', async () => {
     const root = project('ungated');
     const thread = write(
       root,
@@ -142,7 +142,7 @@ describe('AC: threads and observations are not resolved by the validator', () =>
 });
 
 describe('AC: the clause index is loaded once for the whole run', () => {
-  it('four decisions carrying eight schema: refs between them → cortex-schema.md read once', async () => {
+  it('[SCHEMA-BEARS-ON-8] four decisions carrying eight schema: refs between them → cortex-schema.md read once', async () => {
     const root = project('once');
     const refs = ['"schema:§5"', '"schema:§6"', '"schema:§6.2"', '"schema:§99"'];
     for (let i = 0; i < 4; i++) {
@@ -163,7 +163,7 @@ describe('AC: the clause index is loaded once for the whole run', () => {
 });
 
 describe('AC: no artefact may carry a stored inverse', () => {
-  it('decided_by is not recognised by any check — no violation, no resolution', async () => {
+  it('[SCHEMA-BEARS-ON-9] decided_by is not recognised by any check — no violation, no resolution', async () => {
     const root = project('inverse');
     const file = decision(root, '2026-09-15-inv', 'decided_by: [R-001, R-999]\nbears_on: [R-001]');
     const report = await validate(root);

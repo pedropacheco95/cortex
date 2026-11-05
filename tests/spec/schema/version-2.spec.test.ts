@@ -55,7 +55,7 @@ describe('schema.version-2 — the config and validator both read 3.0', () => {
 });
 
 describe('schema.version-2 — the re-rooted validator passes green at 3.0 against the moved trees', () => {
-  it('validate over the .specflow/-rooted fixture (a 3.0 project) reports zero errors and declares the validator version — MINOR below supported is the §10.2 backward-compatibility guarantee', async () => {
+  it('[SCHEMA-VERSION-2-2] validate over the .specflow/-rooted fixture (a 3.0 project) reports zero errors and declares the validator version — MINOR below supported is the §10.2 backward-compatibility guarantee', async () => {
     const report = await validate(VALID_FIXTURE);
     expect(report.schemaVersion).toBe(SUPPORTED_VERSION);
     expect(report.counts.error).toBe(0);
@@ -64,14 +64,14 @@ describe('schema.version-2 — the re-rooted validator passes green at 3.0 again
 });
 
 describe('schema.version-2 — version-gate behaviour (schema §10.3)', () => {
-  it('a higher MAJOR (4.0) short-circuits to exactly one check.config error', async () => {
+  it('[SCHEMA-VERSION-2-3] a higher MAJOR (4.0) short-circuits to exactly one check.config error', async () => {
     const report = await validate(fixtureAtVersion('4.0'));
     expect(report.violations).toHaveLength(1);
     expect(report.violations[0]!.check).toBe('check.config');
     expect(report.violations[0]!.severity).toBe('error');
   });
 
-  it('a lower MAJOR (2.0) short-circuits with one error recommending cortex migrate', async () => {
+  it('[SCHEMA-VERSION-2-4] a lower MAJOR (2.0) short-circuits with one error recommending cortex migrate', async () => {
     const report = await validate(fixtureAtVersion('2.0'));
     expect(report.violations).toHaveLength(1);
     expect(report.violations[0]!.check).toBe('check.config');
@@ -79,7 +79,7 @@ describe('schema.version-2 — version-gate behaviour (schema §10.3)', () => {
     expect(report.violations[0]!.message).toMatch(/migrate/i);
   });
 
-  it('a higher MINOR (3.7) yields one warning then proceeds (forward tolerance)', async () => {
+  it('[SCHEMA-VERSION-2-5] a higher MINOR (3.7) yields one warning then proceeds (forward tolerance)', async () => {
     const report = await validate(fixtureAtVersion('3.7'));
     const configWarnings = report.violations.filter(
       (v) => v.check === 'check.config' && v.severity === 'warning',

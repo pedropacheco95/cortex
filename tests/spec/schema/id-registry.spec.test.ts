@@ -159,7 +159,7 @@ function expectedLines(): string[] {
 
 describe('schema.id-registry slice: init scaffolds, id next allocates, sync migrates once', () => {
   it(
-    'cortex init writes the header-only registry; cortex id next rule then bug --slug flaky-tier print R-004 and B-020 and reserve them',
+    '[SCHEMA-ID-REGISTRY-4, SCHEMA-ID-REGISTRY-5] cortex init writes the header-only registry; cortex id next rule then bug --slug flaky-tier print R-004 and B-020 and reserve them',
     async () => {
       const root = tmp('proj');
       expect(await init3x(root)).toBe(0);
@@ -189,7 +189,7 @@ describe('schema.id-registry slice: init scaffolds, id next allocates, sync migr
   );
 
   it(
-    'cortex sync on a project with three rules, nineteen bugs and no registry creates it once (summary names it); a second sync leaves it byte-identical and reports it present',
+    '[SCHEMA-ID-REGISTRY-12] cortex sync on a project with three rules, nineteen bugs and no registry creates it once (summary names it); a second sync leaves it byte-identical and reports it present',
     async () => {
       const root = tmp('sync');
       expect(await init3x(root)).toBe(0);
@@ -216,7 +216,7 @@ describe('schema.id-registry slice: init scaffolds, id next allocates, sync migr
 });
 
 describe('schema.id-registry slice: cortex validate surfaces the registry findings', () => {
-  it('a file missing from the registry is one error naming the file and cortex id next bug', async () => {
+  it('[SCHEMA-ID-REGISTRY-6] a file missing from the registry is one error naming the file and cortex id next bug', async () => {
     const root = fixture('missing');
     writeRegistry(root, ['R-001 sample-rule']);
     writeBug(root, 'B-019-x.md', 'B-019', { register: false });
@@ -228,7 +228,7 @@ describe('schema.id-registry slice: cortex validate surfaces the registry findin
     expect(out[0]!.message).toContain('cortex id next bug');
   });
 
-  it('a registered id without a file is one warning naming R-009 and zero errors from the check', async () => {
+  it('[SCHEMA-ID-REGISTRY-7] a registered id without a file is one warning naming R-009 and zero errors from the check', async () => {
     const root = fixture('reserved');
     writeRegistry(root, ['R-001 sample-rule', 'R-009 reserved']);
     const out = await validateJson(root);
@@ -237,7 +237,7 @@ describe('schema.id-registry slice: cortex validate surfaces the registry findin
     expect(out[0]!.message).toContain('R-009');
   });
 
-  it('duplicate and malformed lines are two errors: one naming both line numbers of B-004, one naming the malformed line', async () => {
+  it('[SCHEMA-ID-REGISTRY-8] duplicate and malformed lines are two errors: one naming both line numbers of B-004, one naming the malformed line', async () => {
     const root = fixture('dup');
     writeRegistry(root, ['R-05 short', 'R-001 sample-rule', 'B-004 a', 'B-004 a']);
     writeBug(root, 'B-004-a.md', 'B-004');
@@ -252,7 +252,7 @@ describe('schema.id-registry slice: cortex validate surfaces the registry findin
     expect(malformed.location.line).toBe(base + 1);
   });
 
-  it('an absent registry warns naming cortex sync when rule files exist, and is silent on a project with no rules, no bugs and no registry', async () => {
+  it('[SCHEMA-ID-REGISTRY-9] an absent registry warns naming cortex sync when rule files exist, and is silent on a project with no rules, no bugs and no registry', async () => {
     const withRules = fixture('absent-rules');
     fs.rmSync(registryAbs(withRules), { force: true });
     writeRule(withRules, 'R-002-second.md', 'R-002', { register: false });

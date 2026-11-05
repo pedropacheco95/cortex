@@ -32,7 +32,7 @@ function cleanup(dir: string): void {
 }
 
 describe('AC1: valid fixture passes with 0 errors', () => {
-  it('validate valid fixture → conformant', async () => {
+  it('[SCHEMA-VALIDATOR-1] validate valid fixture → conformant', async () => {
     const report = await validate(VALID_FIXTURE);
     expect(report.conformant).toBe(true);
     expect(report.counts.error).toBe(0);
@@ -48,7 +48,7 @@ describe('AC2: leaf with two implements values → error at implements key', () 
   beforeAll(() => { tmpDir = makeTmpFixture('ac2'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('two implements values → exactly one error mentioning "exactly one"', async () => {
+  it('[SCHEMA-VALIDATOR-2] two implements values → exactly one error mentioning "exactly one"', async () => {
     const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const content = fs.readFileSync(specPath, 'utf-8');
     const newContent = content.replace(
@@ -68,7 +68,7 @@ describe('AC3: broken implements path → error naming missing target', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('ac3'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('nonexistent implements path → error', async () => {
+  it('[SCHEMA-VALIDATOR-3] nonexistent implements path → error', async () => {
     const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const content = fs.readFileSync(specPath, 'utf-8');
     const newContent = content.replace(
@@ -88,7 +88,7 @@ describe('AC4: asymmetric implements/implemented_by → error naming both files'
   beforeAll(() => { tmpDir = makeTmpFixture('ac4'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('business spec without matching implemented_by → xref-symmetry error', async () => {
+  it('[SCHEMA-VALIDATOR-4] business spec without matching implemented_by → xref-symmetry error', async () => {
     // Remove implemented_by from business spec
     const bizPath = path.join(tmpDir, '.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
     fs.writeFileSync(bizPath, `---
@@ -113,7 +113,7 @@ describe('AC5: missing _overview.md → error check.overview-present', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('ac5'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('remove _overview.md from schema dir → error', async () => {
+  it('[SCHEMA-VALIDATOR-5] remove _overview.md from schema dir → error', async () => {
     fs.unlinkSync(path.join(tmpDir, '.specflow', 'specs', 'schema', '_overview.md'));
     const report = await validate(tmpDir);
     const v = report.violations.find((v) => v.check === 'check.overview-present');
@@ -127,7 +127,7 @@ describe('AC6: dev spec missing status → error check.dev-spec', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('ac6'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('spec without status → error mentioning "status"', async () => {
+  it('[SCHEMA-VALIDATOR-6] spec without status → error mentioning "status"', async () => {
     const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     fs.writeFileSync(specPath, `---
 id: schema.validator
@@ -148,7 +148,7 @@ describe('AC7: schemaVersion 99.0 → exactly one check.config error, no other v
   beforeAll(() => { tmpDir = makeTmpFixture('ac7'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('major version mismatch short-circuits all other checks', async () => {
+  it('[SCHEMA-VALIDATOR-7] major version mismatch short-circuits all other checks', async () => {
     const configPath = path.join(tmpDir, '.cortex', 'cortex.config.json');
     fs.writeFileSync(configPath, JSON.stringify({ schemaVersion: '99.0', hooks: { preRead: false }, loop: { enabled: false } }));
     const report = await validate(tmpDir);
@@ -159,7 +159,7 @@ describe('AC7: schemaVersion 99.0 → exactly one check.config error, no other v
 });
 
 describe('AC8: single-file scope on valid spec → no false unresolved-xref errors', () => {
-  it('file scope on validator.spec.md → no spurious xref errors', async () => {
+  it('[SCHEMA-VALIDATOR-8] file scope on validator.spec.md → no spurious xref errors', async () => {
     const specPath = path.join(VALID_FIXTURE, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const report = await validate(specPath, { scope: 'file', root: VALID_FIXTURE });
     const xrefViolations = report.violations.filter((v) => v.check === 'check.xref-resolve');
@@ -264,7 +264,7 @@ describe('check.atlas (3.4): the two decision warnings — bears on nothing; sou
     fs.rmSync(p);
   });
 
-  it('a decision whose sources: resolves under .cortex/pulse/ → one check.atlas warning at key sources containing "record it as evidence", and no error for that file', async () => {
+  it('[ATLAS-EVIDENCE-5] a decision whose sources: resolves under .cortex/pulse/ → one check.atlas warning at key sources containing "record it as evidence", and no error for that file', async () => {
     const reportsDir = path.join(tmpDir, '.cortex', 'pulse', 'reports');
     fs.mkdirSync(reportsDir, { recursive: true });
     fs.writeFileSync(path.join(reportsDir, 'usage.md'), '---\nkind: pulse-usage-report\ngenerated: 2026-09-15T00:00:00Z\nloop: cortex-usage\n---\n\n# Usage\n');
@@ -519,7 +519,7 @@ describe('check.xref-unique: two specs with same ID → fires', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('xref-unique'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('duplicate spec ID fires check.xref-unique', async () => {
+  it('[SCHEMA-VALIDATOR-11] duplicate spec ID fires check.xref-unique', async () => {
     // Create a second spec dir with a spec that has the same ID
     const schemaDir2 = path.join(tmpDir, '.specflow', 'specs', 'schema2');
     fs.mkdirSync(schemaDir2, { recursive: true });

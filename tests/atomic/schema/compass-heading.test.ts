@@ -21,7 +21,7 @@ describe('An H1 that disagrees with the id is warned, a filename that disagrees 
   });
   afterAll(() => cleanup(root));
 
-  it('one check.compass-heading warning at R-026-first.md naming R-027 and R-026', async () => {
+  it('[SCHEMA-VALIDATOR-13] one check.compass-heading warning at R-026-first.md naming R-027 and R-026', async () => {
     const report = await validate(root);
     const headings = report.violations.filter((v) => v.check === 'check.compass-heading');
     expect(headings).toHaveLength(1);
@@ -33,7 +33,7 @@ describe('An H1 that disagrees with the id is warned, a filename that disagrees 
     expect(v.message).toBe('H1 "R-027" disagrees with id "R-026"');
   });
 
-  it('one check.bug error at the id key of B-004-x.md (the filename rule), no heading finding for it', async () => {
+  it('[SCHEMA-VALIDATOR-13] one check.bug error at the id key of B-004-x.md (the filename rule), no heading finding for it', async () => {
     const report = await validate(root);
     const bugErrors = report.violations.filter((v) => v.check === 'check.bug' && v.location.path.endsWith('B-004-x.md'));
     expect(bugErrors).toHaveLength(1);
@@ -51,7 +51,7 @@ describe('checkCompassHeading edge cases', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('an H1 without an id token (# Core makes no LLM calls) → nothing', () => {
+  it('[SCHEMA-VALIDATOR-13] an H1 without an id token (# Core makes no LLM calls) → nothing', () => {
     writeRule(root, 'R-002-no-token.md', 'R-002', { h1: '# Core makes no LLM calls' });
     expect(checkCompassHeading(root).filter((v) => v.location.path.endsWith('R-002-no-token.md'))).toHaveLength(0);
   });

@@ -69,7 +69,7 @@ describe('check.constellation — absence and conformance', () => {
     expect(await constellationViolations(root)).toEqual([]);
   });
 
-  it('a real compiler output is conformant (zero violations)', async () => {
+  it('[CONSTELLATION-COMPILER-1] a real compiler output is conformant (zero violations)', async () => {
     const root = tmp('conformant');
     makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     writeRule(root, 'R-001-r.md', `id: R-001\ntitle: R\nsource: []\nrelated_specs:\n  - schema.validator`);

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const VALID_FIXTURE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'fixtures', 'valid');
 
 describe('Spec-level: full validator over valid fixture', () => {
-  it('valid fixture produces conformant report with 0 errors', async () => {
+  it('[SCHEMA-VALIDATOR-1] valid fixture produces conformant report with 0 errors', async () => {
     const report = await validate(VALID_FIXTURE);
     expect(report.schemaVersion).toBe(SUPPORTED_VERSION);
     expect(report.conformant).toBe(true);
@@ -53,7 +53,7 @@ describe('wave A: Rules 12–14', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('the three checks report exactly the planted defects and nothing else', async () => {
+  it('[SCHEMA-VALIDATOR-9, SCHEMA-VALIDATOR-10, SCHEMA-VALIDATOR-14] the three checks report exactly the planted defects and nothing else', async () => {
     const report = await validate(root);
     const rel = (p: string) => path.relative(root, p);
 
@@ -84,7 +84,7 @@ describe('wave A: Rules 12–14', () => {
     expect(report.counts.error).toBe(3);
   });
 
-  it('a conformant tree passes: the two new checks add nothing to the valid fixture', async () => {
+  it('[SCHEMA-VALIDATOR-1] a conformant tree passes: the two new checks add nothing to the valid fixture', async () => {
     const report = await validate(VALID_FIXTURE);
     expect(report.conformant).toBe(true);
     expect(report.violations.filter((v) => v.check === 'check.compass-heading' || v.check === 'check.index-completeness' || v.check === 'check.xref-unique')).toEqual([]);

@@ -51,7 +51,7 @@ describe('AC1: silent unless the repo is declared public', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('visibility absent, { repo: "unknown" }, { repo: "private" } → no check.visibility violation in any run', async () => {
+  it('[SCHEMA-VISIBILITY-1] visibility absent, { repo: "unknown" }, { repo: "private" } → no check.visibility violation in any run', async () => {
     for (const visibility of [undefined, { repo: 'unknown' }, { repo: 'private' }]) {
       setConfig(root, { visibility });
       const report = await validate(root);
@@ -70,7 +70,7 @@ describe('AC2: a public repo warns with the line, per family', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('exactly five warnings, lines 5–9, families ipv4/host/port/ssh/account, each ending visibility.allow; conformant', async () => {
+  it('[SCHEMA-VISIBILITY-2] exactly five warnings, lines 5–9, families ipv4/host/port/ssh/account, each ending visibility.allow; conformant', async () => {
     const report = await validate(root);
     const out = visibilityOf(report) as { severity: string; location: { path: string; line?: number }; message: string }[];
     expect(out).toHaveLength(5);
@@ -100,7 +100,7 @@ describe('AC3: safe hosts and dev ports never match', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('no check.visibility warning is emitted', async () => {
+  it('[SCHEMA-VISIBILITY-3] no check.visibility warning is emitted', async () => {
     expect(visibilityOf(await validate(root))).toEqual([]);
   });
 });
@@ -119,7 +119,7 @@ describe('AC3b: a code reference is not a port', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('exactly one warning, for the .cloud:8443 line, none for a .ts reference', async () => {
+  it('[SCHEMA-VISIBILITY-4] exactly one warning, for the .cloud:8443 line, none for a .ts reference', async () => {
     const out = visibilityOf(await validate(root)) as { location: { line?: number }; message: string }[];
     expect(out).toHaveLength(1);
     expect(out[0]!.location.line).toBe(5);
@@ -139,7 +139,7 @@ describe('AC4: ignored files are out of scope, re-included ones are in', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('exactly one warning, for reframe.md', async () => {
+  it('[SCHEMA-VISIBILITY-5] exactly one warning, for reframe.md', async () => {
     const out = visibilityOf(await validate(root)) as { location: { path: string } }[];
     expect(out).toHaveLength(1);
     expect(path.relative(root, out[0]!.location.path)).toBe('.cortex/atlas/sources/reframe.md');
@@ -155,13 +155,13 @@ describe('AC5: an allow glob silences a file and is reported', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('no warning names the file and the report notes carry the allow line', async () => {
+  it('[SCHEMA-VISIBILITY-6] no warning names the file and the report notes carry the allow line', async () => {
     const report = await validate(root);
     expect(visibilityOf(report).some((v) => (v as { location: { path: string } }).location.path.endsWith('environment.md'))).toBe(false);
     expect(report.notes).toEqual(['allowed by visibility.allow: .cortex/compass/environment.md']);
   });
 
-  it('`cortex validate --json` carries the same notes in its JSON report', async () => {
+  it('[SCHEMA-VISIBILITY-6] `cortex validate --json` carries the same notes in its JSON report', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     try {
       const code = await validateCli([root, '--json']);
@@ -194,7 +194,7 @@ describe('AC6: the per-file cap holds', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('20 line warnings plus one "… and 10 more lines" warning', async () => {
+  it('[SCHEMA-VISIBILITY-7] 20 line warnings plus one "… and 10 more lines" warning', async () => {
     const out = visibilityOf(await validate(root)) as { location: { line?: number }; message: string }[];
     expect(out).toHaveLength(21);
     expect(out.slice(0, 20).map((v) => v.location.line)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
@@ -209,7 +209,7 @@ describe('AC7: the config shape is checked', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('{ repo: "open" } → one check.config error naming visibility.repo', async () => {
+  it('[SCHEMA-VISIBILITY-8] { repo: "open" } → one check.config error naming visibility.repo', async () => {
     setConfig(root, { visibility: { repo: 'open' } });
     const report = await validate(root);
     const errs = report.violations.filter((v) => v.check === 'check.config' && v.severity === 'error');
@@ -218,7 +218,7 @@ describe('AC7: the config shape is checked', () => {
     expect(report.conformant).toBe(false);
   });
 
-  it('{ repo: "public", allow: "compass/*" } → one check.config error naming visibility.allow', async () => {
+  it('[SCHEMA-VISIBILITY-8] { repo: "public", allow: "compass/*" } → one check.config error naming visibility.allow', async () => {
     setConfig(root, { visibility: { repo: 'public', allow: 'compass/*' } });
     const report = await validate(root);
     const errs = report.violations.filter((v) => v.check === 'check.config' && v.severity === 'error');
@@ -244,12 +244,12 @@ describe('AC8: init writes the key explicitly; sync leaves an old config alone',
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(freshRoot); cleanTmp(oldRoot); cleanTmp(home); });
 
-  it('the fresh project carries "visibility": { "repo": "unknown", "allow": [] }', () => {
+  it('[SCHEMA-VISIBILITY-9] the fresh project carries "visibility": { "repo": "unknown", "allow": [] }', () => {
     const config = JSON.parse(fs.readFileSync(path.join(freshRoot, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect(config.visibility).toEqual({ repo: 'unknown', allow: [] });
   });
 
-  it('the old project still lacks the key after sync', () => {
+  it('[SCHEMA-VISIBILITY-9] the old project still lacks the key after sync', () => {
     const config = JSON.parse(fs.readFileSync(path.join(oldRoot, '.cortex', 'cortex.config.json'), 'utf-8'));
     expect('visibility' in config).toBe(false);
   });

@@ -118,7 +118,7 @@ describe('check.config: visibility and placement (§10.1, schema.visibility Rule
     }
   });
 
-  it('visibility: { repo: "open" } → exactly one error at visibility.repo, clause §10.1', () => {
+  it('[SCHEMA-VISIBILITY-8] visibility: { repo: "open" } → exactly one error at visibility.repo, clause §10.1', () => {
     const root = rootWithConfig('vis-open', { visibility: { repo: 'open' } });
     const v = keyViolations(root, 'visibility.repo');
     expect(v).toHaveLength(1);
@@ -128,7 +128,7 @@ describe('check.config: visibility and placement (§10.1, schema.visibility Rule
     expect(checkConfig(root).majorOk).toBe(true);
   });
 
-  it('visibility: { repo: "public", allow: "compass/*" } → exactly one error at visibility.allow', () => {
+  it('[SCHEMA-VISIBILITY-8] visibility: { repo: "public", allow: "compass/*" } → exactly one error at visibility.allow', () => {
     const root = rootWithConfig('vis-allow-str', { visibility: { repo: 'public', allow: 'compass/*' } });
     const v = keyViolations(root, 'visibility.allow');
     expect(v).toHaveLength(1);

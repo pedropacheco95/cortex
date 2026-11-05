@@ -138,7 +138,7 @@ Renders validation reports.
 });
 
 describe('schema.validator Rule 16: retired', () => {
-  it('a retired dev spec and business spec are valid: no status finding from either check', async () => {
+  it('[SCHEMA-VALIDATOR-18] a retired dev spec and business spec are valid: no status finding from either check', async () => {
     const root = makeFixtureCopy('retired-valid');
     setStatus(root, DEV_REL, 'draft', 'retired');
     setStatus(root, BIZ_REL, 'draft', 'retired');
@@ -158,7 +158,7 @@ describe('schema.validator Rule 16: retired', () => {
     expect(violations.some((v) => v.check === 'check.dev-spec' && v.location.key === 'status')).toBe(true);
   });
 
-  it('a retired implementer is ignored: one implemented and one retired still lags', async () => {
+  it('[SCHEMA-VALIDATOR-19] a retired implementer is ignored: one implemented and one retired still lags', async () => {
     const root = makeFixtureCopy('retired-mixed');
     const second = path.join('.specflow', 'specs', 'schema', 'old.spec.md');
     fs.writeFileSync(path.join(root, second), fs.readFileSync(path.join(root, DEV_REL), 'utf-8').replace('status: draft', 'status: retired'));
@@ -171,21 +171,21 @@ describe('schema.validator Rule 16: retired', () => {
     expect(found[0].location.path).toBe(biz);
   });
 
-  it('a business spec with only retired implementers is not flagged', async () => {
+  it('[SCHEMA-VALIDATOR-25] a business spec with only retired implementers is not flagged', async () => {
     const root = makeFixtureCopy('retired-all');
     setStatus(root, DEV_REL, 'draft', 'retired');
     setStatus(root, BIZ_REL, 'draft', 'implementing');
     expect(await checkBusinessStatus(root)).toEqual([]);
   });
 
-  it('a retired business spec does not lag its implemented implementers', async () => {
+  it('[SCHEMA-VALIDATOR-24] a retired business spec does not lag its implemented implementers', async () => {
     const root = makeFixtureCopy('retired-biz');
     setStatus(root, DEV_REL, 'draft', 'implemented');
     setStatus(root, BIZ_REL, 'draft', 'retired');
     expect(await checkBusinessStatus(root)).toEqual([]);
   });
 
-  it("a retired spec's dead link is still an error without specflow/", async () => {
+  it("[SCHEMA-VALIDATOR-21] a retired spec's dead link is still an error without specflow/", async () => {
     const root = makeFixtureCopy('retired-dead-link');
     setStatus(root, DEV_REL, 'draft', 'retired');
     const dev = path.join(root, DEV_REL);
@@ -226,21 +226,21 @@ describe('schema.validator Rule 16: retired specs under specflow/', () => {
     expect(on(after.violations, root).length).toBeGreaterThan(0);
   });
 
-  it("a retired spec's dead link is not an error under specflow/", async () => {
+  it("[SCHEMA-VALIDATOR-20] a retired spec's dead link is not an error under specflow/", async () => {
     const root = portedCopy('dead');
     setStatus(root, PORTED_DEV, 'draft', 'retired');
     breakLink(root);
     expect(on((await validate(root)).violations, root)).toEqual([]);
   });
 
-  it('a live link to a retired spec must resolve', async () => {
+  it('[SCHEMA-VALIDATOR-22] a live link to a retired spec must resolve', async () => {
     const root = portedCopy('live');
     breakLink(root);
     const found = on((await validate(root)).violations, root);
     expect(found.some((v) => (v as unknown as { message: string }).message.includes('does not resolve'))).toBe(true);
   });
 
-  it('a retired spec without required fields is still an error', async () => {
+  it('[SCHEMA-VALIDATOR-23] a retired spec without required fields is still an error', async () => {
     const root = portedCopy('fields');
     setStatus(root, PORTED_DEV, 'draft', 'retired');
     const p = path.join(root, PORTED_DEV);
