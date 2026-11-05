@@ -1,6 +1,6 @@
 ---
 id: anatomy.refresh-fast
-status: implemented
+status: retired
 depends_on:
   - anatomy.scanner
   - core-cli.init

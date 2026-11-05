@@ -70,7 +70,7 @@ It may write anywhere in `cortex/` (P11), but its two spec jobs only propose: sp
    - (e) **Discard.** Every throwaway worktree is removed and pruned, also after a failure, and the measurement says so. No edit from the job reaches any branch.
 
    A ticket on which the agent edits nothing is counted as `blind`: it is the method's known limit.
-10. **Every fresh agent runs in the foreground, or is awaited before the next step.** A headless session can end while a background agent runs, and its work is lost (D5).
+10. **Every fresh agent runs in the foreground, or is awaited before the next step, and writes its output to a file under `<os tmpdir>/cortex-quality-<today>/`, which the skill reads.** A headless session can end while a background agent runs, and its work is lost (D5). A hand-back can also fail after the agent has finished, as every one did in the ported run of 2026-11-05, so the file is the delivery and the reply is not.
 11. **The measurement.** One new `history/measurements/<today>-quality.md` per run (first free name by the `-2` rule): `about`, `permanence: stable`, `verified: <today> (observed)`, `origin: session:<id>`. Headings in this order, each with its numbers, never omitted:
     - `## Specs`: lint errors and warnings, criteria, tagged, unverified, untagged tests;
     - `## Tests`: passed, failed, new failures, failures open more than 7 days, or the skip reason;
@@ -204,7 +204,7 @@ It may write anywhere in `cortex/` (P11), but its two spec jobs only propose: sp
 ### The skill keeps every agent in the foreground
 
 - **Given** the SKILL.md text
-- **Then** it says every agent runs in the foreground or is awaited before the next step
+- **Then** it says every agent runs in the foreground or is awaited before the next step, and writes its output to a file under `<os tmpdir>/cortex-quality-<today>/` that the skill reads
 
 ### The skill specifies the measurement
 

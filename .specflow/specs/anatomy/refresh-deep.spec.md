@@ -1,6 +1,6 @@
 ---
 id: anatomy.refresh-deep
-status: implemented
+status: retired
 depends_on:
   - anatomy.scanner
   - anatomy.refresh-fast

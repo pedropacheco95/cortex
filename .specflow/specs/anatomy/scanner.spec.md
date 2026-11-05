@@ -1,6 +1,6 @@
 ---
 id: anatomy.scanner
-status: implemented
+status: retired
 depends_on:
   - schema.validator
 implements: ../../specs-business/anatomy/contributor-gets-a-legible-codebase.business.md
