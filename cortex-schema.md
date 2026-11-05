@@ -444,6 +444,8 @@ extraction:                        # required — the extraction-output contract
 
 #### 4.4.3 `archive/intent-register.yaml` (new at v3.2)
 
+**Ended at 4.0 (owner, 2026-11-05).** The anchor test is gone and nothing writes this file any more. It stays as a read format only: `check.archive-intent-register` still validates a 3.x store, and `cortex migrate` turns its entries into `history/changes/` files (S9.3). At 4.0 a quoted ask maps to a criterion or is listed under Open questions (`specflow.spec-skill` Rule 14). The rest of this section describes the 3.x artefact.
+
 Plan `plans_and_handoffs/plans/2026-08-03.md` §0.5 / Phase 4.1 (Fork 2). Spec-derived tests remain the durable contract; a verbatim user statement ("the password needs one uppercase") is pinned by a **frozen intent-anchor test** that is *retired* once a spec-derived test demonstrably subsumes it. The register is where retired anchors go — a **thin changelog over the citation graph**: it records the words the user said, where that intent landed, and which spec test now covers it. It does **not** hold copies of tests, and it is never a second test suite.
 
 A standalone YAML file (like `metadata.yaml`, §4.4.1 — machine-readable data, not prose), committed, sibling of `register.md`. `register.md` indexes ingested *documents*; this file indexes stated *intents*. The two are deliberately separate artefacts with separate names.
@@ -1606,7 +1608,7 @@ End every substantive answer with an explicit confidence and what would change y
   | Field | Required | Shape |
   |---|---|---|
   | `kind` | yes | open enum: `change-request` \| `decision-change` \| `spec-amendment` \| `other`; new values produce a `warning`, not an `error` |
-  | `status` | yes | free string; for `change-request`, the 3.x intent statuses are kept verbatim (`open`, `reconciled`, …) |
+  | `status` | yes | free string; for `change-request`, the 3.x intent statuses are kept verbatim (`open`, `reconciled`, …); they come from migration, and nothing new writes them |
   | `decision` | no | path of the `world/decisions/` file this event changed |
   | `spec` | no | dev or business spec id or path |
   | `source` | no | path under `history/sources/`, or a verbatim quote of the ask |
