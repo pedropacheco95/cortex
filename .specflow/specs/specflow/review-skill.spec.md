@@ -50,6 +50,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
     ```
     A finding with no criterion id is allowed only in diff mode, for a silent change, and carries `diff:<file>`.
 11. **Rationalizations.** The SKILL.md has a `## Rationalizations` table with these four thoughts, each answered: `I wrote this spec, I can review it myself.`, `The code looks like it does this; no need to check.`, `Minor wording, not worth a finding.`, `The diff is large; I will review the main files.`
+12. **A review received from someone else** (owner decision, sitting item 9). The SKILL.md carries this sentence verbatim: `Verify each point of a review you received against the spec, a rule or the code before applying it, and reject what does not hold, with the reason.` A disagreement is settled by the spec, a rule or a command anyone can run, never by who said it or how sure they sounded. Rule 7 covers this skill's own findings; this rule covers a review from a person or another agent. Applying what holds is ordinary work, not a write of this skill.
 
 ## Acceptance Criteria
 
@@ -148,3 +149,9 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** it says the goldfish reads and never edits a spec, a test or code
+
+### A received review is verified before it is applied
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it contains the Rule 12 sentence byte for byte on one line, and says a disagreement is settled by the spec, a rule or a command, never by who said it
