@@ -102,7 +102,7 @@ ${block}
 // ---------------------------------------------------------------------------
 
 describe('pulse-list shows pending only', () => {
-  it('prints S-001 (pending) with title/target/block, and neither S-002 (accepted) nor S-003 (dismissed)', async () => {
+  it('[PULSE-REVIEW-CLI-1] prints S-001 (pending) with title/target/block, and neither S-002 (accepted) nor S-003 (dismissed)', async () => {
     const root = makeProject('list-pending', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -135,7 +135,7 @@ loop: cortex-init
 });
 
 describe('Expired dismissal resurfaces', () => {
-  it('S-003 appears as pending once its dismissal Expires is in the past', async () => {
+  it('[PULSE-REVIEW-CLI-2] S-003 appears as pending once its dismissal Expires is in the past', async () => {
     const root = makeProject('list-expired', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -161,7 +161,7 @@ loop: cortex-init
 });
 
 describe('Accept applies the block verbatim', () => {
-  it('appends the block after a blank line, annotates Status: accepted, and changes no other file', async () => {
+  it('[PULSE-REVIEW-CLI-3] appends the block after a blank line, annotates Status: accepted, and changes no other file', async () => {
     const root = makeProject('accept-verbatim', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -200,7 +200,7 @@ describe('Accept applies the block verbatim', () => {
 });
 
 describe('Non-compass target refused', () => {
-  it('exits 1 naming the path and changes nothing when the target is outside .cortex/compass/', async () => {
+  it('[PULSE-REVIEW-CLI-4] exits 1 naming the path and changes nothing when the target is outside .cortex/compass/', async () => {
     const root = makeProject('refuse-target', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -215,7 +215,7 @@ describe('Non-compass target refused', () => {
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('refuses a `..` escape out of .cortex/compass/', async () => {
+  it('[PULSE-REVIEW-CLI-4] refuses a `..` escape out of .cortex/compass/', async () => {
     const root = makeProject('refuse-escape', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -229,7 +229,7 @@ describe('Non-compass target refused', () => {
 });
 
 describe('Reject records the window', () => {
-  it('adds an S-001 dismissed section whose Expires is dismissedWindowDays after Dismissed', async () => {
+  it('[PULSE-REVIEW-CLI-5] adds an S-001 dismissed section whose Expires is dismissedWindowDays after Dismissed', async () => {
     const root = makeProject('reject-window', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -264,7 +264,7 @@ describe('Reject records the window', () => {
 });
 
 describe('Deciding twice is safe', () => {
-  it('re-accepting an accepted id is a no-op (exit 0, zero file changes); rejecting it is a reversal error (exit 1)', async () => {
+  it('[PULSE-REVIEW-CLI-6] re-accepting an accepted id is a no-op (exit 0, zero file changes); rejecting it is a reversal error (exit 1)', async () => {
     const root = makeProject('decide-twice', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -297,7 +297,7 @@ describe('Deciding twice is safe', () => {
 });
 
 describe('Unknown id errors', () => {
-  it('exits 1 naming S-999 when the suggestions file lacks it', async () => {
+  it('[PULSE-REVIEW-CLI-11] exits 1 naming S-999 when the suggestions file lacks it', async () => {
     const root = makeProject('unknown', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -381,7 +381,7 @@ orphan block
 });
 
 describe('Discovery spans all pulse reports', () => {
-  it('pulse-list and pulse-accept both find S-004 proposed inside rule-candidates.md, and accept applies its block', async () => {
+  it('[PULSE-REVIEW-CLI-7] pulse-list and pulse-accept both find S-004 proposed inside rule-candidates.md, and accept applies its block', async () => {
     const root = makeProject('discovery', {
       suggestions: SUGGESTIONS_HEADER + entry('S-001', 'In suggestions', '.cortex/compass/preferences.md', 'text one'),
       extra: {
@@ -436,7 +436,7 @@ loop: cortex-init
 });
 
 describe('Skill proposal accepted to a new skill only', () => {
-  it('accept on S-005 targeting a nonexistent .claude/skills/my-workflow/SKILL.md creates it with the block', async () => {
+  it('[PULSE-REVIEW-CLI-8] accept on S-005 targeting a nonexistent .claude/skills/my-workflow/SKILL.md creates it with the block', async () => {
     const root = makeProject('skill-new', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -450,7 +450,7 @@ describe('Skill proposal accepted to a new skill only', () => {
     expect(suggestions).toContain('**Status:** accepted');
   });
 
-  it('a suggestion targeting an EXISTING skill file is refused, exit 1, nothing changed', async () => {
+  it('[PULSE-REVIEW-CLI-8] a suggestion targeting an EXISTING skill file is refused, exit 1, nothing changed', async () => {
     const root = makeProject('skill-existing', {
       suggestions:
         SUGGESTIONS_HEADER +
@@ -502,7 +502,7 @@ loop: cortex-loop-rule-decay
     });
   }
 
-  it('pulse-accept on the duplicated id exits 1 naming both files, nothing changed', async () => {
+  it('[PULSE-REVIEW-CLI-9] pulse-accept on the duplicated id exits 1 naming both files, nothing changed', async () => {
     const root = makeDuplicateProject('dup-accept');
     const before = snapshotTree(root);
     expect(await pulseCli('pulse-accept', ['S-006'], root)).toBe(1);
@@ -511,7 +511,7 @@ loop: cortex-loop-rule-decay
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('pulse-reject on the duplicated id exits 1 naming both files, nothing changed', async () => {
+  it('[PULSE-REVIEW-CLI-9] pulse-reject on the duplicated id exits 1 naming both files, nothing changed', async () => {
     const root = makeDuplicateProject('dup-reject');
     const before = snapshotTree(root);
     expect(await pulseCli('pulse-reject', ['S-006'], root)).toBe(1);
@@ -520,7 +520,7 @@ loop: cortex-loop-rule-decay
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('pulse-list also treats the duplicate as a hard error (exit 1 naming both files)', async () => {
+  it('[PULSE-REVIEW-CLI-9] pulse-list also treats the duplicate as a hard error (exit 1 naming both files)', async () => {
     const root = makeDuplicateProject('dup-list');
     expect(await pulseCli('pulse-list', [], root)).toBe(1);
     expect(stderr()).toContain(path.join('.cortex', 'pulse', 'suggestions.md'));
@@ -604,7 +604,7 @@ ${PAYLOAD}
 `;
   }
 
-  it('pulse-accept applies a four-backtick-wrapped payload byte-exact, inner fences included', async () => {
+  it('[PULSE-REVIEW-CLI-10] pulse-accept applies a four-backtick-wrapped payload byte-exact, inner fences included', async () => {
     const root = makeProject('b003-accept', {
       suggestions: SUGGESTIONS_HEADER + fencedEntry('S-030', '.claude/skills/fenced-workflow/SKILL.md'),
     });
@@ -622,7 +622,7 @@ ${PAYLOAD}
     expect(stdout()).toContain('Done.');
   });
 
-  it('accept to a compass core file lands the payload byte-exact too', async () => {
+  it('[PULSE-REVIEW-CLI-10] accept to a compass core file lands the payload byte-exact too', async () => {
     const root = makeProject('b003-compass', {
       suggestions: SUGGESTIONS_HEADER + fencedEntry('S-032', '.cortex/compass/preferences.md'),
     });
@@ -713,7 +713,7 @@ ${EVIDENCE_PAYLOAD}\`\`\`
 }
 
 describe('An evidence-candidate is gated like a decision-candidate (accept)', () => {
-  it('accept creates the file byte-exact and atlas/evidence/_index.md alongside it when the directory is absent', async () => {
+  it('[ATLAS-EVIDENCE-11] accept creates the file byte-exact and atlas/evidence/_index.md alongside it when the directory is absent', async () => {
     const root = makeProject('evidence-accept', {
       extra: { '.cortex/pulse/reports/audit.md': EVIDENCE_REPORT_HEADER + evidenceCandidate('S-031', '.cortex/atlas/evidence/2026-09-15-audit.md') },
     });
@@ -785,7 +785,7 @@ Body.
 }
 
 describe('Accept registers a new rule file, and refuses a taken id (Rule 7b)', () => {
-  it('S-031 landing a new R-004-x.md appends `R-004 x` to a registry ending R-003', async () => {
+  it('[SCHEMA-ID-REGISTRY-11] S-031 landing a new R-004-x.md appends `R-004 x` to a registry ending R-003', async () => {
     const root = makeProject('register-rule', {
       suggestions: SUGGESTIONS_HEADER + ruleFileEntry('S-031', '.cortex/compass/rules/R-004-x.md', 'R-004'),
       extra: { [REGISTRY_FILE]: `${REGISTRY_HEADER}\nR-001 a\nR-002 b\nR-003 c\nB-001 z\n` },
@@ -796,7 +796,7 @@ describe('Accept registers a new rule file, and refuses a taken id (Rule 7b)', (
     expect(fs.readFileSync(path.join(root, '.cortex', 'pulse', 'suggestions.md'), 'utf-8')).toContain('**Status:** accepted');
   });
 
-  it('a registry already carrying `R-004 other` → exit 1 naming that line and cortex id next rule; proposal pending, no file, registry untouched', async () => {
+  it('[SCHEMA-ID-REGISTRY-11] a registry already carrying `R-004 other` → exit 1 naming that line and cortex id next rule; proposal pending, no file, registry untouched', async () => {
     const registry = `${REGISTRY_HEADER}\nR-001 a\nR-004 other\n`;
     const root = makeProject('refuse-taken', {
       suggestions: SUGGESTIONS_HEADER + ruleFileEntry('S-031', '.cortex/compass/rules/R-004-x.md', 'R-004'),

@@ -145,19 +145,19 @@ function spawnCalls(): number {
 // entryStaleness — the comparison the CLI header and the PreRead marker share.
 // ---------------------------------------------------------------------------
 describe('entryStaleness: the entry is authoritative for itself', () => {
-  it('a body that hashes to source_sha256 is fresh', () => {
+  it('[INSIGHT-CLI-13] a body that hashes to source_sha256 is fresh', () => {
     const root = freshRoot('unit-fresh');
     const s = entryStaleness(root, fileQuery(root, SOURCE));
     expect(s).toEqual({ built_at_commit: BUILT, extracted_at: EXTRACTED, stale: false, reason: 'fresh' });
   });
 
-  it('a body that differs is stale for the reason "changed"', () => {
+  it('[INSIGHT-CLI-14] a body that differs is stale for the reason "changed"', () => {
     const root = changedRoot('unit-changed');
     const s = entryStaleness(root, fileQuery(root, SOURCE));
     expect(s).toEqual({ built_at_commit: BUILT, extracted_at: EXTRACTED, stale: true, reason: 'changed' });
   });
 
-  it('no file at the path is stale for the reason "missing", never a throw', () => {
+  it('[INSIGHT-CLI-15] no file at the path is stale for the reason "missing", never a throw', () => {
     const root = missingRoot('unit-missing');
     expect(entryStaleness(root, fileQuery(root, SOURCE))).toEqual({
       built_at_commit: BUILT,
@@ -167,13 +167,13 @@ describe('entryStaleness: the entry is authoritative for itself', () => {
     });
   });
 
-  it('a directory in place of the source is "missing" too (unreadable, not a crash)', () => {
+  it('[INSIGHT-CLI-15] a directory in place of the source is "missing" too (unreadable, not a crash)', () => {
     const root = missingRoot('unit-dir');
     fs.mkdirSync(path.join(root, SOURCE));
     expect(entryStaleness(root, fileQuery(root, SOURCE))?.reason).toBe('missing');
   });
 
-  it('a miss (no entry) and an absent module carry no staleness at all (null)', () => {
+  it('[INSIGHT-CLI-17] a miss (no entry) and an absent module carry no staleness at all (null)', () => {
     const root = makeTmpRoot('unit-null');
     writeSource(root, BODY);
     expect(entryStaleness(root, fileQuery(root, SOURCE))).toBeNull();
@@ -205,7 +205,7 @@ describe('entryStaleness: the entry is authoritative for itself', () => {
 // AC: `file` prints a fresh stamp when the source matches its entry
 // ---------------------------------------------------------------------------
 describe('AC: file prints a fresh stamp when the source matches its entry', () => {
-  it('the second output line is exactly `built at 9f2c1ab · 2026-07-07 · fresh`', async () => {
+  it('[INSIGHT-CLI-13] the second output line is exactly `built at 9f2c1ab · 2026-07-07 · fresh`', async () => {
     const root = freshRoot('ac-fresh');
     const { code, out } = await capture(() => insightCli('file', [SOURCE], root));
     expect(code).toBe(0);
@@ -220,7 +220,7 @@ describe('AC: file prints a fresh stamp when the source matches its entry', () =
 // AC: `file` prints a STALE stamp when the source body changed
 // ---------------------------------------------------------------------------
 describe('AC: file prints a STALE stamp when the source body changed', () => {
-  it('the second line is exactly `built at 9f2c1ab · 2026-07-07 · STALE: source changed since`, sections render, exit 0', async () => {
+  it('[INSIGHT-CLI-14] the second line is exactly `built at 9f2c1ab · 2026-07-07 · STALE: source changed since`, sections render, exit 0', async () => {
     const root = changedRoot('ac-changed');
     const { code, out } = await capture(() => insightCli('file', [SOURCE], root));
     expect(code).toBe(0);
@@ -235,7 +235,7 @@ describe('AC: file prints a STALE stamp when the source body changed', () => {
 // AC: A missing source is stale, not a crash
 // ---------------------------------------------------------------------------
 describe('AC: a missing source is stale, not a crash', () => {
-  it('the second line ends `STALE: source missing`, exit 0, and no git process is spawned', async () => {
+  it('[INSIGHT-CLI-15] the second line ends `STALE: source missing`, exit 0, and no git process is spawned', async () => {
     const root = missingRoot('ac-missing');
     const before = spawnCalls();
     const { code, out, err } = await capture(() => insightCli('file', [SOURCE], root));
@@ -246,7 +246,7 @@ describe('AC: a missing source is stale, not a crash', () => {
     expect(spawnCalls()).toBe(before);
   });
 
-  it('the fresh and changed renderings spawn nothing either (the comparison is in-process)', async () => {
+  it('[INSIGHT-CLI-13, INSIGHT-CLI-14] the fresh and changed renderings spawn nothing either (the comparison is in-process)', async () => {
     const before = spawnCalls();
     await capture(() => insightCli('file', [SOURCE], freshRoot('spawn-fresh')));
     await capture(() => insightCli('file', [SOURCE], changedRoot('spawn-changed')));
@@ -271,7 +271,7 @@ describe('AC: --json carries the stamp fields', () => {
     sections: Record<string, string>;
   }
 
-  it('the fresh fixture → built_at_commit "9f2c1ab", extracted_at "2026-07-07T14:00:00Z", stale false; frontmatter.source_sha256 unchanged', async () => {
+  it('[INSIGHT-CLI-16] the fresh fixture → built_at_commit "9f2c1ab", extracted_at "2026-07-07T14:00:00Z", stale false; frontmatter.source_sha256 unchanged', async () => {
     const root = freshRoot('json-fresh');
     const { code, out } = await capture(() => insightCli('file', [SOURCE, '--json'], root));
     expect(code).toBe(0);
@@ -284,7 +284,7 @@ describe('AC: --json carries the stamp fields', () => {
     expect(parsed.frontmatter.extracted_at).toBe('2026-07-07T14:00:00Z');
   });
 
-  it('the changed fixture → the same stamp strings, stale true, frontmatter.source_sha256 still the entry\'s own hash', async () => {
+  it('[INSIGHT-CLI-16] the changed fixture → the same stamp strings, stale true, frontmatter.source_sha256 still the entry\'s own hash', async () => {
     const root = changedRoot('json-changed');
     const { code, out } = await capture(() => insightCli('file', [SOURCE, '--json'], root));
     expect(code).toBe(0);
@@ -319,7 +319,7 @@ describe('AC: --json carries the stamp fields', () => {
 // AC: An absent entry carries no stamp
 // ---------------------------------------------------------------------------
 describe('AC: an absent entry carries no stamp', () => {
-  it('a miss renders as before: no `built at` line, no `stale` field, with and without --json', async () => {
+  it('[INSIGHT-CLI-17] a miss renders as before: no `built at` line, no `stale` field, with and without --json', async () => {
     const root = freshRoot('miss');
     const plain = await capture(() => insightCli('file', ['src/utils/orphan.ts'], root));
     expect(plain.code).toBe(1);
@@ -336,7 +336,7 @@ describe('AC: an absent entry carries no stamp', () => {
     expect(json.out).not.toContain('built at');
   });
 
-  it('an absent module (Rule 8) is unchanged too', async () => {
+  it('[INSIGHT-CLI-12] an absent module (Rule 8) is unchanged too', async () => {
     const root = makeTmpRoot('miss-module');
     const { code, err, out } = await capture(() => insightCli('file', [SOURCE], root));
     expect(code).toBe(1);

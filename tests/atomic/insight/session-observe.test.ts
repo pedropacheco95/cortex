@@ -198,7 +198,7 @@ describe('collect: shared-corpus reuse and unobserved-session worklist', () => {
     expect(readObserveWorklist(root)?.sessions.map((s) => s.id)).toEqual(['sess-x']);
   });
 
-  it('apply marks the worklist sessions observed; a re-collect excludes them', () => {
+  it('[INSIGHT-SESSION-OBSERVE-19] apply marks the worklist sessions observed; a re-collect excludes them', () => {
     const root = makeGitProject('observe-state');
     collectFor(root, ['sess-1', 'sess-2']);
     applyObserve(root, { now: NOW });
@@ -230,7 +230,7 @@ function readCorpusRaw(root: string): { generated: string; since: string; sessio
 }
 
 describe('collect: corpus freshness — refresh instead of stale reuse (spec Rule 11)', () => {
-  it('appends sessions newer than corpus.generated, re-stamps generated, leaves since + distil-last-run alone', () => {
+  it('[INSIGHT-SESSION-OBSERVE-16] appends sessions newer than corpus.generated, re-stamps generated, leaves since + distil-last-run alone', () => {
     const root = tmp('refresh');
     const home = tmp('refresh-home');
     writeCorpus(root, ['old-1']);
@@ -254,7 +254,7 @@ describe('collect: corpus freshness — refresh instead of stale reuse (spec Rul
     expect(worklist?.corpus_appended).toBe(1);
   });
 
-  it('a session rewritten after generated is replaced in place (upsert by id), never duplicated', () => {
+  it('[INSIGHT-SESSION-OBSERVE-16] a session rewritten after generated is replaced in place (upsert by id), never duplicated', () => {
     const root = tmp('refresh-upsert');
     const home = tmp('refresh-upsert-home');
     writeCorpus(root, ['old-1']);
@@ -274,7 +274,7 @@ describe('collect: corpus freshness — refresh instead of stale reuse (spec Rul
 });
 
 describe('collect: kind tagging — scheduled vs interactive (spec Rule 12)', () => {
-  it('sessionKind is decided by the first user message alone', () => {
+  it('[INSIGHT-SESSION-OBSERVE-17] sessionKind is decided by the first user message alone', () => {
     expect(sessionKind([{ role: 'user', text: 'Base directory for this skill: /x/y' }])).toBe('scheduled');
     expect(sessionKind([{ role: 'user', text: 'hi <scheduled-task name="cortex-daily" file="x">go</scheduled-task>' }])).toBe('scheduled');
     expect(sessionKind([{ role: 'assistant', text: '<scheduled-task' }, { role: 'user', text: 'plain question' }])).toBe('interactive');
@@ -282,7 +282,7 @@ describe('collect: kind tagging — scheduled vs interactive (spec Rule 12)', ()
     expect(sessionKind([])).toBe('interactive');
   });
 
-  it('a collected corpus and its worklist carry kind for every session', () => {
+  it('[INSIGHT-SESSION-OBSERVE-17] a collected corpus and its worklist carry kind for every session', () => {
     const root = tmp('kind-collect');
     const home = tmp('kind-collect-home');
     fs.mkdirSync(path.join(root, '.cortex', 'pulse'), { recursive: true });
@@ -296,7 +296,7 @@ describe('collect: kind tagging — scheduled vs interactive (spec Rule 12)', ()
     expect(Object.fromEntries((worklist?.sessions ?? []).map((s) => [s.id, s.kind]))).toEqual(kinds);
   });
 
-  it('a legacy corpus without kind still loads, every session read as interactive', () => {
+  it('[INSIGHT-SESSION-OBSERVE-17] a legacy corpus without kind still loads, every session read as interactive', () => {
     const root = tmp('kind-legacy');
     writeCorpus(root, ['sess-a']); // the fixture writes no `kind`
     expect(readCorpus(root)?.sessions[0]?.kind).toBe('interactive');
@@ -304,7 +304,7 @@ describe('collect: kind tagging — scheduled vs interactive (spec Rule 12)', ()
     expect(readObserveWorklist(root)?.sessions[0]?.kind).toBe('interactive');
   });
 
-  it('the worklist lists interactive sessions first, corpus order preserved within each kind', () => {
+  it('[INSIGHT-SESSION-OBSERVE-18] the worklist lists interactive sessions first, corpus order preserved within each kind', () => {
     const root = tmp('kind-order');
     fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'state'), { recursive: true });
     const mk = (id: string, kind: string) => ({ id, kind, mtime: T.toISOString(), messages: [{ role: 'user', text: id }] });
@@ -333,7 +333,7 @@ function writeProposals(root: string, name: string, doc: unknown): string {
 }
 
 describe('apply: claimed observation — only sessions the skill read are marked observed (spec Rule 13)', () => {
-  it('the object shape claims exactly the listed ids; the rest get an attempts count and stay in the worklist', () => {
+  it('[INSIGHT-SESSION-OBSERVE-19] the object shape claims exactly the listed ids; the rest get an attempts count and stay in the worklist', () => {
     const root = makeGitProject('claim-object');
     collectFor(root, ['sess-1', 'sess-2']);
     const r = applyObserve(root, { now: NOW, proposalsFile: writeProposals(root, 'p.json', { observed: ['sess-1'], candidates: [] }) });
@@ -350,7 +350,7 @@ describe('apply: claimed observation — only sessions the skill read are marked
     expect(readObserveWorklist(root)?.sessions.map((s) => s.id)).toEqual(['sess-2']);
   });
 
-  it('an object without `observed` claims nothing; without `candidates` it routes no gated candidates', () => {
+  it('[INSIGHT-SESSION-OBSERVE-19] an object without `observed` claims nothing; without `candidates` it routes no gated candidates', () => {
     const root = makeGitProject('claim-empty-object');
     collectFor(root, ['sess-1']);
     const r = applyObserve(root, { now: NOW, proposalsFile: writeProposals(root, 'p.json', {}) });
@@ -375,7 +375,7 @@ describe('apply: claimed observation — only sessions the skill read are marked
     expect(r.counts.proposed).toBe(1);
   });
 
-  it('the legacy bare array claims every worklist session (backward compatibility)', () => {
+  it('[INSIGHT-SESSION-OBSERVE-19] the legacy bare array claims every worklist session (backward compatibility)', () => {
     const root = makeGitProject('claim-array');
     collectFor(root, ['sess-1', 'sess-2']);
     const r = applyObserve(root, { now: NOW, proposalsFile: writeProposals(root, 'p.json', []) });
@@ -384,7 +384,7 @@ describe('apply: claimed observation — only sessions the skill read are marked
     expect(readObserveState(root).attempts).toEqual({});
   });
 
-  it('plain --apply with no proposals file claims every worklist session (the empty-worklist path keeps working)', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-19] plain --apply with no proposals file claims every worklist session (the empty-worklist path keeps working)', async () => {
     const root = makeGitProject('claim-plain');
     collectFor(root, ['sess-1']);
     expect(await runSessionObserve(root, { apply: true, now: NOW })).toBe(0);
@@ -394,7 +394,7 @@ describe('apply: claimed observation — only sessions the skill read are marked
     expect(await runSessionObserve(root, { apply: true, now: NOW })).toBe(0);
   });
 
-  it('an unclaimed session expires as observed on its third unclaimed apply, with a report note; not after two', () => {
+  it('[INSIGHT-SESSION-OBSERVE-20] an unclaimed session expires as observed on its third unclaimed apply, with a report note; not after two', () => {
     const root = makeGitProject('claim-expire');
     const claimNothing = () => {
       collectFor(root, ['sess-stuck']);
@@ -435,7 +435,7 @@ describe('apply: claimed observation — only sessions the skill read are marked
 // apply — section-boundary enforcement (spec Rule 2)
 // ---------------------------------------------------------------------------
 describe('apply: section-boundary + provenance enforcement on enriched entries', () => {
-  it('an Insights append carrying the claude-sessions trailer passes (exit 0)', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-1] an Insights append carrying the claude-sessions trailer passes (exit 0)', async () => {
     const root = makeGitProject('append-ok');
     collectFor(root);
     const abs = path.join(root, ENTRY_REL);
@@ -453,7 +453,7 @@ describe('apply: section-boundary + provenance enforcement on enriched entries',
     expect(await runSessionObserve(root, { apply: true, now: NOW })).toBe(0);
   });
 
-  it('a Query pointers append with the trailer passes; without it → violation', () => {
+  it('[INSIGHT-SESSION-OBSERVE-2] a Query pointers append with the trailer passes; without it → violation', () => {
     const root = makeGitProject('qp');
     collectFor(root);
     const abs = path.join(root, ENTRY_REL);
@@ -473,7 +473,7 @@ describe('apply: section-boundary + provenance enforcement on enriched entries',
     expect(report).toContain('provenance trailer');
   });
 
-  it('a Purpose edit → violation and exit 1 (extraction-owned section)', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-3] a Purpose edit → violation and exit 1 (extraction-owned section)', async () => {
     const root = makeGitProject('purpose');
     collectFor(root);
     const abs = path.join(root, ENTRY_REL);
@@ -492,7 +492,7 @@ describe('apply: section-boundary + provenance enforcement on enriched entries',
     expect(applyObserve(root, { now: NOW }).violations).toBeGreaterThan(0);
   });
 
-  it('a direct compass write → loop-write-invariant violation (RULES 7)', () => {
+  it('[INSIGHT-SESSION-OBSERVE-21] a direct compass write → loop-write-invariant violation (RULES 7)', () => {
     const root = makeGitProject('gated');
     collectFor(root);
     fs.appendFileSync(path.join(root, '.cortex', 'compass', 'preferences.md'), '\n- sneaky direct rule\n', 'utf-8');
@@ -587,7 +587,7 @@ describe('candidate validation and decision drafting', () => {
     expect(decisionSlug({ title: 'ignored', slug: 'explicit-slug' })).toBe('explicit-slug');
   });
 
-  it('decisionFilePayload drafts §4.3-conformant frontmatter with claude-sessions provenance', () => {
+  it('[INSIGHT-SESSION-OBSERVE-12] decisionFilePayload drafts §4.3-conformant frontmatter with claude-sessions provenance', () => {
     const { targetRel, payload } = decisionFilePayload(
       { type: 'decision-candidate', title: 'Polling over webhooks', reasoning: 'Because ingress.', sessionIds: ['sess-1', 'sess-2'] },
       NOW,
@@ -603,7 +603,7 @@ describe('candidate validation and decision drafting', () => {
     expect(payload).not.toContain('bears_on');
   });
 
-  it('decisionFilePayload emits a non-empty bears_on seed as a YAML list after date: and before provenance: (3.4)', () => {
+  it('[INSIGHT-SESSION-OBSERVE-13] decisionFilePayload emits a non-empty bears_on seed as a YAML list after date: and before provenance: (3.4)', () => {
     const { payload } = decisionFilePayload(
       { type: 'decision-candidate', title: 'Polling over webhooks', reasoning: 'Because ingress.', sessionIds: ['sess-1'] },
       NOW,
@@ -627,7 +627,7 @@ describe('candidate validation and decision drafting', () => {
     ]);
   });
 
-  it('decisionFilePayload with an explicitly empty seed omits bears_on (an absent ledger yields no key)', () => {
+  it('[INSIGHT-SESSION-OBSERVE-13] decisionFilePayload with an explicitly empty seed omits bears_on (an absent ledger yields no key)', () => {
     const { payload } = decisionFilePayload(
       { type: 'decision-candidate', title: 'x', reasoning: 'y', sessionIds: ['sess-1'] },
       NOW,
@@ -637,7 +637,7 @@ describe('candidate validation and decision drafting', () => {
     expect(payload).not.toContain('bears_on');
   });
 
-  it('ruleFilePayload drafts §4.2-conformant frontmatter (B-010: the rule-candidate equivalent of decisionFilePayload)', () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] ruleFilePayload drafts §4.2-conformant frontmatter (B-010: the rule-candidate equivalent of decisionFilePayload)', () => {
     const root = tmp('rule-payload');
     const allocated = new Set<string>();
     const { targetRel, payload } = ruleFilePayload(
@@ -666,7 +666,7 @@ describe('candidate validation and decision drafting', () => {
     expect(allocated.has('R-001')).toBe(true);
   });
 
-  it('ruleFilePayload falls back to governs: ["**/*"] when governedGlobs is absent', () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] ruleFilePayload falls back to governs: ["**/*"] when governedGlobs is absent', () => {
     const root = tmp('rule-payload-fallback');
     const { payload } = ruleFilePayload(
       { type: 'rule-candidate', pattern: 'x', proposedText: 'y', sessionIds: ['s'] },
@@ -678,7 +678,7 @@ describe('candidate validation and decision drafting', () => {
     expect(payload).toContain('"**/*"');
   });
 
-  it('ruleFilePayload allocates the next R-NNN from existing on-disk rule files, and never collides within one batch', () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] ruleFilePayload allocates the next R-NNN from existing on-disk rule files, and never collides within one batch', () => {
     const root = tmp('rule-payload-scan');
     fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-001-existing.md'), '# existing\n', 'utf-8');
@@ -705,7 +705,7 @@ describe('candidate validation and decision drafting', () => {
 // decision-candidate — type table, check.pulse, and the accept path
 // ---------------------------------------------------------------------------
 describe('decision-candidate in the typed pulse gate', () => {
-  it('is in the §4.5.1 enum with atlas/decisions/ as its only permitted root', () => {
+  it('[INSIGHT-SESSION-OBSERVE-12] is in the §4.5.1 enum with atlas/decisions/ as its only permitted root', () => {
     expect(SUGGESTION_TYPES).toContain('decision-candidate');
     expect(isTargetPermitted('decision-candidate', '.cortex/atlas/decisions/2026-07-08-x.md')).toBe(true);
     expect(isTargetPermitted('decision-candidate', '.cortex/atlas/stakeholders/x.md')).toBe(false);
@@ -713,7 +713,7 @@ describe('decision-candidate in the typed pulse gate', () => {
     expect(permittedRoots('decision-candidate')).toEqual([{ kind: 'dir', prefix: '.cortex/atlas/decisions/' }]);
   });
 
-  it('check.pulse accepts a decision-candidate section and errors on a wrong root', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-12] check.pulse accepts a decision-candidate section and errors on a wrong root', async () => {
     const root = tmp('check-pulse');
     fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
     fs.writeFileSync(
@@ -732,7 +732,7 @@ describe('decision-candidate in the typed pulse gate', () => {
     expect(s2.some((v) => v.severity === 'error' && v.message.includes('outside the permitted root'))).toBe(true);
   });
 
-  it('accept creates a schema-valid atlas decision (validated with the real checks)', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-12] accept creates a schema-valid atlas decision (validated with the real checks)', async () => {
     const root = makeGitProject('accept');
     collectFor(root);
     const proposals = path.join(root, 'proposals.json');
@@ -838,7 +838,7 @@ function proposedFileFrontmatter(report: string, id: string): Record<string, unk
 }
 
 describe('readLedgerSeed: the read-ledger seed for a decision-candidate (spec Rule 6, 3.4)', () => {
-  it('keeps .cortex/ and .specflow/ lines in ledger order, collapses duplicates first-seen, caps at 12', () => {
+  it('[INSIGHT-SESSION-OBSERVE-13] keeps .cortex/ and .specflow/ lines in ledger order, collapses duplicates first-seen, caps at 12', () => {
     const root = tmp('seed-ac');
     writeLedger(root, 's1', AC_LEDGER_LINES);
     const seed = readLedgerSeed(root, ['s1']);
@@ -848,7 +848,7 @@ describe('readLedgerSeed: the read-ledger seed for a decision-candidate (spec Ru
     expect(seed).not.toContain('src/pulse/usage.ts');
   });
 
-  it('concatenates ledgers in candidate order, dedupes across sessions, skips an absent ledger, and honours the cap argument', () => {
+  it('[INSIGHT-SESSION-OBSERVE-13] concatenates ledgers in candidate order, dedupes across sessions, skips an absent ledger, and honours the cap argument', () => {
     const root = tmp('seed-multi');
     writeLedger(root, 's1', ['.cortex/compass/preferences.md', 'README.md', '.specflow/specs/a.spec.md']);
     writeLedger(root, 's3', ['.specflow/specs/a.spec.md', '.cortex/atlas/_index.md']);
@@ -860,14 +860,14 @@ describe('readLedgerSeed: the read-ledger seed for a decision-candidate (spec Ru
     expect(readLedgerSeed(root, ['s1', 's3'], 2)).toEqual(['.cortex/compass/preferences.md', '.specflow/specs/a.spec.md']);
   });
 
-  it('no ledger on disk → an empty seed, never a throw', () => {
+  it('[INSIGHT-SESSION-OBSERVE-13] no ledger on disk → an empty seed, never a throw', () => {
     const root = tmp('seed-none');
     expect(readLedgerSeed(root, ['sess-1'])).toEqual([]);
   });
 });
 
 describe("a decision-candidate's bears_on is seeded from the session's read ledger (spec AC, 3.4)", () => {
-  it('the proposed file carries exactly 12 entries in ledger order, and the accepted decision passes check.atlas + check.bears-on clean', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-13] the proposed file carries exactly 12 entries in ledger order, and the accepted decision passes check.atlas + check.bears-on clean', async () => {
     const root = makeGitProject('seed-apply');
     writeLedgerTargets(root);
     gitCommitAll(root, 'ledger targets'); // gated roots must be clean for the enrichment audit
@@ -892,7 +892,7 @@ describe("a decision-candidate's bears_on is seeded from the session's read ledg
     expect(await checkBearsOn(root, index, loadClauseIndex(root))).toEqual([]);
   });
 
-  it('the same candidate with no ledger on disk → no bears_on key, and the section is otherwise identical', () => {
+  it('[INSIGHT-SESSION-OBSERVE-13] the same candidate with no ledger on disk → no bears_on key, and the section is otherwise identical', () => {
     const seeded = makeGitProject('seed-with');
     writeLedgerTargets(seeded);
     gitCommitAll(seeded, 'ledger targets');
@@ -922,7 +922,7 @@ describe("a decision-candidate's bears_on is seeded from the session's read ledg
 // file must pass check.rules (id/title/source/governs) + check.provenance.
 // ---------------------------------------------------------------------------
 describe('rule-candidate in the typed pulse gate (B-010 fix)', () => {
-  it('renders a **Proposed file:** section targeting a Core-computed .cortex/compass/rules/R-NNN path', () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] renders a **Proposed file:** section targeting a Core-computed .cortex/compass/rules/R-NNN path', () => {
     const root = makeGitProject('rule-render');
     collectFor(root);
     const proposals = path.join(root, 'proposals.json');
@@ -948,7 +948,7 @@ describe('rule-candidate in the typed pulse gate (B-010 fix)', () => {
     expect(rep).not.toContain('**Proposed addition:**');
   });
 
-  it('accept creates a schema-valid rule file against an EMPTY .cortex/compass/rules/ (the bug: this used to fail "Target file does not exist")', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] accept creates a schema-valid rule file against an EMPTY .cortex/compass/rules/ (the bug: this used to fail "Target file does not exist")', async () => {
     const root = makeGitProject('rule-accept-empty');
     expect(fs.existsSync(path.join(root, '.cortex', 'compass', 'rules'))).toBe(false);
     collectFor(root);
@@ -985,7 +985,7 @@ describe('rule-candidate in the typed pulse gate (B-010 fix)', () => {
     expect(await checkProvenance(root)).toEqual([]);
   });
 
-  it('two rule-candidates accepted from the same apply batch get distinct, non-colliding R-NNN ids', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-11] two rule-candidates accepted from the same apply batch get distinct, non-colliding R-NNN ids', async () => {
     const root = makeGitProject('rule-two-batch');
     collectFor(root);
     const proposals = path.join(root, 'proposals.json');

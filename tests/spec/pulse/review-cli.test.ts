@@ -94,7 +94,7 @@ function makeProject(label: string): string {
 }
 
 describe('pulse.review-cli integrated slice (through cortex CLI run())', () => {
-  it('lists, accepts one (touching only its target + suggestions.md), then rejects the other', async () => {
+  it('[PULSE-REVIEW-CLI-3, PULSE-REVIEW-CLI-1] lists, accepts one (touching only its target + suggestions.md), then rejects the other', async () => {
     const root = makeProject('flow');
     process.chdir(root);
 
@@ -150,7 +150,7 @@ describe('pulse.review-cli integrated slice (through cortex CLI run())', () => {
     expect(stdout().toLowerCase()).toContain('nothing pending');
   });
 
-  it('B-003 regression, distil skill-proposal lens: a fenced draft survives propose → accept byte-exact into a NEW skill', async () => {
+  it('[PULSE-REVIEW-CLI-10, PULSE-REVIEW-CLI-8] B-003 regression, distil skill-proposal lens: a fenced draft survives propose → accept byte-exact into a NEW skill', async () => {
     const root = makeProject('skill-lens-accept');
     process.chdir(root);
 

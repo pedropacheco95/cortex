@@ -83,7 +83,7 @@ function answeredOpts(
 // ---------------------------------------------------------------------------
 
 describe('AC — a thread file has the contract frontmatter and body (from a record with a read ledger)', () => {
-  it('writes T-001 with the §4.5.3 fields, the ledger\'s .cortex/.specflow lines as bears_on, and the question as body', () => {
+  it('[PULSE-THREADS-1] writes T-001 with the §4.5.3 fields, the ledger\'s .cortex/.specflow lines as bears_on, and the question as body', () => {
     const root = tmp('contract');
     makeCortexProject(root);
     writeReadLedger(root, 's1', [
@@ -142,7 +142,7 @@ describe('AC — a thread file has the contract frontmatter and body (from a rec
 });
 
 describe('AC — one thread per record item, in creation order (Rules 3, 6, 8)', () => {
-  it('offer, two approvals, one finding, one copied artefact → T-001..T-005 in that order; the uncopied artefact opens nothing', () => {
+  it('[PULSE-THREADS-3] offer, two approvals, one finding, one copied artefact → T-001..T-005 in that order; the uncopied artefact opens nothing', () => {
     const root = tmp('order');
     makeCortexProject(root);
     const record = makeSessionRecord({
@@ -199,7 +199,7 @@ describe('AC — one thread per record item, in creation order (Rules 3, 6, 8)',
 });
 
 describe('AC — a scheduled record opens finding and artefact threads only', () => {
-  it('skips the offer and the approval; opens the finding and the artefact; ids are consecutive', () => {
+  it('[PULSE-THREADS-4] skips the offer and the approval; opens the finding and the artefact; ids are consecutive', () => {
     const root = tmp('scheduled');
     makeCortexProject(root);
     const record = makeSessionRecord({
@@ -217,7 +217,7 @@ describe('AC — a scheduled record opens finding and artefact threads only', ()
 });
 
 describe('AC — a finding\'s tag targets lead its bears_on, capped at 12', () => {
-  it('two tag targets first, then the first ten .cortex/ ledger paths; other threads get the first twelve ledger paths', () => {
+  it('[PULSE-THREADS-5] two tag targets first, then the first ten .cortex/ ledger paths; other threads get the first twelve ledger paths', () => {
     const root = tmp('bearson');
     makeCortexProject(root);
     const ledger = Array.from({ length: 15 }, (_, i) => `.cortex/insight/anatomy/src/f${i}.ts.md`);
@@ -255,7 +255,7 @@ describe('AC — a finding\'s tag targets lead its bears_on, capped at 12', () =
 // ---------------------------------------------------------------------------
 
 describe('AC — same question twice opens one thread with a two-session trail', () => {
-  it('a matching key against an open thread appends s2\'s citation, creates no file, and reports the matched id', () => {
+  it('[PULSE-THREADS-6] a matching key against an open thread appends s2\'s citation, creates no file, and reports the matched id', () => {
     const root = tmp('dedupe');
     makeCortexProject(root);
     writeThread(root, makeThread({ body: 'do you want the counter in state/ or at the pulse root?' }));
@@ -294,7 +294,7 @@ describe('AC — same question twice opens one thread with a two-session trail',
 });
 
 describe('AC — an answered thread does not block a new one', () => {
-  it('T-001 answered with the same key → T-002 is opened and T-001 is untouched', () => {
+  it('[PULSE-THREADS-7] T-001 answered with the same key → T-002 is opened and T-001 is untouched', () => {
     const root = tmp('answered');
     makeCortexProject(root);
     writeThread(root, makeThread({ status: 'answered', answered: ENDED, resolved_by: threadCitation('s1') }));
@@ -316,7 +316,7 @@ describe('AC — an answered thread does not block a new one', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC — mentioning a thread id answers it', () => {
-  it('a user message naming T-003 marks it answered with the record\'s ended and the session citation; body byte-identical', () => {
+  it('[PULSE-THREADS-8] a user message naming T-003 marks it answered with the record\'s ended and the session citation; body byte-identical', () => {
     const root = tmp('idmention');
     makeCortexProject(root);
     writeThread(root, makeThread({ id: 'T-003', body: 'Keep the counter in state/?' }));
@@ -336,7 +336,7 @@ describe('AC — mentioning a thread id answers it', () => {
     expect((readThreadRaw(root, 'T-003') as string).split('---\n')[2]).toBe(bodyBefore);
   });
 
-  it('only a whole-word id counts; assistant text counts too; a scheduled session still answers by id', () => {
+  it('[PULSE-THREADS-8] only a whole-word id counts; assistant text counts too; a scheduled session still answers by id', () => {
     const root = tmp('idword');
     makeCortexProject(root);
     writeThread(root, makeThread({ id: 'T-003' }));
@@ -349,7 +349,7 @@ describe('AC — mentioning a thread id answers it', () => {
 });
 
 describe('AC — restating a thread\'s text answers it, short keys excepted', () => {
-  it('a 45-character key restated verbatim answers; a 12-character key does not', () => {
+  it('[PULSE-THREADS-9] a 45-character key restated verbatim answers; a 12-character key does not', () => {
     const root = tmp('keymention');
     makeCortexProject(root);
     const longBody = 'Keep the thread counter under pulse/state/?';
@@ -369,7 +369,7 @@ describe('AC — restating a thread\'s text answers it, short keys excepted', ()
     expect(threadById(root, 'T-005').status).toBe('open');
   });
 
-  it('the key is matched over the normalised concatenation of every message, across a message boundary too', () => {
+  it('[PULSE-THREADS-9] the key is matched over the normalised concatenation of every message, across a message boundary too', () => {
     const root = tmp('concat');
     makeCortexProject(root);
     writeThread(root, makeThread({ id: 'T-004', body: 'Keep the thread counter under pulse/state/?' }));
@@ -391,7 +391,7 @@ describe('AC — the next interactive session\'s first message answers a hanging
     return openThreads(root);
   }
 
-  it('s2 interactive with a non-empty first user message mentioning neither id nor key → T-006 answered by s2', () => {
+  it('[PULSE-THREADS-10] s2 interactive with a non-empty first user message mentioning neither id nor key → T-006 answered by s2', () => {
     const root = tmp('reply');
     const openBefore = hangingSetup(root);
     const answered = detectAnswered(
@@ -412,7 +412,7 @@ describe('AC — the next interactive session\'s first message answers a hanging
     expect(t.answered).toBe('2026-09-15T11:00:00.000Z');
   });
 
-  it('the newest record is picked by greatest ended, excluding the session itself; an empty first message does not reply', () => {
+  it('[PULSE-THREADS-10] the newest record is picked by greatest ended, excluding the session itself; an empty first message does not reply', () => {
     const root = tmp('newest');
     const openBefore = hangingSetup(root);
     // A record for s2 itself (a re-fire) must not count as "the newest other record".
@@ -425,7 +425,7 @@ describe('AC — the next interactive session\'s first message answers a hanging
     ).toEqual(['T-006']);
   });
 
-  it('when a newer record lists a different thread, the older hanging question is not answered by reply', () => {
+  it('[PULSE-THREADS-10] when a newer record lists a different thread, the older hanging question is not answered by reply', () => {
     const root = tmp('older');
     const openBefore = hangingSetup(root);
     writeSessionRecordFixture(root, makeSessionRecord({ session_id: 's1b', ended: '2026-09-15T10:30:00.000Z', threads_opened: ['T-099'] }));
@@ -434,7 +434,7 @@ describe('AC — the next interactive session\'s first message answers a hanging
   });
 
   describe('AC — a scheduled session or an approval thread is not answered by reply', () => {
-    it('(a) s2 scheduled → T-006 stays open', () => {
+    it('[PULSE-THREADS-11] (a) s2 scheduled → T-006 stays open', () => {
       const root = tmp('sched-reply');
       const openBefore = hangingSetup(root);
       expect(
@@ -443,7 +443,7 @@ describe('AC — the next interactive session\'s first message answers a hanging
       expect(threadById(root, 'T-006').status).toBe('open');
     });
 
-    it('(b) T-006 is an approval thread → stays open', () => {
+    it('[PULSE-THREADS-11] (b) T-006 is an approval thread → stays open', () => {
       const root = tmp('approval-reply');
       const openBefore = hangingSetup(root, 'approval');
       expect(detectAnswered(root, answeredOpts({ sessionId: 's2', firstUserText: 'state/ please', openBefore }))).toEqual([]);
@@ -453,7 +453,7 @@ describe('AC — the next interactive session\'s first message answers a hanging
 });
 
 describe('AC — threads opened this run are never answered by this run', () => {
-  it('a question restated verbatim earlier in the same session stays open when openBefore was captured first', () => {
+  it('[PULSE-THREADS-12] a question restated verbatim earlier in the same session stays open when openBefore was captured first', () => {
     const root = tmp('samerun');
     makeCortexProject(root);
     const openBefore = openThreads(root);
@@ -487,7 +487,7 @@ describe('Rule 10 — only open threads are re-evaluated; terminal states never 
 });
 
 describe('Rule 13 — only pulse is written', () => {
-  it('opening and answering touch nothing outside .cortex/pulse/', () => {
+  it('[PULSE-THREADS-20] opening and answering touch nothing outside .cortex/pulse/', () => {
     const root = tmp('pulse-only');
     makeCortexProject(root);
     fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });

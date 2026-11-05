@@ -42,7 +42,7 @@ describe('Shared S-id allocator (schema §4.5)', () => {
     expect(readSuggestionCounter(root)).toBe(3);
   });
 
-  it('continues from an existing counter value (never reuses an id)', () => {
+  it('[PULSE-DISTIL-4] continues from an existing counter value (never reuses an id)', () => {
     const root = tmp('continue');
     fs.mkdirSync(path.dirname(counterPath(root)), { recursive: true });
     fs.writeFileSync(counterPath(root), '7', 'utf-8');

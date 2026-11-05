@@ -84,7 +84,7 @@ describe('`thread list` filters by status and by `bears_on` prefix', () => {
     ]);
   }
 
-  it('defaults to open threads, oldest first, one line each with id, kind, date and key text', async () => {
+  it('[PULSE-THREADS-13] defaults to open threads, oldest first, one line each with id, kind, date and key text', async () => {
     const root = tmp('list-default');
     seed(root);
     const code = await threadCli(['list'], root, { now: NOW });
@@ -95,14 +95,14 @@ describe('`thread list` filters by status and by `bears_on` prefix', () => {
     ]);
   });
 
-  it('--status dropped lists exactly the dropped thread', async () => {
+  it('[PULSE-THREADS-13] --status dropped lists exactly the dropped thread', async () => {
     const root = tmp('list-status');
     seed(root);
     expect(await threadCli(['list', '--status', 'dropped'], root, { now: NOW })).toBe(0);
     expect(lines()).toEqual(['T-002  offer  2026-09-11  Want me to wire the verb now?']);
   });
 
-  it('--touching keeps threads with a bears_on entry starting with the argument', async () => {
+  it('[PULSE-THREADS-13] --touching keeps threads with a bears_on entry starting with the argument', async () => {
     const root = tmp('list-touching');
     seed(root);
     expect(await threadCli(['list', '--touching', '.cortex/compass'], root, { now: NOW })).toBe(0);
@@ -112,7 +112,7 @@ describe('`thread list` filters by status and by `bears_on` prefix', () => {
     expect(lines().map((l) => l.slice(0, 5))).toEqual(['T-003']);
   });
 
-  it('truncates the key text to 80 characters', async () => {
+  it('[PULSE-THREADS-13] truncates the key text to 80 characters', async () => {
     const root = tmp('list-truncate');
     const long = 'x'.repeat(120);
     seedThreads(root, [makeThread({ id: 'T-001', body: long })]);
@@ -152,7 +152,7 @@ describe('`thread list` filters by status and by `bears_on` prefix', () => {
 // ---------------------------------------------------------------------------
 
 describe('`drop` and `close` change status once', () => {
-  it('drop moves open → dropped; a later close prints the current status, exits 1 and leaves the file unchanged', async () => {
+  it('[PULSE-THREADS-14] drop moves open → dropped; a later close prints the current status, exits 1 and leaves the file unchanged', async () => {
     const root = tmp('drop-then-close');
     seedThreads(root, [makeThread({ id: 'T-001' })]);
 
@@ -172,7 +172,7 @@ describe('`drop` and `close` change status once', () => {
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('drop on a non-open thread prints the current status and exits 1 without writing', async () => {
+  it('[PULSE-THREADS-14] drop on a non-open thread prints the current status and exits 1 without writing', async () => {
     const root = tmp('drop-answered');
     seedThreads(root, [
       makeThread({
@@ -208,7 +208,7 @@ describe('`drop` and `close` change status once', () => {
 });
 
 describe('`close` requires `--by` and records it verbatim', () => {
-  it('without --by exits 2 with a usage message and writes nothing', async () => {
+  it('[PULSE-THREADS-15] without --by exits 2 with a usage message and writes nothing', async () => {
     const root = tmp('close-no-by');
     seedThreads(root, [makeThread({ id: 'T-002' })]);
     const before = snapshotTree(root);
@@ -218,7 +218,7 @@ describe('`close` requires `--by` and records it verbatim', () => {
     expect(readThread(root, 'T-002')?.status).toBe('open');
   });
 
-  it('--by with a missing value is the same usage error', async () => {
+  it('[PULSE-THREADS-15] --by with a missing value is the same usage error', async () => {
     const root = tmp('close-empty-by');
     seedThreads(root, [makeThread({ id: 'T-002' })]);
     const before = snapshotTree(root);
@@ -227,7 +227,7 @@ describe('`close` requires `--by` and records it verbatim', () => {
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('with --by sets status answered, resolved_by as given and answered = now; the body is byte-identical', async () => {
+  it('[PULSE-THREADS-15] with --by sets status answered, resolved_by as given and answered = now; the body is byte-identical', async () => {
     const root = tmp('close-by');
     seedThreads(root, [makeThread({ id: 'T-002', body: 'Ship the counter under state/?' })]);
     expect(await threadCli(['close', 'T-002', '--by', '.specflow/specs/pulse/threads.spec.md'], root, { now: NOW })).toBe(0);
@@ -263,7 +263,7 @@ describe('Rule 11 — verb grammar', () => {
 // ---------------------------------------------------------------------------
 
 describe('Only pulse is written outside `promote`', () => {
-  it('a list → drop → close sequence touches only files beneath .cortex/pulse/', async () => {
+  it('[PULSE-THREADS-20] a list → drop → close sequence touches only files beneath .cortex/pulse/', async () => {
     const root = tmp('pulse-only');
     fs.mkdirSync(path.join(root, '.cortex', 'compass', 'bugs'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex', 'compass', 'bugs', '_index.md'), '# bugs\n', 'utf-8');
@@ -309,7 +309,7 @@ async function refused(root: string, argv: string[], pattern: RegExp): Promise<v
 }
 
 describe('Promote to evidence refuses the wrong kind and demands findings', () => {
-  it('a question thread and a conclusion finding exit 2 naming the kind; nothing written, threads stay open', async () => {
+  it('[ATLAS-EVIDENCE-10] a question thread and a conclusion finding exit 2 naming the kind; nothing written, threads stay open', async () => {
     const root = tmp('evidence-kind');
     seedEvidenceThreads(root);
     await refused(root, ['T-008', '--to', 'atlas/evidence', '--finding', 'x=1'], /question/);
@@ -318,7 +318,7 @@ describe('Promote to evidence refuses the wrong kind and demands findings', () =
     expect(readThread(root, 'T-009')?.status).toBe('open');
   });
 
-  it('no --finding exits 2 naming --finding; a malformed --finding (no `=`) too', async () => {
+  it('[ATLAS-EVIDENCE-10] no --finding exits 2 naming --finding; a malformed --finding (no `=`) too', async () => {
     const root = tmp('evidence-finding');
     seedEvidenceThreads(root);
     await refused(root, ['T-010', '--to', 'atlas/evidence'], /--finding/);
@@ -327,7 +327,7 @@ describe('Promote to evidence refuses the wrong kind and demands findings', () =
     expect(readThread(root, 'T-011')?.status).toBe('open');
   });
 
-  it('an empty resulting bears_on exits 2 naming --bears-on', async () => {
+  it('[ATLAS-EVIDENCE-10] an empty resulting bears_on exits 2 naming --bears-on', async () => {
     const root = tmp('evidence-bears-on');
     seedEvidenceThreads(root);
     await refused(root, ['T-010', '--to', 'atlas/evidence', '--finding', 'x=1'], /--bears-on/);
@@ -347,7 +347,7 @@ describe('Promote to evidence refuses the wrong kind and demands findings', () =
 });
 
 describe('Promote to evidence drafts from the flags and the trail', () => {
-  it('--bears-on replaces the thread list; a numeric value is stored as a number, others as strings; the window falls back to `opened` without session records', async () => {
+  it('[ATLAS-EVIDENCE-9] --bears-on replaces the thread list; a numeric value is stored as a number, others as strings; the window falls back to `opened` without session records', async () => {
     const root = tmp('evidence-draft');
     seedEvidenceThreads(root);
     fs.mkdirSync(path.join(root, 'src'), { recursive: true });
@@ -377,7 +377,7 @@ describe('Promote to evidence drafts from the flags and the trail', () => {
     expect(readThread(root, 'T-011')?.resolved_by).toBe('.cortex/atlas/evidence/2026-09-16-2-insight-invocations-over-55-sessions.md');
   });
 
-  it('the window spans the opener record\'s `ended` to the last record\'s `ended` when both exist; one missing record falls back to `opened` for that end', async () => {
+  it('[ATLAS-EVIDENCE-9] the window spans the opener record\'s `ended` to the last record\'s `ended` when both exist; one missing record falls back to `opened` for that end', async () => {
     const root = tmp('evidence-window');
     seedEvidenceThreads(root);
     seedSessionRecord(root, 's1', '2026-09-10T08:00:00.000Z');
@@ -415,7 +415,7 @@ describe('Promote stamps the draft (atomic)', () => {
     return fs.readFileSync(path.join(dir, name), 'utf-8');
   }
 
-  it('a detached HEAD (bare sha) stamps its first seven characters; the thread-cli module spawns no git', async () => {
+  it('[COMPASS-BUG-CURRENCY-6] a detached HEAD (bare sha) stamps its first seven characters; the thread-cli module spawns no git', async () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../../../src/pulse/thread-cli.ts'), 'utf-8');
     expect(src).not.toMatch(/child_process|execSync|spawnSync/);
     const root = tmp('stamp-detached');
@@ -426,7 +426,7 @@ describe('Promote stamps the draft (atomic)', () => {
     expect(bugFile(root)).toContain('\nfound_at_commit: abcdef0\n');
   });
 
-  it('a HEAD the reader cannot resolve (garbage) drafts without the key rather than failing the promote', async () => {
+  it('[COMPASS-BUG-CURRENCY-6] a HEAD the reader cannot resolve (garbage) drafts without the key rather than failing the promote', async () => {
     const root = tmp('stamp-garbage');
     fs.mkdirSync(path.join(root, '.git'), { recursive: true });
     fs.writeFileSync(path.join(root, '.git', 'HEAD'), 'garbage\n', 'utf-8');
@@ -435,7 +435,7 @@ describe('Promote stamps the draft (atomic)', () => {
     expect(bugFile(root)).not.toContain('found_at_commit');
   });
 
-  it('the id is the registry\'s: a registry line `B-041 reserved` with no bug files on disk drafts B-042 and appends `B-042 <slug>`', async () => {
+  it('[SCHEMA-ID-REGISTRY-10] the id is the registry\'s: a registry line `B-041 reserved` with no bug files on disk drafts B-042 and appends `B-042 <slug>`', async () => {
     const root = tmp('stamp-registry');
     seedBugThread(root);
     fs.mkdirSync(path.join(root, '.cortex', 'compass'), { recursive: true });
