@@ -113,7 +113,7 @@ const VALID_EVIDENCE = [
 // ---------------------------------------------------------------------------
 
 describe('check.evidence is wired into validate() and composes with check.atlas, check.bears-on and check.layout', () => {
-  it('a valid evidence file is clean across all three checks; the project stays conformant', async () => {
+  it('[ATLAS-EVIDENCE-1] a valid evidence file is clean across all three checks; the project stays conformant', async () => {
     const root = project('valid');
     const baseline = await validate(root);
     expect(errors(baseline)).toEqual([]);
@@ -127,7 +127,7 @@ describe('check.evidence is wired into validate() and composes with check.atlas,
     expect(report.conformant).toBe(true);
   });
 
-  it('five missing/invalid fields are five check.evidence errors and conformant is false; id/filename disagreement and a decision in supersedes are two more', async () => {
+  it('[ATLAS-EVIDENCE-2] five missing/invalid fields are five check.evidence errors and conformant is false; id/filename disagreement and a decision in supersedes are two more', async () => {
     const root = project('errors');
     write(root, '.cortex/atlas/evidence/_index.md', '# Evidence — index\n\n**Read this when:** x.\n\n**What\'s here:** y.\n');
     const five = write(
@@ -151,7 +151,7 @@ describe('check.evidence is wired into validate() and composes with check.atlas,
     expect(report.conformant).toBe(false);
   });
 
-  it('an absent atlas/evidence/ is nothing; a present one without _index.md is one check.layout error', async () => {
+  it('[ATLAS-EVIDENCE-4] an absent atlas/evidence/ is nothing; a present one without _index.md is one check.layout error', async () => {
     const root = project('layout');
     const absent = await validate(root);
     expect(absent.violations.filter((v) => /evidence/.test(v.message) || /evidence/.test(path.relative(root, v.location.path)))).toEqual([]);
@@ -175,7 +175,7 @@ function candidate(target: string, label: string, payload: string): string {
 }
 
 describe('An evidence-candidate is gated like a decision-candidate', () => {
-  it('validate admits the section; accept creates the file byte-exact plus _index.md; validate is then clean', async () => {
+  it('[ATLAS-EVIDENCE-11] validate admits the section; accept creates the file byte-exact plus _index.md; validate is then clean', async () => {
     const root = project('accept');
     const { payload } = evidenceFilePayload(
       {
@@ -207,7 +207,7 @@ describe('An evidence-candidate is gated like a decision-candidate', () => {
     expect(errors(after)).toEqual([]);
   });
 
-  it('a decisions target or an addition payload is a check.pulse error for the section, and accept refuses it', async () => {
+  it('[ATLAS-EVIDENCE-11] a decisions target or an addition payload is a check.pulse error for the section, and accept refuses it', async () => {
     const root = project('gate');
     write(root, '.cortex/pulse/reports/x.md', REPORT_HEADER + candidate('.cortex/atlas/decisions/y.md', 'Proposed file', '---\nid: evidence.y\n---\n'));
     write(root, '.cortex/pulse/reports/y.md', REPORT_HEADER.replace('S-031', 'S-032') + candidate('.cortex/atlas/evidence/2026-09-15-audit.md', 'Proposed addition', 'text\n').replace('S-031', 'S-032'));
@@ -228,7 +228,7 @@ describe('An evidence-candidate is gated like a decision-candidate', () => {
 // ---------------------------------------------------------------------------
 
 describe('Only atlas/evidence is written by the producers', () => {
-  it('usage --record, thread promote --to atlas/evidence and pulse-accept together create nothing under .cortex/atlas/ outside evidence/', async () => {
+  it('[ATLAS-EVIDENCE-12] usage --record, thread promote --to atlas/evidence and pulse-accept together create nothing under .cortex/atlas/ outside evidence/', async () => {
     const root = project('producers');
     const home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-evidence-home-')));
     dirs.push(home);

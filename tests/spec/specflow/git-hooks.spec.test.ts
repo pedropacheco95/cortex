@@ -66,7 +66,7 @@ const since = (root: string): unknown => JSON.parse(fs.readFileSync(path.join(ro
 const head = (root: string): string => git(root, ['rev-parse', 'HEAD']).stdout.trim();
 
 describe('specflow.git-hooks: install', () => {
-  it('Install points git at the hooks', () => {
+  it('[SPECFLOW-GIT-HOOKS-1] Install points git at the hooks', () => {
     const root = repo();
     const r = install(root);
     expect(r.code).toBe(0);
@@ -79,7 +79,7 @@ describe('specflow.git-hooks: install', () => {
     }
   });
 
-  it('Install is idempotent', () => {
+  it('[SPECFLOW-GIT-HOOKS-2] Install is idempotent', () => {
     const root = repo();
     install(root);
     git(root, ['add', '-A']);
@@ -90,7 +90,7 @@ describe('specflow.git-hooks: install', () => {
     expect(git(root, ['status', '--porcelain']).stdout).toBe('');
   });
 
-  it('A file with no git hook name gets no passthrough', () => {
+  it('[SPECFLOW-GIT-HOOKS-35] A file with no git hook name gets no passthrough', () => {
     const root = repo();
     write(root, '.git/hooks/post-commit 2', '#!/bin/sh\n', 0o755);
     write(root, '.git/hooks/post-commit', '#!/bin/sh\n', 0o755);
@@ -99,14 +99,14 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.existsSync(path.join(root, '.githooks/post-commit'))).toBe(true);
   });
 
-  it('Sample hooks are ignored', () => {
+  it('[SPECFLOW-GIT-HOOKS-5] Sample hooks are ignored', () => {
     const root = repo();
     write(root, '.git/hooks/pre-rebase.sample', '#!/bin/sh\n', 0o755);
     install(root);
     expect(fs.existsSync(path.join(root, '.githooks/pre-rebase'))).toBe(false);
   });
 
-  it('No store means no since', () => {
+  it('[SPECFLOW-GIT-HOOKS-28] No store means no since', () => {
     const root = tmpRepo('nostore');
     git(root, ['init', '-q', '-b', 'main']);
     write(root, 'a.md', 'x');
@@ -116,7 +116,7 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.existsSync(path.join(root, '.githooks/commit-msg'))).toBe(true);
   });
 
-  it('A foreign hooks path is left alone', () => {
+  it('[SPECFLOW-GIT-HOOKS-29] A foreign hooks path is left alone', () => {
     const root = repo();
     git(root, ['config', 'core.hooksPath', '.husky']);
     const r = install(root);
@@ -127,14 +127,14 @@ describe('specflow.git-hooks: install', () => {
     expect(git(root, ['config', 'core.hooksPath']).stdout.trim()).toBe('.husky');
   });
 
-  it('Outside git it refuses', () => {
+  it('[SPECFLOW-GIT-HOOKS-34] Outside git it refuses', () => {
     const root = tmpRepo('nogit');
     const r = install(root);
     expect(r.code).toBe(1);
     expect(r.err).toEqual(['specflow: not a git repository']);
   });
 
-  it('A Cortex hook edited by hand is rewritten', () => {
+  it('[SPECFLOW-GIT-HOOKS-23] A Cortex hook edited by hand is rewritten', () => {
     const root = repo();
     install(root);
     const file = path.join(root, '.githooks/pre-commit');
@@ -144,7 +144,7 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.readFileSync(file, 'utf-8')).toBe(original);
   });
 
-  it('A fresh clone installs over its tracked hooks', () => {
+  it('[SPECFLOW-GIT-HOOKS-24] A fresh clone installs over its tracked hooks', () => {
     const root = repo();
     install(root);
     git(root, ['add', '-A']);
@@ -157,7 +157,7 @@ describe('specflow.git-hooks: install', () => {
     expect(git(clone, ['status', '--porcelain']).stdout).toBe('');
   });
 
-  it('A hand-written hook stops the install', () => {
+  it('[SPECFLOW-GIT-HOOKS-19] A hand-written hook stops the install', () => {
     const root = repo();
     git(root, ['config', 'core.hooksPath', '.githooks']);
     write(root, '.githooks/pre-commit', '#!/bin/sh\necho mine\n', 0o755);
@@ -170,7 +170,7 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.readFileSync(path.join(root, '.githooks/pre-commit'), 'utf-8')).toContain('mine');
   });
 
-  it('A hand-written hook stops the install with no hooks path set', () => {
+  it('[SPECFLOW-GIT-HOOKS-20] A hand-written hook stops the install with no hooks path set', () => {
     const root = repo();
     write(root, '.githooks/commit-msg', '#!/bin/sh\necho mine\n', 0o755);
     expect(install(root).code).toBe(1);
@@ -179,7 +179,7 @@ describe('specflow.git-hooks: install', () => {
     expect(since(root)).toBeUndefined();
   });
 
-  it('A passthrough does not overwrite a hand-written hook', () => {
+  it('[SPECFLOW-GIT-HOOKS-21] A passthrough does not overwrite a hand-written hook', () => {
     const root = repo();
     write(root, '.git/hooks/post-commit', '#!/bin/sh\n', 0o755);
     write(root, '.githooks/post-commit', '#!/bin/sh\necho mine\n', 0o755);
@@ -189,7 +189,7 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.readFileSync(path.join(root, '.githooks/post-commit'), 'utf-8')).toContain('mine');
   });
 
-  it('Moving the hand-written hook lets the install finish', () => {
+  it('[SPECFLOW-GIT-HOOKS-22] Moving the hand-written hook lets the install finish', () => {
     const root = repo();
     write(root, '.githooks/pre-commit', '#!/bin/sh\ntouch moved-hook-ran\n', 0o755);
     expect(install(root).code).toBe(1);
@@ -201,7 +201,7 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.existsSync(path.join(root, 'moved-hook-ran'))).toBe(true);
   });
 
-  it('A hook of another name is left alone', () => {
+  it('[SPECFLOW-GIT-HOOKS-25] A hook of another name is left alone', () => {
     const root = repo();
     write(root, '.githooks/pre-rebase', '#!/bin/sh\necho mine\n', 0o755);
     expect(install(root).code).toBe(0);
@@ -221,7 +221,7 @@ describe('specflow.git-hooks: install', () => {
 });
 
 describe('specflow.git-hooks: since', () => {
-  it('Install records where judging starts, once', () => {
+  it('[SPECFLOW-GIT-HOOKS-32] Install records where judging starts, once', () => {
     const root = repo();
     const a = head(root);
     install(root);
@@ -232,7 +232,7 @@ describe('specflow.git-hooks: since', () => {
     expect(since(root)).toBe(a);
   });
 
-  it('A sync refresh leaves since alone', () => {
+  it('[SPECFLOW-GIT-HOOKS-30] A sync refresh leaves since alone', () => {
     const root = repo();
     install(root, { writeSince: false });
     expect(since(root)).toBeUndefined();
@@ -256,7 +256,7 @@ describe('specflow.git-hooks: real commits', () => {
     return root;
   }
 
-  it('A commit reusing another message is not an amend', () => {
+  it('[SPECFLOW-GIT-HOOKS-26] A commit reusing another message is not an amend', () => {
     const root = installed();
     const sha = head(root);
     write(root, 'src/a.ts', 'x');
@@ -267,7 +267,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(fs.existsSync(path.join(root, '.git/specflow-amend'))).toBe(false);
   });
 
-  it('A hook with no specflow folder stays quiet', () => {
+  it('[SPECFLOW-GIT-HOOKS-27] A hook with no specflow folder stays quiet', () => {
     const root = tmpRepo('quiet');
     git(root, ['init', '-q', '-b', 'main']);
     git(root, ['config', 'user.email', 't@example.com']);
@@ -280,7 +280,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(r.stderr).not.toContain('INDEX');
   });
 
-  it('An amend with -m is judged whole', () => {
+  it('[SPECFLOW-GIT-HOOKS-6] An amend with -m is judged whole', () => {
     const root = installed();
     write(root, 'src/a.ts', 'x');
     write(root, 'tests/a.test.ts', 'y');
@@ -294,7 +294,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(r.stderr).toContain('rule (d)');
   });
 
-  it('Commit -C HEAD is not an amend', () => {
+  it('[SPECFLOW-GIT-HOOKS-7] Commit -C HEAD is not an amend', () => {
     const root = installed();
     write(root, 'src/a.ts', 'x');
     write(root, 'tests/a.test.ts', 'y');
@@ -307,7 +307,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(r.stderr).toContain('rule (a)');
   });
 
-  it('A failed amend leaves nothing for the next commit', () => {
+  it('[SPECFLOW-GIT-HOOKS-8] A failed amend leaves nothing for the next commit', () => {
     const root = installed();
     write(root, 'src/a.ts', 'x');
     write(root, 'tests/a.test.ts', 'y');
@@ -320,7 +320,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(git(root, ['commit', '-m', 'code only']).code).not.toBe(0);
   });
 
-  it('An amend of a clean merge is judged as a merge', () => {
+  it('[SPECFLOW-GIT-HOOKS-9] An amend of a clean merge is judged as a merge', () => {
     const root = installed();
     git(root, ['checkout', '-q', '-b', 'side']);
     write(root, 'src/side.ts', 'x');
@@ -334,7 +334,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(git(root, ['commit', '-q', '--amend', '--no-edit']).code).toBe(0);
   });
 
-  it('An amend of the first commit is not judged', () => {
+  it('[SPECFLOW-GIT-HOOKS-10] An amend of the first commit is not judged', () => {
     const root = tmpRepo('first');
     git(root, ['init', '-q', '-b', 'main']);
     git(root, ['config', 'user.email', 't@example.com']);
@@ -347,7 +347,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(git(root, ['commit', '-q', '--amend', '--no-edit']).code).toBe(0);
   });
 
-  it('A real commit is refused through the hook', () => {
+  it('[SPECFLOW-GIT-HOOKS-11] A real commit is refused through the hook', () => {
     const root = installed();
     const before = head(root);
     write(root, 'src/a.ts', 'x');
@@ -358,7 +358,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(head(root)).toBe(before);
   });
 
-  it('A missing binary refuses the commit', () => {
+  it('[SPECFLOW-GIT-HOOKS-12] A missing binary refuses the commit', () => {
     const root = installed();
     write(root, 'README.md', 'x');
     git(root, ['add', '-A']);
@@ -367,7 +367,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(r.stderr).toContain('specflow: cortex not found on PATH');
   });
 
-  it('A cortex too old for the hooks says what to do', () => {
+  it('[SPECFLOW-GIT-HOOKS-13] A cortex too old for the hooks says what to do', () => {
     const root = installed();
     const old = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-old-'));
     write(old, 'cortex', '#!/bin/sh\necho "Usage: cortex <verb> [options]"\nexit 2\n', 0o755);
@@ -381,7 +381,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(head(root)).toBe(before);
   });
 
-  it('A failed INDEX refresh does not stop a commit', () => {
+  it('[SPECFLOW-GIT-HOOKS-14] A failed INDEX refresh does not stop a commit', () => {
     const root = installed();
     const fake = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-fake-'));
     write(fake, 'cortex', `#!/bin/sh\nif [ "$1" = "specs" ]; then exit 1; fi\nexec "${path.join(bin, 'cortex')}" "$@"\n`, 0o755);
@@ -395,7 +395,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(r.stderr).toContain('specflow: warning:');
   });
 
-  it('The INDEX is refreshed in the commit', () => {
+  it('[SPECFLOW-GIT-HOOKS-15] The INDEX is refreshed in the commit', () => {
     const root = installed();
     const spec = 'specflow/impl/billing/refunds.spec.md';
     fs.appendFileSync(path.join(root, spec), '\n### BILLING-REFUNDS-2: B\n\n- **Then** ok\n');
@@ -404,7 +404,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(git(root, ['show', 'HEAD:specflow/INDEX.md']).stdout).toContain('BILLING-REFUNDS-2');
   });
 
-  it('An existing post-commit keeps running', () => {
+  it('[SPECFLOW-GIT-HOOKS-3] An existing post-commit keeps running', () => {
     const root = repo();
     write(root, '.git/hooks/post-commit', '#!/bin/sh\ntouch marker\n', 0o755);
     install(root);
@@ -414,7 +414,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(fs.existsSync(path.join(root, 'marker'))).toBe(true);
   });
 
-  it('An existing hook of the same name runs first', () => {
+  it('[SPECFLOW-GIT-HOOKS-4] An existing hook of the same name runs first', () => {
     const root = repo();
     write(root, '.git/hooks/commit-msg', '#!/bin/sh\nexit 7\n', 0o755);
     install(root);
@@ -462,7 +462,7 @@ describe('specflow.git-hooks: push', () => {
     expect(git(root, ['commit', '-q', '-m', 'valid']).code).toBe(0);
   }
 
-  it('A push of a bad range is refused', () => {
+  it('[SPECFLOW-GIT-HOOKS-16] A push of a bad range is refused', () => {
     const root = pushed();
     commitCodeOnly(root);
     const r = git(root, ['push', '-q', 'origin', 'main']);
@@ -470,7 +470,7 @@ describe('specflow.git-hooks: push', () => {
     expect(r.stderr).toContain('rule (a)');
   });
 
-  it('A branch deletion is not judged', () => {
+  it('[SPECFLOW-GIT-HOOKS-17] A branch deletion is not judged', () => {
     const root = pushed();
     git(root, ['checkout', '-q', '-b', 'old']);
     commitCodeOnly(root);
@@ -481,7 +481,7 @@ describe('specflow.git-hooks: push', () => {
     expect(r.stderr).not.toContain('rule (a)');
   });
 
-  it('A new branch is compared with its merge base', () => {
+  it('[SPECFLOW-GIT-HOOKS-18] A new branch is compared with its merge base', () => {
     const root = pushed();
     git(root, ['checkout', '-q', '-b', 'new']);
     commitValid(root);
@@ -490,7 +490,7 @@ describe('specflow.git-hooks: push', () => {
     expect(r.stderr.match(/specflow: allowed/g)).toHaveLength(1);
   });
 
-  it('A first push does not judge old commits', () => {
+  it('[SPECFLOW-GIT-HOOKS-31] A first push does not judge old commits', () => {
     const root = repo();
     for (let i = 0; i < 30; i += 1) {
       write(root, 'src/a.ts', `${i}`);
@@ -510,7 +510,7 @@ describe('specflow.git-hooks: push', () => {
     expect(r.stderr).toContain(' valid\n');
   });
 
-  it('A new branch with no base says so', () => {
+  it('[SPECFLOW-GIT-HOOKS-33] A new branch with no base says so', () => {
     const root = pushed();
     git(root, ['remote', 'set-head', 'origin', '--delete']);
     const config = JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf-8'));
@@ -571,7 +571,7 @@ describe('specflow.check Rule 19: the commit order table', () => {
   const check = (root: string): { status: number | null; stderr: string } =>
     spawnSync(path.join(bin, 'cortex'), ['check', '--range', 'main..HEAD'], { cwd: root, encoding: 'utf-8', env: env() });
 
-  it('The commit order table holds in real commits', () => {
+  it('[SPECFLOW-CHECK-78] The commit order table holds in real commits', () => {
     const commit = (name: string, run: (root: string) => void): void => {
       const root = table();
       try {

@@ -84,7 +84,7 @@ const page = (root: string, file = 'specs.html'): string => fs.readFileSync(path
 const specOf = (data: PageData, id: string): PageSpec => data.trees.dev.specs.find((s) => s.id === id) as PageSpec;
 
 describe('specflow.viewer: the command', () => {
-  it('One file is written', () => {
+  it('[SPECFLOW-VIEWER-1] One file is written', () => {
     const root = ported();
     const r = view(root);
     expect(r.code).toBe(0);
@@ -95,7 +95,7 @@ describe('specflow.viewer: the command', () => {
     expect(r.out).toContain('2 unverified');
   });
 
-  it('The output path can be chosen', () => {
+  it('[SPECFLOW-VIEWER-2] The output path can be chosen', () => {
     const root = ported();
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'view-out-'));
     outDirs.push(dir);
@@ -107,21 +107,21 @@ describe('specflow.viewer: the command', () => {
     expect(fs.existsSync(path.join(root, 'specs.html'))).toBe(false);
   });
 
-  it('No folder exits 1', () => {
+  it('[SPECFLOW-VIEWER-3] No folder exits 1', () => {
     const root = tmpRepo('view-empty');
     const r = view(root);
     expect(r.code).toBe(1);
     expect(r.err).toContain('specflow: no specflow/ folder here');
   });
 
-  it('A bad flag is a usage error', () => {
+  it('[SPECFLOW-VIEWER-4] A bad flag is a usage error', () => {
     const root = ported();
     expect(view(root, ['--nope']).code).toBe(2);
     expect(view(root, ['--out']).code).toBe(2);
     expect(fs.existsSync(path.join(root, 'specs.html'))).toBe(false);
   });
 
-  it('Nothing loads from the network', () => {
+  it('[SPECFLOW-VIEWER-5] Nothing loads from the network', () => {
     const root = ported();
     view(root);
     const html = page(root);
@@ -131,7 +131,7 @@ describe('specflow.viewer: the command', () => {
     expect(html).not.toMatch(/@import/);
   });
 
-  it('It runs with no Python', () => {
+  it('[SPECFLOW-VIEWER-6] It runs with no Python', () => {
     const root = ported();
     const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'view-bin-'));
     outDirs.push(bin);
@@ -147,7 +147,7 @@ describe('specflow.viewer: the command', () => {
     }
   });
 
-  it('Criteria carry their id and mark', () => {
+  it('[SPECFLOW-VIEWER-7] Criteria carry their id and mark', () => {
     const root = ported();
     view(root);
     const refunds = specOf(pageData(page(root)), 'billing.refunds');
@@ -159,7 +159,7 @@ describe('specflow.viewer: the command', () => {
     expect(second?.unverified).toBe(true);
   });
 
-  it('The dashboard counts match the index', () => {
+  it('[SPECFLOW-VIEWER-8] The dashboard counts match the index', () => {
     const root = ported();
     view(root);
     const data = pageData(page(root));
@@ -173,7 +173,7 @@ describe('specflow.viewer: the command', () => {
     expect(data.constants.length).toBe(1);
   });
 
-  it('Promises and specs link both ways', () => {
+  it('[SPECFLOW-VIEWER-9] Promises and specs link both ways', () => {
     const root = ported();
     view(root);
     const data = pageData(page(root));
@@ -182,14 +182,14 @@ describe('specflow.viewer: the command', () => {
     expect(promise.implemented_by).toEqual(['billing.invoices', 'billing.refunds']);
   });
 
-  it('A retired spec shows its status', () => {
+  it('[SPECFLOW-VIEWER-10] A retired spec shows its status', () => {
     const root = ported();
     write(root, 'specflow/impl/billing/old.spec.md', spec('billing.old', ['Old thing'], { status: 'retired', front: '' }));
     view(root);
     expect(specOf(pageData(page(root)), 'billing.old').status).toBe('retired');
   });
 
-  it('The same tree gives the same bytes', () => {
+  it('[SPECFLOW-VIEWER-11] The same tree gives the same bytes', () => {
     const root = ported();
     view(root);
     const first = page(root);
@@ -197,7 +197,7 @@ describe('specflow.viewer: the command', () => {
     expect(page(root)).toBe(first);
   });
 
-  it('A broken file does not stop the build', () => {
+  it('[SPECFLOW-VIEWER-12] A broken file does not stop the build', () => {
     const root = ported();
     write(root, 'specflow/impl/billing/broken.spec.md', '---\nid: [\nstatus: draft\n---\n\n# Broken\n\n## Intent\n\nx\n');
     const r = view(root);
@@ -208,7 +208,7 @@ describe('specflow.viewer: the command', () => {
     expect(broken.warnings.join('\n')).toContain('frontmatter does not parse');
   });
 
-  it('The output stays out of git', () => {
+  it('[SPECFLOW-VIEWER-13] The output stays out of git', () => {
     const root = ported();
     view(root);
     const status = execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf-8' });

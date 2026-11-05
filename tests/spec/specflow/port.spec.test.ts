@@ -74,7 +74,7 @@ const nothingMoved = (root: string): void => {
 };
 
 describe('specflow.port: the move', () => {
-  it('A two-tree project moves', () => {
+  it('[SPECFLOW-PORT-1] A two-tree project moves', () => {
     const root = twoTree();
     const r = port(root);
     expect(r.code).toBe(0);
@@ -87,7 +87,7 @@ describe('specflow.port: the move', () => {
     expect(git(root, 'rev-list', '--count', 'HEAD').trim()).toBe('1');
   });
 
-  it('A bench-layout project moves', () => {
+  it('[SPECFLOW-PORT-2] A bench-layout project moves', () => {
     const spec = devSpec('billing.refunds', ['BILLING-REFUNDS-1: A'], { link: '../../promises/billing/x.md' });
     const root = repo({ 'specs/impl/billing/refunds.spec.md': spec, 'specs/promises/billing/x.md': '# x\n', 'specs/INDEX.md': 'old' });
     expect(port(root).code).toBe(0);
@@ -97,7 +97,7 @@ describe('specflow.port: the move', () => {
     expect(read(root, 'specflow/INDEX.md')).toContain('GENERATED');
   });
 
-  it('Ids are written into headings at either level', () => {
+  it('[SPECFLOW-PORT-3] Ids are written into headings at either level', () => {
     const root = twoTree({
       '.specflow/specs/billing/other.spec.md': devSpec('billing.other', ['Refund is issued'], { level: 3 }),
     });
@@ -106,7 +106,7 @@ describe('specflow.port: the move', () => {
     expect(read(root, 'specflow/impl/billing/other.spec.md')).toContain('\n#### BILLING-OTHER-1: Refund is issued\n');
   });
 
-  it('Existing ids are kept and numbering continues', () => {
+  it('[SPECFLOW-PORT-4] Existing ids are kept and numbering continues', () => {
     const root = twoTree({ [DEV]: devSpec('billing.refunds', ['BILLING-REFUNDS-4: A', 'B']) });
     port(root);
     const text = read(root, NEW_DEV);
@@ -114,7 +114,7 @@ describe('specflow.port: the move', () => {
     expect(text).toContain('### BILLING-REFUNDS-5: B\n');
   });
 
-  it('Frontmatter links still resolve', async () => {
+  it('[SPECFLOW-PORT-5] Frontmatter links still resolve', async () => {
     const root = twoTree();
     port(root);
     expect(read(root, NEW_DEV)).toContain('implements: ../../promises/billing/refunds-are-fair.business.md\n');
@@ -123,7 +123,7 @@ describe('specflow.port: the move', () => {
     expect(violations.filter((v) => /check\.(dev-spec$|business-spec|xref)/.test(v.check) && v.severity === 'error')).toEqual([]);
   });
 
-  it('Everything else is byte-identical', () => {
+  it('[SPECFLOW-PORT-6] Everything else is byte-identical', () => {
     const cite = 'See `.specflow/specs/billing/other.spec.md` for more.\n\n';
     const source = devSpec('billing.refunds', ['Refund is issued'], { extra: cite });
     const root = twoTree({ [DEV]: source });
@@ -144,7 +144,7 @@ describe('specflow.port: the move', () => {
 });
 
 describe('specflow.port: retired', () => {
-  it('A retired dev spec moves and stays as it was', () => {
+  it('[SPECFLOW-PORT-7] A retired dev spec moves and stays as it was', () => {
     const source = devSpec('billing.old', ['Refund is issued'], { status: 'retired' });
     const root = twoTree({ '.specflow/specs/billing/old.spec.md': source });
     port(root);
@@ -154,7 +154,7 @@ describe('specflow.port: retired', () => {
     expect(classOf(root, 'billing.old').class).toBe('retired');
   });
 
-  it('A retired business spec moves and keeps its name', () => {
+  it('[SPECFLOW-PORT-8] A retired business spec moves and keeps its name', () => {
     const source = bizSpec('billing.old', 'retired', ['../../specs/billing/refunds.spec.md']);
     const root = twoTree({ '.specflow/specs-business/billing/old.business.md': source });
     port(root);
@@ -162,13 +162,13 @@ describe('specflow.port: retired', () => {
     expect(moved.replace('../../impl/', '../../specs/')).toBe(source);
   });
 
-  it('A retired spec outranks every other class', () => {
+  it('[SPECFLOW-PORT-9] A retired spec outranks every other class', () => {
     const root = twoTree({ '.specflow/specs/billing/old.spec.md': devSpec('billing.old', [], { status: 'retired' }) });
     port(root);
     expect(classOf(root, 'billing.old').class).toBe('retired');
   });
 
-  it('A live spec on a retired business spec is flagged', () => {
+  it('[SPECFLOW-PORT-10] A live spec on a retired business spec is flagged', () => {
     const root = twoTree({
       [BIZ]: bizSpec('billing.refunds-are-fair', 'retired'),
       'tests/a.test.ts': "// billing.refunds\nit('x', f);\n",
@@ -179,7 +179,7 @@ describe('specflow.port: retired', () => {
     expect(row.reason).toContain(NEW_BIZ);
   });
 
-  it("A tag proposal naming a retired spec's criterion fails verify", () => {
+  it("[SPECFLOW-PORT-11] A tag proposal naming a retired spec's criterion fails verify", () => {
     const root = twoTree({
       '.specflow/specs/billing/old.spec.md': devSpec('billing.old', ['BILLING-OLD-1: A'], { status: 'retired' }),
       'tests/a.test.ts': "it('x', f);\n",
@@ -193,25 +193,25 @@ describe('specflow.port: retired', () => {
 });
 
 describe('specflow.port: refusals', () => {
-  it('Both layouts present is refused', () => {
+  it('[SPECFLOW-PORT-12] Both layouts present is refused', () => {
     const root = twoTree({ 'specs/impl/x/y.spec.md': 'x' });
     expect(port(root).code).toBe(1);
     nothingMoved(root);
   });
 
-  it('No tree is refused', () => {
+  it('[SPECFLOW-PORT-13] No tree is refused', () => {
     const root = repo({ 'README.md': 'x' });
     expect(port(root).code).toBe(1);
     nothingMoved(root);
   });
 
-  it('An existing target is refused', () => {
+  it('[SPECFLOW-PORT-14] An existing target is refused', () => {
     const root = twoTree({ 'specflow/impl/x.md': 'x' });
     expect(port(root).code).toBe(1);
     nothingMoved(root);
   });
 
-  it('An unaccepted migration is refused', () => {
+  it('[SPECFLOW-PORT-18] An unaccepted migration is refused', () => {
     const root = twoTree({ '.cortex/cortex.config.json': '{}' }, { config: undefined });
     write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', migration: { from: '3.4', accepted: null } }));
     git(root, 'add', '-A');
@@ -222,7 +222,7 @@ describe('specflow.port: refusals', () => {
     nothingMoved(root);
   });
 
-  it('A 3.x project beside a bare store is refused', () => {
+  it('[SPECFLOW-PORT-15] A 3.x project beside a bare store is refused', () => {
     for (const legacy of ['.cortex/cortex.config.json', '.cortex/compass/r.md']) {
       const root = twoTree({ [legacy]: '{}' }, { config: undefined });
       write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', visibility: { repo: 'private' } }));
@@ -235,7 +235,7 @@ describe('specflow.port: refusals', () => {
     }
   });
 
-  it('A migration with no accepted date is refused', () => {
+  it('[SPECFLOW-PORT-16] A migration with no accepted date is refused', () => {
     for (const migration of [{ from: '3.4' }, { from: '3.4', accepted: 'soon' }]) {
       const root = twoTree({}, { config: undefined });
       write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', migration }));
@@ -248,7 +248,7 @@ describe('specflow.port: refusals', () => {
     }
   });
 
-  it('An unreadable store file is refused', () => {
+  it('[SPECFLOW-PORT-17] An unreadable store file is refused', () => {
     const root = twoTree({}, { config: undefined });
     write(root, 'cortex/cortex.json', '{nope');
     git(root, 'add', '-A');
@@ -259,20 +259,20 @@ describe('specflow.port: refusals', () => {
     nothingMoved(root);
   });
 
-  it('A dirty source is refused', () => {
+  it('[SPECFLOW-PORT-19] A dirty source is refused', () => {
     const root = twoTree();
     write(root, DEV, 'edited');
     expect(port(root).code).toBe(1);
     expect(fs.existsSync(path.join(root, 'specflow'))).toBe(false);
   });
 
-  it('No store is refused', () => {
+  it('[SPECFLOW-PORT-20] No store is refused', () => {
     const root = twoTree({}, { store: false });
     expect(port(root).code).toBe(1);
     nothingMoved(root);
   });
 
-  it('A dry run writes nothing', () => {
+  it('[SPECFLOW-PORT-21] A dry run writes nothing', () => {
     const root = twoTree();
     const r = port(root, ['--dry-run']);
     expect(r.code).toBe(0);
@@ -282,7 +282,7 @@ describe('specflow.port: refusals', () => {
 });
 
 describe('specflow.port: test config', () => {
-  it('Test config defaults are written', () => {
+  it('[SPECFLOW-PORT-22] Test config defaults are written', () => {
     const root = twoTree({ 'tests/a.test.ts': "it('x', f);\n", 'backend/tests/test_b.py': 'def test_b():\n    pass\n' });
     const r = port(root);
     const config = JSON.parse(read(root, 'cortex/cortex.json')).specflow;
@@ -292,7 +292,7 @@ describe('specflow.port: test config', () => {
     expect(r.out).toContain('"b": "off"');
   });
 
-  it('Only runners with files are written', () => {
+  it('[SPECFLOW-PORT-23] Only runners with files are written', () => {
     const root = twoTree({ 'tests/a.test.ts': "it('x', f);\n" });
     port(root);
     expect(JSON.parse(read(root, 'cortex/cortex.json')).specflow.tests.map((t: any) => t.runner)).toEqual(['vitest']);
@@ -305,7 +305,7 @@ describe('specflow.port: test config', () => {
     expect(r.findings.filter((f) => f.check === 'check.store-config')).toEqual([]);
   });
 
-  it('An existing test config is kept', () => {
+  it('[SPECFLOW-PORT-24] An existing test config is kept', () => {
     const tests = [{ runner: 'vitest', include: ['t/**/*.ts'] }];
     const root = twoTree({}, { config: { tests } });
     port(root);
@@ -318,7 +318,7 @@ describe('specflow.port: classes', () => {
   const stray = devSpec('billing.stray', ['A']).replace('## Acceptance Criteria\n', '## Acceptance Criteria\n\nStray text.\n');
   const cites = ['billing.nothen', 'billing.stray', 'billing.twice', 'billing.clean'].map((id) => `// ${id}`).join('\n');
 
-  it('Each class is reported', () => {
+  it('[SPECFLOW-PORT-25] Each class is reported', () => {
     const root = twoTree({
       '.specflow/specs/billing/none.spec.md': devSpec('billing.none', []),
       '.specflow/specs/billing/uncited.spec.md': devSpec('billing.uncited', ['A']),
@@ -353,13 +353,13 @@ describe('specflow.port: classes', () => {
     expect(classOf(root, 'billing.twice').class).toBe('needs-edit');
   });
 
-  it('Precedence holds', () => {
+  it('[SPECFLOW-PORT-26] Precedence holds', () => {
     const root = twoTree({ '.specflow/specs/billing/none.spec.md': devSpec('billing.none', []) });
     port(root);
     expect(classOf(root, 'billing.none').class).toBe('no-ACs');
   });
 
-  it('A ticket cited by one spec links it', () => {
+  it('[SPECFLOW-PORT-27] A ticket cited by one spec links it', () => {
     const root = twoTree({
       '.specflow/specs/billing/t.spec.md': devSpec('billing.t', ['A'], { extra: 'See TKT-7.\n\n' }),
       'tests/a.test.ts': "// TKT-7\nit('x', f);\n",
@@ -368,7 +368,7 @@ describe('specflow.port: classes', () => {
     expect(classOf(root, 'billing.t').class).toBe('clean');
   });
 
-  it('A ticket shared by two specs does not link', () => {
+  it('[SPECFLOW-PORT-28] A ticket shared by two specs does not link', () => {
     const root = twoTree({
       '.specflow/specs/billing/t.spec.md': devSpec('billing.t', ['A'], { extra: 'See TKT-7.\n\n' }),
       '.specflow/specs/billing/u.spec.md': devSpec('billing.u', ['A'], { extra: 'See TKT-7.\n\n' }),
@@ -396,7 +396,7 @@ describe('specflow.port: classes', () => {
 });
 
 describe('specflow.port: report and next steps', () => {
-  it('Untagged tests are listed', () => {
+  it('[SPECFLOW-PORT-29] Untagged tests are listed', () => {
     const root = twoTree({ 'tests/a.test.ts': "it('a', f);\nit('b', f);\nit('c', f);\n" });
     port(root);
     expect(report(root).untagged).toHaveLength(3);
@@ -404,7 +404,7 @@ describe('specflow.port: report and next steps', () => {
     expect(read(root, '.cortex-port/report.md')).toContain('- `tests/a.test.ts`: 3');
   });
 
-  it('Names built at run time are counted', () => {
+  it('[SPECFLOW-PORT-30] Names built at run time are counted', () => {
     const root = twoTree({ 'tests/a.test.ts': "it(`${x} pays`, f);\nit('a', f);\n" });
     port(root);
     expect(report(root).counts.dynamicNames).toBe(1);
@@ -412,7 +412,7 @@ describe('specflow.port: report and next steps', () => {
     expect(read(root, '.cortex-port/report.md')).toContain('names built at run time: 1');
   });
 
-  it('Ids run on through several sections', () => {
+  it('[SPECFLOW-PORT-31] Ids run on through several sections', () => {
     const root = twoTree({ [DEV]: `${devSpec('billing.refunds', ['A'])}\n## Acceptance Criteria: more\n\n### B\n\n- **Then** y\n` });
     port(root);
     const moved = read(root, NEW_DEV);
@@ -420,20 +420,20 @@ describe('specflow.port: report and next steps', () => {
     expect(moved).toContain('### BILLING-REFUNDS-2: B\n');
   });
 
-  it('A heading that nearly matches is reported', () => {
+  it('[SPECFLOW-PORT-32] A heading that nearly matches is reported', () => {
     const root = twoTree({ [DEV]: `${devSpec('billing.refunds', ['A'])}\n## Acceptance criteria for mobile\n\n### B\n` });
     port(root);
     expect(report(root).nearHeadings).toEqual([{ file: NEW_DEV, line: expect.any(Number), title: 'Acceptance criteria for mobile' }]);
     expect(read(root, '.cortex-port/report.md')).toContain('Acceptance criteria for mobile');
   });
 
-  it('The working folder stays out of git', () => {
+  it('[SPECFLOW-PORT-33] The working folder stays out of git', () => {
     const root = twoTree();
     port(root);
     expect(git(root, 'status', '--porcelain')).not.toContain('.cortex-port');
   });
 
-  it('Next steps are printed and not run', () => {
+  it('[SPECFLOW-PORT-34] Next steps are printed and not run', () => {
     const root = twoTree();
     const r = port(root);
     expect(r.out).toContain('cortex store map');
@@ -454,7 +454,7 @@ describe('specflow.port: --verify', () => {
   const tagA = { file: 'tests/a.test.ts', name: 'a', line: 1, action: 'tag', reason: 'r', criterion: 'BILLING-REFUNDS-1' };
   const tagB = { file: 'tests/a.test.ts', name: 'b', line: 2, action: 'delete', reason: 'r' };
 
-  it('Verify finds a case with no proposal', () => {
+  it('[SPECFLOW-PORT-35] Verify finds a case with no proposal', () => {
     const root = ported();
     write(root, '.cortex-port/tagging/billing.jsonl', line(tagA));
     const r = port(root, ['--verify']);
@@ -462,7 +462,7 @@ describe('specflow.port: --verify', () => {
     expect(r.out).toContain('tests/a.test.ts › b');
   });
 
-  it('Verify finds a tag proposal naming no criterion', () => {
+  it('[SPECFLOW-PORT-36] Verify finds a tag proposal naming no criterion', () => {
     const root = ported();
     write(root, '.cortex-port/tagging/billing.jsonl', line({ ...tagA, criterion: 'BILLING-REFUNDS-99' }) + line(tagB));
     const r = port(root, ['--verify']);
@@ -470,7 +470,7 @@ describe('specflow.port: --verify', () => {
     expect(r.out).toContain('BILLING-REFUNDS-99');
   });
 
-  it('Verify passes on a full set', () => {
+  it('[SPECFLOW-PORT-37] Verify passes on a full set', () => {
     const root = ported();
     write(root, '.cortex-port/tagging/billing.jsonl', line(tagA) + line(tagB));
     const before = git(root, 'status', '--porcelain');

@@ -30,11 +30,11 @@ const CONVENTION = fs.readFileSync(
 // ---------------------------------------------------------------------------
 
 describe('AC: the Iron Law and its letter-and-spirit clause are present', () => {
-  it('carries the Iron Law verbatim on one line', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-1] carries the Iron Law verbatim on one line', () => {
     expect(SKILL).toContain('NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE');
   });
 
-  it('follows the law with the letter-and-spirit clause', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-1] follows the law with the letter-and-spirit clause', () => {
     const lawIdx = SKILL.indexOf('NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE');
     const after = SKILL.slice(lawIdx);
     expect(after).toMatch(/Violating the letter of this law is violating the spirit/);
@@ -69,7 +69,7 @@ describe('AC: the gate requires fresh evidence before a claim', () => {
     expect(SKILL).toMatch(/obtain the evidence before speaking/i);
   });
 
-  it('requires the test command to be run and cited for a "tests pass" claim', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-2] requires the test command to be run and cited for a "tests pass" claim', () => {
     expect(SKILL).toMatch(/The test command run this turn/);
   });
 });
@@ -87,7 +87,7 @@ describe('AC: the claim→evidence table covers the spec Rule-4 claim kinds', ()
     "I didn't change X",
   ];
 
-  it('has a two-column claim → evidence table', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-3] has a two-column claim → evidence table', () => {
     expect(SKILL).toMatch(/\|\s*Claim\s*\|\s*Evidence that discharges it\s*\|/);
   });
 
@@ -97,7 +97,7 @@ describe('AC: the claim→evidence table covers the spec Rule-4 claim kinds', ()
     });
   }
 
-  it('names cortex validate as the evidence for a schema/spec claim', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-3] names cortex validate as the evidence for a schema/spec claim', () => {
     expect(SKILL).toMatch(/`cortex validate` run this turn/);
   });
 
@@ -111,7 +111,7 @@ describe('AC: the claim→evidence table covers the spec Rule-4 claim kinds', ()
 // ---------------------------------------------------------------------------
 
 describe('AC: the rationalization table answers the pressure excuses', () => {
-  it('uses the pinned two-column header form', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-4] uses the pinned two-column header form', () => {
     expect(SKILL).toMatch(/\|\s*Thought\/Excuse\s*\|\s*Reality\s*\|/);
   });
 
@@ -129,7 +129,7 @@ describe('AC: the rationalization table answers the pressure excuses', () => {
     });
   }
 
-  it('has at least five rationalization rows', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-4] has at least five rationalization rows', () => {
     const section = SKILL.slice(SKILL.indexOf('## Rationalization table'));
     const rows = section.split('\n').filter((l) => /^\|\s*"/.test(l));
     expect(rows.length).toBeGreaterThanOrEqual(5);
@@ -141,12 +141,12 @@ describe('AC: the rationalization table answers the pressure excuses', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: an unverifiable claim is narrowed, not skipped', () => {
-  it('directs the agent to narrow the claim and state what was not verified', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-5] directs the agent to narrow the claim and state what was not verified', () => {
     expect(SKILL).toMatch(/\*\*narrow the claim\*\*/);
     expect(SKILL).toMatch(/state plainly what you did not/i);
   });
 
-  it('forbids making the unqualified claim anyway', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-5] forbids making the unqualified claim anyway', () => {
     expect(SKILL).toMatch(/Never make the unqualified claim anyway/);
   });
 });
@@ -156,7 +156,7 @@ describe('AC: an unverifiable claim is narrowed, not skipped', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: the skill is process-agnostic', () => {
-  it('states that it requires no spec tree and no Cortex module', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-6] states that it requires no spec tree and no Cortex module', () => {
     expect(SKILL).toMatch(/requires no spec tree/i);
   });
 
@@ -164,7 +164,7 @@ describe('AC: the skill is process-agnostic', () => {
     expect(SKILL).toMatch(/enrichment, never a precondition/);
   });
 
-  it('never makes a step conditional on .specflow/ existing', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-6] never makes a step conditional on .specflow/ existing', () => {
     // The only permitted mention is the negative one in the Scope section.
     for (const line of SKILL.split('\n')) {
       if (!line.includes('.specflow/')) continue;
@@ -196,14 +196,14 @@ describe('AC: the three patterns are each defined with a shape and a worked exam
     });
   }
 
-  it('gives each pattern a required form and the failure mode it prevents', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-1] gives each pattern a required form and the failure mode it prevents', () => {
     expect(CONVENTION.match(/\*\*Required form:\*\*|\*\*Shape\.\*\*/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
     expect(CONVENTION.match(/\*\*Failure mode it prevents\.\*\*/g)?.length ?? 0).toBe(3);
   });
 });
 
 describe('AC: the rationalization-table headers are pinned', () => {
-  it('pins the two-column Thought/Excuse → Reality form', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-2] pins the two-column Thought/Excuse → Reality form', () => {
     expect(CONVENTION).toMatch(/\|\s*Thought\/Excuse\s*\|\s*Reality\s*\|/);
   });
 
@@ -213,17 +213,17 @@ describe('AC: the rationalization-table headers are pinned', () => {
 });
 
 describe('AC: the HARD-GATE carries the too-simple anti-pattern', () => {
-  it('requires the "too simple to need the gate" paragraph', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-3] requires the "too simple to need the gate" paragraph', () => {
     expect(CONVENTION).toMatch(/too simple to need the gate/i);
   });
 
-  it('explains why the gate fails without it', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-3] explains why the gate fails without it', () => {
     expect(CONVENTION).toMatch(/gate without it is defeated/i);
   });
 });
 
 describe('AC: the convention is not registered as a skill', () => {
-  it('skills/_conventions/ contains no SKILL.md', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-4] skills/_conventions/ contains no SKILL.md', () => {
     expect(fs.existsSync(path.join(PKG_ROOT, 'skills', '_conventions', 'SKILL.md'))).toBe(false);
   });
 
