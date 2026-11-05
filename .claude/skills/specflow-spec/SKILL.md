@@ -33,7 +33,7 @@ A request creates a behaviour no criterion covers, or touches more than one spec
 
 If the request contradicts a rule, a 'Not this spec' line or a recorded decision the owner made, do not build it: write the spec with the conflict as an open question and stop.
 
-The stop has no exception in any run. The spec holding the conflict is committed by step 8, with the conflict under *Open questions*; `specflow-review` does not follow and no wave starts.
+The stop has no exception in any run. It holds *Today* and the open question, with no criteria and no waves. The spec holding the conflict is committed by step 8, with the conflict under *Open questions*; `specflow-review` does not follow and no wave starts.
 
 If you were told the user can't answer during this run, don't wait: decide, write the decision and its reason under Open questions in the spec, and continue. This never applies to a conflict with a recorded owner decision; that always stops.
 
@@ -53,7 +53,7 @@ Edit an existing criterion's text directly and commit it alone with its `Specflo
 
 ## Spec shape
 
-A new spec goes in `specflow/impl/<area>/<leaf>.spec.md`. Its frontmatter carries `serves: [<promise id>]` with exactly one entry; a project whose promises are not converted yet uses `implements:` instead.
+New criteria go in the spec that already covers the behaviour, and an `implemented` spec drops to `implementing`. A new spec goes in `specflow/impl/<area>/<leaf>.spec.md`. Its frontmatter carries `serves: [<promise id>]` with exactly one entry; a project whose promises are not converted yet uses `implements:` instead.
 
 ```
 ---

@@ -7,7 +7,7 @@ description: 'Fresh-agent review of a spec against the code (before code, or wee
 
 ## The Iron Law
 
-NO FINDING WITHOUT A CRITERION ID, A LOCATION AND A PROPOSED CHANGE
+NO FINDING WITHOUT A CRITERION OR SECTION, A LOCATION AND A PROPOSED CHANGE
 
 Violating the letter of this law is violating the spirit. If you find yourself constructing a reading under which an observation is useful without being specific, that construction is the violation.
 
@@ -54,7 +54,7 @@ Per criterion id: covered (which test cites it), not covered, or contradicted. F
 <path>:<line> — <what is wrong, one sentence> — proposed: <the change, one sentence>
 ```
 
-A finding with no criterion id is allowed only in diff mode, for a silent change, and carries `diff:<file>`.
+A finding about a rule or section rather than one criterion carries `spec:<file>#<rule or section>`. In diff mode, a finding with no criterion id is allowed only for a silent change, and carries `diff:<file>`.
 
 ## A review received from someone else
 

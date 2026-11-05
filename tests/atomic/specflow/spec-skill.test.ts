@@ -114,4 +114,14 @@ describe('specflow.spec-skill', () => {
     expect(before).toContain('including the ask of a spec request');
     expect(text.indexOf(sentence)).toBeLessThan(text.indexOf('**Commit the spec alone.**'));
   });
+
+  it('A conflict spec holds no criteria', () => {
+    const body = text.slice(text.indexOf('## Owner decisions'), text.indexOf('## Where a constant lives'));
+    expect(body).toContain('It holds *Today* and the open question, with no criteria and no waves.');
+  });
+
+  it('New criteria join the spec that covers the behaviour', () => {
+    const body = text.slice(text.indexOf('## Spec shape'), text.indexOf('## After review'));
+    expect(body).toContain('New criteria go in the spec that already covers the behaviour, and an `implemented` spec drops to `implementing`.');
+  });
 });

@@ -25,8 +25,6 @@ reading under which this does not apply to your case, that construction is the v
 "Fresh" means: produced in the current turn, **after** your most recent change. Evidence from
 before the last edit describes a state that no longer exists.
 
-Hardening mechanisms per `skills/_conventions/hardening.md`.
-
 ## The gate
 
 Run this before the claim leaves your mouth — not after, not "at the end".

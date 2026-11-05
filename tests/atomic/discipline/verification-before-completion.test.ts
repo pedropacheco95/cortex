@@ -47,8 +47,8 @@ describe('AC: the Iron Law and its letter-and-spirit clause are present', () => 
     expect(lawIdx).toBeLessThan(1500);
   });
 
-  it('references the shared hardening convention rather than restating it', () => {
-    expect(SKILL).toContain('skills/_conventions/hardening.md');
+  it('points at no repo-side file, because it is installed at 4.0', () => {
+    expect(SKILL).not.toContain('skills/_conventions/hardening.md');
   });
 });
 
