@@ -55,7 +55,7 @@ function writeTranscript(home: string, slug: string, id: string, content: string
 
 // ===========================================================================
 describe('Slug encoding is exact', () => {
-  it("projectSlug('/Users/pedropacheco1/Documents/Projetos/cortex') === '-Users-pedropacheco1-Documents-Projetos-cortex'", () => {
+  it("[LOOPS-SESSION-READING-1] projectSlug('/Users/pedropacheco1/Documents/Projetos/cortex') === '-Users-pedropacheco1-Documents-Projetos-cortex'", () => {
     expect(projectSlug('/Users/pedropacheco1/Documents/Projetos/cortex')).toBe(
       '-Users-pedropacheco1-Documents-Projetos-cortex',
     );
@@ -64,7 +64,7 @@ describe('Slug encoding is exact', () => {
 
 // ===========================================================================
 describe('Project isolation', () => {
-  it('a prefix-sharing sibling directory is never read', () => {
+  it('[LOOPS-SESSION-READING-2] a prefix-sharing sibling directory is never read', () => {
     const home = tmp('isolation-home');
     writeTranscript(home, '-tmp-proj-a', 's1', '{"type":"user","message":{"role":"user","content":"a"}}\n');
     writeTranscript(home, '-tmp-proj-a-b', 's2', '{"type":"user","message":{"role":"user","content":"b"}}\n');
@@ -76,7 +76,7 @@ describe('Project isolation', () => {
 
 // ===========================================================================
 describe('since-filter and ordering', () => {
-  it('since between the first and second mtime → the two newer sessions, newest first', () => {
+  it('[LOOPS-SESSION-READING-3] since between the first and second mtime → the two newer sessions, newest first', () => {
     const home = tmp('since-home');
     const slug = projectSlug('/tmp/proj');
     const f1 = writeTranscript(home, slug, 'oldest', '{"type":"user","message":{"role":"user","content":"1"}}\n');
@@ -98,7 +98,7 @@ describe('since-filter and ordering', () => {
 
 // ===========================================================================
 describe('Tolerant parse yields the readable parts', () => {
-  it('3 valid + 2 malformed + 1 valid unknown-type → 4 entries (type preserved), skipped === 2', () => {
+  it('[LOOPS-SESSION-READING-4] 3 valid + 2 malformed + 1 valid unknown-type → 4 entries (type preserved), skipped === 2', () => {
     const home = tmp('tolerant-home');
     const slug = projectSlug('/tmp/proj');
     const lines = [
@@ -123,7 +123,7 @@ describe('Tolerant parse yields the readable parts', () => {
 
 // ===========================================================================
 describe('Message extraction', () => {
-  it('interleaved message/non-message entries → only user/assistant texts, in order, with timestamps', () => {
+  it('[LOOPS-SESSION-READING-5] interleaved message/non-message entries → only user/assistant texts, in order, with timestamps', () => {
     const home = tmp('extract-home');
     const slug = projectSlug('/tmp/proj');
     const lines = [
@@ -148,7 +148,7 @@ describe('Message extraction', () => {
 
 // ===========================================================================
 describe('Missing history is empty, not an error', () => {
-  it('no projects/<slug>/ directory → empty list, no throw', () => {
+  it('[LOOPS-SESSION-READING-11] no projects/<slug>/ directory → empty list, no throw', () => {
     const home = tmp('missing-home');
     fs.mkdirSync(path.join(home, '.claude'), { recursive: true }); // exists, but no projects/<slug>
     expect(() => listSessions('/tmp/never-initialised', { home })).not.toThrow();
@@ -158,7 +158,7 @@ describe('Missing history is empty, not an error', () => {
 
 // ===========================================================================
 describe('Strictly read-only', () => {
-  it('a list/read/extract sequence creates, modifies, or deletes nothing', () => {
+  it('[LOOPS-SESSION-READING-12] a list/read/extract sequence creates, modifies, or deletes nothing', () => {
     const home = tmp('readonly-home');
     const projectRoot = tmp('readonly-project');
     const slug = projectSlug('/tmp/proj');
@@ -196,7 +196,7 @@ describe('Strictly read-only', () => {
 // Rule 7 — tool-use extraction and session title.
 // ===========================================================================
 describe('Tool uses are extracted in order with paths', () => {
-  it('Read/Edit/Write/NotebookEdit carry filePath, Grep carries nothing, order and timestamps preserved', () => {
+  it('[LOOPS-SESSION-READING-6] Read/Edit/Write/NotebookEdit carry filePath, Grep carries nothing, order and timestamps preserved', () => {
     const home = tmp('tooluse-home');
     const root = '/tmp/proj';
     writeSessionTranscript(home, root, 'tools', [
@@ -250,7 +250,7 @@ describe('Tool uses are extracted in order with paths', () => {
 });
 
 describe('Bash commands are truncated', () => {
-  it('a 500-char command is cut to exactly its first 200 chars; description is not carried', () => {
+  it('[LOOPS-SESSION-READING-7] a 500-char command is cut to exactly its first 200 chars; description is not carried', () => {
     const command = 'x'.repeat(150) + 'y'.repeat(50) + 'z'.repeat(300);
     const uses = extractToolUses([toolTurnAt('2026-09-15T00:00:00Z', bash(command))]);
     expect(uses).toHaveLength(1);
@@ -267,7 +267,7 @@ describe('Bash commands are truncated', () => {
 });
 
 describe('Malformed tool-use parts are skipped, not thrown', () => {
-  it('null part, nameless tool_use, string input, and tool_result → one record, no throw, no result leakage', () => {
+  it('[LOOPS-SESSION-READING-8] null part, nameless tool_use, string input, and tool_result → one record, no throw, no result leakage', () => {
     const entry = rawAssistantTurn(
       [
         null,
@@ -307,7 +307,7 @@ describe('Malformed tool-use parts are skipped, not thrown', () => {
 });
 
 describe('No tool use yields an empty array', () => {
-  it('text-only messages plus non-message types → []', () => {
+  it('[LOOPS-SESSION-READING-9] text-only messages plus non-message types → []', () => {
     const home = tmp('notools-home');
     const root = '/tmp/proj';
     writeSessionTranscript(home, root, 'plain', [
@@ -324,7 +324,7 @@ describe('No tool use yields an empty array', () => {
 });
 
 describe('Session title is read when present, undefined when absent', () => {
-  it('present → the customTitle; absent → undefined', () => {
+  it('[LOOPS-SESSION-READING-10] present → the customTitle; absent → undefined', () => {
     const withTitle = [customTitleEntry('Cortex daily'), textTurn('user', 'q'), textTurn('assistant', 'a')];
     const without = [textTurn('user', 'q'), lastPromptEntry('q'), textTurn('assistant', 'a')];
     expect(sessionTitle(withTitle as { type: string }[])).toBe('Cortex daily');
@@ -332,7 +332,7 @@ describe('Session title is read when present, undefined when absent', () => {
     expect(sessionTitle([])).toBeUndefined();
   });
 
-  it('repeated entries: the last one wins; a malformed one is ignored', () => {
+  it('[LOOPS-SESSION-READING-10] repeated entries: the last one wins; a malformed one is ignored', () => {
     const entries = [
       customTitleEntry('first'),
       textTurn('user', 'q'),
