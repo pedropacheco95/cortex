@@ -4,6 +4,7 @@
  * (spec core-cli.sync — the existing-project repair/upgrade path init's own
  * refusal message now names), the `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
  * `cortex specs index [--staged] [--json]` (spec specflow.index),
+ * `cortex check --commit-msg <file> | --range <base>..<head>` (spec specflow.check),
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
  * `cortex insight file|concept|element [--json]` — the read-only insight
  * query surface (spec insight.cli, Rule 1; §4.10.8),
@@ -49,11 +50,12 @@
  * line after this paragraph is its mirror, asserted equal by
  * tests/atomic/core-cli/dispatch.test.ts so the two cannot drift.
  *
- * Verbs: init, sync, store, specs, migrate, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
+ * Verbs: init, sync, store, specs, check, migrate, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
  */
 import { init } from './init.js';
 import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
 import { isEntryPoint } from '../entry.js';
+import { check } from '../specflow/check/index.js';
 import { specsIndex } from '../specflow/index.js';
 
 /**
@@ -68,6 +70,7 @@ const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['sync', 'sync [target] [--yes]'],
   ['store', 'store init|validate|map|expire|stale … (the 4.0 store, cortex/)'],
   ['specs', 'specs index [--staged] [--json]'],
+  ['check', 'check --commit-msg <file> | --range <base>..<head>'],
   ['migrate', 'migrate [--plan <file>] [--report <file>] [--json] [--apply|--accept]'],
   ['validate', 'validate [path] [--json]'],
   ['scan', 'scan'],
@@ -580,6 +583,8 @@ export async function run(argv: string[]): Promise<number> {
   // `cortex store <init|validate|map|expire|stale>` — the 4.0 store under
   // `cortex/` (schema Part II; specs store.*). `cortex migrate` moves a 3.x
   // `.cortex/` store to it (store.migrate).
+  if (argv[0] === 'check') return check(argv.slice(1));
+
   if (argv[0] === 'specs') {
     if (argv[1] === 'index') return specsIndex(argv.slice(2));
     process.stderr.write(`cortex specs: unknown command ${argv[1] ?? '(none)'}. Nothing was written.\n`);
