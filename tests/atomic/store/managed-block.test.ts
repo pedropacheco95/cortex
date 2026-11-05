@@ -11,6 +11,7 @@ import { loadStore } from '../../../src/store/layout.js';
 import { checkMapFresh, SPECS_SECTION_STAGE1, SPECS_SECTION_STAGE2 } from '../../../src/store/managed-block.js';
 import { storeCli } from '../../../src/store/cli.js';
 import { tmpRepo, cleanRepos } from '../../fixtures/store.js';
+import { specsRoot } from '../../../src/paths.js';
 
 afterEach(cleanRepos);
 
@@ -87,7 +88,7 @@ describe('store.managed-block', () => {
 
 /** The fenced text of a numbered rule in the spec: Rules 10 and 11 are compared byte for byte. */
 function ruleFence(n: number): string {
-  const spec = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../.specflow/specs/store/managed-block.spec.md'), 'utf8');
+  const spec = fs.readFileSync(path.join(specsRoot(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')), 'store/managed-block.spec.md'), 'utf8');
   const rule = spec.slice(spec.indexOf(`\n${n}. **`));
   const open = rule.indexOf('    ```\n') + '    ```\n'.length;
   return rule.slice(open, rule.indexOf('\n    ```', open)).split('\n').map((l) => l.replace(/^ {4}/, '')).join('\n');

@@ -1818,7 +1818,7 @@ Tests cite criteria by tag:
 
 | Runner | Tag |
 |---|---|
-| `vitest`, `jest`, `node` | `[ID]` or `[ID, ID]` at the start of the `it` or `test` name |
+| `vitest`, `jest`, `node` | `[ID]` or `[ID, ID]` at the start of the `it` or `test` name, written statically; a name built at run time may start with one |
 | `pytest` | `@pytest.mark.criterion("ID")`, one or more ids, directly above the test |
 
 ### S12.3 `specflow/INDEX.md`

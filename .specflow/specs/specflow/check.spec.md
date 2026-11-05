@@ -42,6 +42,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 5. **Rule items.** A spec's *rules* are the numbered items under its heading titled exactly `Rules`, at any heading level. Its *criteria* are as `specflow.index` Rule 2 defines them. Text is compared after collapsing whitespace and removing `**`. Only files under `specflow/impl/` count; promises are outside the check (P7). An item is:
    - **A criterion** is matched by id: **added** when its id is new, **changed** when the same id has different text, **removed** when its id is gone.
    - **A rule** is matched by text, so renumbering alone changes nothing. A base rule whose text no longer appears anywhere in the staged list is **changed** if its base number still exists, and **removed** if not. It is always named by its base number. A staged rule whose text is not in the base is **added**. New: the bench keyed rules by number, which made every rule after an insertion an amendment.
+   - **Specs are paired by `id`,** not path, so moving a spec file changes no item.
    - An **amendment** is a changed or removed item. A commit that edits a rule and inserts another still needs the trailer for the edited rule's base number.
    - **A retired spec has no items.** A spec with `status: retired` in both the base and the staged tree is never judged, so correcting a record needs no trailer. A commit that sets `status: retired` removes every item the spec had, and a commit that clears it adds them. So retiring a spec cannot share a commit with code (Rule 9).
 6. **Rule (a) code-needs-test.** A commit with a `code` path and no `test` path is refused. Measured. Always on.
@@ -57,8 +58,8 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 12. **Rule (g) stale-literal.** For each constant whose value changed in a `constants.md`, the check lists tracked files outside `specflow/` that still hold the old value as a whole word (`git grep -w -F`), at most 20. An old value shorter than 3 characters is not searched, and the warning says so. New. Warns only.
 13. **Rule levels.** Rules (a), (d), (e) always refuse and (f), (g) always warn. `specflow.rules.b` and `.c` take `off`, `warn` or `refuse`, and an absent key means `off` (A11). The config cannot turn off a measured rule. The lint rule `lint.rules-early` guards turning (b) or (c) on early.
 14. **Merge commits.** In `--commit-msg` mode, when `MERGE_HEAD` exists, the check judges only what the merge adds beyond the automatic merge: the staged tree against the `git merge-tree --write-tree` result of merging each `MERGE_HEAD` in turn, minus files that conflicted. A conflict resolution is not judged. A clean merge therefore passes.
-15. **Range mode.** Commits come from `git rev-list --reverse <base>..<head>`, leaving out `specflow.since` and its ancestors when that key is set (`specflow.git-hooks` Rule 10): commits made before the hooks existed are never judged. Each non-merge commit is judged against its first parent, using its own message. A merge commit is judged as in Rule 14, from its parents. Rule (c) then runs once over the whole range. Output has one block per commit with a verdict, headed by its short hash and subject. An empty range prints `specflow: 0 commits in range` and exits 0. Range mode exits 1 if any commit is refused.
-16. **No `specflow/` folder.** The check prints `specflow: no specflow/ folder here; nothing was checked` to stderr and exits 0. It never passes silently.
+15. **Range mode.** Commits come from `git rev-list --reverse <base>..<head>`, leaving out `specflow.since` and its ancestors when that key is set (`specflow.git-hooks` Rule 10): commits made before the hooks existed are never judged. Each non-merge commit is judged against its first parent, using its own message. A merge commit is judged as in Rule 14, from its parents. Rule (c) then runs once over the whole range. Output has one block per commit with a verdict, headed by its short hash and subject. Each block ends `specflow: allowed (<short hash>)` or the refusal. An empty range prints `specflow: 0 commits in range` to stderr and exits 0. Range mode exits 1 if any commit is refused.
+16. **No `specflow/` folder.** `cortex/cortex.json` is read from the working tree in every mode. With no `specflow/` folder, the check prints `specflow: no specflow/ folder here; nothing was checked` to stderr and exits 0. It never passes silently.
 17. **Messages.** Verdicts go to stderr. A refusal prints `specflow: REFUSED (<commit|merge commit|<short hash>>)` and then one line per refused rule, exactly as in the table below. A warning prints `specflow: warning: <text>`. At most 8 paths or items are named, then ` …`.
 
     | Rule | Line |
@@ -70,7 +71,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
     | (e) | `- rule (e) amend-needs-trailer: changes existing spec text with no trailer for: <items>. Add one line each: Specflow-Amends: <spec-id>#<item> — <reason>` |
 
     Rule (c)'s commit-mode warning is `criterion text changed with no tagged test changed yet: <ids>. The range check refuses this if the change ends without one.`
-18. **Event log.** Every verdict appends one JSON line to `events.jsonl`: `ts`, `subject`, `kind` (`commit`, `merge`, `range`), `outcome` (`allowed`, `refused`, `error`), `rules` (letters refused), `warned` (letters that warned), `reasons` (the printed lines). Each allowed commit appends one line per amendment to `amendments.jsonl`: `ts`, `subject`, `spec`, `file`, `item`, `change`, `trailer`. Refused commits leave no trace in git, so this log is the only record for review metric 2. A failed write prints a warning and never changes the verdict.
+18. **Event log.** Every verdict appends one JSON line to `events.jsonl`: `ts`, `subject`, `kind` (`commit`, `merge`, `range`), `outcome` (`allowed`, `refused`, `error`), `rules` (letters refused), `warned` (letters that warned), `reasons` (the printed lines). Each allowed commit appends one line per amendment to `amendments.jsonl`: `ts`, `subject`, `spec`, `file`, `item`, `change`, `trailer`. Refused commits leave no trace in git, so this log is the only record for review metric 2. `amendments.jsonl` is written in commit mode only: a range replays commits the hook already saw, so a `--no-verify` commit leaves no amendment record. A failed write prints a warning and never changes the verdict.
 19. **What passes and what refuses.** The table is the contract for commit order. It assumes (b) and (c) are on at `refuse`.
 
     | Work | Commits, in order | Verdict |
@@ -206,6 +207,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** a spec retired in the base, with one criterion's text changed and no trailer, and a `code` path in the same commit
 - **When** the check runs
 - **Then** it passes rules (c), (d) and (e)
+
+### Moving a spec file changes no item
+
+- **Given** a spec moved to another path with its text unchanged
+- **When** the check runs with no trailer
+- **Then** it exits 0
 
 ### Inserting a rule mid-list amends nothing
 
@@ -398,6 +405,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** one refused and one allowed commit attempt
 - **When** the check runs for each
 - **Then** `events.jsonl` under the git common dir has two lines whose `outcome` values are `refused` and `allowed`, the first with `rules` `["a"]`
+
+### A range writes no amendment record
+
+- **Given** a commit made with `--no-verify` that amends a criterion with its trailer
+- **When** `cortex check --range` judges it
+- **Then** it is allowed, and `amendments.jsonl` gains no line
 
 ### The log is shared by worktrees
 

@@ -10,9 +10,11 @@ export interface TestCase {
   line: number;
   skipped: boolean;
   tags: string[];
+  /** A name built at run time with no static tag: counted, not a case (Rule 5). */
+  dynamic?: boolean;
 }
 
-const CASE_MODIFIERS = new Set(['skip', 'todo', 'only', 'concurrent', 'sequential', 'fails']);
+const CASE_MODIFIERS = new Set(['skip', 'todo', 'only', 'concurrent', 'sequential', 'fails', 'each']);
 const REGEX_MAY_FOLLOW = '(,=:[!&|?{};\n';
 
 function tagsOf(name: string): string[] {
@@ -83,13 +85,38 @@ function skipGap(src: string, at: number): number {
   }
 }
 
-function stringLiteral(src: string, at: number): string | null {
+interface Name {
+  text: string;
+  /** Holds `${…}`, so only its static start can be trusted. */
+  built: boolean;
+}
+
+function nameAt(src: string, at: number): Name | null {
   const quote = src[at];
   if (quote !== "'" && quote !== '"' && quote !== '`') return null;
   const end = quote === '`' ? skipTemplate(src, at) : skipString(src, at);
   const body = src.slice(at + 1, end - 1);
-  if (quote === '`' && body.includes('${')) return null;
-  return body.replace(/\\(.)/g, '$1');
+  if (quote === '`' && body.includes('${')) return { text: body, built: true };
+  return { text: body.replace(/\\(.)/g, '$1'), built: false };
+}
+
+/** Past the call that opens at `at`, skipping strings and comments inside it. */
+function skipCall(src: string, at: number): number {
+  let depth = 0;
+  let i = at;
+  while (i < src.length) {
+    const c = src.charAt(i);
+    if (src.startsWith('//', i) || src.startsWith('/*', i)) i = skipGap(src, i);
+    else if (c === "'" || c === '"') i = skipString(src, i);
+    else if (c === '`') i = skipTemplate(src, i);
+    else {
+      if (c === '(') depth += 1;
+      if (c === ')') depth -= 1;
+      i += 1;
+      if (depth === 0) return i;
+    }
+  }
+  return i;
 }
 
 /** Cases of a vitest, jest or node test file. */
@@ -138,21 +165,25 @@ export function scanJsCases(file: string, src: string): TestCase[] {
       const chain = (m as RegExpExecArray)[0];
       i += chain.length;
       const [word = '', ...mods] = chain.split('.');
-      if (prev !== '.' && src[skipGap(src, i)] === '(') {
+      const each = mods.includes('each');
+      const taggedEach = each && src[skipGap(src, i)] === '`';
+      if (prev !== '.' && (src[skipGap(src, i)] === '(' || taggedEach)) {
         if (word === 'describe' && (mods.includes('skip') || mods.includes('todo'))) {
           nextParenSkips = true;
         }
         if ((word === 'it' || word === 'test') && mods.every((x) => CASE_MODIFIERS.has(x))) {
-          const name = stringLiteral(src, skipGap(src, skipGap(src, i) + 1));
-          if (name !== null) {
-            cases.push({
-              file,
-              name,
-              line: lineAt(start),
-              skipped: mods.includes('skip') || mods.includes('todo') || parens.includes(true),
-              tags: tagsOf(name),
-            });
-          }
+          const open = skipGap(src, i);
+          const nameCall = each ? skipGap(src, taggedEach ? skipTemplate(src, open) : skipCall(src, open)) : open;
+          const name = src[nameCall] === '(' ? nameAt(src, skipGap(src, nameCall + 1)) : null;
+          const tags = tagsOf(name?.text ?? '');
+          cases.push({
+            file,
+            name: name?.text ?? '',
+            line: lineAt(start),
+            skipped: mods.includes('skip') || mods.includes('todo') || parens.includes(true),
+            tags,
+            dynamic: tags.length === 0 && (name === null || name.built || each),
+          });
         }
       }
       prev = 'a';

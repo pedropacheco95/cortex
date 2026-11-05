@@ -9,6 +9,7 @@ import * as path from 'path';
 import { cleanRepos, tmpRepo } from '../../fixtures/store.js';
 import { specsLint } from '../../../src/specflow/lint.js';
 import { validate } from '../../../src/schema/validate.js';
+import { isPorted, specsRoot } from '../../../src/paths.js';
 
 afterEach(cleanRepos);
 
@@ -128,6 +129,16 @@ describe('specflow.lint: carried checks', () => {
     const found = hits(await lint(root), 'check.dev-spec').join('\n');
     expect(found).toContain('R-999');
     expect(found).not.toContain('R-001');
+  });
+
+  it('A stray empty folder does not hide the old tree', async () => {
+    const root = tmpRepo('stray');
+    write(root, '.specflow/specs/billing/refunds.spec.md', 'not valid');
+    fs.mkdirSync(path.join(root, 'specflow'));
+    expect(isPorted(root)).toBe(false);
+    expect(specsRoot(root)).toBe(path.join(root, '.specflow', 'specs'));
+    write(root, 'specflow/INDEX.md', 'x');
+    expect(isPorted(root)).toBe(true);
   });
 
   it('Serves replaces implements', async () => {
