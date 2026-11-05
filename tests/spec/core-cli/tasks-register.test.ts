@@ -9,9 +9,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { registerTasks, verifyTasks, TASK_CADENCE_3X } from '../../../src/cli/tasks-register.js';
-import { CANONICAL_TASK_NAMES, RETIRED_CANONICAL_TASK_NAMES, scopedTaskName } from '../../../src/cli/task-scoping.js';
+import { registerTasks, verifyTasks, TASK_CADENCE } from '../../../src/cli/tasks-register.js';
+import { RETIRED_CANONICAL_TASK_NAMES, STORE_V4_CANONICAL_NAMES, scopedTaskName } from '../../../src/cli/task-scoping.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
+import { acceptedProject } from '../../fixtures/task-store.js';
 
 describe('core-cli.tasks-register: register → verify → wipe → detect → heal', () => {
   let root: string;
@@ -22,6 +23,7 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
 
   beforeAll(() => {
     root = makeTmpDir('tr-slice-root');
+    acceptedProject(root);
     home = makeTmpDir('tr-slice-home');
     appSupport = makeTmpDir('tr-slice-appsupport');
     registryFile = path.join(appSupport, 'claude-code-sessions', 'u1', 'u2', 'scheduled-tasks.json');
@@ -58,9 +60,9 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
     const r = registerTasks(opts());
     expect(r.exitCode).toBe(0);
 
-    // Payloads: 5 scoped bundle dirs, retired dir removed.
+    // Payloads: 3 scoped task dirs, retired dir removed.
     const base = path.join(home, '.claude', 'scheduled-tasks');
-    const expectedDirs = Object.values(CANONICAL_TASK_NAMES).map((c) => scopedTaskName(root, c)).sort();
+    const expectedDirs = STORE_V4_CANONICAL_NAMES.map((c) => scopedTaskName(root, c)).sort();
     expect(fs.readdirSync(base).sort()).toEqual(expectedDirs);
     for (const retired of RETIRED_CANONICAL_TASK_NAMES) {
       expect(fs.existsSync(path.join(base, scopedTaskName(root, retired)))).toBe(false);
@@ -77,17 +79,17 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
       appExtra: 1,
     });
     expect(entries.some((e) => e['id'] === scopedTaskName(root, 'cortex-loop-anatomy-refresh-deep'))).toBe(false);
-    for (const canonical of Object.values(CANONICAL_TASK_NAMES)) {
+    for (const canonical of STORE_V4_CANONICAL_NAMES) {
       const entry = entries.find((e) => e['id'] === scopedTaskName(root, canonical))!;
       expect(fs.existsSync(entry['filePath'] as string), canonical).toBe(true);
-      expect(entry['cronExpression']).toBe(TASK_CADENCE_3X[canonical]);
+      expect(entry['cronExpression']).toBe(TASK_CADENCE[canonical]!.cron);
     }
   });
 
   it('verify passes on the registered slice', () => {
     const v = verifyTasks(opts());
     expect(v.exitCode).toBe(0);
-    expect(v.output).toContain('All 5 Cortex bundles registered');
+    expect(v.output).toContain('All 3 Cortex tasks registered');
   });
 
   it('an app-update wipe (#49276) is detected by verify and healed by re-register', () => {
@@ -96,7 +98,7 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
 
     const v1 = verifyTasks(opts());
     expect(v1.exitCode).toBe(1);
-    expect(v1.output).toContain('5 of 5');
+    expect(v1.output).toContain('3 of 3');
 
     const r = registerTasks(opts());
     expect(r.exitCode).toBe(0);

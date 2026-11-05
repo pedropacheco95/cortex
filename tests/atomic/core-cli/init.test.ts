@@ -1000,12 +1000,12 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
     const home = makeTmpDir('regok-home');
     const appSupportDir = makeTmpDir('regok-appsupport');
     try {
-      // Seed an app-created registry, then fully register via the fallback writer.
+      // Seed an app-created registry holding the 3.x roster: `register` refuses on 3.x.
+      const { planTasks } = await import('../../../src/cli/tasks-register.js');
+      const scheduledTasks = planTasks({ projectRoot: root, home }).tasks.map((t) => ({ id: t.id, enabled: true }));
       const registryFile = path.join(appSupportDir, 'claude-code-sessions', 'u1', 'u2', 'scheduled-tasks.json');
       fs.mkdirSync(path.dirname(registryFile), { recursive: true });
-      fs.writeFileSync(registryFile, JSON.stringify({ scheduledTasks: [], recordedSkips: {} }, null, 2) + '\n', 'utf-8');
-      const { registerTasks } = await import('../../../src/cli/tasks-register.js');
-      expect(registerTasks({ projectRoot: root, home, appSupportDir }).exitCode).toBe(0);
+      fs.writeFileSync(registryFile, JSON.stringify({ scheduledTasks, recordedSkips: {} }, null, 2) + '\n', 'utf-8');
 
       const result = await init(root, { noLlm: true, home, appSupportDir, ...DARWIN });
       expect(result.exitCode).toBe(0);

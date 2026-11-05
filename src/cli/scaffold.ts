@@ -646,7 +646,7 @@ export interface ScheduledTasksResult {
 }
 
 /** A required skill is "present" iff it exists as a directory in <root>/.claude/skills/. */
-function missingRequiredSkills(root: string, requiredSkills: string[]): string[] {
+export function missingRequiredSkills(root: string, requiredSkills: string[]): string[] {
   return requiredSkills.filter((skill) => {
     const dir = path.join(root, '.claude', 'skills', skill);
     return !(fs.existsSync(dir) && fs.statSync(dir).isDirectory());

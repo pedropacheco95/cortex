@@ -11,8 +11,10 @@
  * app runs (externally-appended entries are clobbered on the next flush; one
  * malformed field makes the app treat the whole file as empty and wipe every
  * task), so the PRIMARY registration path is the `cortex-register-tasks`
- * skill, run inside a Claude Desktop session where the app's own internal
- * `mcp__scheduled-tasks__*` MCP tools exist. This module supplies:
+ * skill, typed as `/cortex-register-tasks` inside a Claude Desktop session
+ * where the app's own internal `mcp__scheduled-tasks__*` MCP tools exist. An
+ * accepted 4.0 store has three tasks; any other project keeps the five 3.x
+ * bundles, read-only (Rule 13). This module supplies:
  *
  * - `tasksPlan` — the authoritative, read-only registration plan the skill
  *   consumes (`cortex tasks plan --json`); Core stays the single source of
@@ -22,8 +24,11 @@
  *   `pgrep` at the CLI entry).
  * - `verifyTasks` — the read-only silent-loss detector app updates make
  *   necessary (registry wipes observed, #49276); never restricted.
- * - `registrationStatus` — the read-only check `cortex init` uses to print
- *   its register-in-Desktop instruction block.
+ * - `registrationStatus` — the read-only summary `cortex init` and `cortex
+ *   sync` print from.
+ * - `writeTaskPayloads` — the three 4.0 prompts, written by sync's update route
+ *   and by `registerTasks`.
+ * - `heartbeatTask` — the record that makes a missed run visible.
  *
  * Deterministic Core (RULES 3): pure file I/O, no LLM, no network. All paths
  * are injected (`home`, `appSupportDir`) so tests never touch the real
@@ -34,16 +39,37 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import fg from 'fast-glob';
 import { SCHEDULED_TASKS, STORE_V4_TASKS, storeV4TaskSkillMd } from './templates.js';
+import { TASK_CADENCE } from './templates.js';
 import {
   CANONICAL_TASK_NAMES,
-  RETIRED_CANONICAL_TASK_NAMES,
+  STORE_V4_RETIRED_NAMES,
+  hashScopedTaskName,
   resolveScopedTaskName,
   scopedTaskName,
+  taskDirProjectRoot,
+  taskRoster,
 } from './task-scoping.js';
-import { writeScheduledTasks } from './init.js';
-import { INSTALLED_MARKER_FILENAME, readInstalledMarker, sha256Hex, writeInstalledMarker } from './scaffold.js';
+import {
+  INSTALLED_MARKER_FILENAME,
+  missingRequiredSkills,
+  readInstalledMarker,
+  sha256Hex,
+  writeInstalledMarker,
+} from './scaffold.js';
 
-export { TASK_CADENCE } from './templates.js';
+export { TASK_CADENCE };
+
+/** Rule 13: what `register`, `heartbeat` and `collect` say on the 3.x roster. */
+export const NOT_ACCEPTED_MESSAGE =
+  'this project has no 4.0 tasks until its store is accepted (cortex migrate --accept)';
+
+/** Rule 11: the refusal while the Desktop app runs. */
+export const REGISTER_APP_RUNNING_MESSAGE =
+  'Scheduled tasks not registered: the Claude Desktop app is open and would overwrite or wipe the registry. ' +
+  'Type /cortex-register-tasks in a Desktop session, or quit the app and run cortex tasks register.';
+
+/** Rule 16: an unknown task name given to `collect` or `heartbeat`. */
+export const HEARTBEAT_USAGE = 'Usage: cortex tasks <collect|heartbeat> <learn|fresh|quality>';
 
 /**
  * The `permissionMode` Cortex stamps on every entry it owns. Matches the
@@ -55,7 +81,8 @@ export { TASK_CADENCE } from './templates.js';
 export const TASK_PERMISSION_MODE = 'bypassPermissions';
 
 /**
- * Canonical bundle name → cron expression (the cadence table, data not code).
+ * The 3.x roster's cadence table, read only by `plan` and `verify` (Rule 13);
+ * `TASK_CADENCE` is the 4.0 one.
  * v3.0 consolidation: one cadence per bundle (each bundle runs its member
  * loops sequentially in a single fire), staggered so no two Cortex bundles of
  * one project ever fire in the same slot:
@@ -169,11 +196,25 @@ function isCommandResult(v: LoadedRegistry | TasksCommandResult): v is TasksComm
   return 'exitCode' in v;
 }
 
-/** This project's 5 (canonical, scopedId, cron, model, payload filePath, description) rows. */
+/** This project's (canonical, scopedId, cron, model, payload filePath, description) rows, per its roster. */
 function ownRows(
   root: string,
   home: string,
 ): { canonical: string; id: string; cron: string; model: string; filePath: string; description: string }[] {
+  const baseDir = path.join(home, '.claude', 'scheduled-tasks');
+  if (taskRoster(root) === 'store-v4') {
+    return STORE_V4_TASKS.map((task) => {
+      const id = resolveScopedTaskName(baseDir, root, task.name);
+      return {
+        canonical: task.name,
+        id,
+        cron: (TASK_CADENCE[task.name] as { cron: string }).cron,
+        model: task.model,
+        filePath: path.join(baseDir, id, 'SKILL.md'),
+        description: task.description,
+      };
+    });
+  }
   return SCHEDULED_TASKS.map((task) => {
     const canonical = CANONICAL_TASK_NAMES[task.name] ?? task.name;
     const id = scopedTaskName(root, canonical);
@@ -248,8 +289,9 @@ export function writeTaskPayloads(opts: { projectRoot: string; home: string; dry
 // ---------------------------------------------------------------------------
 
 /** Bumped on any change to the `--json` shape (the cortex-register-tasks skill
- *  consumes it). v2: added the per-bundle `model` field (v3.0 consolidation). */
-export const TASK_PLAN_VERSION = 2;
+ *  consumes it). v2: added the per-bundle `model` field (v3.0 consolidation).
+ *  v3: the three 4.0 tasks. */
+export const TASK_PLAN_VERSION = 3;
 
 /** One row of the registration plan, as emitted by `cortex tasks plan --json`. */
 export interface TaskPlanEntry {
@@ -307,7 +349,7 @@ export function tasksPlan(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home
     return { exitCode: 0, output: JSON.stringify(plan, null, 2) };
   }
   const lines: string[] = [
-    `Registration plan — ${plan.taskCount} Cortex scheduled-task bundles for ${plan.projectRoot}`,
+    `Registration plan — ${plan.taskCount} Cortex scheduled tasks for ${plan.projectRoot}`,
     `(permissionMode ${TASK_PERMISSION_MODE}, cwd = project root, useWorktree false for all)`,
     '',
   ];
@@ -320,8 +362,10 @@ export function tasksPlan(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home
   }
   lines.push('');
   lines.push(
-    'To register: open this folder in a Claude Desktop session and say "run cortex-register-tasks" ' +
-      '(the app\'s own scheduled-tasks tools exist only there). Confirm with `cortex tasks verify`.',
+    taskRoster(path.resolve(opts.projectRoot)) === 'store-v4'
+      ? 'To register: type /cortex-register-tasks in a Claude Desktop session for this project ' +
+          '(the app\'s own scheduled-tasks tools exist only there). Confirm with `cortex tasks verify`.'
+      : NOT_ACCEPTED_MESSAGE,
   );
   return { exitCode: 0, output: lines.join('\n') };
 }
@@ -351,14 +395,15 @@ export interface RegistrationStatus {
   registryFound: boolean;
   /** Canonical names of this project's tasks not registered-and-enabled. */
   unregistered: string[];
-  /** Total tasks in the roster (5 bundles). */
+  /** Total tasks in the project's roster. */
   total: number;
 }
 
 /**
- * Read-only registration check for `cortex init`'s summary: which of the
- * five bundles are present AND enabled in the app registry. Registry-not-found
- * (the app never ran) is tolerated — every bundle reports unregistered.
+ * Read-only registration check for the `cortex init` and `cortex sync`
+ * summaries (Rule 19): which of the project's roster are present AND enabled
+ * in the app registry. Registry-not-found (the app never ran) is tolerated:
+ * every task reports unregistered.
  */
 export function registrationStatus(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home' | 'appSupportDir'>): RegistrationStatus {
   const root = path.resolve(opts.projectRoot);
@@ -378,61 +423,67 @@ export function registrationStatus(opts: Pick<TasksRegistryOptions, 'projectRoot
   };
 }
 
+/** Remove this project's retired payload dirs, plain and hash forms; another project's stay. */
+function removeRetiredPayloadDirs(root: string, home: string): string[] {
+  const baseDir = path.join(home, '.claude', 'scheduled-tasks');
+  const removed: string[] = [];
+  for (const canonical of STORE_V4_RETIRED_NAMES) {
+    for (const name of [scopedTaskName(root, canonical), hashScopedTaskName(root, canonical)]) {
+      const dir = path.join(baseDir, name);
+      if (!fs.existsSync(dir)) continue;
+      const owner = taskDirProjectRoot(dir);
+      if (owner !== undefined && owner !== root) continue;
+      fs.rmSync(dir, { recursive: true, force: true });
+      if (!removed.includes(canonical)) removed.push(canonical);
+    }
+  }
+  return removed;
+}
+
 /**
- * Direct-write FALLBACK (app closed only): refresh the payload roster, then
- * upsert this project's five bundle entries into the Desktop app's registry:
- * backup, preserve every foreign entry (and any unknown fields on our own
- * entries) structurally intact, atomic write, idempotent. Refuses while the
- * Desktop app runs (injected check) — the app holds the registry in memory
- * and would clobber the write; the sanctioned path is the
- * `cortex-register-tasks` skill in a Desktop session.
+ * Direct-write FALLBACK (app closed only): write the payloads, then upsert
+ * this project's three task entries into the Desktop app's registry: backup,
+ * preserve every foreign entry (and any unknown fields on our own entries)
+ * structurally intact, atomic write, idempotent. Every refusal writes nothing
+ * (Rule 2). The app holds the registry in memory and would clobber a write
+ * while it runs; the main route is `/cortex-register-tasks` in a Desktop
+ * session. No escape hatch by design.
  */
 export function registerTasks(opts: TasksRegistryOptions): TasksCommandResult {
-  // Guard (no escape hatch by design): the app loads scheduled-tasks.json
-  // into memory once at launch and rewrites the whole file from memory on
-  // every task event — a direct write now would be clobbered, and a malformed
-  // merge can make the app wipe ALL tasks on its next flush.
-  if (opts.isDesktopAppRunning?.() === true) {
-    return {
-      exitCode: 1,
-      output:
-        'cortex tasks register: refused — the Claude Desktop app is running.\n' +
-        'The app loads scheduled-tasks.json into memory once at launch and rewrites the whole file ' +
-        'from memory on every task event: anything written here now would be silently clobbered, and a ' +
-        'write the app cannot parse makes it treat the registry as empty and wipe ALL scheduled tasks.\n' +
-        'Use the sanctioned flow instead: open this folder in a Claude Desktop session and say ' +
-        '"run cortex-register-tasks" (it registers via the app\'s own scheduled-tasks tools), then ' +
-        'confirm with `cortex tasks verify`. Direct writing remains available only while the app is fully quit.',
-    };
-  }
-
   const root = path.resolve(opts.projectRoot);
-  const now = opts.now ?? ((): Date => new Date());
-  const lines: string[] = [];
+  if (taskRoster(root) !== 'store-v4') return { exitCode: 1, output: NOT_ACCEPTED_MESSAGE };
+  if (opts.isDesktopAppRunning?.() === true) return { exitCode: 1, output: REGISTER_APP_RUNNING_MESSAGE };
+  const missing = missingRequiredSkills(root, [...new Set(STORE_V4_TASKS.flatMap((t) => t.requiredSkills))]);
+  if (missing.length > 0) {
+    return { exitCode: 1, output: `Scheduled tasks not registered: .claude/skills/ lacks ${missing.join(', ')}.` };
+  }
+  const loaded = loadRegistry(opts.appSupportDir);
+  if (isCommandResult(loaded)) return loaded;
 
-  // 1. Payload roster refresh (missing payloads written, user-edited ones
-  //    preserved, this project's retired scoped dirs removed).
-  const roster = writeScheduledTasks(opts.home, false, root, false);
+  const now = opts.now ?? (() => new Date());
+  const lines: string[] = [...loaded.warnings];
+
+  // 1. Payloads first, so every filePath the registry gets has a file behind it.
+  const payloads = writeTaskPayloads({ projectRoot: root, home: opts.home });
+  const retired = removeRetiredPayloadDirs(root, opts.home);
   lines.push(
-    `Payloads: ${roster.written} written, ${roster.preserved} preserved` +
-      `${roster.retired.length > 0 ? `; retired ${roster.retired.join(', ')}` : ''}.`,
+    `Payloads: ${payloads.written.length} written, ${payloads.updated.length} updated, ${payloads.kept.length} left with local edits` +
+      `${retired.length > 0 ? `; retired ${retired.join(', ')}` : ''}.`,
   );
 
-  // 2. Registry discovery + parse.
-  const loaded = loadRegistry(opts.appSupportDir);
-  if (isCommandResult(loaded)) {
-    return { exitCode: loaded.exitCode, output: [...lines, loaded.output].join('\n') };
-  }
-  lines.push(...loaded.warnings);
-
-  // 3. Upsert. Foreign entries (and recordedSkips / unknown top-level keys)
+  // 2. Upsert. Foreign entries (and recordedSkips / unknown top-level keys)
   //    pass through untouched; retired Cortex entries of THIS project are
   //    dropped; owned fields are set, unknown fields on existing own entries
   //    survive; createdAt is stamped only on newly created entries.
-  const retiredIds = new Set(RETIRED_CANONICAL_TASK_NAMES.map((c) => scopedTaskName(root, c)));
-  const entries: unknown[] = (loaded.entries as unknown[]).filter(
-    (e) => !(isRecord(e) && typeof e['id'] === 'string' && retiredIds.has(e['id'] as string)),
+  const retiredIds = new Set(
+    STORE_V4_RETIRED_NAMES.flatMap((c) => [scopedTaskName(root, c), hashScopedTaskName(root, c)]),
   );
+  const isOwnRetired = (e: unknown): boolean =>
+    isRecord(e) &&
+    typeof e['id'] === 'string' &&
+    retiredIds.has(e['id'] as string) &&
+    (e['cwd'] === undefined || e['cwd'] === root);
+  const entries: unknown[] = (loaded.entries as unknown[]).filter((e) => !isOwnRetired(e));
   const removedRetired = (loaded.entries as unknown[]).length - entries.length;
   let added = 0;
   let updated = 0;
@@ -459,11 +510,11 @@ export function registerTasks(opts: TasksRegistryOptions): TasksCommandResult {
 
   const next = JSON.stringify({ ...loaded.registry, scheduledTasks: entries }, null, 2) + '\n';
   if (next === loaded.raw) {
-    lines.push(`Registry ${loaded.file}: already up to date (${ownRows(root, opts.home).length} bundle(s) registered) — nothing written.`);
+    lines.push(`Registry ${loaded.file}: already up to date (${ownRows(root, opts.home).length} task(s) registered) — nothing written.`);
     return { exitCode: 0, output: lines.join('\n') };
   }
 
-  // 4. Backup, then atomic temp+rename write.
+  // 3. Backup, then atomic temp+rename write.
   const stamp = now().toISOString().replace(/[:.]/g, '-');
   const backup = `${loaded.file}.cortex-backup-${stamp}`;
   fs.copyFileSync(loaded.file, backup);
@@ -483,9 +534,9 @@ export function registerTasks(opts: TasksRegistryOptions): TasksCommandResult {
 }
 
 /**
- * Per-bundle report against the app registry: registered / enabled / cron /
- * payload SKILL.md exists. Exit 1 if any of the five is missing, disabled,
- * or points at a dangling payload; cron drift from the cadence table is
+ * Per-task report against the app registry: registered / enabled / cron /
+ * model / payload SKILL.md exists. Exit 1 if any is missing, disabled, or
+ * points at a dangling payload; cron or model drift from the cadence table is
  * reported but does not fail.
  */
 export function verifyTasks(opts: TasksRegistryOptions): TasksCommandResult {
@@ -520,14 +571,54 @@ export function verifyTasks(opts: TasksRegistryOptions): TasksCommandResult {
       continue;
     }
     const cron = entry['cronExpression'];
-    const drift = cron === row.cron ? '' : ` [cron drifted: expected "${row.cron}"]`;
+    const drift =
+      (cron === row.cron ? '' : ` [cron drifted: expected "${row.cron}"]`) +
+      (entry['model'] === row.model ? '' : ` [model drifted: expected "${row.model}"]`);
     lines.push(`ok   ${row.canonical}: enabled, cron "${String(cron)}", payload present${drift}`);
   }
   const total = ownRows(root, opts.home).length;
+  const remedy =
+    taskRoster(root) === 'store-v4'
+      ? 'type /cortex-register-tasks in a Desktop session, or quit the Desktop app and run `cortex tasks register`'
+      : NOT_ACCEPTED_MESSAGE;
   lines.push(
     failures === 0
-      ? `All ${total} Cortex bundles registered, enabled, and backed by payloads.`
-      : `${failures} of ${total} Cortex bundle(s) missing, disabled, or dangling — open this folder in a Claude Desktop session and say "run cortex-register-tasks" (or, with the app fully quit, run \`cortex tasks register\`).`,
+      ? `All ${total} Cortex tasks registered, enabled, and backed by payloads.`
+      : `${failures} of ${total} Cortex task(s) missing, disabled, or dangling: ${remedy}.`,
   );
   return { exitCode: failures === 0 ? 0 : 1, output: lines.join('\n') };
+}
+
+// ---------------------------------------------------------------------------
+// `cortex tasks heartbeat` (Rule 15)
+// ---------------------------------------------------------------------------
+
+function addDays(day: string, days: number): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Replace this task's item in `now/cortex-tasks.md`. A task that stops running
+ * leaves an item that expires, which is how a missed run or a registry wipe
+ * surfaces. The other tasks' items stay byte-identical.
+ */
+export function heartbeatTask(opts: { projectRoot: string; task: string; today: string }): TasksCommandResult {
+  const { task, today } = opts;
+  const cadence = TASK_CADENCE[task];
+  if (cadence === undefined) return { exitCode: 2, output: HEARTBEAT_USAGE };
+  const root = path.resolve(opts.projectRoot);
+  if (taskRoster(root) !== 'store-v4') return { exitCode: 1, output: NOT_ACCEPTED_MESSAGE };
+
+  const file = path.join(root, 'cortex', 'now', 'cortex-tasks.md');
+  const item = `## ${task} last ran ${today}\nuntil: ${addDays(today, cadence.heartbeatDays)}\n`;
+  const text = fs.existsSync(file)
+    ? fs.readFileSync(file, 'utf-8')
+    : `---\nabout: When each scheduled task last ran\npermanence: volatile\nverified: ${today} (observed)\norigin: person:cortex-tasks@${today}\n---\n`;
+  const own = new RegExp(`^## ${task} last ran [^\\n]*\\n(?:(?!## )[^\\n]*(?:\\n|$))*`, 'm');
+  const next = own.test(text) ? text.replace(own, item) : `${text}\n${item}`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, next, 'utf-8');
+  return { exitCode: 0, output: `heartbeat: ${task} last ran ${today}` };
 }

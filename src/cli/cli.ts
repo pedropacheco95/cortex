@@ -76,7 +76,7 @@ const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['id', 'id next rule|bug [--slug <slug>]'],
   ['hook', 'hook <name>'],
   ['constellation', 'constellation [--port <n>]'],
-  ['tasks', 'tasks rename|plan|register|verify'],
+  ['tasks', 'tasks rename|plan|register|verify|heartbeat'],
   ['pulse-list', 'pulse-list'],
   ['pulse-accept', 'pulse-accept <id>'],
   ['pulse-reject', 'pulse-reject <id>'],
@@ -644,7 +644,21 @@ export async function run(argv: string[]): Promise<number> {
       else console.error(result.output);
       return result.exitCode;
     }
-    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|plan|register|verify`.');
+    if (argv[1] === 'heartbeat') {
+      const { heartbeatTask, HEARTBEAT_USAGE } = await import('./tasks-register.js');
+      const { localToday } = await import('../store/types.js');
+      const at = argv.indexOf('--today');
+      const today = at >= 0 ? argv[at + 1] : localToday();
+      if (today === undefined || !/^\d{4}-\d{2}-\d{2}$/.test(today)) {
+        console.error(HEARTBEAT_USAGE);
+        return 2;
+      }
+      const result = heartbeatTask({ projectRoot: process.cwd(), task: argv[2] ?? '', today });
+      if (result.exitCode === 0) console.log(result.output);
+      else console.error(result.output);
+      return result.exitCode;
+    }
+    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|plan|register|verify|heartbeat`.');
     return 1;
   }
 

@@ -68,8 +68,48 @@ export const RETIRED_CANONICAL_TASK_NAMES: readonly string[] = [
   'cortex-loop-session-observe',
 ];
 
+/** The canonical names of the 4.0 roster (schema §9.1). */
+export const STORE_V4_CANONICAL_NAMES: readonly string[] = ['learn', 'fresh', 'quality'];
+
+/**
+ * What `cortex tasks register` removes on the 4.0 roster: every retired name
+ * plus the five 3.x bundles, which are retired identities there (Rule 1).
+ * `RETIRED_CANONICAL_TASK_NAMES` itself stays free of the bundles, because the
+ * 3.x payload writer deletes what it lists.
+ */
+export const STORE_V4_RETIRED_NAMES: readonly string[] = [
+  ...RETIRED_CANONICAL_TASK_NAMES,
+  ...Object.values(CANONICAL_TASK_NAMES),
+];
+
 /** The five registered canonical task names (suffix set for recognition). */
 const CANONICAL_SET: ReadonlySet<string> = new Set(Object.values(CANONICAL_TASK_NAMES));
+
+/** Every name a project's own task dir may carry, on either roster. */
+const OWN_TASK_SET: ReadonlySet<string> = new Set([...CANONICAL_SET, ...STORE_V4_CANONICAL_NAMES]);
+
+export type TaskRoster = 'store-v4' | '3x';
+
+/**
+ * Which roster a project is on (core-cli.tasks-register Rule 13; the test of
+ * core-cli.sync Rule 16): 4.0 when `cortex/cortex.json` has a date in
+ * `migration.accepted`, or no `migration` field and no 3.x config beside it.
+ */
+export function taskRoster(root: string): TaskRoster {
+  let cfg: unknown;
+  try {
+    cfg = JSON.parse(fs.readFileSync(path.join(root, 'cortex', 'cortex.json'), 'utf-8'));
+  } catch {
+    return '3x';
+  }
+  if (typeof cfg !== 'object' || cfg === null) return '3x';
+  const record = cfg as Record<string, unknown>;
+  if (!('migration' in record)) {
+    return fs.existsSync(path.join(root, '.cortex', 'cortex.config.json')) ? '3x' : 'store-v4';
+  }
+  const accepted = (record['migration'] as { accepted?: unknown } | null)?.accepted;
+  return typeof accepted === 'string' && /^\d{4}-\d{2}-\d{2}/.test(accepted) ? 'store-v4' : '3x';
+}
 
 /**
  * Every unscoped name a Cortex task may exist under on disk from before
@@ -185,11 +225,11 @@ export function resolveScopedTaskName(tasksDir: string, root: string, canonical:
 export function isOwnScopedTask(root: string, dirName: string, tasksDir?: string): boolean {
   const slug = projectTaskSlug(root);
   const hashPrefix = `${slug}-${projectTaskHash(root)}-`;
-  if (dirName.startsWith(hashPrefix) && CANONICAL_SET.has(dirName.slice(hashPrefix.length))) {
+  if (dirName.startsWith(hashPrefix) && OWN_TASK_SET.has(dirName.slice(hashPrefix.length))) {
     return true;
   }
   const plainPrefix = `${slug}-`;
-  if (dirName.startsWith(plainPrefix) && CANONICAL_SET.has(dirName.slice(plainPrefix.length))) {
+  if (dirName.startsWith(plainPrefix) && OWN_TASK_SET.has(dirName.slice(plainPrefix.length))) {
     if (tasksDir !== undefined) {
       const owner = taskDirProjectRoot(path.join(tasksDir, dirName));
       if (owner !== undefined && owner !== path.resolve(root)) return false;
@@ -278,6 +318,9 @@ export function migrateHashScopedTaskDirs(home: string, root: string): string[] 
  * legacy set are never touched.
  */
 export function tasksRename(home: string, root: string): TasksRenameResult {
+  if (taskRoster(root) === 'store-v4') {
+    return { exitCode: 0, output: 'Nothing to rename: cortex tasks register removes retired tasks.' };
+  }
   const baseDir = path.join(home, '.claude', 'scheduled-tasks');
   const lines: string[] = [];
   let moved = 0;
