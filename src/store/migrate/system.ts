@@ -116,7 +116,9 @@ export function isRetiredName(name: string): boolean {
 
 /** True when `dir` is a symbolic link or holds one anywhere under it. */
 export function holdsSymlink(dir: string): boolean {
-  if (fs.lstatSync(dir).isSymbolicLink()) return true;
+  const stat = fs.lstatSync(dir);
+  if (stat.isSymbolicLink()) return true;
+  if (!stat.isDirectory()) return false;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.isSymbolicLink()) return true;
     if (e.isDirectory() && holdsSymlink(path.join(dir, e.name))) return true;

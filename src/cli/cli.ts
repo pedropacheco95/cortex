@@ -71,7 +71,7 @@ import { specsPort } from '../specflow/port.js';
  */
 const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['init', 'init [target] [--force] [--yes] [--no-llm] [--partial] [--profile <name>] [--timeout-ms <n>]'],
-  ['sync', 'sync [target] [--yes]'],
+  ['sync', 'sync [target] [--dry-run]'],
   ['store', 'store init|validate|map|expire|stale|amendments … (the 4.0 store, cortex/)'],
   ['specs', 'specs index [--staged] [--json] | port [--dry-run] [--ticket-pattern <regex>] [--verify] | lint [--json] [--fix]'],
   ['check', 'check --commit-msg <file> | --range <base>..<head> | --pre-push'],
@@ -693,21 +693,16 @@ export async function run(argv: string[]): Promise<number> {
     return 1;
   }
 
-  // `cortex sync` — repair/upgrade an EXISTING project (spec core-cli.sync).
-  // No --force flag (Rule 12: every write is a merge/append/judgment-gated
-  // upgrade, never an unconditional overwrite).
+  // `cortex sync` — the 4.0 update route (spec core-cli.sync Rules 16–27). It
+  // takes no prompt; `--yes` is accepted and ignored so old scripts keep working.
   if (argv[0] === 'sync') {
-    const yes = argv.includes('--yes') || argv.includes('-y');
+    const dryRun = argv.includes('--dry-run');
     const positional = argv.slice(1).filter((a) => !a.startsWith('-'));
     const target = positional[0] ?? '.';
     try {
-      const { sync } = await import('./sync.js');
-      const onProgress = (message: string): void => {
-        process.stderr.write(`cortex sync: ${message}\n`);
-      };
-      const { exitCode, summary } = await sync(target, { yes, onProgress });
-      if (exitCode === 0) console.log(summary);
-      else console.error(summary);
+      const { updateRoute } = await import('./update.js');
+      const { exitCode, out } = await updateRoute(target, { dryRun });
+      for (const line of out) (exitCode === 0 ? console.log : console.error)(line);
       return exitCode;
     } catch (err) {
       console.error(`cortex sync: ${(err as Error).message}`);
@@ -715,11 +710,6 @@ export async function run(argv: string[]): Promise<number> {
     }
   }
 
-  // `cortex init [target] […]` — ONLY on the literal verb (core-cli.init Rule
-  // 18, B-018). The verb is stripped before init's own flags and target are
-  // parsed, so index 0 of `rest` is a real positional — the old fall-through
-  // parsed the whole argv and kept the verb out of the target only because an
-  // absent `--timeout-ms`/`--profile` made `indexOf(-1) + 1 === 0` exclude it.
   if (argv[0] === 'init') {
     const rest = argv.slice(1);
     const force = rest.includes('--force');

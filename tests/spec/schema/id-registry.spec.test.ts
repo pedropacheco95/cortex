@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
+import { sync } from '../../../src/cli/sync.js';
 import * as path from 'path';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 import { makeTmpFixture, cleanup, writeRule, writeBug, rulesDir, bugsDir } from '../../fixtures/validator-tmp.js';
@@ -49,6 +50,13 @@ async function withHomeEnv<T>(homeDir: string, fn: () => Promise<T>): Promise<T>
 }
 
 /** `cortex <argv…>` from inside `root` with the temp home. */
+/** The 3.x `sync()`: the verb is the 4.0 route, and this slice is the 3.x record. */
+async function sync3x(root: string): Promise<number> {
+  const { exitCode, summary } = await sync(root, { home, yes: true });
+  console.log(summary);
+  return exitCode;
+}
+
 async function cortex(root: string, argv: string[]): Promise<number> {
   process.chdir(root);
   try {
@@ -183,7 +191,7 @@ describe('schema.id-registry slice: init scaffolds, id next allocates, sync migr
       fs.rmSync(registryAbs(root));
 
       clearCapture();
-      const first = await cortex(root, ['sync', '--yes']);
+      const first = await sync3x(root);
       const firstOut = logs.join('\n');
       expect(firstOut).toContain('registry created (3 rules, 19 bugs)');
       const created = fs.readFileSync(registryAbs(root), 'utf-8');
@@ -193,7 +201,7 @@ describe('schema.id-registry slice: init scaffolds, id next allocates, sync migr
       expect(await validateJson(root)).toEqual([]);
 
       clearCapture();
-      expect(await cortex(root, ['sync', '--yes'])).toBe(0);
+      expect(await sync3x(root)).toBe(0);
       expect(logs.join('\n')).toContain('registry present');
       expect(fs.readFileSync(registryAbs(root), 'utf-8')).toBe(created);
     },

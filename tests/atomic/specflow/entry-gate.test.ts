@@ -149,6 +149,7 @@ describe('AC: no tracked file still points at the old name', () => {
     path.join('src', 'store', 'migrate', 'system.ts'),
     path.join('src', 'store', 'migrate', 'shipped-hashes.ts'),
     path.join('tests', 'atomic', 'store', 'migrate-accept-v4.test.ts'),
+    path.join('tests', 'spec', 'core-cli', 'sync-update.spec.test.ts'),
     path.join('tests', 'atomic', 'core-cli', 'retired-bundles.test.ts'),
     path.join('tests', 'spec', 'core-cli', 'sync-retirement.spec.test.ts'),
     // The rename's own spec — it necessarily names what was renamed, including

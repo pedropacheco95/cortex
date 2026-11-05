@@ -133,36 +133,12 @@ describe('Rule 12: sync has no --force flag', () => {
       // B-011: this exercises the real CLI dispatcher (no `home` seam on the
       // actual `cortex sync` surface), so `os.homedir()` MUST be redirected
       // to the fixture for the duration of the call — see withHomeEnv.
+      // The verb is the 4.0 route now, which refuses this 3.x project (Rule 16).
       const exitCode = await withHomeEnv(home, () => run(['sync', root, '--force']));
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(3);
     } finally {
       console.log = origLog;
     }
-    cleanTmp(root); cleanTmp(home);
-  }, TEST_TIMEOUT);
-});
-
-// ---------------------------------------------------------------------------
-// B-011 regression: the CLI dispatch never escapes an injected/stubbed home
-// ---------------------------------------------------------------------------
-describe('B-011 regression: cortex sync CLI dispatch honours a stubbed os.homedir(), never the real one', () => {
-  it('scheduled-task payloads land under the stubbed home, not the real one', async () => {
-    const { root, home } = await bootstrap('b011-regression');
-    const logs: string[] = [];
-    const origLog = console.log;
-    console.log = (msg: string) => logs.push(msg);
-    try {
-      const exitCode = await withHomeEnv(home, () => run(['sync', root]));
-      expect(exitCode).toBe(0);
-    } finally {
-      console.log = origLog;
-    }
-    // Proves the dispatch resolved `home` through `os.homedir()` (the only
-    // seam sync.ts reads when no `home` option is passed) rather than some
-    // other hardcoded or cached path: the payloads exist under the stub.
-    const scheduledTasksDir = path.join(home, '.claude', 'scheduled-tasks');
-    expect(fs.existsSync(scheduledTasksDir)).toBe(true);
-    expect(fs.readdirSync(scheduledTasksDir).length).toBe(5);
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 });
