@@ -32,13 +32,13 @@ const run = async (root: string, ...args: string[]): Promise<{ code: number; out
 afterEach(cleanRepos);
 
 describe('Trailers are parsed per schema S10', () => {
-  it('splits at the last # and takes any of the three separators', () => {
+  it('[LOOPS-LEARN-TASK-10] splits at the last # and takes any of the three separators', () => {
     expect(parseAmendsValue('core-cli.init#rule-7 — wording')).toEqual({ spec: 'core-cli.init', item: 'rule-7', reason: 'wording' });
     expect(parseAmendsValue('a#b#c -- x y')).toEqual({ spec: 'a#b', item: 'c', reason: 'x y' });
     expect(parseAmendsValue('a#b - why')).toEqual({ spec: 'a', item: 'b', reason: 'why' });
   });
 
-  it('rejects a target with no item, or no reason', () => {
+  it('[LOOPS-LEARN-TASK-10] rejects a target with no item, or no reason', () => {
     expect(parseAmendsValue('core-cli.init wording')).toBeNull();
     expect(parseAmendsValue('core-cli.init — wording')).toBeNull();
     expect(parseAmendsValue('a#b —')).toBeNull();
@@ -46,7 +46,7 @@ describe('Trailers are parsed per schema S10', () => {
 });
 
 describe('Amendments are recorded once', () => {
-  it('writes one file with two origins and two lines; a second run writes nothing', async () => {
+  it('[LOOPS-LEARN-TASK-11] writes one file with two origins and two lines; a second run writes nothing', async () => {
     const root = repo();
     amend(root, 'core-cli.init#rule-7 — wording');
     amend(root, 'core-cli.init#CORE-CLI-INIT-3 -- renamed');
@@ -66,7 +66,7 @@ describe('Amendments are recorded once', () => {
 });
 
 describe('A later amendment gets a new file', () => {
-  it('writes only the third, leaves the first byte-identical, and stays append-only', async () => {
+  it('[LOOPS-LEARN-TASK-12] writes only the third, leaves the first byte-identical, and stays append-only', async () => {
     const root = repo();
     amend(root, 'a.b#rule-1 — one');
     amend(root, 'a.b#rule-2 — two');
@@ -87,7 +87,7 @@ describe('A later amendment gets a new file', () => {
 });
 
 describe('A malformed trailer is reported, not written', () => {
-  it('names the commit and writes no history file', async () => {
+  it('[LOOPS-LEARN-TASK-13] names the commit and writes no history file', async () => {
     const root = repo();
     amend(root, 'core-cli.init wording');
     const short = git(root, ['rev-parse', '--short=7', 'HEAD']).trim();
@@ -114,7 +114,7 @@ describe('Malformed trailers before specflow.since are not listed', () => {
     return { oldShort, newShort: git(root, ['rev-parse', '--short=7', 'HEAD']).trim(), since };
   }
 
-  it('lists only the newer malformed trailer, and records the older well-formed one', async () => {
+  it('[LOOPS-LEARN-TASK-14] lists only the newer malformed trailer, and records the older well-formed one', async () => {
     const root = repo();
     const { oldShort, newShort, since } = history(root);
     setSince(root, since);
@@ -124,7 +124,7 @@ describe('Malformed trailers before specflow.since are not listed', () => {
     expect(fs.readFileSync(path.join(changes(root), `${TODAY}-spec-amendments.md`), 'utf-8')).toContain('a.b#rule-1 — kept');
   });
 
-  it('lists every malformed trailer with no since, or a since git cannot resolve', async () => {
+  it('[LOOPS-LEARN-TASK-14] lists every malformed trailer with no since, or a since git cannot resolve', async () => {
     for (const since of [undefined, 'no-such-ref']) {
       const root = repo();
       const { oldShort, newShort } = history(root);
@@ -137,7 +137,7 @@ describe('Malformed trailers before specflow.since are not listed', () => {
 });
 
 describe('Without --apply nothing changes', () => {
-  it('lists them and writes nothing', async () => {
+  it('[LOOPS-LEARN-TASK-15] lists them and writes nothing', async () => {
     const root = repo();
     amend(root, 'a.b#rule-1 — one');
     const before = snapshot(path.join(root, 'cortex'));
@@ -148,7 +148,7 @@ describe('Without --apply nothing changes', () => {
 });
 
 describe('Outside a git repository nothing happens', () => {
-  it('prints the line and exits 0', async () => {
+  it('[LOOPS-LEARN-TASK-16] prints the line and exits 0', async () => {
     const root = tmpRepo('nogit');
     const { out, code } = await run(root);
     expect(code).toBe(0);

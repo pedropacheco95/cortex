@@ -21,7 +21,7 @@ function empty(): string {
 const rule = (applies_when: string) => baseFm({ about: 'A rule', applies_when, scope: ['action'], source: 'user@2026-10-12' });
 
 describe('store.map', () => {
-  it('carries the fixed sections in order, with the tie-breaker word for word', () => {
+  it('[STORE-MAP-1] carries the fixed sections in order, with the tie-breaker word for word', () => {
     const map = renderMap(loadStore(empty()));
     const at = (s: string) => map.indexOf(s);
     expect(at('`code/<area>/`')).toBeGreaterThan(-1);
@@ -32,20 +32,20 @@ describe('store.map', () => {
     expect(TIE_BREAKER).toBe('The subject is what the fact constrains. If it constrains two, file it under the one the reader would be working in when it bites, and add an alias in the other.');
   });
 
-  it('prints hard rules in full', () => {
+  it('[STORE-MAP-2] prints hard rules in full', () => {
     const root = empty();
     writeStoreFile(root, 'world/rules/never-push-main.md', rule('always'), 'Never push to main.\n');
     const map = renderMap(loadStore(root));
     expect(map.slice(map.indexOf('## Hard rules'))).toContain('Never push to main.');
   });
 
-  it('does not print rules that do not always apply', () => {
+  it('[STORE-MAP-3] does not print rules that do not always apply', () => {
     const root = empty();
     writeStoreFile(root, 'world/rules/deploys.md', rule('The agent is about to run a command that deploys to production'), 'Ask before deploying.\n');
     expect(renderMap(loadStore(root))).not.toContain('Ask before deploying.');
   });
 
-  it('generates the cast and the terms', () => {
+  it('[STORE-MAP-4] generates the cast and the terms', () => {
     const root = empty();
     writeStoreFile(root, 'world/people/rui.md', baseFm({ about: 'Ops lead at AIF' }));
     writeStoreFile(root, 'world/terms/fare.md', baseFm({ about: 'What a fare is', aliases: ['ticket price'] }));
@@ -56,14 +56,14 @@ describe('store.map', () => {
     expect(terms).toContain('ticket price');
   });
 
-  it('omits empty generated sections', () => {
+  it('[STORE-MAP-5] omits empty generated sections', () => {
     const map = renderMap(loadStore(empty()));
     expect(map).not.toContain('## Cast');
     expect(map).not.toMatch(/^Terms: /m);
     expect(map).not.toContain('## Hard rules');
   });
 
-  it('checks the size', () => {
+  it('[STORE-MAP-6] checks the size', () => {
     const root = empty();
     // The empty map's length plus enough hard-rule lines to reach 75.
     const base = renderMap(loadStore(root)).replace(/\n$/, '').split('\n').length;
@@ -75,7 +75,7 @@ describe('store.map', () => {
     expect(hit?.message).toContain('75 lines (limit 60)');
   });
 
-  it('checks the staleness of MAP', () => {
+  it('[STORE-MAP-7] checks the staleness of MAP', () => {
     const root = empty();
     writeMapAndBlocks(root);
     writeStoreFile(root, 'world/terms/route.md', baseFm({ about: 'What a route is' }));
@@ -84,7 +84,7 @@ describe('store.map', () => {
     expect(hit?.message).toContain('out of date');
   });
 
-  it('is deterministic', () => {
+  it('[STORE-MAP-8] is deterministic', () => {
     const root = empty();
     writeStoreFile(root, 'world/people/rui.md', baseFm({ about: 'Ops lead at AIF' }));
     writeStoreFile(root, 'world/terms/fare.md', baseFm({ about: 'What a fare is', aliases: ['ticket price'] }));

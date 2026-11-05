@@ -31,7 +31,7 @@ function setMigration(root: string, accepted: string | null): void {
 const read = (root: string, f: string) => fs.readFileSync(path.join(root, f), 'utf8');
 
 describe('store.managed-block', () => {
-  it('CLAUDE.md gets the include block', async () => {
+  it('[STORE-MANAGED-BLOCK-1] CLAUDE.md gets the include block', async () => {
     const root = tmpRepo('claude');
     storeInit(root);
     fs.writeFileSync(path.join(root, 'CLAUDE.md'), '# Project\n');
@@ -43,7 +43,7 @@ describe('store.managed-block', () => {
     expect(text).toContain('@cortex/MAP.md');
   });
 
-  it('AGENTS.md gets a copy of MAP', async () => {
+  it('[STORE-MANAGED-BLOCK-2] AGENTS.md gets a copy of MAP', async () => {
     const root = tmpRepo('agents');
     storeInit(root);
     await map(root);
@@ -53,7 +53,7 @@ describe('store.managed-block', () => {
     expect(text).toContain('## Filing a new fact');
   });
 
-  it('leaves content outside the block untouched', async () => {
+  it('[STORE-MANAGED-BLOCK-3] leaves content outside the block untouched', async () => {
     const root = tmpRepo('outside');
     storeInit(root);
     const before = '# Title\n\nIntro text.\n\n';
@@ -66,7 +66,7 @@ describe('store.managed-block', () => {
     expect(text).not.toContain('old body');
   });
 
-  it('leaves a 3.x block alone until acceptance', async () => {
+  it('[STORE-MANAGED-BLOCK-4] leaves a 3.x block alone until acceptance', async () => {
     const root = tmpRepo('v3');
     storeInit(root);
     setMigration(root, null);
@@ -78,7 +78,7 @@ describe('store.managed-block', () => {
     expect(out.join('\n')).toContain('left at v3.x');
   });
 
-  it('--no-agents skips AGENTS.md', async () => {
+  it('[STORE-MANAGED-BLOCK-5] --no-agents skips AGENTS.md', async () => {
     const root = tmpRepo('noagents');
     storeInit(root);
     await map(root, ['--no-agents']);
@@ -113,7 +113,7 @@ function addSkill(root: string): void {
 const stale = (root: string): boolean => checkMapFresh(loadStore(root)).some((f) => f.message.includes('managed block is out of date'));
 
 describe('store.managed-block: the Specs section', () => {
-  it('No specs, no section', async () => {
+  it('[STORE-MANAGED-BLOCK-6] No specs, no section', async () => {
     const root = tmpRepo('nospecs');
     storeInit(root);
     await map(root);
@@ -122,14 +122,14 @@ describe('store.managed-block: the Specs section', () => {
     expect(read(root, 'AGENTS.md')).not.toContain('## Specs');
   });
 
-  it('A project with specs gets stage 1', async () => {
+  it('[STORE-MANAGED-BLOCK-7] A project with specs gets stage 1', async () => {
     const root = withSpecs('stage1');
     await map(root);
     expect(body(read(root, 'CLAUDE.md'))).toBe(`${RULE_2}\n\n${ruleFence(10)}`);
     expect(read(root, 'CLAUDE.md')).not.toContain('run specflow-spec first');
   });
 
-  it('A project with the skill gets stage 2', async () => {
+  it('[STORE-MANAGED-BLOCK-8] A project with the skill gets stage 2', async () => {
     const root = withSpecs('stage2', true);
     await map(root);
     const text = read(root, 'CLAUDE.md');
@@ -137,7 +137,7 @@ describe('store.managed-block: the Specs section', () => {
     expect(text.trimEnd().endsWith('<!-- cortex:end -->')).toBe(true);
   });
 
-  it('AGENTS.md carries the same section', async () => {
+  it('[STORE-MANAGED-BLOCK-9] AGENTS.md carries the same section', async () => {
     const root = withSpecs('agents', true);
     await map(root);
     const section = body(read(root, 'CLAUDE.md')).slice(RULE_2.length + 2);
@@ -146,7 +146,7 @@ describe('store.managed-block: the Specs section', () => {
     expect(agents).toContain(read(root, 'cortex/MAP.md').replace(/\n$/, ''));
   });
 
-  it('Content outside the block stays untouched with the section', async () => {
+  it('[STORE-MANAGED-BLOCK-10] Content outside the block stays untouched with the section', async () => {
     const root = tmpRepo('outside');
     storeInit(root);
     await map(root);
@@ -160,7 +160,7 @@ describe('store.managed-block: the Specs section', () => {
     expect(next.endsWith('<!-- cortex:end -->\n\nafter\n')).toBe(true);
   });
 
-  it("The owner's lines are the plan's lines", () => {
+  it("[STORE-MANAGED-BLOCK-11] The owner's lines are the plan's lines", () => {
     const paragraphs = ruleFence(10).split('\n\n');
     const last = SPECS_SECTION_STAGE1.split('\n').filter((l) => l !== '').slice(-3);
     expect(last).toEqual(paragraphs.slice(-3));
@@ -173,7 +173,7 @@ describe('store.managed-block: the Specs section', () => {
     expect(lines.filter((l) => l.startsWith('A git hook'))).toEqual([]);
   });
 
-  it('A new folder or skill makes the block stale', async () => {
+  it('[STORE-MANAGED-BLOCK-12] A new folder or skill makes the block stale', async () => {
     const root = withSpecs('staleskill');
     await map(root);
     expect(stale(root)).toBe(false);
@@ -183,7 +183,7 @@ describe('store.managed-block: the Specs section', () => {
     expect(stale(root)).toBe(false);
   });
 
-  it('A new `specflow/` folder makes the block stale', async () => {
+  it('[STORE-MANAGED-BLOCK-13] A new `specflow/` folder makes the block stale', async () => {
     const root = tmpRepo('stalefolder');
     storeInit(root);
     await map(root);
@@ -192,7 +192,7 @@ describe('store.managed-block: the Specs section', () => {
     expect(stale(root)).toBe(true);
   });
 
-  it('A 3.x block is still left alone', async () => {
+  it('[STORE-MANAGED-BLOCK-14] A 3.x block is still left alone', async () => {
     const root = withSpecs('still3x');
     setMigration(root, null);
     const text = '<!-- cortex:start v3.4 -->\nold\n<!-- cortex:end -->\n';

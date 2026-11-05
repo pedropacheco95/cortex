@@ -72,7 +72,7 @@ function decidingPlan(root: string): string {
 }
 
 describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
-  it('drops scoped insight by decision, grouped, with the scope count', async () => {
+  it('[STORE-MIGRATE-19] drops scoped insight by decision, grouped, with the scope count', async () => {
     const root = foreign('scoped');
     const { text } = await run(root, []);
     const legacy = readLegacyStore(root)!;
@@ -85,7 +85,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(text).toMatch(/git rm -r -q --ignore-unmatch [^`]*\.cortex\/insight\/scopes[^`]* && rm -rf /);
   });
 
-  it('retires junk files and produces nothing for empty folders', async () => {
+  it('[STORE-MIGRATE-20] retires junk files and produces nothing for empty folders', async () => {
     const root = foreign('junk');
     const { text } = await run(root, []);
     expect(row(text, '.DS_Store')).toContain('not a store file');
@@ -93,7 +93,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(readLegacyStore(root)!.entries.some((e) => e.ref.startsWith('compass/rules 2'))).toBe(false);
   });
 
-  it('migrates a non-markdown atlas source with its raw, byte for byte', async () => {
+  it('[STORE-MIGRATE-21] migrates a non-markdown atlas source with its raw, byte for byte', async () => {
     const root = foreign('html');
     const { code, text } = await run(root, ['--plan', decidingPlan(root), '--apply']);
     expect(code, text).toBe(0);
@@ -101,7 +101,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(fs.readFileSync(path.join(root, 'cortex/history/sources/raw/2026-10-19-brochure.dc.html'))).toEqual(fs.readFileSync(path.join(root, '.cortex/atlas/sources/brochure.dc.html')));
   });
 
-  it('copies every raw of a document, byte for byte, without collisions', async () => {
+  it('[STORE-MIGRATE-22] copies every raw of a document, byte for byte, without collisions', async () => {
     const root = foreign('raws');
     const { code, text } = await run(root, ['--plan', decidingPlan(root), '--apply']);
     expect(code, text).toBe(0);
@@ -114,7 +114,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(text).toMatch(/not written: 0/);
   });
 
-  it('a re-apply with binary raws is byte-identical', async () => {
+  it('[STORE-MIGRATE-23] a re-apply with binary raws is byte-identical', async () => {
     const root = foreign('rerun');
     const plan = decidingPlan(root);
     expect((await run(root, ['--plan', plan, '--apply'])).code).toBe(0);
@@ -124,7 +124,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(bytes(path.join(root, 'cortex'))).toEqual(first);
   });
 
-  it('single-raw sources keep their path', async () => {
+  it('[STORE-MIGRATE-25] single-raw sources keep their path', async () => {
     const root = tmpRepo('single');
     gitInit(root);
     writeLegacyStore(root);
@@ -133,7 +133,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(fs.existsSync(path.join(root, 'cortex/history/sources/raw/2026-01-02-brief.md'))).toBe(true);
   });
 
-  it('maps bug statuses beyond the 3.x enum', async () => {
+  it('[STORE-MIGRATE-26] maps bug statuses beyond the 3.x enum', async () => {
     const root = foreign('statuses');
     const { text } = await run(root, []);
     expect(row(text, 'compass/bugs/B-101-totals-rounded-twice.md')).toContain('history/incidents/2026-09-01-totals-rounded-twice.md');
@@ -144,21 +144,21 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(review).toContain('3.x status open-worked-around');
   });
 
-  it('A bug without affects takes its area from its specs', async () => {
+  it('[STORE-MIGRATE-66] A bug without affects takes its area from its specs', async () => {
     const root = foreign('area');
     fs.writeFileSync(path.join(root, '.cortex/compass/bugs/B-104-late.md'), "---\nid: B-104\ntitle: Late\ntype: crash\nseverity: low\nstatus: open\ndiscovered: '2026-09-04'\nspecs:\n  - billing.late\n---\n\nLate.\n");
     const { text } = await run(root, []);
     expect(row(text, 'compass/bugs/B-104-late.md')).toContain('code/billing/late.md');
   });
 
-  it('never dates a path 0000', async () => {
+  it('[STORE-MIGRATE-27] never dates a path 0000', async () => {
     const root = foreign('nodate');
     const { text } = await run(root, []);
     expect(text).not.toContain('0000-00-00');
     expect(row(text, 'archive/documents/policy')).toMatch(/history\/sources\/\d{4}-\d{2}-\d{2}-policy\.md/);
   });
 
-  it('retires an unknown archive folder as undecided, and copies nothing from it', async () => {
+  it('[STORE-MIGRATE-28] retires an unknown archive folder as undecided, and copies nothing from it', async () => {
     const root = foreign('tooling');
     const { text } = await run(root, []);
     for (const f of ['archive/tooling/probe/README.md', 'archive/tooling/probe/probe.ts']) {
@@ -167,7 +167,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(section(text, 'Undecided')).toContain('archive/tooling/');
   });
 
-  it('refuses apply while unpromoted work is undecided; regenerable never blocks', async () => {
+  it('[STORE-MIGRATE-29] refuses apply while unpromoted work is undecided; regenerable never blocks', async () => {
     const root = foreign('undecided');
     const { code, text } = await run(root, ['--apply']);
     expect(code).toBe(1);
@@ -179,14 +179,14 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(fs.existsSync(path.join(root, 'cortex'))).toBe(false);
   });
 
-  it('prints the no-loss lines', async () => {
+  it('[STORE-MIGRATE-30] prints the no-loss lines', async () => {
     const root = foreign('noloss');
     const { text } = await run(root, []);
     expect(text).toMatch(/^tracked: \d+\/\d+ landed, decided: \d+, regenerable: \d+, undecided: 2$/m);
     expect(text).toMatch(/^untracked: 4\/11 landed, decided: 0, regenerable: 2, undecided: 5$/m);
   });
 
-  it('a plan decides folders, rescues, digests and raws', async () => {
+  it('[STORE-MIGRATE-31] a plan decides folders, rescues, digests and raws', async () => {
     const root = foreign('plan');
     const { code, text } = await run(root, ['--plan', decidingPlan(root), '--apply']);
     expect(code, text).toBe(0);
@@ -208,7 +208,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(validateStore(root, TODAY).findings.filter((f) => f.level === 'error')).toEqual([]);
   });
 
-  it('refuses bad plans', async () => {
+  it('[STORE-MIGRATE-36] refuses bad plans', async () => {
     const root = foreign('badplan');
     const plan = path.join(root, 'plan.json');
     const attempt = async (p: unknown, needle: string) => {
@@ -224,7 +224,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     await attempt({ 'pulse/reports/loop.md': { target: 'now/loop.md', file: path.join(root, 'missing.md') } }, 'missing.md');
   });
 
-  it('lists concept definitions', async () => {
+  it('[STORE-MIGRATE-37] lists concept definitions', async () => {
     const root = foreign('concepts');
     const { text } = await run(root, []);
     const c = section(text, 'Concept definitions (2)');
@@ -232,7 +232,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(c).toContain('insight/scopes/api/concepts/crossing.md: One trip between two ports.');
   });
 
-  it('treats dismissed memory with entries as unpromoted, a template as regenerable', async () => {
+  it('[STORE-MIGRATE-38] treats dismissed memory with entries as unpromoted, a template as regenerable', async () => {
     const root = foreign('dismissed');
     expect(row((await run(root, [])).text, 'pulse/dismissed.md')).toContain('unpromoted work');
     const other = tmpRepo('dismissed-template');
@@ -243,7 +243,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(row((await run(other, [])).text, 'pulse/dismissed.md')).toContain('machinery or regenerable');
   });
 
-  it('checks unknown visibility as public, and --visibility sets it', async () => {
+  it('[STORE-MIGRATE-39] checks unknown visibility as public, and --visibility sets it', async () => {
     const root = foreign('visibility');
     const dry = await run(root, []);
     expect(dry.code).toBe(0);
@@ -255,7 +255,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(applied.text).toMatch(/\d+ visibility findings would be committed to a public \(or unknown-visibility\) repository; review them, or rerun with --redact <file>/);
   });
 
-  it('the dry run names the packaged cortex-migrate skill', async () => {
+  it('[STORE-MIGRATE-24] the dry run names the packaged cortex-migrate skill', async () => {
     const root = foreign('skillpath');
     const { text } = await run(root, []);
     const m = /Agentic step: read (\S+\/skills\/cortex-migrate\/SKILL\.md)/.exec(text);
@@ -263,7 +263,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(fs.existsSync(m![1]!)).toBe(true);
   });
 
-  it('accept retires the 3.x system around the store and deletes nothing', async () => {
+  it('[STORE-MIGRATE-40] accept retires the 3.x system around the store and deletes nothing', async () => {
     const root = foreign('accept');
     const home = tmpRepo('accept-home');
     writeLegacySystem(root, home, (dir) => hashDirectoryContent(dir, [INSTALLED_MARKER_FILENAME]));
@@ -293,7 +293,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(bytes(path.join(root, '.cortex'))).toEqual(before.legacy);
   });
 
-  it('Accept leaves a settings file without cortex hooks unwritten', async () => {
+  it('[STORE-MIGRATE-65] Accept leaves a settings file without cortex hooks unwritten', async () => {
     const root = foreign('accept-nohooks');
     const home = tmpRepo('accept-nohooks-home');
     fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
@@ -306,7 +306,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
 });
 
 describe('store.migrate Rule 14 reaches rescued and digested text (amendment 2026-10-19)', () => {
-  it('redacts a rescued unpromoted file, a digest body, and an edit on an unpromoted ref', async () => {
+  it('[STORE-MIGRATE-32] redacts a rescued unpromoted file, a digest body, and an edit on an unpromoted ref', async () => {
     const root = foreign('redact-rescue');
     fs.writeFileSync(path.join(root, '.cortex/pulse/onboarding-scratch/x/RULES.md'), '# Service rules\n\n1. Never retry an acme write blindly.\n2. Keep the (private) bucket.\n');
     const plan = decidingPlan(root);
@@ -327,7 +327,7 @@ describe('store.migrate Rule 14 reaches rescued and digested text (amendment 202
     expect(red).toContain('pulse/reports/loop.md');
   });
 
-  it('rejects a proposal id that is already an alias of another file', async () => {
+  it('[STORE-MIGRATE-33] rejects a proposal id that is already an alias of another file', async () => {
     const root = foreign('alias-collision');
     const plan = decidingPlan(root);
     fs.writeFileSync(path.join(root, 'd.md'), '## B-101: clash\n\nSame id as a bug.\n');
@@ -338,7 +338,7 @@ describe('store.migrate Rule 14 reaches rescued and digested text (amendment 202
 });
 
 describe('store.migrate Rule 4 amendments (2026-10-19, foreign stores)', () => {
-  it('turns a session URL in a carried origin into session:, strips other URLs, and flags review', async () => {
+  it('[STORE-MIGRATE-34] turns a session URL in a carried origin into session:, strips other URLs, and flags review', async () => {
     const root = foreign('origin-url');
     fs.writeFileSync(path.join(root, '.cortex/archive/documents/contract/metadata.yaml'), 'id: archive.contract\nkind: contract\ningested_at: 2026-02-01T10:00:00Z\norigin: "Claude Code session session_0198AbC (https://claude.ai/code/session_0198AbC) that ran the plan; mirror at https://example.org/a/b.exp (archived)"\n');
     commitAll(root, 'origin with urls');
@@ -354,7 +354,7 @@ describe('store.migrate Rule 4 amendments (2026-10-19, foreign stores)', () => {
     expect(validateStore(root, TODAY).findings.filter((f) => f.level === 'error')).toEqual([]);
   });
 
-  it('drops a stem alias that two migrated files would share, and lists it', async () => {
+  it('[STORE-MIGRATE-35] drops a stem alias that two migrated files would share, and lists it', async () => {
     const root = foreign('stems');
     fs.mkdirSync(path.join(root, '.cortex/pulse/onboarding-scratch/y'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex/pulse/onboarding-scratch/y/notes.md'), 'more notes\n');

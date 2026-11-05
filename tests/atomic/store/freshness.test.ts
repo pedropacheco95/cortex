@@ -24,7 +24,7 @@ async function cli(root: string, args: string[]): Promise<{ code: number; out: s
 const read = (root: string, rel: string) => fs.readFileSync(path.join(root, 'cortex', rel), 'utf8');
 
 describe('store.freshness', () => {
-  it('a now/ item without until is an error', () => {
+  it('[STORE-FRESHNESS-1] a now/ item without until is an error', () => {
     const root = tmpRepo('nountil');
     storeInit(root);
     writeStoreFile(root, 'now/team.md', nowFm(), '- Rui is away\n');
@@ -33,7 +33,7 @@ describe('store.freshness', () => {
     expect(hit!.message).toContain('Rui is away');
   });
 
-  it('an expired item is a warning', () => {
+  it('[STORE-FRESHNESS-2] an expired item is a warning', () => {
     const root = tmpRepo('expired');
     storeInit(root);
     writeStoreFile(root, 'now/team.md', nowFm(), '- Rui is away until: 2026-10-01\n');
@@ -42,7 +42,7 @@ describe('store.freshness', () => {
     expect(hit?.message).toContain('expired');
   });
 
-  it('expiry moves items to history', async () => {
+  it('[STORE-FRESHNESS-3] expiry moves items to history', async () => {
     const root = tmpRepo('move');
     storeInit(root);
     writeStoreFile(root, 'now/team.md', nowFm(), '- Rui is away until: 2026-10-01\n- Ana is away until: 2026-10-30\n');
@@ -56,7 +56,7 @@ describe('store.freshness', () => {
     expect(validateStore(root, '2026-10-14').findings.filter((f) => f.level === 'error')).toEqual([]);
   });
 
-  it('marks and counts unreviewed proposals on expiry', async () => {
+  it('[STORE-FRESHNESS-4] marks and counts unreviewed proposals on expiry', async () => {
     const root = tmpRepo('proposals');
     storeInit(root);
     writeStoreFile(root, 'now/proposals.md', baseFm({ about: 'Proposals waiting for a decision', permanence: 'volatile' }),
@@ -69,7 +69,7 @@ describe('store.freshness', () => {
     expect(rec).toContain('pending decision, expired unreviewed');
   });
 
-  it('a second expiry on the same day writes a new file', async () => {
+  it('[STORE-FRESHNESS-5] a second expiry on the same day writes a new file', async () => {
     const root = tmpRepo('second');
     gitInit(root);
     storeInit(root);
@@ -84,7 +84,7 @@ describe('store.freshness', () => {
     expect(validateStore(root, '2026-10-14').findings.filter((f) => f.check === 'check.append-only')).toEqual([]);
   });
 
-  it('expire without --apply changes nothing', async () => {
+  it('[STORE-FRESHNESS-6] expire without --apply changes nothing', async () => {
     const root = tmpRepo('dry');
     storeInit(root);
     writeStoreFile(root, 'now/team.md', nowFm(), '- Rui is away until: 2026-10-01\n- Ana is away until: 2026-10-30\n');
@@ -94,7 +94,7 @@ describe('store.freshness', () => {
     expect(snapshot(root)).toEqual(before);
   });
 
-  it('reports a changed dependency as stale', async () => {
+  it('[STORE-FRESHNESS-7] reports a changed dependency as stale', async () => {
     const root = tmpRepo('stale');
     gitInit(root);
     storeInit(root);
@@ -109,7 +109,7 @@ describe('store.freshness', () => {
     expect(out).toEqual([`code/hooks/latency.md → src/hooks/pre-read.ts: ${sha} 2026-10-05`]);
   });
 
-  it('does not report an unchanged dependency', async () => {
+  it('[STORE-FRESHNESS-8] does not report an unchanged dependency', async () => {
     const root = tmpRepo('fresh');
     gitInit(root);
     storeInit(root);
@@ -123,7 +123,7 @@ describe('store.freshness', () => {
     expect(out).toEqual(['no stale facts']);
   });
 
-  it('is a no-op outside git', async () => {
+  it('[STORE-FRESHNESS-9] is a no-op outside git', async () => {
     const root = tmpRepo('nogit');
     storeInit(root);
     const { code, out } = await cli(root, ['stale']);
