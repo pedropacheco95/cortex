@@ -25,7 +25,7 @@ The check only works if git calls it, and a hook that silently does not run read
 ## Rules
 
 1. `cortex hooks install` writes the hook files of Rules 3 to 6, makes them executable and sets repository-local `core.hooksPath` to `.githooks`. The second line of every file it writes is `# cortex-managed: cortex hooks install rewrites this file`. It prints each file written. Re-running it changes nothing and exits 0.
-2. **Existing hooks are kept.** `core.hooksPath` makes git stop reading `.git/hooks/`, so each executable hook there, `*.sample` files excepted, keeps running. A Cortex hook of the same name first runs `.git/hooks/<name>` with the same arguments and stdin, and stops with its exit code if it fails. A hook with no Cortex counterpart, such as `post-commit`, gets a passthrough file doing only that.
+2. **Existing hooks are kept.** `core.hooksPath` makes git stop reading `.git/hooks/`, so each executable hook there, `*.sample` files excepted, keeps running. A Cortex hook of the same name first runs `.git/hooks/<name>` with the same arguments and stdin, and stops with its exit code if it fails. A hook with no Cortex counterpart, such as `post-commit`, gets a passthrough file doing only that. Only git's own hook names get one: git never runs any other file there.
 3. **`commit-msg`** runs `cortex check --commit-msg "$1"`.
 4. **`prepare-commit-msg`** first deletes any marker, so a failed amend leaves nothing behind. When git's own command line (`ps -o args= -p $PPID`) holds `--amend`, or an abbreviation down to `--am`, it writes `HEAD`'s hash to `$(git rev-parse --git-path specflow-amend)`, and otherwise does nothing. It always exits 0. `cortex check` reads and deletes that marker, and uses `HEAD^` as its base only when the marker equals `HEAD`.
 5. **`pre-commit` and `pre-merge-commit`** run `cortex specs index --staged`, which rewrites and stages `specflow/INDEX.md` when it differs. Their failures print a warning and exit 0: only the check may refuse (RULES.md rule 6). With no `specflow/` folder they exit 0 silently.
@@ -69,6 +69,12 @@ The check only works if git calls it, and a hook that silently does not run read
 - **Given** an executable `.git/hooks/commit-msg` that exits 1
 - **When** `cortex hooks install` runs and a commit that the check would allow is attempted
 - **Then** the commit is refused with that hook's exit code
+
+### SPECFLOW-GIT-HOOKS-35: A file with no git hook name gets no passthrough
+
+- **Given** an executable `.git/hooks/post-commit 2`
+- **When** `cortex hooks install` runs
+- **Then** `.githooks/post-commit 2` does not exist
 
 ### SPECFLOW-GIT-HOOKS-5: Sample hooks are ignored
 
