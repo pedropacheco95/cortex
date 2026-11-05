@@ -22,7 +22,7 @@ function inOrder(body: string, marks: string[]): void {
 }
 
 describe('specflow.spec-skill', () => {
-  it('The bundle exists, is mirrored and fits the budget', () => {
+  it('[SPECFLOW-SPEC-SKILL-1] The bundle exists, is mirrored and fits the budget', () => {
     expect(text).not.toBe('');
     expect(fs.readFileSync(MIRROR, 'utf8')).toBe(text);
     const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'measure-skill-descriptions.mjs')], { cwd: ROOT, encoding: 'utf8' });
@@ -31,83 +31,83 @@ describe('specflow.spec-skill', () => {
     for (const p of ['spec this', 'brainstorm', 'plan this']) expect(lines[2]).toContain(`"${p}"`);
   });
 
-  it('3.x init and sync never install it', () => {
+  it('[SPECFLOW-SPEC-SKILL-2] 3.x init and sync never install it', () => {
     expect(listSkillBundles(path.join(ROOT, 'skills'))).not.toContain('specflow-spec');
   });
 
-  it('The description and the Iron Law are exact', () => {
+  it('[SPECFLOW-SPEC-SKILL-3] The description and the Iron Law are exact', () => {
     expect(lines[2]).toBe(`description: 'Turn a request that no criterion covers, or that touches more than one spec, into a spec: invariant criteria, constants, a named test per criterion, waves. Code-free. "spec this", "brainstorm", "plan this".'`);
     expect(text).toContain('NO CRITERION WITHOUT A NAMED TEST, AND NO CODE IN THIS SESSION');
     expect(text).toContain('Violating the letter of this law is violating the spirit. If you find yourself constructing a reading under which this does not apply to your case, that construction is the violation.');
   });
 
-  it('The steps appear in order', () => {
+  it('[SPECFLOW-SPEC-SKILL-4] The steps appear in order', () => {
     const body = text.slice(text.indexOf('## Steps, in order'), text.indexOf('## Owner decisions'));
     inOrder(body, ['Check for a conflict', '*Today* section with file paths', 'invariants', 'Name a test', '`not read in the code`', 'Cut the work into waves', 'Record open questions', 'Spec files only', '`specflow-review`']);
   });
 
-  it('Both owner sentences are verbatim', () => {
+  it('[SPECFLOW-SPEC-SKILL-5] Both owner sentences are verbatim', () => {
     expect(lines).toContain(`If the request contradicts a rule, a 'Not this spec' line or a recorded decision the owner made, do not build it: write the spec with the conflict as an open question and stop.`);
     expect(lines).toContain(`If you were told the user can't answer during this run, don't wait: decide, write the decision and its reason under Open questions in the spec, and continue. This never applies to a conflict with a recorded owner decision; that always stops.`);
   });
 
-  it('A promise counts as an owner decision', () => {
+  it('[SPECFLOW-SPEC-SKILL-6] A promise counts as an owner decision', () => {
     const step = lines.find((l) => l.startsWith('1. **Check for a conflict.**'))!;
     for (const n of ['specflow/promises/', 'cortex/world/decisions/', '`Not this spec`']) expect(step).toContain(n);
   });
 
-  it('Constants follow the folder rule', () => {
+  it('[SPECFLOW-SPEC-SKILL-7] Constants follow the folder rule', () => {
     const body = text.slice(text.indexOf('## Where a constant lives'), text.indexOf('## Starting from a spec request'));
     for (const n of ['`constants.md`', 'lowest folder', 'every spec using it', 'its ancestors', '`const:NAME`']) expect(body).toContain(n);
     expect(text).not.toContain('### Constants');
   });
 
-  it('The code-free line holds', () => {
+  it('[SPECFLOW-SPEC-SKILL-8] The code-free line holds', () => {
     expect(text).toContain('no plan file, no code and no test code');
     for (const n of ['fresh implementer', 'per-wave', 'diff review']) expect(text).not.toContain(n);
   });
 
-  it('A criterion amendment commits alone', () => {
+  it('[SPECFLOW-SPEC-SKILL-9] A criterion amendment commits alone', () => {
     const body = text.slice(text.indexOf('## Amending a criterion'), text.indexOf('## Spec shape'));
     for (const n of ['commit it alone with its `Specflow-Amends:` trailer', 'Never edit a test', 'rule (c)', 'a warning', 'same branch', 'tagged test']) expect(body).toContain(n);
   });
 
-  it('The unverified mark is left to INDEX', () => {
+  it('[SPECFLOW-SPEC-SKILL-10] The unverified mark is left to INDEX', () => {
     expect(text).toContain('`not read in the code`');
     expect(text).toContain('`specflow/INDEX.md` computes the `unverified` mark');
     expect(text).not.toContain('(unverified)');
   });
 
-  it('A spec request is consumed only by a written spec', () => {
+  it('[SPECFLOW-SPEC-SKILL-11] A spec request is consumed only by a written spec', () => {
     const body = text.slice(text.indexOf('## Starting from a spec request'), text.indexOf('## Amending a criterion'));
     expect(body).toContain('Once the spec is committed, remove the item');
     expect(body).toContain('An ask refused for a conflict keeps its item');
   });
 
-  it('The old paths are gone', () => {
+  it('[SPECFLOW-SPEC-SKILL-12] The old paths are gone', () => {
     expect(text).toContain('specflow/INDEX.md');
     expect(text).toContain('specflow/impl/');
     expect(text).not.toMatch(/(?<!specflow\/)specs\//);
     expect(text).not.toContain('.specflow/');
   });
 
-  it('The spec shape is shown', () => {
+  it('[SPECFLOW-SPEC-SKILL-13] The spec shape is shown', () => {
     const body = text.slice(text.indexOf('## Spec shape'), text.indexOf('## After review'));
     inOrder(body, ['serves:', '### Rules', '### Not this spec', '### Today', '### Acceptance Criteria', 'test:', '### Waves', '### Open questions']);
   });
 
-  it('A conflict is committed but not reviewed', () => {
+  it('[SPECFLOW-SPEC-SKILL-14] A conflict is committed but not reviewed', () => {
     const body = text.slice(text.indexOf('## Owner decisions'), text.indexOf('## Where a constant lives'));
     expect(body).toContain('The spec holding the conflict is committed by step 8, with the conflict under *Open questions*; `specflow-review` does not follow and no wave starts.');
   });
 
-  it('The rationalizations are kept', () => {
+  it('[SPECFLOW-SPEC-SKILL-15] The rationalizations are kept', () => {
     const body = text.slice(text.indexOf('## Rationalizations'));
     for (const t of ['The change is small, I can just write the code.', 'The value is obvious, I will write it in each criterion.', 'I know what the code does, no need to read it.', 'I will name the tests later.']) expect(body).toContain(t);
     expect(lines.find((l) => l.includes('The value is obvious'))).toContain('`constants.md`');
   });
 
-  it('Every quoted ask is accounted for', () => {
+  it('[SPECFLOW-SPEC-SKILL-16] Every quoted ask is accounted for', () => {
     const sentence = 'Every ask quoted in the request maps to a criterion or is listed under Open questions.';
     expect(lines.map((l) => l.trim())).toContain(sentence);
     const before = text.slice(0, text.indexOf(sentence));
@@ -115,12 +115,12 @@ describe('specflow.spec-skill', () => {
     expect(text.indexOf(sentence)).toBeLessThan(text.indexOf('**Commit the spec alone.**'));
   });
 
-  it('A conflict spec holds no criteria', () => {
+  it('[SPECFLOW-SPEC-SKILL-17] A conflict spec holds no criteria', () => {
     const body = text.slice(text.indexOf('## Owner decisions'), text.indexOf('## Where a constant lives'));
     expect(body).toContain('It holds *Today* and the open question, with no criteria and no waves.');
   });
 
-  it('New criteria join the spec that covers the behaviour', () => {
+  it('[SPECFLOW-SPEC-SKILL-18] New criteria join the spec that covers the behaviour', () => {
     const body = text.slice(text.indexOf('## Spec shape'), text.indexOf('## After review'));
     expect(body).toContain('New criteria go in the spec that already covers the behaviour, and an `implemented` spec drops to `implementing`.');
   });

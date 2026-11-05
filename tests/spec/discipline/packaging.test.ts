@@ -95,7 +95,7 @@ describe('AC: the discipline bundles install from a fresh init', () => {
     });
   }
 
-  it('every installed directory is a real bundle — each carries a SKILL.md', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-5] every installed directory is a real bundle — each carries a SKILL.md', () => {
     for (const name of fs
       .readdirSync(path.join(root, '.claude', 'skills'), { withFileTypes: true })
       .filter((e) => e.isDirectory())
@@ -107,7 +107,7 @@ describe('AC: the discipline bundles install from a fresh init', () => {
     }
   });
 
-  it('listSkillBundles is the shared enumeration, and it excludes SKILL.md-less dirs', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-5] listSkillBundles is the shared enumeration, and it excludes SKILL.md-less dirs', () => {
     const bundles = listSkillBundles(PKG_SKILLS);
     for (const name of REFERENCE_DIRS) expect(bundles).not.toContain(name);
     for (const name of DISCIPLINE_BUNDLES) expect(bundles).toContain(name);

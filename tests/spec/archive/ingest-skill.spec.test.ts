@@ -148,7 +148,7 @@ Author of the brief.
 
 describe('An emitted promotion is acceptable by the gate it targets (B-020)', () => {
   it(
-    'the step 4 template lists as pending, accepts with exit 0, lands with source: and provenance: resolving, registers the rule id, and touches nothing under insight/',
+    '[INSIGHT-PROMOTION-MECHANISM-5] the step 4 template lists as pending, accepts with exit 0, lands with source: and provenance: resolving, registers the rule id, and touches nothing under insight/',
     async () => {
       const root = tmp('accept');
       expect(await cortex(root, ['init', '--no-llm', '--yes'])).toBe(0);

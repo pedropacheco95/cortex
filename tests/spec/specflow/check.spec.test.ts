@@ -70,7 +70,7 @@ function events(root: string): any[] {
 }
 
 describe('specflow.check: rule (a)', () => {
-  it('Code with no test change is refused', () => {
+  it('[SPECFLOW-CHECK-1] Code with no test change is refused', () => {
     const root = repo();
     stage(root, { 'src/a.ts': 'x' });
     const r = run(root);
@@ -79,13 +79,13 @@ describe('specflow.check: rule (a)', () => {
     expect(r.err).toContain('- rule (a) code-needs-test: changes code or config with no test change: src/a.ts. Change or add the test that proves it.');
   });
 
-  it('Code with a test change is allowed', () => {
+  it('[SPECFLOW-CHECK-2] Code with a test change is allowed', () => {
     const root = repo();
     stage(root, { 'src/a.ts': 'x', 'tests/a.test.ts': 'y' });
     expect(run(root).code).toBe(0);
   });
 
-  it('Config counts as code', () => {
+  it('[SPECFLOW-CHECK-3] Config counts as code', () => {
     const root = repo();
     stage(root, { 'package.json': '{}' });
     const r = run(root);
@@ -93,19 +93,19 @@ describe('specflow.check: rule (a)', () => {
     expect(r.err).toContain('package.json');
   });
 
-  it("The store's own config needs no test", () => {
+  it("[SPECFLOW-CHECK-4] The store's own config needs no test", () => {
     const root = repo();
     stage(root, { 'cortex/cortex.json': JSON.stringify({ schemaVersion: '4.0', specflow: { rules: { b: 'warn' } } }) });
     expect(run(root).code).toBe(0);
   });
 
-  it('Docs, specs and hooks need no test', () => {
+  it('[SPECFLOW-CHECK-5] Docs, specs and hooks need no test', () => {
     const root = repo();
     stage(root, { 'README.md': '# r', [SPEC]: BASE.replace('None.', 'Some.'), '.githooks/pre-commit': '#!/bin/sh\n' });
     expect(run(root).code).toBe(0);
   });
 
-  it('A rename counts as a code change', () => {
+  it('[SPECFLOW-CHECK-6] A rename counts as a code change', () => {
     const root = repo();
     git(root, 'mv', 'src/keep.ts', 'src/moved.ts');
     const r = run(root);
@@ -142,7 +142,7 @@ describe('specflow.check: rule (a)', () => {
 describe('specflow.check: rule (d)', () => {
   const edited = text(['Rule one.', 'Rule two.', 'Rule three.'], ['BILLING-REFUNDS-3: Window of 30', 'BILLING-REFUNDS-4: Other']);
 
-  it('A criterion edit with code is refused', () => {
+  it('[SPECFLOW-CHECK-7] A criterion edit with code is refused', () => {
     const root = repo();
     stage(root, { [SPEC]: edited, 'src/a.ts': 'x', 'tests/a.test.ts': 'y' });
     const r = run(root, `m\n\n${TRAILER}\n`);
@@ -150,7 +150,7 @@ describe('specflow.check: rule (d)', () => {
     expect(r.err).toContain('- rule (d) spec-commit-alone: changes spec rules or criteria (billing.refunds#BILLING-REFUNDS-3) together with code or config (src/a.ts).');
   });
 
-  it('A rule edit with code is refused', () => {
+  it('[SPECFLOW-CHECK-8] A rule edit with code is refused', () => {
     const root = repo();
     stage(root, {
       [SPEC]: text(['Rule one.', 'Rule two, reworded.', 'Rule three.'], ['BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-4: Other']),
@@ -163,13 +163,13 @@ describe('specflow.check: rule (d)', () => {
     expect(r.err).toContain('billing.refunds#rule-2');
   });
 
-  it('An Intent edit may share a commit with code', () => {
+  it('[SPECFLOW-CHECK-9] An Intent edit may share a commit with code', () => {
     const root = repo();
     stage(root, { [SPEC]: BASE.replace('Why.', 'Because.'), 'src/a.ts': 'x', 'tests/a.test.ts': 'y' });
     expect(run(root).code).toBe(0);
   });
 
-  it('A promise edit is outside the check', () => {
+  it('[SPECFLOW-CHECK-10] A promise edit is outside the check', () => {
     const root = repo();
     commit(root, { 'specflow/promises/billing/refunds.md': 'a' });
     stage(root, { 'specflow/promises/billing/refunds.md': 'b', 'src/a.ts': 'x', 'tests/a.test.ts': 'y' });
@@ -193,7 +193,7 @@ describe('specflow.check: rule (d)', () => {
 describe('specflow.check: rule (e)', () => {
   const edited = text(['Rule one.', 'Rule two.', 'Rule three.'], ['BILLING-REFUNDS-3: Window of 30', 'BILLING-REFUNDS-4: Other']);
 
-  it('An amendment without a trailer is refused', () => {
+  it('[SPECFLOW-CHECK-11] An amendment without a trailer is refused', () => {
     const root = repo();
     stage(root, { [SPEC]: edited });
     const r = run(root);
@@ -201,7 +201,7 @@ describe('specflow.check: rule (e)', () => {
     expect(r.err).toContain('- rule (e) amend-needs-trailer: changes existing spec text with no trailer for: billing.refunds#BILLING-REFUNDS-3.');
   });
 
-  it('An amendment with its trailer is allowed and recorded', () => {
+  it('[SPECFLOW-CHECK-12] An amendment with its trailer is allowed and recorded', () => {
     const root = repo();
     stage(root, { [SPEC]: edited });
     expect(run(root, `m\n\n${TRAILER}\n`).code).toBe(0);
@@ -218,7 +218,7 @@ describe('specflow.check: rule (e)', () => {
     }
   });
 
-  it('A trailer for another item does not count', () => {
+  it('[SPECFLOW-CHECK-13] A trailer for another item does not count', () => {
     const root = repo();
     stage(root, { [SPEC]: text(['Rule one.', 'Rule two, new.', 'Rule three, new.'], ['BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-4: Other']) });
     const r = run(root, 'm\n\nSpecflow-Amends: billing.refunds#rule-2 — why\n');
@@ -227,7 +227,7 @@ describe('specflow.check: rule (e)', () => {
     expect(r.err).not.toContain('#rule-2.');
   });
 
-  it('A trailer with no reason does not count', () => {
+  it('[SPECFLOW-CHECK-14] A trailer with no reason does not count', () => {
     const root = repo();
     stage(root, { [SPEC]: edited });
     const r = run(root, 'm\n\nSpecflow-Amends: billing.refunds#BILLING-REFUNDS-3\n');
@@ -235,7 +235,7 @@ describe('specflow.check: rule (e)', () => {
     expect(r.err).toContain('rule (e)');
   });
 
-  it('Removing a criterion is an amendment', () => {
+  it('[SPECFLOW-CHECK-15] Removing a criterion is an amendment', () => {
     const root = repo();
     stage(root, { [SPEC]: text(['Rule one.', 'Rule two.', 'Rule three.'], ['BILLING-REFUNDS-4: Other']) });
     const r = run(root);
@@ -243,13 +243,13 @@ describe('specflow.check: rule (e)', () => {
     expect(r.err).toContain('billing.refunds#BILLING-REFUNDS-3');
   });
 
-  it('Adding a criterion needs no trailer', () => {
+  it('[SPECFLOW-CHECK-16] Adding a criterion needs no trailer', () => {
     const root = repo();
     stage(root, { [SPEC]: text(['Rule one.', 'Rule two.', 'Rule three.'], ['BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-4: Other', 'BILLING-REFUNDS-9: New']) });
     expect(run(root).code).toBe(0);
   });
 
-  it('Retiring a spec with code is refused', () => {
+  it('[SPECFLOW-CHECK-17] Retiring a spec with code is refused', () => {
     const root = repo();
     stage(root, { [SPEC]: BASE.replace('status: draft', 'status: retired'), 'src/a.ts': 'x', 'tests/a.test.ts': 'y' });
     const r = run(root, 'm\n\nSpecflow-Amends: billing.refunds#retired — replaced\n');
@@ -257,7 +257,7 @@ describe('specflow.check: rule (e)', () => {
     expect(r.err).toContain('rule (d)');
   });
 
-  it('Retiring a spec needs one trailer', () => {
+  it('[SPECFLOW-CHECK-18] Retiring a spec needs one trailer', () => {
     const root = repo();
     stage(root, { [SPEC]: BASE.replace('status: draft', 'status: retired') });
     expect(run(root, 'm\n\nSpecflow-Amends: billing.refunds#retired — replaced by billing.new\n').code).toBe(0);
@@ -266,7 +266,7 @@ describe('specflow.check: rule (e)', () => {
     expect(r.err).toContain('rule (e)');
   });
 
-  it('Editing a retired spec is not judged', () => {
+  it('[SPECFLOW-CHECK-19] Editing a retired spec is not judged', () => {
     const root = repo();
     commit(root, { [SPEC]: BASE.replace('status: draft', 'status: retired') });
     stage(root, {
@@ -277,13 +277,13 @@ describe('specflow.check: rule (e)', () => {
     expect(run(root).code).toBe(0);
   });
 
-  it('Inserting a rule mid-list amends nothing', () => {
+  it('[SPECFLOW-CHECK-21] Inserting a rule mid-list amends nothing', () => {
     const root = repo();
     stage(root, { [SPEC]: text(['Rule one.', 'Rule new.', 'Rule two.', 'Rule three.'], ['BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-4: Other']) });
     expect(run(root).code).toBe(0);
   });
 
-  it('Inserting a rule and editing a shifted one needs the base number', () => {
+  it('[SPECFLOW-CHECK-22] Inserting a rule and editing a shifted one needs the base number', () => {
     const root = repo();
     stage(root, { [SPEC]: text(['Rule one.', 'Rule new.', 'Rule two.', 'Rule three, reworded.'], ['BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-4: Other']) });
     const r = run(root);
@@ -302,7 +302,7 @@ describe('specflow.check: rule (e)', () => {
     expect(r.err).toContain('billing.refunds#BILLING-REFUNDS-7');
   });
 
-  it('Rules are found on both heading layouts', () => {
+  it('[SPECFLOW-CHECK-23] Rules are found on both heading layouts', () => {
     const root = repo();
     const second = 'specflow/impl/billing/other.spec.md';
     const deep = (r: string, c: string): string =>
@@ -325,13 +325,13 @@ describe('specflow.check: rule (e)', () => {
     expect(run(root).code).toBe(0);
   });
 
-  it('Moving a spec file changes no item', () => {
+  it('[SPECFLOW-CHECK-20] Moving a spec file changes no item', () => {
     const root = repo();
     git(root, 'mv', SPEC, 'specflow/impl/billing/moved.spec.md');
     expect(run(root).code).toBe(0);
   });
 
-  it('The config cannot switch a measured rule off', () => {
+  it('[SPECFLOW-CHECK-31] The config cannot switch a measured rule off', () => {
     const root = repo({ rules: { a: 'off', d: 'off', e: 'off' } });
     stage(root, { 'src/a.ts': 'x' });
     const r = run(root);
@@ -347,7 +347,7 @@ describe('specflow.check: range mode', () => {
     return root;
   }
 
-  it('Range mode replays each commit', () => {
+  it('[SPECFLOW-CHECK-37] Range mode replays each commit', () => {
     const root = branch();
     commit(root, { 'README.md': 'a' }, 'one');
     const second = commit(root, { 'src/a.ts': 'x' }, 'two');
@@ -361,7 +361,7 @@ describe('specflow.check: range mode', () => {
     expect(r.err).toContain(' two\n');
   });
 
-  it("Range mode reads each commit's own trailer", () => {
+  it("[SPECFLOW-CHECK-38] Range mode reads each commit's own trailer", () => {
     const root = branch();
     commit(root, { [SPEC]: BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X') }, `one\n\n${TRAILER}`);
     commit(root, { [SPEC]: BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X').replace('BILLING-REFUNDS-4: Other', 'BILLING-REFUNDS-4: Y') }, 'two');
@@ -371,7 +371,7 @@ describe('specflow.check: range mode', () => {
     expect(r.err).toContain('billing.refunds#BILLING-REFUNDS-4');
   });
 
-  it('Commits before the hooks are not judged', () => {
+  it('[SPECFLOW-CHECK-39] Commits before the hooks are not judged', () => {
     const root = branch();
     const since = commit(root, { 'src/a.ts': 'x' }, 'old code only');
     commit(root, { 'cortex/cortex.json': JSON.stringify({ schemaVersion: '4.0', specflow: { since } }) }, 'hooks');
@@ -381,7 +381,7 @@ describe('specflow.check: range mode', () => {
     expect(r.err).not.toContain('old code only');
   });
 
-  it('An empty range is a pass that says so', () => {
+  it('[SPECFLOW-CHECK-40] An empty range is a pass that says so', () => {
     const root = repo();
     const r = range(root);
     expect(r.code).toBe(0);
@@ -406,14 +406,14 @@ describe('specflow.check: merges, amends, edges', () => {
     }
   }
 
-  it('A clean merge passes', () => {
+  it('[SPECFLOW-CHECK-41] A clean merge passes', () => {
     const root = diverged();
     startMerge(root, 'side');
     expect(run(root, 'Merge').code).toBe(0);
     expect(events(root)[0]).toMatchObject({ kind: 'merge', outcome: 'allowed' });
   });
 
-  it("A merge's own code change is judged", () => {
+  it("[SPECFLOW-CHECK-42] A merge's own code change is judged", () => {
     const root = diverged();
     startMerge(root, 'side');
     stage(root, { 'src/side.ts': 'edited by hand\n' });
@@ -424,7 +424,7 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(r.err).toContain('src/side.ts');
   });
 
-  it('A conflict resolution is not judged', () => {
+  it('[SPECFLOW-CHECK-43] A conflict resolution is not judged', () => {
     const root = repo();
     commit(root, { 'src/a.ts': 'base\n', 'tests/a.test.ts': 'y' });
     git(root, 'checkout', '-q', '-b', 'side');
@@ -445,7 +445,7 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(r.err).toContain(`specflow: allowed (${merge})`);
   });
 
-  it('An amend compares against the parent', () => {
+  it('[SPECFLOW-CHECK-44] An amend compares against the parent', () => {
     const root = repo();
     commit(root, { 'src/a.ts': 'x', 'tests/a.test.ts': 'y' });
     fs.writeFileSync(path.join(root, '.git/specflow-amend'), git(root, 'rev-parse', 'HEAD'));
@@ -462,7 +462,7 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(fs.existsSync(path.join(root, '.git/specflow-amend'))).toBe(false);
   });
 
-  it('The first commit is not judged', () => {
+  it('[SPECFLOW-CHECK-45] The first commit is not judged', () => {
     const root = tmpRepo('first');
     git(root, 'init', '-q', '-b', 'main');
     write(root, 'specflow/x.md', 'x');
@@ -470,7 +470,7 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(run(root).code).toBe(0);
   });
 
-  it('No specflow folder says so', () => {
+  it('[SPECFLOW-CHECK-46] No specflow folder says so', () => {
     const root = tmpRepo('none');
     git(root, 'init', '-q', '-b', 'main');
     stage(root, { 'src/a.ts': 'x' });
@@ -479,7 +479,7 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(r.err).toBe('specflow: no specflow/ folder here; nothing was checked');
   });
 
-  it('An internal error is not a pass', () => {
+  it('[SPECFLOW-CHECK-47] An internal error is not a pass', () => {
     const root = repo();
     write(root, 'cortex/cortex.json', '{ not json');
     const r = run(root);
@@ -487,14 +487,14 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(r.err.startsWith('specflow: internal error in the check (not a verdict on your change):')).toBe(true);
   });
 
-  it('an internal error is logged', () => {
+  it('[SPECFLOW-CHECK-47] an internal error is logged', () => {
     const root = repo();
     write(root, 'cortex/cortex.json', '{ not json');
     run(root);
     expect(events(root).at(-1)).toMatchObject({ outcome: 'error' });
   });
 
-  it('Bad arguments are a usage error', () => {
+  it('[SPECFLOW-CHECK-69] Bad arguments are a usage error', () => {
     const root = repo();
     const out: string[] = [];
     const io = { stdout: (l: string) => out.push(l), stderr: () => {} };
@@ -506,7 +506,7 @@ describe('specflow.check: merges, amends, edges', () => {
 });
 
 describe('specflow.check: the log', () => {
-  it('Every verdict is logged', () => {
+  it('[SPECFLOW-CHECK-74] Every verdict is logged', () => {
     const root = repo();
     stage(root, { 'src/a.ts': 'x' });
     run(root);
@@ -519,7 +519,7 @@ describe('specflow.check: the log', () => {
     expect(Object.keys(e[0]).sort()).toEqual(['kind', 'outcome', 'reasons', 'rules', 'subject', 'ts', 'warned']);
   });
 
-  it('A range writes no amendment record', () => {
+  it('[SPECFLOW-CHECK-75] A range writes no amendment record', () => {
     const root = repo();
     git(root, 'checkout', '-q', '-b', 'work');
     commit(root, { [SPEC]: BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X') }, `one\n\n${TRAILER}`);
@@ -527,7 +527,7 @@ describe('specflow.check: the log', () => {
     expect(fs.existsSync(path.join(root, '.git/specflow/amendments.jsonl'))).toBe(false);
   });
 
-  it('The log is shared by worktrees', () => {
+  it('[SPECFLOW-CHECK-76] The log is shared by worktrees', () => {
     const root = repo();
     const linked = path.join(tmpRepo('wt'), 'linked');
     git(root, 'worktree', 'add', '-q', '-b', 'wt', linked);
@@ -540,7 +540,7 @@ describe('specflow.check: the log', () => {
     expect(git(root, 'status', '--porcelain')).toBe('');
   });
 
-  it('An unwritable log does not change the verdict', () => {
+  it('[SPECFLOW-CHECK-77] An unwritable log does not change the verdict', () => {
     const root = repo();
     write(root, '.git/specflow', 'a file');
     stage(root, { 'README.md': 'a' });
@@ -553,7 +553,7 @@ describe('specflow.check: the log', () => {
 describe('specflow.check: rule (b)', () => {
   const config = (b: string) => ({ rules: { b } });
 
-  it('An untagged changed test is refused when rule (b) is on', () => {
+  it('[SPECFLOW-CHECK-24] An untagged changed test is refused when rule (b) is on', () => {
     const root = repo(config('refuse'));
     stage(root, { 'tests/a.test.ts': "it('adds up', f);\n" });
     const r = run(root);
@@ -561,13 +561,13 @@ describe('specflow.check: rule (b)', () => {
     expect(r.err).toContain('- rule (b) test-needs-tag: test case without a resolving criterion tag: tests/a.test.ts › adds up.');
   });
 
-  it('A tag that resolves passes rule (b)', () => {
+  it('[SPECFLOW-CHECK-25] A tag that resolves passes rule (b)', () => {
     const root = repo(config('refuse'));
     stage(root, { 'tests/a.test.ts': "it('[BILLING-REFUNDS-3] adds up', f);\n" });
     expect(run(root).code).toBe(0);
   });
 
-  it('A tag naming no criterion is refused', () => {
+  it('[SPECFLOW-CHECK-26] A tag naming no criterion is refused', () => {
     const root = repo(config('refuse'));
     stage(root, { 'tests/a.test.ts': "it('[BILLING-REFUNDS-99] adds up', f);\n" });
     const r = run(root);
@@ -575,7 +575,7 @@ describe('specflow.check: rule (b)', () => {
     expect(r.err).toContain('rule (b)');
   });
 
-  it('A second tag naming nothing warns', () => {
+  it('[SPECFLOW-CHECK-27] A second tag naming nothing warns', () => {
     const root = repo(config('refuse'));
     stage(root, { 'tests/a.test.ts': "it('[BILLING-REFUNDS-3, BILLING-REFUNDS-99] adds up', f);\n" });
     const r = run(root);
@@ -583,7 +583,7 @@ describe('specflow.check: rule (b)', () => {
     expect(r.err).toContain('specflow: warning: tag naming no criterion: [BILLING-REFUNDS-99]');
   });
 
-  it('A helper change is not a changed case', () => {
+  it('[SPECFLOW-CHECK-28] A helper change is not a changed case', () => {
     const root = repo();
     commit(root, { 'tests/a.test.ts': "const help = 1;\nit('old', f);\n" });
     commit(root, { 'cortex/cortex.json': JSON.stringify({ schemaVersion: '4.0', specflow: { rules: { b: 'refuse' }, tests: [{ runner: 'vitest', include: ['tests/**/*.test.ts'] }] } }) });
@@ -601,7 +601,7 @@ describe('specflow.check: rule (b)', () => {
     expect(run(root).code).toBe(1);
   });
 
-  it('Rule (b) is off by default', () => {
+  it('[SPECFLOW-CHECK-29] Rule (b) is off by default', () => {
     const root = repo();
     stage(root, { 'tests/a.test.ts': "it('adds up', f);\n" });
     const r = run(root);
@@ -610,7 +610,7 @@ describe('specflow.check: rule (b)', () => {
     expect(r.err).not.toContain('tests/a.test.ts');
   });
 
-  it('Rule (b) at warn does not refuse', () => {
+  it('[SPECFLOW-CHECK-30] Rule (b) at warn does not refuse', () => {
     const root = repo(config('warn'));
     stage(root, { 'tests/a.test.ts': "it('adds up', f);\n" });
     const r = run(root);
@@ -624,7 +624,7 @@ describe('specflow.check: rule (c)', () => {
   const edited = BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: Thirty');
   const msg = `m\n\n${TRAILER}\n`;
 
-  it('A changed criterion with no test warns at commit', () => {
+  it('[SPECFLOW-CHECK-32] A changed criterion with no test warns at commit', () => {
     const root = repo(on);
     stage(root, { [SPEC]: edited });
     const r = run(root, msg);
@@ -632,7 +632,7 @@ describe('specflow.check: rule (c)', () => {
     expect(r.err).toContain('specflow: warning: criterion text changed with no tagged test changed yet: BILLING-REFUNDS-3.');
   });
 
-  it('A test changed in HEAD settles rule (c) at commit', () => {
+  it('[SPECFLOW-CHECK-33] A test changed in HEAD settles rule (c) at commit', () => {
     const root = repo(on);
     commit(root, { 'src/a.ts': 'x', 'tests/a.test.ts': "it('[BILLING-REFUNDS-3] x', f);\n" });
     stage(root, { [SPEC]: edited });
@@ -641,7 +641,7 @@ describe('specflow.check: rule (c)', () => {
     expect(r.err).not.toContain('criterion text changed');
   });
 
-  it('A whitespace edit does not fire rule (c)', () => {
+  it('[SPECFLOW-CHECK-34] A whitespace edit does not fire rule (c)', () => {
     const root = repo(on);
     stage(root, { [SPEC]: BASE.replace('- **Then** ok', '- **Then**\n  ok') });
     const r = run(root);
@@ -649,7 +649,7 @@ describe('specflow.check: rule (c)', () => {
     expect(r.err).toBe('');
   });
 
-  it('A range with no tagged test change is refused by rule (c)', () => {
+  it('[SPECFLOW-CHECK-35] A range with no tagged test change is refused by rule (c)', () => {
     const root = repo(on);
     git(root, 'checkout', '-q', '-b', 'work');
     commit(root, { [SPEC]: edited }, msg);
@@ -659,7 +659,7 @@ describe('specflow.check: rule (c)', () => {
     expect(r.err).toContain('- rule (c) criterion-needs-test: criterion text changed with no tagged test changed: BILLING-REFUNDS-3.');
   });
 
-  it('A range with the tagged test later in the branch passes rule (c)', () => {
+  it('[SPECFLOW-CHECK-36] A range with the tagged test later in the branch passes rule (c)', () => {
     const root = repo(on);
     git(root, 'checkout', '-q', '-b', 'work');
     commit(root, { [SPEC]: edited }, msg);
@@ -678,7 +678,7 @@ describe('specflow.check: rule (c)', () => {
 });
 
 describe('specflow.check: rules (f) and (g)', () => {
-  it('Touched criteria are listed through imports', () => {
+  it('[SPECFLOW-CHECK-70] Touched criteria are listed through imports', () => {
     const root = repo();
     commit(root, {
       'src/a.ts': 'export const a = 1;\n',
@@ -691,7 +691,7 @@ describe('specflow.check: rules (f) and (g)', () => {
     expect(r.err).toContain('specflow: warning: this change touches criteria: BILLING-REFUNDS-3');
   });
 
-  it('A Python import counts', () => {
+  it('[SPECFLOW-CHECK-71] A Python import counts', () => {
     const root = repo({ tests: [{ runner: 'pytest', include: ['**/test_*.py'] }] });
     commit(root, {
       'backend/app/pay.py': 'x = 1\n',
@@ -716,7 +716,7 @@ describe('specflow.check: rules (f) and (g)', () => {
 
   const constants = (v: number): string => `---\nconstants:\n  REFUND_DAYS: ${v}\n---\n`;
 
-  it('A changed constant lists stale files', () => {
+  it('[SPECFLOW-CHECK-72] A changed constant lists stale files', () => {
     const root = repo();
     commit(root, { 'specflow/impl/billing/constants.md': constants(14), 'src/a.ts': 'const d = 14;\n', 'src/b.ts': 'const d = 140;\n' });
     stage(root, { 'specflow/impl/billing/constants.md': constants(30) });
@@ -726,7 +726,7 @@ describe('specflow.check: rules (f) and (g)', () => {
     expect(r.err).not.toContain('src/b.ts');
   });
 
-  it('A very short old value is not searched', () => {
+  it('[SPECFLOW-CHECK-73] A very short old value is not searched', () => {
     const root = repo();
     commit(root, { 'specflow/impl/billing/constants.md': constants(3) });
     stage(root, { 'specflow/impl/billing/constants.md': constants(5) });
@@ -740,7 +740,7 @@ describe('specflow.check: adversarial review findings', () => {
   const edited2 = (base: string): string => base.replace('Rule two.', 'Rule two, reworded.');
   const code = { 'src/b.ts': 'x', 'tests/b.test.ts': 'y' };
 
-  it('A js frontmatter runs nothing and the commit is still judged', () => {
+  it('[SPECFLOW-CHECK-48] A js frontmatter runs nothing and the commit is still judged', () => {
     const root = repo();
     const planted = path.join(root, 'ran.txt');
     stage(root, { 'specflow/impl/billing/evil.spec.md': `---js\nrequire('fs').writeFileSync(${JSON.stringify(planted)}, 'x')\n---\n`, 'src/b.ts': 'x' });
@@ -750,7 +750,7 @@ describe('specflow.check: adversarial review findings', () => {
     expect(r.err).toContain('rule (a)');
   });
 
-  it('A line that only starts with a fence token hides nothing', () => {
+  it('[SPECFLOW-CHECK-49] A line that only starts with a fence token hides nothing', () => {
     const stray = BASE.replace('Why.', '```inline``` is why refunds exist.');
     const root = repo();
     commit(root, { [SPEC]: stray });
@@ -758,7 +758,7 @@ describe('specflow.check: adversarial review findings', () => {
     expect(run(root).code).toBe(1);
   });
 
-  it('A fence never closed hides nothing', () => {
+  it('[SPECFLOW-CHECK-50] A fence never closed hides nothing', () => {
     const stray = BASE.replace('Why.', '```\nopen and never closed');
     const root = repo();
     commit(root, { [SPEC]: stray });
@@ -766,7 +766,7 @@ describe('specflow.check: adversarial review findings', () => {
     expect(run(root).code).toBe(1);
   });
 
-  it('A real fence still hides what it holds', () => {
+  it('[SPECFLOW-CHECK-51] A real fence still hides what it holds', () => {
     const fenced = BASE.replace('Why.', '```\n## Rules\n\n1. Example.\n```');
     const root = repo();
     commit(root, { [SPEC]: fenced });
@@ -780,7 +780,7 @@ describe('specflow.check: adversarial review findings', () => {
     ['indented numbers', (t: string) => t.replace(/^(\d)\. /gm, '  $1. ')],
     ['a closed heading', (t: string) => t.replace('## Rules', '## Rules ##')],
   ] as const) {
-    it(`Rules are seen in every list form: ${name}`, () => {
+    it(`[SPECFLOW-CHECK-63] Rules are seen in every list form: ${name}`, () => {
       const root = repo();
       commit(root, { [SPEC]: form(BASE) }, `m\n\nSpecflow-Amends: billing.refunds#rule-1 — form\nSpecflow-Amends: billing.refunds#rule-2 — form\nSpecflow-Amends: billing.refunds#rule-3 — form\n`);
       stage(root, { [SPEC]: form(edited2(BASE)), ...code });
@@ -790,7 +790,7 @@ describe('specflow.check: adversarial review findings', () => {
     });
   }
 
-  it('Two criteria with one id do not hide an edit', () => {
+  it('[SPECFLOW-CHECK-52] Two criteria with one id do not hide an edit', () => {
     const twin = text(['Rule one.'], ['BILLING-REFUNDS-3: First', 'BILLING-REFUNDS-3: Second']);
     const root = repo();
     commit(root, { [SPEC]: twin }, 'twin\n\nSpecflow-Amends: billing.refunds#retired — x\n');
@@ -798,7 +798,7 @@ describe('specflow.check: adversarial review findings', () => {
     expect(run(root).code).toBe(1);
   });
 
-  it('An added copy of a spec does not hide an edit to the original', () => {
+  it('[SPECFLOW-CHECK-53] An added copy of a spec does not hide an edit to the original', () => {
     const root = repo();
     stage(root, { 'specflow/impl/billing/aaa.spec.md': BASE, [SPEC]: BASE.replace('BILLING-REFUNDS-4: Other', 'BILLING-REFUNDS-4: Edited'), ...code });
     const r = run(root);
@@ -806,14 +806,14 @@ describe('specflow.check: adversarial review findings', () => {
     expect(r.err).toContain('BILLING-REFUNDS-4');
   });
 
-  it('A rule change is named once', () => {
+  it('[SPECFLOW-CHECK-54] A rule change is named once', () => {
     const root = repo();
     stage(root, { [SPEC]: edited2(BASE), ...code });
     const line = run(root).err.split('\n').find((l) => l.includes('rule (d)')) as string;
     expect(line.match(/#rule-2/g)).toHaveLength(1);
   });
 
-  it('A trailer counts only in the last paragraph', () => {
+  it('[SPECFLOW-CHECK-55] A trailer counts only in the last paragraph', () => {
     const edited = BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X');
     for (const message of [TRAILER, `subject\n\n${TRAILER}\nmore words\n\nAnd a closing paragraph.\n`]) {
       const root = repo();
@@ -822,13 +822,13 @@ describe('specflow.check: adversarial review findings', () => {
     }
   });
 
-  it('A comment after the trailers and a scissors line do not hide them', () => {
+  it('[SPECFLOW-CHECK-56] A comment after the trailers and a scissors line do not hide them', () => {
     const root = repo();
     stage(root, { [SPEC]: BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X') });
     expect(run(root, `m\n\n${TRAILER}\n\n# Please enter the commit message\n# ------------------------ >8 ------------------------\ndiff\n`).code).toBe(0);
   });
 
-  it('Every way of marking a case is read by rule (b)', () => {
+  it('[SPECFLOW-CHECK-57] Every way of marking a case is read by rule (b)', () => {
     for (const line of ["it.skipIf(false)('adds up', f);", "it.runIf(true)('adds up', f);", "it.failing('adds up', f);", "xit('adds up', f);", "fit('adds up', f);"]) {
       const root = repo({ rules: { b: 'refuse' } });
       stage(root, { 'tests/a.test.ts': `${line}\n` });
@@ -836,7 +836,7 @@ describe('specflow.check: adversarial review findings', () => {
     }
   });
 
-  it('Cases with one name are told apart', () => {
+  it('[SPECFLOW-CHECK-58] Cases with one name are told apart', () => {
     const two = (c: string): string => `describe('a', () => { it('[BILLING-REFUNDS-3] works', () => { a(); }); });\ndescribe('b', () => { it('[BILLING-REFUNDS-3] works', () => { b(); }); });\n${c}`;
     const root = repo({ rules: { c: 'refuse' } });
     commit(root, { 'tests/a.test.ts': two('') });
@@ -846,7 +846,7 @@ describe('specflow.check: adversarial review findings', () => {
     expect(range(root).code).toBe(1);
   });
 
-  it('A merge of unrelated histories is judged, not an error', () => {
+  it('[SPECFLOW-CHECK-59] A merge of unrelated histories is judged, not an error', () => {
     const root = repo();
     git(root, 'checkout', '-q', '--orphan', 'other');
     git(root, 'rm', '-rfq', '.');
@@ -856,7 +856,7 @@ describe('specflow.check: adversarial review findings', () => {
     expect(run(root, 'Merge').code).toBe(0);
   });
 
-  it('A since not in this clone warns and judges the range', () => {
+  it('[SPECFLOW-CHECK-60] A since not in this clone warns and judges the range', () => {
     const root = repo({ since: 'a'.repeat(40) });
     git(root, 'checkout', '-q', '-b', 'work');
     commit(root, { 'src/b.ts': 'x' }, 'code only');
@@ -865,14 +865,14 @@ describe('specflow.check: adversarial review findings', () => {
     expect(r.err).toContain('specflow: warning: specflow.since');
   });
 
-  it('Removing specflow/ with code is still judged', () => {
+  it('[SPECFLOW-CHECK-61] Removing specflow/ with code is still judged', () => {
     const root = repo();
     git(root, 'rm', '-rq', 'specflow');
     stage(root, { 'src/b.ts': 'x' });
     expect(run(root).code).toBe(1);
   });
 
-  it('Run from a subfolder, the check finds the repository', () => {
+  it('[SPECFLOW-CHECK-62] Run from a subfolder, the check finds the repository', () => {
     const root = repo();
     stage(root, { 'src/b.ts': 'x' });
     const file = path.join(root, '.git', 'TEST_MSG');
@@ -885,7 +885,7 @@ describe('specflow.check: adversarial review findings', () => {
 describe('specflow.check: hooks and config', () => {
   const MANAGED = '#!/bin/sh\n# cortex-managed: cortex hooks install rewrites this file\nexit 1\n';
 
-  it('A hook change warns', () => {
+  it('[SPECFLOW-CHECK-64] A hook change warns', () => {
     const root = repo();
     commit(root, { '.githooks/pre-commit': MANAGED });
     stage(root, { '.githooks/pre-commit': `${MANAGED}# more\n` });
@@ -894,7 +894,7 @@ describe('specflow.check: hooks and config', () => {
     expect(r.err).toContain('specflow: warning: changes a git hook: .githooks/pre-commit');
   });
 
-  it('A hook losing its managed line is refused', () => {
+  it('[SPECFLOW-CHECK-65] A hook losing its managed line is refused', () => {
     const root = repo();
     commit(root, { '.githooks/commit-msg': MANAGED });
     stage(root, { '.githooks/commit-msg': '#!/bin/sh\nexit 0\n' });
@@ -907,7 +907,7 @@ describe('specflow.check: hooks and config', () => {
     expect(run(gone).code).toBe(1);
   });
 
-  it('A hand-written hook may change', () => {
+  it('[SPECFLOW-CHECK-66] A hand-written hook may change', () => {
     const root = repo();
     commit(root, { '.githooks/pre-rebase': 'a' });
     stage(root, { '.githooks/pre-rebase': 'b' });
@@ -916,7 +916,7 @@ describe('specflow.check: hooks and config', () => {
     expect(r.err).toContain('changes a git hook');
   });
 
-  it('Range mode reads config from HEAD', () => {
+  it('[SPECFLOW-CHECK-67] Range mode reads config from HEAD', () => {
     const root = repo();
     git(root, 'checkout', '-q', '-b', 'work');
     const sha = commit(root, { 'src/b.ts': 'x' }, 'code only');
@@ -924,7 +924,7 @@ describe('specflow.check: hooks and config', () => {
     expect(range(root).code).toBe(1);
   });
 
-  it('A bad config value is an internal error', () => {
+  it('[SPECFLOW-CHECK-68] A bad config value is an internal error', () => {
     for (const bad of [{ since: 'HEAD' }, { rules: { b: 'refused' } }]) {
       const root = repo(bad);
       stage(root, { 'README.md': 'x' });

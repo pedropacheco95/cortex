@@ -108,14 +108,14 @@ const NOT_SUBSUMED = `  - id: IR-007
 `;
 
 describe('AC: both branches are exercised by fixtures', () => {
-  it('a register carrying one reconciled and one flagged entry validates clean', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-1] a register carrying one reconciled and one flagged entry validates clean', async () => {
     const root = tmp('both');
     makePairProject(root);
     writeRegister(root, `entries:\n${SUBSUMED}${NOT_SUBSUMED}`);
     expect(await checkViolations(root)).toEqual([]);
   });
 
-  it('the subsumed branch is rejected without its covering spec test', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-5] the subsumed branch is rejected without its covering spec test', async () => {
     const root = tmp('subsumed-stripped');
     makePairProject(root);
     writeRegister(
@@ -126,7 +126,7 @@ describe('AC: both branches are exercised by fixtures', () => {
     expect(messages.some((m) => m.includes('IR-001') && m.includes('requires "covering_spec_test"'))).toBe(true);
   });
 
-  it('the flagged branch is rejected without its filed bug', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-6] the flagged branch is rejected without its filed bug', async () => {
     const root = tmp('flagged-stripped');
     makePairProject(root);
     writeRegister(
@@ -137,7 +137,7 @@ describe('AC: both branches are exercised by fixtures', () => {
     expect(messages.some((m) => m.includes('IR-007') && m.includes('requires "flagged_bug"'))).toBe(true);
   });
 
-  it('the two branches require different evidence — neither satisfies the other', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-5] the two branches require different evidence — neither satisfies the other', async () => {
     const root = tmp('crossed');
     makePairProject(root);
     // A reconciled entry offering only a flagged entry's evidence, and vice versa.

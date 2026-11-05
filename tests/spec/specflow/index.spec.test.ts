@@ -68,7 +68,7 @@ const crit = (m: ReturnType<typeof model>, id: string) =>
   m.specs.flatMap((s) => s.criteria).find((c) => c.id === id);
 
 describe('specflow.index: criteria', () => {
-  it('Criteria are found under a level-2 section', () => {
+  it('[SPECFLOW-INDEX-1] Criteria are found under a level-2 section', () => {
     const root = repo();
     write(root, REFUNDS, TWO);
     expect(run(root, ['--json']).code).toBe(0);
@@ -76,19 +76,19 @@ describe('specflow.index: criteria', () => {
     expect(c.map((x: any) => [x.id, x.title])).toEqual([['BILLING-REFUNDS-1', 'A'], ['BILLING-REFUNDS-2', 'B']]);
   });
 
-  it('Criteria are found under a level-3 section', () => {
+  it('[SPECFLOW-INDEX-2] Criteria are found under a level-3 section', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A', 'BILLING-REFUNDS-2: B'], '', 3) + '\n### Notes\n\n#### Not a criterion\n');
     expect(json(root).specs[0].criteria.map((x: any) => x.id)).toEqual(['BILLING-REFUNDS-1', 'BILLING-REFUNDS-2']);
   });
 
-  it('Several sections are all read', () => {
+  it('[SPECFLOW-INDEX-3] Several sections are all read', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A']) + '\n## Notes\n\n### Not one\n\n## Acceptance Criteria: the 2026 amendment\n\n### BILLING-REFUNDS-2: B\n\n- **Then** ok\n');
     expect(json(root).specs[0].criteria.map((x: any) => x.id)).toEqual(['BILLING-REFUNDS-1', 'BILLING-REFUNDS-2']);
   });
 
-  it('A deeper heading stays inside its criterion', () => {
+  it('[SPECFLOW-INDEX-4] A deeper heading stays inside its criterion', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A\n\n#### Deeper']));
     const m = model(root);
@@ -96,13 +96,13 @@ describe('specflow.index: criteria', () => {
     expect(m.specs[0]?.criteria[0]?.text).toContain('#### Deeper');
   });
 
-  it('Headings of the right level outside the section are not criteria', () => {
+  it('[SPECFLOW-INDEX-5] Headings of the right level outside the section are not criteria', () => {
     const root = repo();
     write(root, REFUNDS, '---\nid: billing.refunds\nstatus: draft\n---\n\n## Rules\n\n### Mobile\n\n## Acceptance Criteria\n\n### BILLING-REFUNDS-1: A\n');
     expect(json(root).specs[0].criteria.map((x: any) => x.title)).toEqual(['A']);
   });
 
-  it('A heading with no id is listed, not numbered', () => {
+  it('[SPECFLOW-INDEX-6] A heading with no id is listed, not numbered', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['A']));
     const r = run(root);
@@ -110,7 +110,7 @@ describe('specflow.index: criteria', () => {
     expect(r.index).toContain('criteria: 0');
   });
 
-  it('Adding a criterion in the middle moves no id', () => {
+  it('[SPECFLOW-INDEX-7] Adding a criterion in the middle moves no id', () => {
     const root = repo();
     write(root, REFUNDS, TWO);
     write(root, 'tests/a.test.ts', "it('[BILLING-REFUNDS-2] x', () => {});\n");
@@ -128,46 +128,46 @@ describe('specflow.index: tags', () => {
     return root;
   }
 
-  it('A test name tag is read', () => {
+  it('[SPECFLOW-INDEX-8] A test name tag is read', () => {
     const c = crit(cases(base(), "it('[BILLING-REFUNDS-1] adds up', () => {});\n"), 'BILLING-REFUNDS-1');
     expect(c?.tests).toHaveLength(1);
     expect(c?.unverified).toBe(false);
   });
 
-  it('Two tags on one test are read', () => {
+  it('[SPECFLOW-INDEX-9] Two tags on one test are read', () => {
     const m = cases(base(), "it('[BILLING-REFUNDS-1, BILLING-REFUNDS-2] x', () => {});\n");
     expect(crit(m, 'BILLING-REFUNDS-1')?.tests).toHaveLength(1);
     expect(crit(m, 'BILLING-REFUNDS-2')?.tests).toHaveLength(1);
   });
 
-  it('A template with a static tag is a tagged case', () => {
+  it('[SPECFLOW-INDEX-10] A template with a static tag is a tagged case', () => {
     const c = crit(cases(base(), 'for (const x of xs) {\n  it(`[BILLING-REFUNDS-1] pays ${x}`, () => {});\n}\n'), 'BILLING-REFUNDS-1');
     expect(c?.tests).toHaveLength(1);
     expect(c?.unverified).toBe(false);
   });
 
-  it('An each name with a static tag is a tagged case', () => {
+  it('[SPECFLOW-INDEX-11] An each name with a static tag is a tagged case', () => {
     const m = cases(base(), "it.each([1, 2])('[BILLING-REFUNDS-1] pays %s', (n) => {});\ntest.each`a\n${1}`('[BILLING-REFUNDS-2] t', () => {});\n");
     expect(crit(m, 'BILLING-REFUNDS-1')?.tests).toHaveLength(1);
     expect(crit(m, 'BILLING-REFUNDS-2')?.tests).toHaveLength(1);
   });
 
-  it('A name built at run time with no static tag is only counted', () => {
+  it('[SPECFLOW-INDEX-12] A name built at run time with no static tag is only counted', () => {
     const m = cases(base(), "it(`${x} pays`, f);\nit.each([[1, ')']])('pays %s', f);\nit(name, f);\n");
     expect(m.untagged).toEqual([]);
     expect(m.dynamicNames).toBe(3);
   });
 
-  it('A tag not at the start is no tag', () => {
+  it('[SPECFLOW-INDEX-13] A tag not at the start is no tag', () => {
     expect(cases(base(), "it('adds up [BILLING-REFUNDS-1]', () => {});\n").untagged).toHaveLength(1);
   });
 
-  it('A describe tag is not read', () => {
+  it('[SPECFLOW-INDEX-14] A describe tag is not read', () => {
     const m = cases(base(), "describe('[BILLING-REFUNDS-1] group', () => { it('x', () => {}); });\n");
     expect(m.untagged.map((t) => t.name)).toEqual(['x']);
   });
 
-  it('A commented-out test is no case', () => {
+  it('[SPECFLOW-INDEX-15] A commented-out test is no case', () => {
     const m = cases(base(), "// it('[BILLING-REFUNDS-1] x', () => {});\n/* it('y', () => {}); */\nconst s = \"it('z', f)\";\n");
     expect(m.untagged).toEqual([]);
     expect(crit(m, 'BILLING-REFUNDS-1')?.tests).toEqual([]);
@@ -181,7 +181,7 @@ describe('specflow.index: tags', () => {
     expect(m.untagged.map((t) => t.name)).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  it('A pytest marker is read', () => {
+  it('[SPECFLOW-INDEX-16] A pytest marker is read', () => {
     const root = repo([PYTEST]);
     write(root, REFUNDS, TWO);
     write(root, 'backend/test_a.py', '@pytest.mark.criterion("BILLING-REFUNDS-1")\ndef test_x():\n    pass\n');
@@ -191,14 +191,14 @@ describe('specflow.index: tags', () => {
     expect(crit(m, 'BILLING-REFUNDS-2')?.tests.map((t) => t.name)).toEqual(['test_y']);
   });
 
-  it('A marker with other decorators between is read', () => {
+  it('[SPECFLOW-INDEX-17] A marker with other decorators between is read', () => {
     const root = repo([PYTEST]);
     write(root, REFUNDS, TWO);
     write(root, 'test_a.py', '@pytest.mark.criterion("BILLING-REFUNDS-1")\n@pytest.mark.slow\ndef test_x():\n    pass\n');
     expect(crit(model(root), 'BILLING-REFUNDS-1')?.tests).toHaveLength(1);
   });
 
-  it('A docstring tag is not a pytest tag', () => {
+  it('[SPECFLOW-INDEX-18] A docstring tag is not a pytest tag', () => {
     const root = repo([PYTEST]);
     write(root, REFUNDS, TWO);
     write(root, 'test_a.py', 'def test_x():\n    """[BILLING-REFUNDS-1] x"""\n');
@@ -219,33 +219,33 @@ describe('specflow.index: unverified and skipped', () => {
     return root;
   }
 
-  it('A criterion with no test is unverified', () => {
+  it('[SPECFLOW-INDEX-19] A criterion with no test is unverified', () => {
     const root = base();
     expect(run(root).index).toContain('**BILLING-REFUNDS-1** A · unverified\n');
     expect(json(root).specs[0].criteria[0].unverified).toBe(true);
   });
 
-  it('A criterion with only a skipped test is unverified', () => {
+  it('[SPECFLOW-INDEX-20] A criterion with only a skipped test is unverified', () => {
     const root = base();
     write(root, 'tests/a.test.ts', "it.skip('[BILLING-REFUNDS-1] x', () => {});\n");
     expect(crit(model(root), 'BILLING-REFUNDS-1')?.unverified).toBe(true);
     expect(run(root).index).toContain('› [BILLING-REFUNDS-1] x (skipped)\n');
   });
 
-  it('A case inside a skipped describe is skipped', () => {
+  it('[SPECFLOW-INDEX-21] A case inside a skipped describe is skipped', () => {
     const m = cases(base(), "describe.skip('g', () => { it('[BILLING-REFUNDS-1] x', () => {}); });\nit('[BILLING-REFUNDS-2] y', () => {});\n");
     expect(crit(m, 'BILLING-REFUNDS-1')?.tests[0]?.skipped).toBe(true);
     expect(crit(m, 'BILLING-REFUNDS-2')?.tests[0]?.skipped).toBe(false);
   });
 
-  it('a pytest skip decorator skips the case', () => {
+  it('[SPECFLOW-INDEX-20] a pytest skip decorator skips the case', () => {
     const root = repo([PYTEST]);
     write(root, REFUNDS, TWO);
     write(root, 'test_a.py', '@pytest.mark.skipif(True, reason="x")\n@pytest.mark.criterion("BILLING-REFUNDS-1")\ndef test_x():\n    pass\n');
     expect(crit(model(root), 'BILLING-REFUNDS-1')?.unverified).toBe(true);
   });
 
-  it('A hand-written mark is ignored', () => {
+  it('[SPECFLOW-INDEX-22] A hand-written mark is ignored', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A (unverified)']));
     const c = crit(cases(root, "it('[BILLING-REFUNDS-1] x', () => {});\n"), 'BILLING-REFUNDS-1');
@@ -253,7 +253,7 @@ describe('specflow.index: unverified and skipped', () => {
     expect(c?.unverified).toBe(false);
   });
 
-  it('Untagged tests are counted', () => {
+  it('[SPECFLOW-INDEX-23] Untagged tests are counted', () => {
     const root = base();
     write(root, 'tests/a.test.ts', "it('[BILLING-REFUNDS-1] x', f);\nit('b', f);\nit('c', f);\n");
     expect(run(root).index).toContain('Untagged tests: 2\n');
@@ -263,7 +263,7 @@ describe('specflow.index: unverified and skipped', () => {
     ]);
   });
 
-  it('An orphan tag is listed', () => {
+  it('[SPECFLOW-INDEX-24] An orphan tag is listed', () => {
     const root = base();
     write(root, 'tests/a.test.ts', "it('[BILLING-REFUNDS-99] x', f);\n");
     expect(run(root).index).toMatch(/## Tags naming no criterion\n\n- \*\*BILLING-REFUNDS-99\*\*/);
@@ -271,13 +271,13 @@ describe('specflow.index: unverified and skipped', () => {
 });
 
 describe('specflow.index: constants and promises', () => {
-  it('Constants are listed', () => {
+  it('[SPECFLOW-INDEX-25] Constants are listed', () => {
     const root = repo();
     write(root, 'specflow/impl/billing/constants.md', '---\nconstants:\n  REFUND_DAYS: 30\n---\n');
     expect(run(root).index).toContain('- `REFUND_DAYS` = `30` · `specflow/impl/billing/constants.md`');
   });
 
-  it('A constant resolves from an ancestor and not from a sibling', () => {
+  it('[SPECFLOW-INDEX-26] A constant resolves from an ancestor and not from a sibling', () => {
     const root = repo();
     write(root, 'specflow/constants.md', '---\nconstants:\n  A: 1\n---\n');
     write(root, 'specflow/impl/billing/constants.md', '---\nconstants:\n  B: 2\n---\n');
@@ -286,14 +286,14 @@ describe('specflow.index: constants and promises', () => {
     expect(resolveConstant(m, 'B', 'specflow/impl/shipping/x.spec.md')).toBeNull();
   });
 
-  it('A spec is grouped under its promise', () => {
+  it('[SPECFLOW-INDEX-27] A spec is grouped under its promise', () => {
     const root = repo();
     write(root, 'specflow/promises/billing/fair.md', '---\nid: P-BILLING-1\ntitle: Fair refunds\nstatus: draft\n---\n');
     write(root, REFUNDS, spec('billing.refunds', [], 'serves: [P-BILLING-1]\n'));
     expect(run(root).index).toMatch(/### P-BILLING-1: Fair refunds\n\n`specflow\/promises\/billing\/fair\.md`\n\n- spec \*\*billing\.refunds\*\*/);
   });
 
-  it('An unconverted spec is grouped under its business spec', () => {
+  it('[SPECFLOW-INDEX-28] An unconverted spec is grouped under its business spec', () => {
     const root = repo();
     write(root, 'specflow/promises/billing/x.business.md', '---\nid: billing.x\nstatus: draft\n---\n\n# X\n');
     write(root, REFUNDS, spec('billing.refunds', [], 'implements: ../../promises/billing/x.business.md\n'));
@@ -308,7 +308,7 @@ describe('specflow.index: constants and promises', () => {
 });
 
 describe('specflow.index: retired', () => {
-  it('A retired spec is listed and counts nowhere else', () => {
+  it('[SPECFLOW-INDEX-29] A retired spec is listed and counts nowhere else', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A']));
     write(root, 'specflow/impl/billing/old.spec.md', spec('billing.old', ['BILLING-OLD-1: A', 'BILLING-OLD-2: B']).replace('status: draft', 'status: retired'));
@@ -322,7 +322,7 @@ describe('specflow.index: retired', () => {
     expect(json(root).retired.map((r: any) => r.id)).toEqual(['billing.old', 'billing.older']);
   });
 
-  it('A retired promise is listed and its spec loses its home', () => {
+  it('[SPECFLOW-INDEX-30] A retired promise is listed and its spec loses its home', () => {
     const root = repo();
     write(root, 'specflow/promises/billing/fair.md', '---\nid: P-BILLING-1\ntitle: Fair\nstatus: retired\n---\n');
     write(root, REFUNDS, spec('billing.refunds', [], 'serves: [P-BILLING-1]\n'));
@@ -332,7 +332,7 @@ describe('specflow.index: retired', () => {
     expect(index).toMatch(/## Specs without a promise\n\n- spec \*\*billing\.refunds\*\*/);
   });
 
-  it('A tag on a retired criterion is an orphan', () => {
+  it('[SPECFLOW-INDEX-31] A tag on a retired criterion is an orphan', () => {
     const root = repo();
     write(root, 'specflow/impl/billing/old.spec.md', spec('billing.old', ['BILLING-OLD-1: A']).replace('status: draft', 'status: retired'));
     write(root, 'tests/a.test.ts', "it('[BILLING-OLD-1] x', f);\n");
@@ -341,7 +341,7 @@ describe('specflow.index: retired', () => {
 });
 
 describe('specflow.index: output', () => {
-  it('The same tree gives the same bytes', () => {
+  it('[SPECFLOW-INDEX-32] The same tree gives the same bytes', () => {
     const root = repo();
     write(root, REFUNDS, TWO);
     const first = run(root).index;
@@ -350,14 +350,14 @@ describe('specflow.index: output', () => {
     expect(first.split('\n')[2]).toContain('GENERATED');
   });
 
-  it('Numbers sort as numbers', () => {
+  it('[SPECFLOW-INDEX-33] Numbers sort as numbers', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-10: T', 'BILLING-REFUNDS-2: W']));
     const { index } = run(root);
     expect(index.indexOf('BILLING-REFUNDS-2')).toBeLessThan(index.indexOf('BILLING-REFUNDS-10'));
   });
 
-  it('Staged mode reads the git index', () => {
+  it('[SPECFLOW-INDEX-34] Staged mode reads the git index', () => {
     const root = repo();
     gitRepo(root);
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A']));
@@ -369,7 +369,7 @@ describe('specflow.index: output', () => {
     expect(staged).not.toContain('BILLING-REFUNDS-2');
   });
 
-  it('Staged mode leaves an unchanged file alone', () => {
+  it('[SPECFLOW-INDEX-35] Staged mode leaves an unchanged file alone', () => {
     const root = repo();
     gitRepo(root);
     write(root, REFUNDS, TWO);
@@ -382,14 +382,14 @@ describe('specflow.index: output', () => {
     expect(git(root, 'status', '--porcelain')).toBe(before);
   });
 
-  it('A missing folder is an error', () => {
+  it('[SPECFLOW-INDEX-36] A missing folder is an error', () => {
     const root = tmpRepo('none');
     const r = run(root);
     expect(r.code).toBe(1);
     expect(r.err).toEqual(['specflow: no specflow/ folder here']);
   });
 
-  it('No test config warns', () => {
+  it('[SPECFLOW-INDEX-37] No test config warns', () => {
     const root = repo(null);
     write(root, 'tests/a.test.ts', "it('x', f);\n");
     const r = run(root);
