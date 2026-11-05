@@ -277,6 +277,54 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 - **When** `cortex specs port --verify` runs
 - **Then** it exits 0
 
+### SPECFLOW-PORT-38: A change beyond ids and links does not reverse
+
+- **Given** an edit that changes line 0 from `a` to `b`
+- **When** reversibility is judged for the text `a` / `c` against `b` / `c`, and against `b` / `d`
+- **Then** the first is reversible and the second is not
+
+### SPECFLOW-PORT-39: The store accepts the specflow key after a port
+
+- **Given** a two-tree project with a test, after `cortex port` has run
+- **When** the store is validated
+- **Then** there is no `check.store-config` finding
+
+### SPECFLOW-PORT-40: Repeated titles are needs-edit even with ids already in the headings
+
+- **Given** a dev spec `billing.twice` whose headings are `BILLING-TWICE-1: A` and `BILLING-TWICE-2: A`, and a test that mentions `billing.twice`
+- **When** `cortex port` runs
+- **Then** the spec is classed `needs-edit`
+
+### SPECFLOW-PORT-41: With no ticket pattern there are no tickets
+
+- **Given** a dev spec that cites `TKT-7`, a test that mentions `TKT-7`, and no ticket pattern
+- **When** `cortex port` runs
+- **Then** the spec `billing.t` is classed `not-mappable`
+
+### SPECFLOW-PORT-42: A bad ticket pattern is a usage error and moves nothing
+
+- **Given** a two-tree project
+- **When** `cortex port --ticket-pattern '('` runs
+- **Then** it exits 2, `git status --porcelain` is empty, and no `.cortex-port` folder exists
+
+### SPECFLOW-PORT-43: Verify names a malformed line
+
+- **Given** a ported project whose `.cortex-port/tagging/billing.jsonl` holds the line `not json` and then a line with only a `file`
+- **When** `cortex port --verify` runs
+- **Then** it exits 1 and its output names `billing.jsonl:1` and `billing.jsonl:2`
+
+### SPECFLOW-PORT-44: An unported project keeps the old paths
+
+- **Given** a project with neither `specflow/INDEX.md` nor `specflow/impl/`
+- **When** `specsRoot`, `businessRoot` and `specsIndexPath` are asked for its trees
+- **Then** they answer under `.specflow/specs` and `.specflow/specs-business`, as `SPECS_REL` and `BUSINESS_REL` state
+
+### SPECFLOW-PORT-45: No Core module names a tree root outside the paths module
+
+- **Given** the sources under `src/`
+- **When** they are searched for a quoted `specs/` or `specs-business/`, or a join of a root with either name
+- **Then** nothing is found
+
 ## Notes
 
 - Promise conversion and the tagging pass are tested in `specflow.onboard-skill`; only their output contracts are here. That includes Rule 15 inside those two steps.

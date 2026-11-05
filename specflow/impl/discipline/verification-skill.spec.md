@@ -112,6 +112,42 @@ This skill is process-agnostic by construction. Nothing in it may require a spec
 - **Then** every file under `skills/verification-before-completion/` is byte-identical to its
   `.claude/skills/` counterpart, and a fresh `cortex init` installs the bundle
 
+### DISCIPLINE-VERIFICATION-SKILL-8: The Iron Law opens the body, before the workflow
+
+- **Given** the shipped skill body
+- **When** the position of `NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE` is read
+- **Then** it is present and starts before character 1500, so only the frontmatter and title come before it
+
+### DISCIPLINE-VERIFICATION-SKILL-9: Fresh evidence means produced this turn, after the last change
+
+- **Given** the shipped skill body
+- **When** it is searched for its definition of fresh evidence
+- **Then** it holds `**after** your most recent change` and `produced in the current turn`
+
+### DISCIPLINE-VERIFICATION-SKILL-10: The gate is a numbered procedure ending in obtain-or-narrow
+
+- **Given** the shipped skill body
+- **When** it is searched for the gate
+- **Then** it has a `## The gate` heading, the steps `**Name the claim.**` and `**Check freshness.**`, and the phrase `obtain the evidence before speaking`
+
+### DISCIPLINE-VERIFICATION-SKILL-11: The table gives a generalisation rule for unlisted claims
+
+- **Given** the shipped skill body
+- **When** it is searched for the rule for claims the table does not list
+- **Then** it holds the question `what observation would be different if this claim were` (case-insensitive)
+
+### DISCIPLINE-VERIFICATION-SKILL-12: A Cortex-layer read is enrichment, never a precondition
+
+- **Given** the shipped skill body
+- **When** it is searched for how Cortex-layer reads are treated
+- **Then** it holds the phrase `enrichment, never a precondition`
+
+### DISCIPLINE-VERIFICATION-SKILL-13: The body carries a worked example of the gate firing
+
+- **Given** the shipped skill body
+- **When** it is searched for a worked example
+- **Then** it has a `## Worked example` heading, and the text from that heading on holds `Go get it` or `Re-run it`
+
 ## Notes
 
 - Verification is atomic + spec tier only: phrase-presence assertions over the shipped body

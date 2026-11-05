@@ -565,6 +565,78 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **When** each row of the Rule 19 table is committed in order with `git commit`, and each branch is then checked with `--range`
 - **Then** every commit and range gets the verdict its row states, in both orders of the amend rows
 
+### SPECFLOW-CHECK-79: A fixture, a snapshot and a generic test path count as a test change
+
+- **Given** a repository with `src/a.ts` staged, together with one of `tests/fixtures/data.json`, `src/__snapshots__/a.snap`, `src/a.spec.ts`, `backend/test_a.py` or `vitest.config.ts`, one case at a time
+- **When** the check runs on the commit
+- **Then** each case exits 0
+
+### SPECFLOW-CHECK-80: More than 8 paths in a refusal line are cut off with an ellipsis
+
+- **Given** nine staged code files `src/f0.ts` to `src/f8.ts` and no test change
+- **When** the check runs
+- **Then** stderr carries `src/f7.ts …` and does not carry `src/f8.ts`
+
+### SPECFLOW-CHECK-81: INDEX.md is ignored by every rule
+
+- **Given** only `specflow/INDEX.md` staged
+- **When** the check runs
+- **Then** it exits 0
+
+### SPECFLOW-CHECK-82: An added criterion with code is refused by rule (d)
+
+- **Given** a staged spec with a new criterion `BILLING-REFUNDS-9: New` beside `BILLING-REFUNDS-3` and `BILLING-REFUNDS-4`, and `src/a.ts` and `tests/a.test.ts` staged
+- **When** the check runs
+- **Then** it exits 1, stderr names `rule (d)` and does not name `rule (e)`
+
+### SPECFLOW-CHECK-83: Every separator of schema S10 is accepted in a trailer
+
+- **Given** a staged edit of `BILLING-REFUNDS-3` and a trailer `Specflow-Amends: billing.refunds#BILLING-REFUNDS-3 <sep> why`, with `<sep>` once `—`, once `-` and once `--`
+- **When** the check runs for each
+- **Then** each exits 0
+
+### SPECFLOW-CHECK-84: A criterion in a later section is judged
+
+- **Given** a spec with a second section `## Acceptance Criteria: amendment` holding `BILLING-REFUNDS-7`, committed, then the criterion's title changed from `Old` to `New` and staged without a trailer
+- **When** the check runs
+- **Then** it exits 1 and stderr names `billing.refunds#BILLING-REFUNDS-7`
+
+### SPECFLOW-CHECK-85: A whitespace edit with code does not fire rule (d) or (e)
+
+- **Given** a staged spec whose only changes are a `**Then**` line wrapped onto a second line and `Rule one.` rewritten as `**Rule**   one.`, with `src/a.ts` and `tests/a.test.ts` staged
+- **When** the check runs
+- **Then** it exits 0
+
+### SPECFLOW-CHECK-86: A merge commit in a range is judged from its parents
+
+- **Given** a branch `side` with a code-only commit, merged into `main` with `--no-ff` after `main` took a README commit
+- **When** `cortex check --range HEAD^..HEAD` judges the merge
+- **Then** the merge is allowed, since it adds nothing over its parents; the same merge with a hand edit to `src/side.ts` and no test is refused
+
+### SPECFLOW-CHECK-87: A stale amend marker is ignored and deleted
+
+- **Given** a committed test change, a file `.git/specflow-amend` holding `deadbeef`, and `src/a.ts` staged with no test
+- **When** the check runs
+- **Then** it exits 1 and `.git/specflow-amend` no longer exists
+
+### SPECFLOW-CHECK-88: A changed case body counts for rule (b) and a whitespace change does not
+
+- **Given** rule (b) at `refuse`, and a committed test `it('old', () => { a(); });`
+- **When** the test is restaged with the body reflowed over three lines, and then with the body `b();`
+- **Then** the first check exits 0 and the second exits 1
+
+### SPECFLOW-CHECK-89: Rule (c) off says nothing in a range
+
+- **Given** rule (c) left at its default, and a branch `work` holding one commit that edits `BILLING-REFUNDS-3` with its trailer
+- **When** `cortex check --range` judges the branch
+- **Then** it exits 0 and stderr does not carry `criterion text changed`
+
+### SPECFLOW-CHECK-90: More than 20 touched criteria are cut off
+
+- **Given** 22 criteria `BILLING-REFUNDS-10` to `BILLING-REFUNDS-31` each tagged in `tests/b.test.ts`, which imports `src/a.ts`, and `src/a.ts` and `tests/c.test.ts` staged
+- **When** the check runs
+- **Then** stderr carries `… and 2 more`
+
 ## Notes
 
 - Labels for the review: (a), (d) measured; (e) measured as a record, new as a refusal; (b), (c), (f), (g) new.

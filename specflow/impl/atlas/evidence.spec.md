@@ -266,6 +266,18 @@ producers; no hook reads evidence yet (step 3).
   the only other writes are the usage report, the promoted thread's status, and the suggestion
   status — nothing under `compass/`, `insight/`, or either spec tree
 
+### ATLAS-EVIDENCE-13: The evidence writer imports no LLM SDK and spawns nothing
+
+- **Given** the source of `src/atlas/evidence.ts`
+- **When** it is read
+- **Then** it matches no import of `@anthropic-ai/`, `openai`, `@google/genai` or `cohere-ai`, and no `child_process`, `node:child_process`, `node-fetch` or `http`/`https` import
+
+### ATLAS-EVIDENCE-14: The evidence writer keeps its file format and never overwrites an index
+
+- **Given** an evidence file written by the shared writer, and an `atlas/evidence/` folder with a hand-edited `_index.md`
+- **When** the file is parsed back, and `ensureEvidenceDir` and `latestEvidenceMatching` run
+- **Then** the file holds its dated path, field order and one trailing newline, its fields round-trip, the index is unchanged, and the newest match is returned
+
 ## Notes
 
 - **Business parent.** This spec lives in `atlas/` because evidence is an atlas artefact, but it

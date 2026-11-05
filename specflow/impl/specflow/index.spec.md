@@ -265,6 +265,30 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 - **When** `cortex specs index` runs
 - **Then** it exits 0, `Untagged tests: 0` is written, and stderr carries the warning
 
+### SPECFLOW-INDEX-38: Every listed test modifier is a case; a regex test call and a variable name are not
+
+- **Given** a test file holding `it.only('a')`, `test.concurrent('b')`, `it.sequential('c')`, `test.fails('d')`, the line `const r = /x(/.test('e');` and `it(name, f);`
+- **When** the index model is built
+- **Then** the untagged cases are `a`, `b`, `c` and `d`, in that order
+
+### SPECFLOW-INDEX-39: A function nested in a test and a def in a docstring are no case
+
+- **Given** a pytest file holding `def test_x():` with a nested `def test_inner():`, and a `def test_doc():` inside a triple-quoted string
+- **When** the index model is built
+- **Then** the untagged cases are `test_x` alone
+
+### SPECFLOW-INDEX-40: A spec with neither link is listed under Specs without a promise
+
+- **Given** a spec `billing.refunds` with no promise link and no business link
+- **When** `cortex index` runs
+- **Then** the index has a `## Specs without a promise` section listing `- spec **billing.refunds**`
+
+### SPECFLOW-INDEX-41: --json writes nothing and prints the model
+
+- **Given** a spec `billing.refunds` with two criteria and no promise
+- **When** `cortex index --json` runs
+- **Then** `INDEX.md` is not written (its text is empty), and stdout is the model whose `counts` are `promises` 0, `specs` 1, `criteria` 2, `tagged` 0, `unverified` 2, `untagged` 0
+
 ## Notes
 
 - **OPEN (owner, G2):** ids in headings. The port writes them there (`specflow.port` Rule 4); positional ids would silently re-point tags when a criterion is inserted. The bench's measured tree had them in the heading.

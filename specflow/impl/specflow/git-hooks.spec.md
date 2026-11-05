@@ -256,6 +256,30 @@ The check only works if git calls it, and a hook that silently does not run read
 - **When** `cortex hooks install` runs
 - **Then** it exits 1 with `specflow: not a git repository`
 
+### SPECFLOW-GIT-HOOKS-36: The read-only check names hand-written hooks and writes nothing
+
+- **Given** hand-written `.githooks/pre-commit`, `.githooks/post-commit` and `.git/hooks/post-commit`, and `core.hooksPath` unset
+- **When** the read-only check `handWrittenHooks` runs
+- **Then** it returns `post-commit` and `pre-commit`, `git status --porcelain` is unchanged, and `core.hooksPath` is still unset
+
+### SPECFLOW-GIT-HOOKS-37: A repository with no commit gets no since
+
+- **Given** a git repository with no commit and a `cortex/cortex.json`
+- **When** `cortex hooks install` runs
+- **Then** it exits 0 and `specflow.since` is not set
+
+### SPECFLOW-GIT-HOOKS-38: An amend of a valid commit passes and leaves no marker
+
+- **Given** the hooks installed, and a first commit `one` of `src/a.ts` with `tests/a.test.ts`
+- **When** `git commit --amend -m "one, reworded"` runs
+- **Then** it exits 0 and `.git/specflow-amend` does not exist afterwards
+
+### SPECFLOW-GIT-HOOKS-39: An existing pre-push hook gets the same stdin
+
+- **Given** an existing `.git/hooks/pre-push` that copies its stdin to a file `seen`, the hooks installed, and a bare `origin`
+- **When** `git push origin main` runs
+- **Then** the file `seen` holds `refs/heads/main`
+
 ## Notes
 
 - Not an item of its own in the plan's batch: the plan lists this command in section 5 with no spec. It is split from `specflow.check` under RULES.md rule 13.

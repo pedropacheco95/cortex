@@ -316,6 +316,48 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
 - **When** `cortex specs lint --fix` runs
 - **Then** those files are unchanged and the findings remain
 
+### SPECFLOW-LINT-45: A bad flag is a usage error
+
+- **Given** a clean tree
+- **When** `cortex lint --nope` runs
+- **Then** it exits 2
+
+### SPECFLOW-LINT-46: A governed_by id kept as a store alias resolves
+
+- **Given** a spec governed by `R-001` and `R-999`, and a store rule that lists `R-001` among its `aliases`
+- **When** `cortex lint` runs
+- **Then** the `check.dev-spec` findings name `R-999` and do not name `R-001`
+
+### SPECFLOW-LINT-47: A Rules section with no numbered item is found
+
+- **Given** a spec whose `## Rules` section holds only the text `Prose.`
+- **When** `cortex lint` runs
+- **Then** a `lint.body` finding says `no numbered item`
+
+### SPECFLOW-LINT-48: An id with another prefix beside the rule prefix is an error
+
+- **Given** a spec `billing.refunds` with criteria `BILLING-REFUNDS-1: A` and `PAY-2: B`
+- **When** `cortex lint` runs
+- **Then** a `lint.criterion-id` finding names `PAY-2`
+
+### SPECFLOW-LINT-49: An unknown runner is an error and an empty include warns
+
+- **Given** `cortex/cortex.json` with one test entry whose runner is `mocha` and whose include is `nothing/**`
+- **When** `cortex lint` runs
+- **Then** `lint.tests-config` reports `error lint.tests-config cortex/cortex.json: unknown runner mocha` and `warning lint.tests-config cortex/cortex.json: include nothing/** matches no file`
+
+### SPECFLOW-LINT-50: A const: in a code span is a mention, not a use
+
+- **Given** a spec whose `**Then**` line holds `const:NOPE` inside a code span, with no constant of that name
+- **When** `cortex lint` runs
+- **Then** there is no `lint.constant-unresolved` finding
+
+### SPECFLOW-LINT-51: Fix moves a constant placed too high down
+
+- **Given** `REFUND_DAYS: 30` defined in `specflow/constants.md` and used as `const:REFUND_DAYS` only by `billing.refunds`
+- **When** `cortex lint --fix` runs
+- **Then** `specflow/impl/billing/constants.md` holds `REFUND_DAYS: 30`
+
 ## Notes
 
 - `lint.literal` is a warning although the plan says "must become a constant": the rule is new, and the review decides whether it earns an error.

@@ -94,6 +94,30 @@ consuming agent is expected to open.
 - **Then** it is skipped by both, through the one shared `listSkillBundles` enumeration rather
   than a filter duplicated per call site
 
+### DISCIPLINE-HARDENING-CONVENTION-6: A skill installed at 4.0 carries no pointer to the convention file
+
+- **Given** the shipped skill body, installed at 4.0
+- **When** it is searched for `skills/_conventions/hardening.md`
+- **Then** the path does not appear
+
+### DISCIPLINE-HARDENING-CONVENTION-7: The convention states the authoring test that keeps strawmen out of the table
+
+- **Given** the hardening convention file
+- **When** it is searched for the authoring test
+- **Then** it holds the phrase `never seen an agent` (case-insensitive)
+
+### DISCIPLINE-HARDENING-CONVENTION-8: A hedged Iron Law is forbidden
+
+- **Given** the hardening convention file
+- **When** it is searched for a ruling on hedged laws
+- **Then** it holds the sentence `A hedged Iron Law is not an Iron Law`
+
+### DISCIPLINE-HARDENING-CONVENTION-9: The convention warns against reflowing grafted lines across line breaks
+
+- **Given** the hardening convention file
+- **When** it is searched for a warning about grafted lines
+- **Then** it holds the sentence `Do not reflow the grafted lines`
+
 ## Notes
 
 - The convention lives inside `skills/` because that is where the bundles it governs live —
