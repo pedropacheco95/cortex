@@ -196,6 +196,19 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(root)).toEqual(before);
   });
 
+  it('init on a .cortex folder with no config refuses and creates no store', async () => {
+    const root = tmpRepo('3xnoconfig');
+    fs.mkdirSync(path.join(root, '.cortex/compass'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex/compass/r.md'), 'rule\n');
+    retired(root);
+    const before = tree(root);
+    const r = await run(root);
+    expect(r.code).toBe(3);
+    expect(r.text).toContain('migrate it first with cortex migrate');
+    expect(fs.existsSync(path.join(root, 'cortex'))).toBe(false);
+    expect(tree(root)).toEqual(before);
+  });
+
   it('init on an accepted project that keeps its old folder runs the update route', async () => {
     const root = tmpRepo('keeps');
     store(root, ACCEPTED);

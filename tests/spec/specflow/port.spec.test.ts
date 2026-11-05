@@ -222,6 +222,43 @@ describe('specflow.port: refusals', () => {
     nothingMoved(root);
   });
 
+  it('A 3.x project beside a bare store is refused', () => {
+    for (const legacy of ['.cortex/cortex.config.json', '.cortex/compass/r.md']) {
+      const root = twoTree({ [legacy]: '{}' }, { config: undefined });
+      write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', visibility: { repo: 'private' } }));
+      git(root, 'add', '-A');
+      git(root, 'commit', '-q', '-m', 'x');
+      const r = port(root);
+      expect(r.code).toBe(1);
+      expect(r.err).toContain('cortex migrate');
+      nothingMoved(root);
+    }
+  });
+
+  it('A migration with no accepted date is refused', () => {
+    for (const migration of [{ from: '3.4' }, { from: '3.4', accepted: 'soon' }]) {
+      const root = twoTree({}, { config: undefined });
+      write(root, 'cortex/cortex.json', JSON.stringify({ schemaVersion: '4.0', migration }));
+      git(root, 'add', '-A');
+      git(root, 'commit', '-q', '-m', 'x');
+      const r = port(root);
+      expect(r.code).toBe(1);
+      expect(r.err).toContain('cortex migrate --accept');
+      nothingMoved(root);
+    }
+  });
+
+  it('An unreadable store file is refused', () => {
+    const root = twoTree({}, { config: undefined });
+    write(root, 'cortex/cortex.json', '{nope');
+    git(root, 'add', '-A');
+    git(root, 'commit', '-q', '-m', 'x');
+    const r = port(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('cortex/cortex.json');
+    nothingMoved(root);
+  });
+
   it('A dirty source is refused', () => {
     const root = twoTree();
     write(root, DEV, 'edited');

@@ -37,6 +37,8 @@ export interface UpdateOptions {
 
 export interface UpdateResult { exitCode: number; out: string[] }
 
+const lstat = (p: string): fs.Stats | undefined => fs.lstatSync(p, { throwIfNoEntry: false });
+
 export type Verb = 'sync' | 'init';
 
 const refused = (verb: Verb, exitCode: number, why: string): UpdateResult => ({ exitCode, out: [`cortex ${verb}: refused — ${why} Nothing was written.`] });
@@ -47,7 +49,7 @@ const refused = (verb: Verb, exitCode: number, why: string): UpdateResult => ({ 
  * neither store, and anything else a refusal.
  */
 export function storeGate(root: string, verb: Verb): 'route' | 'new' | UpdateResult {
-  const legacy = fs.existsSync(path.join(root, '.cortex', 'cortex.config.json'));
+  const legacy = lstat(path.join(root, '.cortex'))?.isDirectory() === true;
   const cfgPath = path.join(storeDir(root), STORE_CONFIG);
   if (fs.existsSync(cfgPath)) {
     let cfg: Record<string, unknown>;
@@ -79,7 +81,6 @@ export function packageRefusal(verb: Verb, pkg: string): UpdateResult | null {
   return lacking.length ? refused(verb, 1, `this package lacks ${lacking.join(', ')}.`) : null;
 }
 
-const lstat = (p: string): fs.Stats | undefined => fs.lstatSync(p, { throwIfNoEntry: false });
 
 /** Rule 18. A bundle is renamed away first, so an interrupted removal never leaves part of one under its name. */
 function removeRetired(skillsDir: string, pkg: string, dry: boolean, say: (l: string) => void): void {

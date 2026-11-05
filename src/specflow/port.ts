@@ -10,6 +10,7 @@ import { execFileSync, spawnSync } from 'child_process';
 import fg from 'fast-glob';
 import picomatch from 'picomatch';
 import { PORT_LAYOUTS, type PortLayout as Layout } from '../paths.js';
+import { isAcceptedDate } from '../store/layout.js';
 import { buildModel, readConfig, selectTestFiles, testCases, type SpecflowConfig, type TestEntry } from './model/model.js';
 import { criteriaSection, criterionPrefix, frontmatter, parseCriteria, splitHeading } from './model/spec.js';
 import { workTree } from './model/tree.js';
@@ -135,8 +136,16 @@ function refusal(root: string): string | { layout: Layout } {
     if (fs.existsSync(path.join(root, t))) return `${t}/ already exists`;
   }
   if (!fs.existsSync(path.join(root, 'cortex/cortex.json'))) return 'no cortex/cortex.json; run cortex store init first';
-  const store = JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf-8')) as { migration?: { accepted?: unknown } };
-  if (store.migration?.accepted === null && fs.existsSync(path.join(root, '.cortex/cortex.config.json'))) {
+  let store: { migration?: { accepted?: unknown } };
+  try {
+    store = JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf-8')) as { migration?: { accepted?: unknown } };
+  } catch {
+    return 'cortex/cortex.json is not valid';
+  }
+  if (store.migration === undefined && fs.existsSync(path.join(root, '.cortex'))) {
+    return 'this project is on the 3.x store; migrate it first with cortex migrate';
+  }
+  if (store.migration !== undefined && !isAcceptedDate(store.migration?.accepted)) {
     return 'the migration is not accepted; finish it with cortex migrate --accept first';
   }
   const dirty = git(root, 'status', '--porcelain', '--', layout.dev, layout.business, ...(layout.staleIndex ? [layout.staleIndex] : []));

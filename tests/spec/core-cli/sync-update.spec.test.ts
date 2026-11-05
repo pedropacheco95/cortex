@@ -137,6 +137,19 @@ describe('core-cli.sync Rule 16: which project gets what', () => {
     expect(tree(root)).toEqual(before);
   });
 
+  it('A .cortex folder with no config is told to migrate', async () => {
+    const root = tmpRepo('3xnoconfig');
+    fs.mkdirSync(path.join(root, '.cortex/compass'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.cortex/compass/r.md'), 'rule\n');
+    bundle(root, 'specflow-develop', 'dev\n', true);
+    storeInit(root);
+    const before = tree(root);
+    const r = await run(root);
+    expect(r.code).toBe(3);
+    expect(r.text).toContain('migrate it first with cortex migrate');
+    expect(tree(root)).toEqual(before);
+  });
+
   it('An unaccepted migration is told to finish', async () => {
     const root = accepted('unaccepted');
     const p = path.join(root, 'cortex/cortex.json');
