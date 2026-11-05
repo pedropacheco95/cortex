@@ -20,12 +20,58 @@ export const CLAUDE_BLOCK_BODY = [
   '@cortex/MAP.md',
 ].join('\n');
 
-export function claudeBlock(): string {
-  return `${BLOCK_START}\n${CLAUDE_BLOCK_BODY}\n${BLOCK_END}`;
+/** The `## Specs` section, stage 1 (Rule 10). The owner's wording: tests compare it byte for byte. */
+export const SPECS_SECTION_STAGE1 = [
+  '## Specs',
+  '',
+  '`specflow/` holds the specs. `specflow/promises/<area>/` has short promises (`P-…` ids) on what the product guarantees.',
+  '`specflow/impl/<area>/` has implementation specs: their rules are numbered under a Rules heading, and their acceptance',
+  'criteria carry stable ids (`PAY-REFUND-3`). Spec text that points at `.specflow/specs/<a>/<b>.spec.md` or',
+  '`.specflow/specs-business/…` means the same file under `specflow/impl/` or `specflow/promises/`. A value more than one',
+  'spec uses is a constant in a `constants.md`; a spec sees its own folder\'s and its ancestors\' constants, no others.',
+  'A test cites a criterion by its id: vitest `it(\'[PAY-REFUND-3] …\')`, pytest `@pytest.mark.criterion("PAY-REFUND-3")`.',
+  '`specflow/INDEX.md` (criteria, their tests, `unverified` marks, constants) is generated; never edit it.',
+  '',
+  'A finished change updates or adds the criterion for every behaviour it changes or adds, and a test that cites it.',
+  '',
+  'A git hook (`.githooks/commit-msg`) checks every commit. It runs no tests. It refuses:',
+  '',
+  '- a commit that changes code or config (anything outside `specflow/`, `cortex/`, tests, `.githooks/` and `.md` files) without changing a test;',
+  '- a commit that changes a spec\'s rules or criteria together with code or config. Commit the spec change on its own,',
+  '  before or after the code;',
+  '- a commit that changes the text of an existing rule or criterion without a trailer',
+  '  `Specflow-Amends: <spec-id>#<rule-7 or criterion id> — <reason>`, one per item. A new rule or criterion needs none.',
+  '',
+  'Merge commits are checked the same way on what the merge itself changes.',
+  '',
+  'Specs say what should hold; code says what does. Before changing code, find what produces the behaviour today and what depends on it. If a criterion describes what you change, change the criterion in the same change.',
+  '',
+  'An unverified criterion is a claim about the code, not a fact; check the code.',
+  '',
+  'If the request contradicts a rule, a \'Not this spec\' line or a recorded decision the owner made, do not build it: write the spec with the conflict as an open question and stop.',
+].join('\n');
+
+/** The two paragraphs stage 2 adds (Rule 11). */
+export const SPECS_SECTION_STAGE2: readonly [string, string] = [
+  'If the request creates a behaviour no criterion covers, or touches more than one spec, do not write code: run specflow-spec first and stop for review.',
+  'If you were told the user can\'t answer during this run, don\'t wait: decide, write the decision and its reason under Open questions in the spec, and continue. This never applies to a conflict with a recorded owner decision; that always stops.',
+];
+
+/** The section this project's blocks carry, or null with no `specflow/` (Rules 8 and 9). */
+export function specsSection(root: string): string | null {
+  if (!fs.statSync(path.join(root, 'specflow'), { throwIfNoEntry: false })?.isDirectory()) return null;
+  if (!fs.existsSync(path.join(root, '.claude', 'skills', 'specflow-spec', 'SKILL.md'))) return SPECS_SECTION_STAGE1;
+  return [SPECS_SECTION_STAGE1, ...SPECS_SECTION_STAGE2].join('\n\n');
 }
 
-export function agentsBlock(mapText: string): string {
-  return `${BLOCK_START}\n## Cortex\n${mapText.replace(/\n$/, '')}\n${BLOCK_END}`;
+const withSection = (body: string, section: string | null): string => (section === null ? body : `${body}\n\n${section}`);
+
+export function claudeBlock(section: string | null = null): string {
+  return `${BLOCK_START}\n${withSection(CLAUDE_BLOCK_BODY, section)}\n${BLOCK_END}`;
+}
+
+export function agentsBlock(mapText: string, section: string | null = null): string {
+  return `${BLOCK_START}\n${withSection(`## Cortex\n${mapText.replace(/\n$/, '')}`, section)}\n${BLOCK_END}`;
 }
 
 /** The version of the file's existing block (`"3.4"`, `"4.0"`), `""` for an unversioned one, null when it has none. */
@@ -84,8 +130,9 @@ export function writeMapAndBlocks(root: string, opts: MapWriteOptions = {}): Map
   res.lines.push(`cortex/${MAP_FILE}: written (${map.replace(/\n$/, '').split('\n').length} lines)`);
   if (opts.mapOnly) return res;
   const accepted = migrationAccepted(store);
-  writeBlockFile(root, 'CLAUDE.md', claudeBlock(), accepted, opts.force ?? false, res);
-  if (!opts.noAgents) writeBlockFile(root, 'AGENTS.md', agentsBlock(map), accepted, opts.force ?? false, res);
+  const section = specsSection(root);
+  writeBlockFile(root, 'CLAUDE.md', claudeBlock(section), accepted, opts.force ?? false, res);
+  if (!opts.noAgents) writeBlockFile(root, 'AGENTS.md', agentsBlock(map, section), accepted, opts.force ?? false, res);
   return res;
 }
 
@@ -95,7 +142,8 @@ export function checkMapFresh(store: Store): Finding[] {
   const map = renderMap(store);
   // No MAP.md yet (a fresh `store init`) is not stale: there is nothing to differ.
   if (store.mapText !== null && store.mapText !== map) out.push(finding('warning', 'check.map-fresh', 'MAP.md', 'MAP.md is out of date; run cortex store map'));
-  for (const [name, block] of [['CLAUDE.md', claudeBlock()], ['AGENTS.md', agentsBlock(map)]] as const) {
+  const section = specsSection(store.root);
+  for (const [name, block] of [['CLAUDE.md', claudeBlock(section)], ['AGENTS.md', agentsBlock(map, section)]] as const) {
     const p = path.join(store.root, name);
     if (!fs.existsSync(p)) continue;
     const text = fs.readFileSync(p, 'utf8');

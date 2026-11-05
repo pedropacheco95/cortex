@@ -12,6 +12,7 @@ import { migrateCli } from '../../../src/store/migrate/cli.js';
 import { FINAL_BUNDLES, RETIRED_SKILL_NAMES, SHIPPED_3X_HASHES, isRetiredName } from '../../../src/store/migrate/system.js';
 import { hashDirectoryContent, INSTALLED_MARKER_FILENAME, writeInstalledMarker } from '../../../src/cli/scaffold.js';
 import { storeInit } from '../../../src/store/init.js';
+import { SPECS_SECTION_STAGE2 } from '../../../src/store/managed-block.js';
 import { migrationAccepted, loadStore } from '../../../src/store/layout.js';
 import { tmpRepo, cleanRepos, gitInit, commitAll } from '../../fixtures/store.js';
 import { writeLegacyStore } from '../../fixtures/legacy-store.js';
@@ -183,6 +184,16 @@ describe('store.migrate Rule 18: bundles', () => {
     }
     expect(fs.existsSync(path.join(root, '.claude/skills/cortex-migrate'))).toBe(false);
     expect(fs.readdirSync(path.join(root, '.claude/skills')).filter((n) => n.startsWith('.cortex-tmp-'))).toEqual([]);
+  });
+
+  it('Accept ends at the right block stage', async () => {
+    const root = project('stage');
+    fs.mkdirSync(path.join(root, 'specflow'));
+    const { code, text } = await accept(root, pkg());
+    expect(code, text).toBe(0);
+    expect(fs.existsSync(path.join(root, '.claude/skills/specflow-spec/SKILL.md'))).toBe(true);
+    const block = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf8');
+    for (const line of SPECS_SECTION_STAGE2) expect(block).toContain(line);
   });
 
   it("A re-run never overwrites a project's edit", async () => {
