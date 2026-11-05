@@ -90,6 +90,15 @@ describe('specflow.git-hooks: install', () => {
     expect(git(root, ['status', '--porcelain']).stdout).toBe('');
   });
 
+  it('A file with no git hook name gets no passthrough', () => {
+    const root = repo();
+    write(root, '.git/hooks/post-commit 2', '#!/bin/sh\n', 0o755);
+    write(root, '.git/hooks/post-commit', '#!/bin/sh\n', 0o755);
+    install(root);
+    expect(fs.existsSync(path.join(root, '.githooks/post-commit 2'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '.githooks/post-commit'))).toBe(true);
+  });
+
   it('Sample hooks are ignored', () => {
     const root = repo();
     write(root, '.git/hooks/pre-rebase.sample', '#!/bin/sh\n', 0o755);

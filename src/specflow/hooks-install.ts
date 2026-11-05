@@ -9,6 +9,14 @@ import type { SpecsIO } from './index.js';
 
 export const MANAGED_LINE = '# cortex-managed: cortex hooks install rewrites this file';
 const HOOKS_DIR = '.githooks';
+/** Every hook name git runs (githooks(5)); no other file in a hooks folder is ever run. */
+const GIT_HOOKS = new Set([
+  'applypatch-msg', 'pre-applypatch', 'post-applypatch', 'pre-commit', 'pre-merge-commit', 'prepare-commit-msg',
+  'commit-msg', 'post-commit', 'pre-rebase', 'post-checkout', 'post-merge', 'pre-push', 'pre-receive', 'update',
+  'proc-receive', 'post-receive', 'post-update', 'reference-transaction', 'push-to-checkout', 'pre-auto-gc',
+  'post-rewrite', 'sendemail-validate', 'fsmonitor-watchman', 'p4-changelist', 'p4-prepare-changelist',
+  'p4-post-changelist', 'p4-pre-submit', 'post-index-change',
+]);
 const NOT_FOUND = 'specflow: cortex not found on PATH; the check cannot run. Install it, or use --no-verify and say so.';
 
 function shim(name: string, body: string): string {
@@ -84,7 +92,7 @@ function plannedHooks(root: string): Map<string, string> {
   const dir = path.resolve(root, git(root, 'rev-parse', '--git-common-dir').out, 'hooks');
   if (!fs.existsSync(dir)) return planned;
   for (const name of fs.readdirSync(dir).sort()) {
-    if (name.endsWith('.sample') || planned.has(name)) continue;
+    if (!GIT_HOOKS.has(name) || planned.has(name)) continue;
     const mode = fs.statSync(path.join(dir, name));
     if (mode.isFile() && (mode.mode & 0o111) !== 0) planned.set(name, shim(name, 'exit 0'));
   }
