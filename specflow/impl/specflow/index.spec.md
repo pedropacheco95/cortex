@@ -30,7 +30,7 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 3. **Criterion ids.** A criterion heading reads `<ID>: <title>`. `<ID>` is the spec's prefix, `-`, and a positive integer. The prefix is the spec id uppercased with each run of other characters replaced by `-`: `core-cli.init` gives `CORE-CLI-INIT`. Ids are written in the heading, so adding a criterion never renumbers another (schema S12.2). The bench's shorter prefixes (`PAY-REFUND-3` for `payments.refund`) are accepted when already present: any id matching `[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-[0-9]+` is an id, unique across the tree.
 4. A heading with no id is a criterion without an id. It has no entry in the criteria list, and its spec is listed under `Specs without criterion ids`. A spec with some ids and some not is listed too. The check does not govern a criterion without an id.
 5. **Tags, vitest, jest, node.** A test case is a call to `it`, `test`, `fit`, `xit` or `xtest`, with any of `.skip`, `.todo`, `.only`, `.concurrent`, `.sequential`, `.fails`, `.failing`, `.skipIf(…)`, `.runIf(…)`, whose first argument is a string literal. `xit` and `xtest` are skipped. A tag is `[ID]` or `[ID, ID]` at the very start of that string. The `describe` title is not read for tags. Calls inside comments or strings are not cases.
-   - **Names built at run time.** A template literal holding `${…}`, the name passed to the call `.each(…)` or `.for(…)` returns, and any other non-literal first argument give a name the text cannot read in full. When the name's source text starts with a static tag, it is a tagged case, one case however many it expands to, named by that source text. Otherwise it is not a case: it is counted in the model and reported by `specflow.port` Rule 9.
+   - **Names built at run time.** A template literal holding `${…}`, the name passed to the call `.each(…)` or `.for(…)` returns, and any other non-literal first argument give a name the text cannot read in full. When the name's source text starts with a static tag, it is a tagged case, one case however many it expands to, named by that source text. Otherwise it is an untagged case like any other, in the `.untagged` list and `Untagged tests`, named by its source text, or `(built name)` when the argument is not a string.
 6. **Tags, pytest.** A test case is a `def test_*` or `async def test_*`, at module level or in a class. Its tags are the string arguments of `@pytest.mark.criterion(...)` decorators directly above it, in any order among other decorators. Parsing is by text in Node, with no Python. A parametrized test is one case.
 7. **Skipped cases.** A case is skipped when it uses `.skip` or `.todo`, sits in a `describe.skip` or `describe.todo`, or has a `@pytest.mark.skip` or `@pytest.mark.skipif` decorator. Skipped cases are listed with `(skipped)`.
 8. **`unverified`.** A criterion is `unverified` when no non-skipped case carries its id. Only the index computes the mark; nothing parses a hand-written one.
@@ -109,11 +109,11 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 - **When** the model is built
 - **Then** `BILLING-REFUNDS-1` lists one case
 
-### SPECFLOW-INDEX-12: A name built at run time with no static tag is only counted
+### SPECFLOW-INDEX-12: A name built at run time with no static tag is an untagged case
 
 - **Given** ``it(`${x} pays`, …)``, `it.each([1])('pays %s', …)` and `it(name, …)`
 - **When** the model is built
-- **Then** there is no case and no untagged test, and the model counts 3
+- **Then** there are 3 untagged cases, in `.untagged`, and no tagged one
 
 ### SPECFLOW-INDEX-13: A tag not at the start is no tag
 
