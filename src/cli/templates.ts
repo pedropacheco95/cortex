@@ -633,6 +633,60 @@ unless your task explicitly owns another write path.
 }
 
 /** Skeleton contents for compass leaf files created empty by init. */
+/**
+ * The cadence table of the 4.0 roster, data not code (core-cli.tasks-register
+ * Rule 7): canonical task name → cron, model and the days a heartbeat item
+ * lives. `tasks-register.ts` re-exports it.
+ */
+export const TASK_CADENCE: Readonly<Record<string, { cron: string; model: string; heartbeatDays: number }>> = {
+  learn: { cron: '0 2 * * *', model: 'claude-opus-5-5', heartbeatDays: 3 },
+  fresh: { cron: '0 4 * * 6', model: 'claude-sonnet-5-5', heartbeatDays: 8 },
+  quality: { cron: '0 4 * * 0', model: 'claude-sonnet-5-5', heartbeatDays: 8 },
+};
+
+/** The first line of every 4.0 payload: the condition of the managed block's "nobody can answer" line (P9). */
+const UNATTENDED_LINE = "This is an unattended run: the user can't answer during this run.";
+
+function storeV4Task(name: string, skill: string, description: string, requiredSkills: string[]): ScheduledTask {
+  return {
+    name,
+    description,
+    body: `${UNATTENDED_LINE}\n\nInvoke the \`${skill}\` skill and follow it.`,
+    model: (TASK_CADENCE[name] as { model: string }).model,
+    requiredSkills,
+  };
+}
+
+/**
+ * The three tasks of an accepted 4.0 store (core-cli.tasks-register Rule 14),
+ * each dispatching one skill. `SCHEDULED_TASKS` stays for the 3.x roster.
+ */
+export const STORE_V4_TASKS: ScheduledTask[] = [
+  storeV4Task('learn', 'cortex-learn', 'File what finished sessions taught this project.', ['cortex-learn', 'cortex-remember']),
+  storeV4Task('fresh', 'cortex-fresh', 'Re-check what has gone stale in this project\'s store.', ['cortex-fresh', 'cortex-remember']),
+  storeV4Task('quality', 'cortex-quality', 'Run the suite and review specs on rotation.', ['cortex-quality', 'cortex-remember', 'specflow-review']),
+];
+
+/**
+ * A 4.0 payload: frontmatter, ownership marker and the task body, with no
+ * other procedure (core-cli.tasks-register Rule 14). The 3.x ground rules in
+ * `scheduledTaskSkillMd` name `.cortex/`, so this renders its own file.
+ */
+export function storeV4TaskSkillMd(task: ScheduledTask, scopedName: string, projectRoot: string): string {
+  return `---
+name: ${scopedName}
+description: ${JSON.stringify(task.description)}
+model: ${task.model}
+---
+
+<!-- cortex-project-root: ${path.resolve(projectRoot)} -->
+
+# ${task.name} (Cortex scheduled task)
+
+${task.body}
+`;
+}
+
 export const COMPASS_ENVIRONMENT_TEMPLATE = `# Environment
 
 Operational pointers only — aliases, profile names, tool locations. **Never secrets.**

@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { registerTasks, verifyTasks, TASK_CADENCE } from '../../../src/cli/tasks-register.js';
+import { registerTasks, verifyTasks, TASK_CADENCE_3X } from '../../../src/cli/tasks-register.js';
 import { CANONICAL_TASK_NAMES, RETIRED_CANONICAL_TASK_NAMES, scopedTaskName } from '../../../src/cli/task-scoping.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
@@ -80,7 +80,7 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
     for (const canonical of Object.values(CANONICAL_TASK_NAMES)) {
       const entry = entries.find((e) => e['id'] === scopedTaskName(root, canonical))!;
       expect(fs.existsSync(entry['filePath'] as string), canonical).toBe(true);
-      expect(entry['cronExpression']).toBe(TASK_CADENCE[canonical]);
+      expect(entry['cronExpression']).toBe(TASK_CADENCE_3X[canonical]);
     }
   });
 

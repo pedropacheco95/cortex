@@ -751,7 +751,8 @@ export function registrationSummaryLines(regStatus: { unregistered: string[]; to
 // `.cortex-installed.json` marker (spec core-cli.sync Notes — sync's own
 // bookkeeping, not a schema-committed artefact). Generic hash/marker helpers
 // live here so sync.ts's judgment logic stays focused on the decision tree;
-// nothing in this file writes the marker — only sync.ts does.
+// nothing in this file writes the marker: sync.ts does, and tasks-register.ts
+// for the 4.0 payloads.
 // ---------------------------------------------------------------------------
 
 export const INSTALLED_MARKER_FILENAME = '.cortex-installed.json';

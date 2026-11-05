@@ -33,13 +33,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import fg from 'fast-glob';
-import { SCHEDULED_TASKS } from './templates.js';
+import { SCHEDULED_TASKS, STORE_V4_TASKS, storeV4TaskSkillMd } from './templates.js';
 import {
   CANONICAL_TASK_NAMES,
   RETIRED_CANONICAL_TASK_NAMES,
+  resolveScopedTaskName,
   scopedTaskName,
 } from './task-scoping.js';
 import { writeScheduledTasks } from './init.js';
+import { INSTALLED_MARKER_FILENAME, readInstalledMarker, sha256Hex, writeInstalledMarker } from './scaffold.js';
+
+export { TASK_CADENCE } from './templates.js';
 
 /**
  * The `permissionMode` Cortex stamps on every entry it owns. Matches the
@@ -60,7 +64,7 @@ export const TASK_PERMISSION_MODE = 'bypassPermissions';
  *   `test-runner` Sunday 06:00;
  * - `monthly-review` on the 1st at 06:00.
  */
-export const TASK_CADENCE: Readonly<Record<string, string>> = {
+export const TASK_CADENCE_3X: Readonly<Record<string, string>> = {
   'daily': '0 2 * * *',
   'weekly-curation': '0 4 * * 6',
   'weekly-quality': '0 4 * * 0',
@@ -176,12 +180,67 @@ function ownRows(
     return {
       canonical,
       id,
-      cron: TASK_CADENCE[canonical] ?? '0 2 * * *',
+      cron: TASK_CADENCE_3X[canonical] ?? '0 2 * * *',
       model: task.model,
       filePath: path.join(home, '.claude', 'scheduled-tasks', id, 'SKILL.md'),
       description: task.description,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// The 4.0 payloads (core-cli.tasks-register Rule 18)
+// ---------------------------------------------------------------------------
+
+export interface TaskPayloadsResult {
+  /** Scoped names of payloads that were absent. */
+  written: string[];
+  /** Scoped names of unedited payloads replaced with the current one. */
+  updated: string[];
+  /** Scoped names of payloads left alone for their local edits. */
+  kept: string[];
+}
+
+/**
+ * Write the three 4.0 payloads, each with a `.cortex-installed.json` marker
+ * holding the hash of its SKILL.md. An identical payload is in no list. It
+ * removes nothing, because a task the app still holds would point at a
+ * missing file, and it never touches the registry. `writeScheduledTasks`
+ * stays for the 3.x roster: it removes retired dirs and writes no marker.
+ */
+export function writeTaskPayloads(opts: { projectRoot: string; home: string; dryRun?: boolean }): TaskPayloadsResult {
+  const root = path.resolve(opts.projectRoot);
+  const baseDir = path.join(opts.home, '.claude', 'scheduled-tasks');
+  const dry = opts.dryRun === true;
+  const result: TaskPayloadsResult = { written: [], updated: [], kept: [] };
+  for (const task of STORE_V4_TASKS) {
+    const scoped = resolveScopedTaskName(baseDir, root, task.name);
+    const skillPath = path.join(baseDir, scoped, 'SKILL.md');
+    const markerPath = path.join(baseDir, scoped, INSTALLED_MARKER_FILENAME);
+    const current = storeV4TaskSkillMd(task, scoped, root);
+    const write = (): void => {
+      if (dry) return;
+      fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+      fs.writeFileSync(skillPath, current, 'utf-8');
+      writeInstalledMarker(markerPath, sha256Hex(current));
+    };
+    if (!fs.existsSync(skillPath)) {
+      write();
+      result.written.push(scoped);
+      continue;
+    }
+    const onDisk = fs.readFileSync(skillPath, 'utf-8');
+    const marker = readInstalledMarker(markerPath)?.sha256;
+    if (onDisk === current) {
+      if (marker !== sha256Hex(current)) write();
+    } else if (marker === sha256Hex(onDisk)) {
+      write();
+      result.updated.push(scoped);
+    } else {
+      result.kept.push(scoped);
+    }
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------

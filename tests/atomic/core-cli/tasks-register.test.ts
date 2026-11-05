@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import {
-  TASK_CADENCE,
+  TASK_CADENCE_3X,
   TASK_PERMISSION_MODE,
   TASK_PLAN_VERSION,
   discoverRegistryFiles,
@@ -113,21 +113,21 @@ function backups(file: string): string[] {
 const opts = (fx: Fixture) => ({ projectRoot: fx.root, home: fx.home, appSupportDir: fx.appSupport });
 
 // ---------------------------------------------------------------------------
-// TASK_CADENCE — the cadence table as data
+// TASK_CADENCE_3X — the cadence table as data
 // ---------------------------------------------------------------------------
-describe('TASK_CADENCE: five bundle entries, collision-free', () => {
+describe('TASK_CADENCE_3X: five bundle entries, collision-free', () => {
   it('has exactly the five §9.1 canonical bundle names as keys', () => {
-    expect(Object.keys(TASK_CADENCE).sort()).toEqual([...CANONICALS].sort());
+    expect(Object.keys(TASK_CADENCE_3X).sort()).toEqual([...CANONICALS].sort());
   });
 
   it('every value is a five-field cron expression', () => {
-    for (const [name, cron] of Object.entries(TASK_CADENCE)) {
+    for (const [name, cron] of Object.entries(TASK_CADENCE_3X)) {
       expect(cron.split(' '), name).toHaveLength(5);
     }
   });
 
   it('pins each bundle cadence verbatim', () => {
-    expect(TASK_CADENCE).toEqual({
+    expect(TASK_CADENCE_3X).toEqual({
       'daily': '0 2 * * *',
       'weekly-curation': '0 4 * * 6',
       'weekly-quality': '0 4 * * 0',
@@ -137,7 +137,7 @@ describe('TASK_CADENCE: five bundle entries, collision-free', () => {
   });
 
   it('no two tasks share an identical cron expression at all', () => {
-    const crons = Object.values(TASK_CADENCE);
+    const crons = Object.values(TASK_CADENCE_3X);
     expect(new Set(crons).size).toBe(crons.length);
   });
 });
@@ -185,7 +185,7 @@ describe('registerTasks: upsert into the app registry', () => {
         const id = scopedTaskName(fx.root, canonical);
         const entry = reg.scheduledTasks.find((e) => e['id'] === id);
         expect(entry, canonical).toBeDefined();
-        expect(entry!['cronExpression']).toBe(TASK_CADENCE[canonical]);
+        expect(entry!['cronExpression']).toBe(TASK_CADENCE_3X[canonical]);
         expect(entry!['model'], canonical).toBe(MODELS[canonical]);
         expect(entry!['enabled']).toBe(true);
         expect(entry!['filePath']).toBe(path.join(fx.home, '.claude', 'scheduled-tasks', id, 'SKILL.md'));
@@ -271,7 +271,7 @@ describe('registerTasks: upsert into the app registry', () => {
       const matches = reg.scheduledTasks.filter((e) => e['id'] === id);
       expect(matches).toHaveLength(1);
       const entry = matches[0]!;
-      expect(entry['cronExpression']).toBe(TASK_CADENCE['daily']);
+      expect(entry['cronExpression']).toBe(TASK_CADENCE_3X['daily']);
       expect(entry['model']).toBe(MODELS['daily']);
       expect(entry['enabled']).toBe(true);
       expect(entry['createdAt']).toBe(111);
@@ -408,7 +408,7 @@ describe('verifyTasks: report and exit codes', () => {
 
       const v = verifyTasks(opts(fx));
       expect(v.exitCode).toBe(0);
-      expect(v.output).toContain(`[cron drifted: expected "${TASK_CADENCE['monthly-review']}"]`);
+      expect(v.output).toContain(`[cron drifted: expected "${TASK_CADENCE_3X['monthly-review']}"]`);
     } finally {
       cleanFixture(fx);
     }
@@ -445,7 +445,7 @@ describe('tasksPlan: 5 bundle entries, stable JSON shape, writes nothing', () =>
         const t = byCanonical.get(canonical)!;
         expect(t, canonical).toBeDefined();
         expect(t.id).toBe(scopedTaskName(fx.root, canonical));
-        expect(t.cronExpression).toBe(TASK_CADENCE[canonical]);
+        expect(t.cronExpression).toBe(TASK_CADENCE_3X[canonical]);
         expect(t.model, canonical).toBe(MODELS[canonical]);
         expect(t.cwd).toBe(path.resolve(fx.root));
         expect(t.enabled).toBe(true);
@@ -597,7 +597,7 @@ describe('cadence table ↔ SCHEDULED_TASKS lock-step', () => {
   it('every SCHEDULED_TASKS entry maps to a cadence row via its canonical name', () => {
     for (const task of SCHEDULED_TASKS) {
       const canonical = CANONICAL_TASK_NAMES[task.name]!;
-      expect(TASK_CADENCE[canonical], task.name).toBeDefined();
+      expect(TASK_CADENCE_3X[canonical], task.name).toBeDefined();
       expect(task.model, task.name).toBe(MODELS[canonical]);
     }
     expect(SCHEDULED_TASKS).toHaveLength(5);
