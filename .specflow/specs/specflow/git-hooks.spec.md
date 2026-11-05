@@ -24,7 +24,7 @@ The check only works if git calls it, and a hook that silently does not run read
 
 ## Rules
 
-1. `cortex hooks install` writes the hook files of Rules 3 to 6, makes them executable and sets repository-local `core.hooksPath` to `.githooks`. It prints each file written. Re-running it changes nothing and exits 0.
+1. `cortex hooks install` writes the hook files of Rules 3 to 6, makes them executable and sets repository-local `core.hooksPath` to `.githooks`. The second line of every file it writes is `# cortex-managed: cortex hooks install rewrites this file`. It prints each file written. Re-running it changes nothing and exits 0.
 2. **Existing hooks are kept.** `core.hooksPath` makes git stop reading `.git/hooks/`, so each executable hook there, `*.sample` files excepted, keeps running. A Cortex hook of the same name first runs `.git/hooks/<name>` with the same arguments and stdin, and stops with its exit code if it fails. A hook with no Cortex counterpart, such as `post-commit`, gets a passthrough file doing only that.
 3. **`commit-msg`** runs `cortex check --commit-msg "$1"`.
 4. **`prepare-commit-msg`**, when `$2` is `commit` (an amend), writes `HEAD`'s hash to `$(git rev-parse --git-path specflow-amend)`, and otherwise does nothing. It always exits 0. `cortex check` reads and deletes that marker, and uses `HEAD^` as its base only when the marker equals `HEAD`.
@@ -40,6 +40,8 @@ The check only works if git calls it, and a hook that silently does not run read
 9. **Limit.** The `pre-push` check runs only when something is pushed, so in a repository that rarely pushes its refusal arrives late: a commit made with `--no-verify`, or a rule (c) gap, can sit unnoticed for many commits. `cortex check --range` can be run at any time to see it sooner.
 10. **Where judging starts.** On first install, the command writes `specflow.since` to `cortex/cortex.json`: the hash of `HEAD` at that moment. A later install leaves it unchanged, and `cortex sync`'s hook refresh (`core-cli.sync` Rule 21) never writes it, since sync writes nothing else under `cortex/`. Range mode skips that commit and its ancestors, because commits made before the hooks existed were never held to the rules. A repository with no commit gets no `since`.
 11. Outside a git repository it prints `specflow: not a git repository` and exits 1. `core.hooksPath` is not cloned, so every fresh clone runs this command again, and `cortex specs lint` warns when `specflow/` exists and it is unset (`lint.hooks-installed`).
+
+12. **A hand-written hook in `.githooks/` is never overwritten.** Before any write, the command looks in `.githooks/` for each file it would write. One that exists with no `# cortex-managed` line is the project's own, and the command refuses: it changes nothing, sets no `core.hooksPath`, writes no `specflow.since`, prints `specflow: .githooks/<name> is not a Cortex hook; nothing was changed. Move it to .git/hooks/<name>, where it keeps running, and run this again.` for each such file, and exits 1. This holds whether or not `core.hooksPath` is set. Rule 8 is checked first. A file with the line is Cortex's and is rewritten. A file in `.githooks/` the command would not write is left alone.
 
 ## Acceptance Criteria
 
@@ -114,6 +116,48 @@ The check only works if git calls it, and a hook that silently does not run read
 - **Given** a new local branch one commit ahead of `origin/HEAD`, that commit valid
 - **When** `git push -u origin new` runs
 - **Then** range mode judges that one commit and the push proceeds
+
+### A hand-written hook stops the install
+
+- **Given** `core.hooksPath` is `.githooks` and `.githooks/pre-commit` holds a hand-written script with no `# cortex-managed` line
+- **When** `cortex hooks install` runs
+- **Then** it exits 1, stderr names `.githooks/pre-commit` and `.git/hooks/pre-commit`, and no file in `.githooks/` changed or was added
+
+### A hand-written hook stops the install with no hooks path set
+
+- **Given** `core.hooksPath` is unset and `.githooks/commit-msg` holds a hand-written script
+- **When** `cortex hooks install` runs
+- **Then** it exits 1, `core.hooksPath` is still unset, `.githooks/commit-msg` is unchanged, and `specflow.since` was not written
+
+### A passthrough does not overwrite a hand-written hook
+
+- **Given** an executable `.git/hooks/post-commit` and a hand-written `.githooks/post-commit`
+- **When** `cortex hooks install` runs
+- **Then** it exits 1 and names `.githooks/post-commit`, which is unchanged
+
+### Moving the hand-written hook lets the install finish
+
+- **Given** the refused repository of the first case, with the file moved to `.git/hooks/pre-commit` as the message says
+- **When** `cortex hooks install` runs and a commit is made
+- **Then** it exits 0 and the moved hook runs first (Rule 2)
+
+### A Cortex hook edited by hand is rewritten
+
+- **Given** an installed `.githooks/pre-commit` with an extra line added below its `# cortex-managed` line
+- **When** `cortex hooks install` runs
+- **Then** it exits 0 and the file is back to Cortex's text
+
+### A fresh clone installs over its tracked hooks
+
+- **Given** a clone whose tracked `.githooks/` was written by Cortex, with `core.hooksPath` unset
+- **When** `cortex hooks install` runs
+- **Then** it exits 0, `core.hooksPath` is `.githooks`, and `git status --porcelain` is empty
+
+### A hook of another name is left alone
+
+- **Given** a hand-written `.githooks/pre-rebase`, and no `.git/hooks/pre-rebase`
+- **When** `cortex hooks install` runs
+- **Then** it exits 0 and `.githooks/pre-rebase` is unchanged
 
 ### A foreign hooks path is left alone
 
