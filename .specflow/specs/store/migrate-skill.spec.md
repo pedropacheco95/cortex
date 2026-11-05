@@ -76,7 +76,6 @@ governs:
     | `specflow-viewer` | `cortex specs view` |
     | `specflow-entry`, `specflow-develop`, `specflow-bugs` | none: `open`, noting that the `## Specs` block's rules now do this work |
     | `cortex-archive-ingest`, `cortex-ingest` | `cortex-remember` (its source digest) |
-    | `cortex-register-tasks` | `cortex tasks register` |
     | `cortex-extract-insight`, `cortex-loop`, `cortex-loop-*`, `cortex-pulse-*` | none: `open` |
     | `.cortex/<path>` | the target `.cortex-migrate/report.json` gives that path, else the S9.3 mapping; no target: `open` |
     | `.specflow/specs/` | `specflow/impl/` |
@@ -85,6 +84,7 @@ governs:
     A skill replacement applies only when `.claude/skills/<replacement>/SKILL.md` exists, a `cortex specs` or `cortex tasks` one only when the installed `cortex` prints that command in its usage, and a `specflow/` one only when `specflow/` exists at the root, which is after `cortex specs port`. Otherwise the mention is `open` with the reason `replacement not there yet`, and a later run of this step, after `cortex sync`, picks it up.
 12. **This step changes no project file outside the listed ones.** A bundle's `.cortex-installed.json` marker is never edited, so an edited bundle no longer matches its marker or the package's copy, and `cortex sync` leaves it alone.
 13. **A retired skill with local edits** (2026-11-04). `cortex sync` removes a retired skill only when it is unedited, and leaves an edited one to this step. The skill reads the bundle, writes one row in `.cortex-migrate/skill-edits.md` with decision `open` saying what project-specific content it holds, and asks the person to choose: remove it, or keep that content under a new name. It deletes nothing itself. A kept bundle under a new name is then scanned like any other.
+14. **Typed only** (owner decision, sitting item 4). The SKILL.md header carries `disable-model-invocation: true`, in the package and in the mirror, so the skill costs no listing context and no agent starts it by itself. Where it is installed, it runs when typed as `/cortex-migrate`. It is not installed in a migrated project (`store.migrate` Rule 18 step 2): there a session reads it at the packaged path the report prints (`store.migrate` Rule 3), and the header does not affect that. `cortex-register-tasks` carries the same line (`core-cli.tasks-register`), and `core-cli.sync` Rule 22 names it as `/cortex-register-tasks`.
 
 ## Acceptance Criteria
 
@@ -167,3 +167,9 @@ governs:
 - **Given** the SKILL.md text
 - **When** its Never section is read
 - **Then** it still names `--apply`, `--accept`, `.cortex/`, `cortex/` and committing, and the skill-adjust section says a person commits
+
+### The skill is typed only
+
+- **Given** `skills/cortex-migrate/SKILL.md` and `skills/cortex-register-tasks/SKILL.md`
+- **When** each file's frontmatter is parsed
+- **Then** `disable-model-invocation` is `true` in both, and `name` and `description` are still present

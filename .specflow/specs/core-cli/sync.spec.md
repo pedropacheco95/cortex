@@ -58,7 +58,7 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
 
 7. **Hooks merge (schema §5).** Merge the current hook entries into `.claude/settings.json`, creating it if absent and preserving all unrelated keys — identical merge semantics to `core-cli.init` Rule 11. The Read-pair entries are present iff `cortex.config.json` `hooks.preRead` is true. The result must satisfy `check.hook-config`; this is sync's registration-refresh path referenced by schema §5's "sync refreshes an existing project's hook registration."
 8. **Git post-commit hook.** If the project is a git repo and `.git/hooks/post-commit` does not already carry the Cortex anatomy-refresh-fast invocation, append it (as `core-cli.init` Rule 12 would), preserving any existing hook content and leaving the file executable. If the invocation is already present, no-op. If not a git repo, skip with a notice.
-9. **Scheduled-task payload refresh (schema §9.1, §9's payload/registration split).** For each of the five bundles: absent locally → write it (as init Rule 13 would). Present and matching the current shipped payload template → no-op. Present and differing: apply the same unmodified-vs-user-modified judgment as Rule 5 (a payload-level `.cortex-installed.json` alongside each scoped task directory) — an unmodified payload is refreshed silently (picking up a changed member-loop roster or cadence), a user-modified one is left in place and reported. Sync never touches registration state itself — only the payload files. After refreshing, sync runs the same read-only `registrationStatus` check init uses (tolerating registry-not-found) and prints the identical instruction block (open the project in Claude Desktop, run `cortex-register-tasks`, confirm with `cortex tasks verify`) when any of the five is unregistered, or the all-registered one-liner otherwise.
+9. **Scheduled-task payload refresh (schema §9.1, §9's payload/registration split).** For each of the five bundles: absent locally → write it (as init Rule 13 would). Present and matching the current shipped payload template → no-op. Present and differing: apply the same unmodified-vs-user-modified judgment as Rule 5 (a payload-level `.cortex-installed.json` alongside each scoped task directory) — an unmodified payload is refreshed silently (picking up a changed member-loop roster or cadence), a user-modified one is left in place and reported. Sync never touches registration state itself — only the payload files. After refreshing, sync runs the same read-only `registrationStatus` check init uses (tolerating registry-not-found) and prints the identical instruction block (open the project in Claude Desktop, type `/cortex-register-tasks`, confirm with `cortex tasks verify`) when any of the five is unregistered, or the all-registered one-liner otherwise.
 10. **Never touches knowledge content.** `compass/`, `atlas/`, `archive/`, `insight/` content and `pulse/` state are read by nothing in this spec and written by nothing in this spec — every byte in those trees is identical before and after a sync run. **One carve-out (3.4 fifth revision, Rule 15):** `compass/registry.md` is created when absent — a machine-derived ledger of ids the files already carry, not knowledge — and never modified when present.
 15. **Id registry migration (schema §10.4, 3.4 fifth revision; `schema.id-registry` Rule 6).** After Rule 4 and before Rule 5: when `.cortex/compass/registry.md` is absent, create it from every `compass/rules/R-*.md` and `compass/bugs/B-*.md` present — the `REGISTRY_HEADER`, then `<id> <slug>` lines, rules first then bugs, each ascending, the slug taken from the filename after the id and its hyphen (or `reserved` when the filename is bare `R-NNN.md`) — and name it in the Rule 12 summary as `registry created (<n> rules, <m> bugs)`. When present: no read beyond existence, no write, summary line `registry present`. Fires under every profile and needs no version comparison: an existing project that already has the file is byte-identical after the run (Rule 13 holds).
 11. **Self-validation.** After all steps, run `schema.validator` over the project. Sync succeeds (exit 0) only if the report is conformant (zero errors); otherwise it prints the violations and exits 1. Warnings do not fail sync.
@@ -75,7 +75,7 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     4. `cortex/cortex.json` exists and `migration.accepted` is `null`: exit 3, `cortex sync: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`;
     5. `.cortex/cortex.config.json` exists: exit 3, `cortex sync: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.`;
     6. otherwise: exit 2, `cortex sync: refused — no Cortex store found at <root>; set one up with cortex init. Nothing was written.`
-17. **The update route, in order:** remove retired skills (Rule 18); install and update the final set (Rule 19); refresh `MAP.md` and the managed blocks (Rule 20); refresh the git hooks (Rule 21); register the tasks (Rule 22); list project skills (Rule 23); validate (Rule 24). The blocks come after the skills, so that they see `specflow-spec` (`store.managed-block` Rule 9).
+17. **The update route, in order:** remove retired skills (Rule 18); install and update the final set (Rule 19); refresh `MAP.md` and the managed blocks (Rule 20); refresh the git hooks (Rule 21); report the tasks (Rule 22); list project skills (Rule 23); validate (Rule 24). The blocks come after the skills, so that they see `specflow-spec` (`store.managed-block` Rule 9).
 18. **Retired skills.** A bundle under `.claude/skills/` whose name matches `RETIRED_SKILL_NAMES` (`store.migrate` Rule 18 step 5) is a candidate.
     - Its `.cortex-installed.json` marker matches its content: it is removed, with the line `skills: removed <name>`.
     - The marker is missing or does not match: it is left alone, with the line `skills: <name> is retired but has local edits; left for the cortex-migrate skill-adjust step`. There is no prompt and no `--yes`: the skill-adjust step decides it (`store.migrate-skill` Rule 13).
@@ -88,11 +88,15 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     - not in the package: `skills: <name> is missing from the package; not installed`.
 20. **Blocks.** It runs `cortex store map`, which writes `MAP.md` and both blocks, and prints its lines. Text outside the blocks stays untouched (`store.managed-block`).
 21. **Git hooks.** When `git config core.hooksPath` is `.githooks`, it does what `cortex hooks install` does and prints `hooks: refreshed .githooks`. When it is anything else and `specflow/` exists, it installs nothing and prints `hooks: not installed; run cortex hooks install`. Turning a refusing check on in a repository stays a separate act. Outside a git repository it prints `hooks: not a git repository; skipped`.
-22. **Tasks. OPEN: the owner has not decided how tasks install (sitting item 4).** Draft: sync calls `registerTasks({ projectRoot, home, appSupportDir, isDesktopAppRunning })` once (`core-cli.tasks-register` Rule 17), all four injected through `SyncOptions`, and prints the returned `message` on one line. Whatever the `outcome`, including `app-running`, sync's exit code does not change.
+22. **Tasks** (owner decision, sitting item 4). Sync does not register tasks: only a Desktop session has the app's scheduling tools, and Core never calls `registerTasks` from this route. It calls the read-only `registrationStatus({ projectRoot, home, appSupportDir })` once (`core-cli.tasks-register`), all three injected through `SyncOptions`. No registry counts as every task unregistered. It prints one line:
+    - every task registered: `tasks: all <n> registered`;
+    - otherwise: `tasks: <m> of <n> not registered; in a Claude Desktop session for this project, type /cortex-register-tasks (plain words will not run it)`.
+
+    The skill is typed, never triggered by words (`store.migrate-skill` Rule 14). Whatever the status, sync's exit code does not change.
 23. **Project skills.** It prints the `project skills to adjust` section of `store.migrate` Rule 18 step 5, from the same code.
 24. **Validation and exit.** It runs `cortex store validate`. Exit 0 when that reports no errors; otherwise it prints them and exits 1. Warnings do not fail sync.
-25. **`--dry-run`** writes nothing and registers nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:` and `hooks:` line prefixed `would: `, then `would: register tasks`, and the Rule 23 section unprefixed, and it exits 0 without validating. On a project Rule 16 refuses, it refuses the same way.
-26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md`, `.githooks/` and what `registerTasks` writes. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
+25. **`--dry-run`** writes nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:` and `hooks:` line prefixed `would: `, and the Rule 22 line and the Rule 23 section unprefixed, and it exits 0 without validating. On a project Rule 16 refuses, it refuses the same way.
+26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md` and `.githooks/`. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
 
 ## Acceptance Criteria
 
@@ -175,7 +179,7 @@ The criteria in this section and under `## Notes` describe the 3.x path (Rules 1
 - **Given** a project whose scheduled-task payloads were written by an older package version and the installed package now ships a bundle with a changed member-loop roster, with a stubbed home directory and no registry present
 - **When** `cortex sync` runs
 - **Then** the affected payload SKILL.md files are refreshed to the current roster
-- **And** the summary prints the open-Desktop-and-run-`cortex-register-tasks` instruction block (registry missing counts as all five unregistered)
+- **And** the summary prints the open-Desktop-and-type-`/cortex-register-tasks` instruction block (registry missing counts as all five unregistered)
 - **And given** a fixture registry where all five are registered and enabled, the summary prints the all-registered one-liner instead
 
 ### Localised _index.md is preserved and reported, not refreshed
@@ -331,7 +335,7 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 
 - **Given** no bundle of the final set under `.claude/skills/`
 - **When** `cortex sync` runs
-- **Then** all eight are installed with markers, each has its `skills: installed` line, and `cortex-migrate` is not installed
+- **Then** all nine are installed with markers, each has its `skills: installed` line, and `cortex-migrate` is not installed
 
 ### An unedited skill is updated
 
@@ -375,23 +379,29 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 - **When** `cortex sync` runs
 - **Then** it exits 0 and the output has `hooks: not a git repository; skipped`
 
-### Tasks wait for the Desktop app (open)
+### Unregistered tasks print the command to type
 
-- **Given** `isDesktopAppRunning` returning true
+- **Given** a test registry holding one of this project's tasks, with the roster at three
 - **When** `cortex sync` runs
-- **Then** the output has `Scheduled tasks not registered: the Claude Desktop app is open. Quit it and run cortex tasks register.` and it exits 0
+- **Then** the output has `tasks: 2 of 3 not registered; in a Claude Desktop session for this project, type /cortex-register-tasks (plain words will not run it)`, the registry is byte-identical, and it exits 0
 
-### Tasks register when the app is closed (open)
+### No registry counts as unregistered
 
-- **Given** `isDesktopAppRunning` returning false and a test registry
+- **Given** no registry under the injected `appSupportDir`
 - **When** `cortex sync` runs
-- **Then** `registerTasks` was called once with the injected roots, and the output has its `message`
+- **Then** the output has the Rule 22 line with every task unregistered, no registry is created, and it exits 0
 
-### A failed registration does not fail sync (open)
+### Registered tasks are reported in one line
 
-- **Given** `isDesktopAppRunning` returning false and no registry
+- **Given** a test registry holding every task of this project, enabled
 - **When** `cortex sync` runs
-- **Then** the output has the message of the `no-registry` outcome and it exits 0
+- **Then** the output has `tasks: all 3 registered` and no `/cortex-register-tasks`
+
+### Sync never registers
+
+- **Given** a test registry and a stub in place of `registerTasks`
+- **When** `cortex sync` runs
+- **Then** the stub was not called, and the registry and `~/.claude/scheduled-tasks/` under the injected home are byte-identical
 
 ### Project skills are listed
 
