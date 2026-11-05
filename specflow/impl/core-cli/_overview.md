@@ -2,7 +2,7 @@
 
 ## What this is
 
-The deterministic Node.js CLI binary surface — every `cortex` command — with no LLM calls. It owns the day-1 `cortex init` bootstrap (the 13-step workflow) and the deterministic plumbing behind scans, status, the constellation server invocation, test runs, and per-loop invocations.
+The deterministic Node.js CLI binary surface — every `cortex` command — with no LLM calls. It owns the setup command `cortex init` (`cortex store init`, then the sync update route) and the deterministic plumbing behind scans, status, the constellation server invocation, test runs, and per-loop invocations.
 
 ## What it covers
 
@@ -29,7 +29,7 @@ _Planned coverage (not yet written):_
 
 This domain is deterministic plumbing only — predictable, testable command surfaces with no LLM calls. All agentic behaviour is deliberately excluded and lives in `loops/`, `pulse/`, and `specflow/`. The CLI stays the source of truth that those agentic layers invoke.
 
-The bootstrap (`cortex init`) belongs here because it is mechanical sequencing of file I/O and scaffold creation, not agentic reasoning.
+Setup (`cortex init`) belongs here because it is mechanical sequencing of file I/O, not agentic reasoning.
 
 ## Related groups
 
@@ -39,4 +39,4 @@ The bootstrap (`cortex init`) belongs here because it is mechanical sequencing o
 - Invokes the self-maintenance loops: `../pulse/`, `../loops/`
 - Launches the renderer: `../constellation/`
 
-- `core-cli.init-profile` — `cortex init --profile specflow|superpowers`: the process-profile field in `cortex.config.json` (schema §10.1) and the one thing that reads it — scheduled-task writing, which scopes Bucket-3 spec-loop members out under a non-specflow profile while every Bucket-1 knowledge loop stays scheduled.
+- `core-cli.init-profile` — the 3.x `init()` function's `--profile specflow|superpowers` (the 4.0 `cortex init` ignores the flag): the process-profile field in `cortex.config.json` (schema §10.1) and the one thing that reads it — scheduled-task writing, which scopes Bucket-3 spec-loop members out under a non-specflow profile while every Bucket-1 knowledge loop stays scheduled.

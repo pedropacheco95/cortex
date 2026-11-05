@@ -9,7 +9,7 @@ Cortex is a holistic, owned-end-to-end system for understanding a codebase — a
 ## What it covers
 
 1. `schema/` — the `cortex-schema.md` contract plus the schema validator; the load-bearing artefact that defines layout, file formats, frontmatter, traceability, and versioning.
-2. `core-cli/` — the deterministic Node.js CLI binary surface, including the day-1 `cortex init` bootstrap. No LLM calls.
+2. `core-cli/` — the deterministic Node.js CLI binary surface, including the setup command `cortex init`. No LLM calls.
 3. `anatomy/` — the native code-structure scanner and its artefacts (SUPERSEDED at v3 — the module is removed and its role absorbed into `insight/`; specs retained for lineage).
 4. `compass/` — the write-time enforcement layer plus the unified bug ledger, rules, and preferences (renamed from `cerebrum/` at v3; decisions consolidated into `atlas/`).
 5. `atlas/` — the project knowledge base (Karpathy LLM Wiki pattern): stakeholders, narrative decisions, domain terms, and raw sources.
