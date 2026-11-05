@@ -58,7 +58,7 @@ A ticket on which the agent edits nothing is counted as `blind`: it is the metho
 
 One new `history/measurements/<today>-quality.md` per run (first free name: `-2`, `-3`): `about`, `permanence: stable`, `verified: <today> (observed)`, `origin: session:<id>`. These headings, in this order, each with its numbers, never omitted:
 
-- `## Specs`: lint errors and warnings, criteria, tagged, unverified, untagged tests;
+- `## Specs`: lint errors and warnings, or `lint not run` when `lint.notRun` is set, then criteria, tagged, unverified, untagged tests;
 - `## Tests`: passed, failed, new failures, failures open more than 7 days, or the skip reason;
 - `## At-rest review`: specs reviewed, findings by severity, proposals written;
 - `## Reviewed specs`: one line `- <spec id> <YYYY-MM-DD>` per spec reviewed;

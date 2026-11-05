@@ -17,7 +17,8 @@ export const ROTATION_SIZE = 5;
 const USAGE_WINDOW_DAYS = 7;
 const READBACK = /^(?:Filing|Updated|Proposed):/;
 
-export interface LintCounts { exit: number; errors: number; warnings: number }
+/** `errors` and `warnings` are null when lint did not run: an empty count must not read as a pass. */
+export interface LintCounts { exit: number; errors: number | null; warnings: number | null; notRun?: string }
 
 export interface Usage {
   sessions: number;
@@ -45,12 +46,18 @@ export interface CollectQualityResult {
 function runLint(root: string): LintCounts {
   const cli = fileURLToPath(new URL('../cli/cli.js', import.meta.url));
   const r = spawnSync(process.execPath, [cli, 'specs', 'lint', '--json'], { cwd: root, encoding: 'utf-8' });
+  return parseLint(r.status ?? 1, r.stdout);
+}
+
+/** Lint's own result, or a not-run one when its output is not the `--json` shape. */
+export function parseLint(exit: number, stdout: string): LintCounts {
   try {
-    const parsed = JSON.parse(r.stdout) as { counts: { error: number; warning: number } };
-    return { exit: r.status ?? 1, errors: parsed.counts.error, warnings: parsed.counts.warning };
+    const { counts: c } = JSON.parse(stdout) as { counts: { error: number; warning: number } };
+    if (typeof c.error === 'number' && typeof c.warning === 'number') return { exit, errors: c.error, warnings: c.warning };
   } catch {
-    return { exit: r.status ?? 1, errors: 0, warnings: 0 };
+    // Handled below.
   }
+  return { exit, errors: null, warnings: null, notRun: 'cortex specs lint gave no result' };
 }
 
 /** The newest date each spec has in a `## Reviewed specs` section (Rule 3). */

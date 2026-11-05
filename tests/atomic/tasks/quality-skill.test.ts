@@ -38,6 +38,7 @@ describe('The skill handles the unported and unconfigured cases', () => {
     expect(text).toContain('`not ported`');
     expect(text).toContain('`no test command configured`');
     expect(text).toContain('A step that fails is recorded in the measurement and the next step runs');
+    expect(text).toContain('`lint not run`');
   });
 });
 

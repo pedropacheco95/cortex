@@ -3,7 +3,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { collectQuality } from '../../../src/tasks/collect-quality.js';
+import { collectQuality, parseLint } from '../../../src/tasks/collect-quality.js';
 import { nameFlags } from '../../../src/tasks/name-flags.js';
 import { tasksCollect } from '../../../src/tasks/collect.js';
 import { storeInit } from '../../../src/store/init.js';
@@ -72,6 +72,19 @@ describe('Collect on an unported repository states it', () => {
     expect(r).toMatchObject({ ported: false, lint: null, coverage: null, rotation: [], area: null });
     expect(r.usage.sessions).toBe(0);
     expect(r.store.filesPerFolder).toEqual({});
+  });
+});
+
+describe('Lint that did not run does not read as a pass', () => {
+  it('gives null counts and says so when the output is not lint JSON', () => {
+    for (const stdout of ['', 'cortex specs: unknown command lint', '{"counts":{}}', '{}']) {
+      expect(parseLint(2, stdout), stdout).toEqual({ exit: 2, errors: null, warnings: null, notRun: 'cortex specs lint gave no result' });
+    }
+  });
+
+  it('keeps real counts, a failing lint included', () => {
+    expect(parseLint(1, '{"findings":[],"counts":{"error":2,"warning":3}}')).toEqual({ exit: 1, errors: 2, warnings: 3 });
+    expect(parseLint(0, '{"findings":[],"counts":{"error":0,"warning":0}}')).toEqual({ exit: 0, errors: 0, warnings: 0 });
   });
 });
 
