@@ -61,6 +61,7 @@ export const TIERS = {
   'cortex-extract-insight': 'A',
   'cortex-loop': 'D',
   'cortex-learn': 'D',
+  'cortex-fresh': 'D',
   'cortex-register-tasks': 'E',
   'cortex-migrate': 'E',
   'cortex-remember': 'B',
@@ -128,6 +129,7 @@ export const REQUIRED_TRIGGERS = {
   // Tiers D and E declare none, and are asserted to have none — see the check below.
   'cortex-loop': [],
   'cortex-learn': [],
+  'cortex-fresh': [],
   'specflow-deep-onboard': [],
   'specflow-viewer': [],
   'cortex-register-tasks': [],

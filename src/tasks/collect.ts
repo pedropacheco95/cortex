@@ -8,6 +8,7 @@ import { localToday } from '../store/types.js';
 import { taskRoster } from '../cli/task-scoping.js';
 import { HEARTBEAT_USAGE, NOT_ACCEPTED_MESSAGE } from '../cli/tasks-register.js';
 import { collectLearn, isInside } from './collect-learn.js';
+import { collectFresh } from './collect-fresh.js';
 
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
@@ -51,6 +52,16 @@ function learn(args: string[], root: string, io: Required<Pick<CollectIO, 'stdou
   return 0;
 }
 
+function fresh(args: string[], root: string, stdout: (l: string) => void): number {
+  const r = collectFresh(root, flag(args, '--today') ?? localToday());
+  if (args.includes('--json')) stdout(JSON.stringify(r, null, 2));
+  else {
+    stdout(`fresh: ${r.expired.length} expired, ${r.stale.length} stale, ${r.aged.length} aged, ${r.deadRules.length} dead rules, ` +
+      `${r.nearDuplicates.length} near-duplicates, ${r.scaffolding.length} scaffolding, ${r.openPitfalls.count} open pitfalls`);
+  }
+  return 0;
+}
+
 export function tasksCollect(args: string[], root: string, io: CollectIO = {}): number {
   const stdout = io.stdout ?? ((l: string) => console.log(l));
   const stderr = io.stderr ?? ((l: string) => console.error(l));
@@ -64,6 +75,7 @@ export function tasksCollect(args: string[], root: string, io: CollectIO = {}): 
     return 1;
   }
   if (task === 'learn') return learn(rest, root, { ...io, stdout, stderr });
+  if (task === 'fresh') return fresh(rest, root, stdout);
   stderr(`cortex tasks collect ${task}: not built yet`);
   return 1;
 }
