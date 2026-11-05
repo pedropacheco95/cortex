@@ -73,6 +73,12 @@ Schema 2.0 is a MAJOR bump (directories moved, a new committed `insight/` module
 - **When** the bump lands
 - **Then** no `cortex migrate` ships and no deprecation marker is written (schema §10.4 waiver, Decision 19)
 
+### SCHEMA-VERSION-2-7: The package's major version equals the store's schema major
+
+- **Given** `package.json` and `SCHEMA_VERSION_4`
+- **When** their major versions are compared
+- **Then** they are equal, so a schema major and the package that writes it are released together
+
 ## Notes
 
 - This spec deliberately owns only the *version wiring*; the substance of the 2.0 contract (the `insight/` module, the typed pulse gate, the re-rooted checks) is owned by the specs that implement each piece. It is the switch that turns 2.0 on, which is why it is inseparable from `specflow.reorg`.
