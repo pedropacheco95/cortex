@@ -315,7 +315,7 @@ describe('specflow.check: rule (e)', () => {
     expect(run(root).code).toBe(0);
   });
 
-  it('moving a spec file changes no item', () => {
+  it('Moving a spec file changes no item', () => {
     const root = repo();
     git(root, 'mv', SPEC, 'specflow/impl/billing/moved.spec.md');
     expect(run(root).code).toBe(0);
@@ -507,6 +507,14 @@ describe('specflow.check: the log', () => {
     expect(e[0].rules).toEqual(['a']);
     expect(e[0].kind).toBe('commit');
     expect(Object.keys(e[0]).sort()).toEqual(['kind', 'outcome', 'reasons', 'rules', 'subject', 'ts', 'warned']);
+  });
+
+  it('A range writes no amendment record', () => {
+    const root = repo();
+    git(root, 'checkout', '-q', '-b', 'work');
+    commit(root, { [SPEC]: BASE.replace('BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-3: X') }, `one\n\n${TRAILER}`);
+    expect(range(root).code).toBe(0);
+    expect(fs.existsSync(path.join(root, '.git/specflow/amendments.jsonl'))).toBe(false);
   });
 
   it('The log is shared by worktrees', () => {

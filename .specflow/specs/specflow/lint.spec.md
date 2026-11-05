@@ -25,7 +25,7 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
 ## Rules
 
 1. `cortex specs lint [--json] [--fix]` prints one line per finding: `<level> <check> <path>: <message>`. Exit 0 with no `error` findings, warnings allowed. Exit 1 with any `error`, or when `specflow/` does not exist. Exit 2 on a usage error. `--json` prints `{ "findings": [{ level, check, path, message }], "counts": { error, warning } }`.
-2. **Carried checks.** Lint runs the existing checks over `specflow/`, unchanged in meaning: `check.overview-present`, `check.overview-shape`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec`, `check.xref-symmetry`, `check.xref-unique`, `check.xref-acyclic`, `check.xref-resolve`, with `specflow/impl` standing for the dev tree and `specflow/promises` for the business tree. When `specflow/` exists, `cortex validate` runs its spec-tree checks there too, and `check.specs-index` is not run: INDEX replaces `_index.md`. A spec with `serves:` needs no `implements:`, and its `serves:` must name a promise.
+2. **Carried checks.** Lint runs the existing checks over `specflow/`, unchanged in meaning: `check.overview-present`, `check.overview-shape`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec`, `check.xref-symmetry`, `check.xref-unique`, `check.xref-acyclic`, `check.xref-resolve`, with `specflow/impl` standing for the dev tree and `specflow/promises` for the business tree. When `specflow/INDEX.md` or `specflow/impl/` exists, the project is ported, and `cortex validate` runs its spec-tree checks there too, and `check.specs-index` is not run: INDEX replaces `_index.md`. A spec with `serves:` needs no `implements:`, and its `serves:` must name a promise. `check.dev-spec-governs-resolves` is not carried: `cortex validate` runs it. A `governed_by` id kept as a store alias resolves, in both commands.
 3. **New tree checks** (each deterministic):
    - `lint.layout` (error): a spec file not under `specflow/impl/<area>/` or `specflow/promises/<area>/`, a file named just `spec.md`, or a leaf spec in a folder of its own.
    - `lint.body` (warning): a dev spec missing a non-empty Intent, Entities, Rules or Acceptance Criteria section, at level 2 or 3; a Rules section with no numbered item.
@@ -33,22 +33,22 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
    - `lint.criterion-id` (error): a heading without an id in a spec with any id; a duplicate id in the tree; an id whose prefix differs from its spec's when the spec's other ids use the Rule 3 prefix of `specflow.index`. A spec with no ids at all is a warning.
    - `lint.criterion-then` (warning): a criterion with no `Then` clause.
    - `lint.orphan` (warning): a spec with no `implements:` and no `serves:`; a promise that nothing serves.
-   - `lint.promise-size` (warning): a promise body over 40 lines.
+   - `lint.promise-size` (warning): a promise body over 40 lines; `.business.md` files are not promises yet.
    - `lint.tests-config` (error): `specflow.tests` missing, or an unknown runner. Warning: an include matching no file.
    - `lint.rules-early` (error): `specflow.rules.b` or `.c` is not `off` while `Untagged tests` is above 0.
    - `lint.orphan-tag` (error): a tag naming no criterion.
    - `lint.hooks-installed` (warning): `core.hooksPath` is not `.githooks`.
    - `lint.retired-link` (warning): a live spec whose `implements:`, `serves:` or `depends_on` names a retired spec or promise.
 4. **Constants.**
-   - `lint.constant-unresolved` (error): `const:NAME` resolves to nothing visible from that spec. If it exists in a folder the spec cannot see, the message names that file and says to move it up.
+   - `lint.constant-unresolved` (error): `const:NAME` resolves to nothing visible from that spec. A `const:` in a code span is a mention, not a use, so no constants rule reads it. If it exists in a folder the spec cannot see, the message names that file and says to move it up.
    - `lint.constant-shadow` (error): a name declared in a folder and in an ancestor.
    - `lint.constant-unused` (warning): a constant no spec names.
    - `lint.constant-placement` (warning): a constant whose users all sit below a lower common folder.
    - `lint.literal` (warning): see Rule 6.
-5. **`--fix`** applies only these, then reports what remains: writes a stub `_overview.md` with TODO markers where one is missing; turns a one-item `implements:` list into a scalar; adds a missing reverse link when the forward link resolves; adds the next free id to a criterion heading without one (highest number in that file plus one); moves a constant up to the lowest folder covering every user, or down under `lint.constant-placement`. It never removes a link, renumbers a rule, or edits rule or criterion text.
+5. **`--fix`** applies only these, then reports what remains: writes a stub `_overview.md`, with the three required headings and TODO under each, where one is missing; turns a one-item `implements:` list into a scalar; adds a missing reverse link when the forward link resolves; adds the next free id to a criterion heading without one (highest number in that file plus one); moves a constant up to the lowest folder covering every user, or down under `lint.constant-placement`. It never removes a link, renumbers a rule, or edits rule or criterion text.
 6. **`lint.literal`.** A literal is a double-quoted string of 8 or more characters, or a number with a unit (`ms`, `s`, `min`, `h`, `day`, `days`, `tokens`, `lines`, `KB`, `MB`, `%`), in a criterion's `Then` clause. A literal in the `Then` clauses of two or more specs that is not already `const:` is a finding, naming the value and each spec. Code spans are not literals: on this repository 477 of them repeat across specs, and they are nearly all paths and commands, while this definition finds 3. `specflow.literals.ignore` lists exact values to skip.
 7. **Dropped from the skill.** Persona-prefix filenames, the jargon word list, and the overview-quality and "answers the three questions" checks are not ported: each needed judgement or applied only to business specs, which become promises. The Given/When/Then "concrete values" judgement goes too. Removing a broken link and renumbering rules were auto-fixes and are not ported: both change meaning.
-8. **Retired records.** A file with `status: retired` is a record (`specflow.index` Rule 14), so its own text is not judged. Only `check.id-matches-path`, `check.dev-spec` or `check.business-spec`, `lint.layout` and the duplicate-id part of `lint.criterion-id` run on it. Its links are not checked, and that includes the `implements:` path test inside `check.dev-spec`, because the file it names may since have become a promise. A constant only retired specs name is unused. A live spec's link to a retired file must still resolve.
+8. **Retired records.** A file with `status: retired` is a record (`specflow.index` Rule 14), so its own text is not judged. Only `check.id-matches-path`, `check.dev-spec` or `check.business-spec`, `lint.layout` and the duplicate-id part of `lint.criterion-id` run on it. Its links and `governs` are not checked, and that includes the `implements:` path test inside `check.dev-spec`, because the file it names may since have become a promise. A constant only retired specs name is unused. A live spec's link to a retired file must still resolve.
 
 ## Acceptance Criteria
 
@@ -93,6 +93,12 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
 - **Given** a 4.0 project with `specflow/` and no `.specflow/`
 - **When** `cortex validate` runs
 - **Then** it reports the spec-tree checks against `specflow/` and does not report `check.specs-index`
+
+### A stray empty folder does not hide the old tree
+
+- **Given** a project with `.specflow/specs/` and an empty `specflow/` folder
+- **When** `cortex validate` runs
+- **Then** it reports against `.specflow/specs/`
 
 ### Serves replaces implements
 

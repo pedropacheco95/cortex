@@ -356,6 +356,14 @@ describe('specflow.port: report and next steps', () => {
     expect(read(root, '.cortex-port/report.md')).toContain('- `tests/a.test.ts`: 3');
   });
 
+  it('Names built at run time are counted', () => {
+    const root = twoTree({ 'tests/a.test.ts': "it(`${x} pays`, f);\nit('a', f);\n" });
+    port(root);
+    expect(report(root).counts.dynamicNames).toBe(1);
+    expect(report(root).counts.testCases).toBe(1);
+    expect(read(root, '.cortex-port/report.md')).toContain('names built at run time: 1');
+  });
+
   it('The working folder stays out of git', () => {
     const root = twoTree();
     port(root);

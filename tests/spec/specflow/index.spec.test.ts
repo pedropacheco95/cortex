@@ -134,6 +134,24 @@ describe('specflow.index: tags', () => {
     expect(crit(m, 'BILLING-REFUNDS-2')?.tests).toHaveLength(1);
   });
 
+  it('A template with a static tag is a tagged case', () => {
+    const c = crit(cases(base(), 'for (const x of xs) {\n  it(`[BILLING-REFUNDS-1] pays ${x}`, () => {});\n}\n'), 'BILLING-REFUNDS-1');
+    expect(c?.tests).toHaveLength(1);
+    expect(c?.unverified).toBe(false);
+  });
+
+  it('An each name with a static tag is a tagged case', () => {
+    const m = cases(base(), "it.each([1, 2])('[BILLING-REFUNDS-1] pays %s', (n) => {});\ntest.each`a\n${1}`('[BILLING-REFUNDS-2] t', () => {});\n");
+    expect(crit(m, 'BILLING-REFUNDS-1')?.tests).toHaveLength(1);
+    expect(crit(m, 'BILLING-REFUNDS-2')?.tests).toHaveLength(1);
+  });
+
+  it('A name built at run time with no static tag is only counted', () => {
+    const m = cases(base(), "it(`${x} pays`, f);\nit.each([[1, ')']])('pays %s', f);\nit(name, f);\n");
+    expect(m.untagged).toEqual([]);
+    expect(m.dynamicNames).toBe(3);
+  });
+
   it('A tag not at the start is no tag', () => {
     expect(cases(base(), "it('adds up [BILLING-REFUNDS-1]', () => {});\n").untagged).toHaveLength(1);
   });

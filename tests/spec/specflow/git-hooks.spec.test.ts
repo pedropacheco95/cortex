@@ -97,6 +97,16 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.existsSync(path.join(root, '.githooks/pre-rebase'))).toBe(false);
   });
 
+  it('No store means no since', () => {
+    const root = tmpRepo('nostore');
+    git(root, ['init', '-q', '-b', 'main']);
+    write(root, 'a.md', 'x');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '-m', 'a']);
+    expect(install(root).code).toBe(0);
+    expect(fs.existsSync(path.join(root, '.githooks/commit-msg'))).toBe(true);
+  });
+
   it('A foreign hooks path is left alone', () => {
     const root = repo();
     git(root, ['config', 'core.hooksPath', '.husky']);
@@ -236,6 +246,30 @@ describe('specflow.git-hooks: real commits', () => {
     git(root, ['commit', '-q', '--no-verify', '-m', 'hooks']);
     return root;
   }
+
+  it('A commit reusing another message is not an amend', () => {
+    const root = installed();
+    const sha = head(root);
+    write(root, 'src/a.ts', 'x');
+    git(root, ['add', '-A']);
+    const r = git(root, ['commit', '-C', sha]);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain('src/a.ts');
+    expect(fs.existsSync(path.join(root, '.git/specflow-amend'))).toBe(false);
+  });
+
+  it('A hook with no specflow folder stays quiet', () => {
+    const root = tmpRepo('quiet');
+    git(root, ['init', '-q', '-b', 'main']);
+    git(root, ['config', 'user.email', 't@example.com']);
+    git(root, ['config', 'user.name', 'T']);
+    install(root);
+    write(root, 'a.md', 'x');
+    git(root, ['add', '-A']);
+    const r = git(root, ['commit', '-m', 'a']);
+    expect(r.code).toBe(0);
+    expect(r.stderr).not.toContain('INDEX');
+  });
 
   it('A real commit is refused through the hook', () => {
     const root = installed();

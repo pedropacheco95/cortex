@@ -35,9 +35,9 @@ export const SPECS_GLOB = '.specflow/specs/**/*.spec.md';
 /** fast-glob pattern (cwd = project root) for business-spec leaf files. */
 export const BUSINESS_GLOB = '.specflow/specs-business/**/*.business.md';
 
-/** True when the project has the visible `specflow/` folder (schema S12.1). */
+/** True when the spec trees live in `specflow/` (specflow.lint Rule 2); a stray empty folder is not a port. */
 export function isPorted(root: string): boolean {
-  return fs.existsSync(path.join(root, 'specflow'));
+  return fs.existsSync(path.join(root, 'specflow', 'INDEX.md')) || fs.existsSync(path.join(root, 'specflow', 'impl'));
 }
 
 /** Absolute path to the dev-spec tree root. */

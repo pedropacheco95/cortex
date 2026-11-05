@@ -201,7 +201,7 @@ function classify(specs: Planned[], businessRetired: Set<string>, tests: string,
 interface Report {
   layout: string;
   head: string;
-  counts: { specs: number; criteria: number; testFiles: number; testCases: number };
+  counts: { specs: number; criteria: number; testFiles: number; testCases: number; dynamicNames: number };
   classes: Record<SpecClass, number>;
   specs: SpecRow[];
   untagged: { file: string; name: string; line: number }[];
@@ -215,7 +215,7 @@ function reportText(r: Report): string {
     '',
     `Source layout: ${r.layout}`,
     `HEAD: ${r.head}`,
-    `Specs: ${r.counts.specs} · criteria: ${r.counts.criteria} · test files: ${r.counts.testFiles} · test cases: ${r.counts.testCases}`,
+    `Specs: ${r.counts.specs} · criteria: ${r.counts.criteria} · test files: ${r.counts.testFiles} · test cases: ${r.counts.testCases} · names built at run time: ${r.counts.dynamicNames}`,
     '',
     '## Specs per class',
     '',
@@ -234,7 +234,8 @@ function reportText(r: Report): string {
 
 function buildReport(root: string, layout: Layout, files: Planned[], config: SpecflowConfig, ticket: RegExp | null): Report {
   const tree = workTree(root);
-  const cases = testCases(tree, config);
+  const scanned = testCases(tree, config);
+  const cases = scanned.filter((c) => !c.dynamic);
   const testFiles = selectTestFiles(tree.list(), config.tests ?? []);
   const tests = [...testFiles.keys()].map((f) => tree.read(f) ?? '').join('\n');
   const specs = files.filter((f) => f.target.startsWith('specflow/impl/') && f.target.endsWith('.spec.md'));
@@ -256,6 +257,7 @@ function buildReport(root: string, layout: Layout, files: Planned[], config: Spe
       criteria: live.reduce((n, s) => n + parseCriteria(s.after).length, 0),
       testFiles: testFiles.size,
       testCases: cases.length,
+      dynamicNames: scanned.length - cases.length,
     },
     classes,
     specs: rows,

@@ -25,7 +25,7 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 ## Rules
 
 1. `cortex specs port [--dry-run] [--ticket-pattern <regex>]`. `--dry-run` writes nothing and prints the report. The command stages its moves and commits nothing. Exit 0 on success, 1 on a refusal, and it never fails half-way: all checks run before the first move.
-2. **Source layouts.** Layout A is `.specflow/specs/` with `.specflow/specs-business/`. Layout B is `specs/impl/` with `specs/promises/`. Refuse (exit 1, nothing written) when neither exists, when both exist, when `specflow/impl/` or `specflow/promises/` already exists, when `cortex/cortex.json` does not exist, or when `git status --porcelain` shows a change under the source tree.
+2. **Source layouts.** Layout A is `.specflow/specs/` with `.specflow/specs-business/`. Layout B is `specs/impl/` with `specs/promises/`. The dev tree is what identifies a layout; a missing business tree moves nothing. Refuse (exit 1, nothing written) when neither exists, when both exist, when `specflow/impl/` or `specflow/promises/` already exists, when `cortex/cortex.json` does not exist, or when `git status --porcelain` shows a change under the source tree.
 3. **The move.** Each file moves by `git mv` with its path below the root unchanged: `.specflow/specs/<p>` and `specs/impl/<p>` to `specflow/impl/<p>`; `.specflow/specs-business/<p>` and `specs/promises/<p>` to `specflow/promises/<p>`. `_overview.md` and `_index.md` files move too. Layout A's emptied `.specflow/` folder goes; Layout B's `specs/INDEX.md` is deleted, since it is regenerated.
 4. **Criterion ids.** In each file under `specflow/impl/` that is not retired (Rule 15), each criterion heading (`specflow.index` Rule 2) with no id gains `<ID>: ` before its title, numbered from 1 in file order. Numbering continues past the highest id already in the file. Heading level and title text do not change. **OPEN (owner, G2):** this is a text change. The bench's tree carried ids in headings, and positional ids are not stable.
 5. **Frontmatter links.** Relative `implements:` and `implemented_by:` values are rewritten to the new relative paths. **OPEN (owner, G2):** a second narrow text change; without it every link breaks.
@@ -39,11 +39,11 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
    - `clean`: the rest.
 
    Tickets are matches of `--ticket-pattern`; with none given, there are no tickets. A ticket cited by exactly this spec counts as a link to it.
-9. **Report.** `.cortex-port/report.md` has: source layout, HEAD, counts of specs, criteria, test files and test cases, specs per class, each non-clean spec with its class and reason, and untagged cases per test file. `.cortex-port/report.json` holds the same and the full untagged list (`file`, `name`, `line`). `.cortex-port/` is added to `.git/info/exclude`. A spec that is not `clean` still moves; the class says what the check cannot yet rely on.
+9. **Report.** `.cortex-port/report.md` has: source layout, HEAD, counts of specs, criteria, test files, test cases and names built at run time (`specflow.index` Rule 5), specs per class, each non-clean spec with its class and reason, and untagged cases per test file. `.cortex-port/report.json` holds the same and the full untagged list (`file`, `name`, `line`). `.cortex-port/` is added to `.git/info/exclude`. A spec that is not `clean` still moves; the class says what the check cannot yet rely on.
 10. **Next steps.** On success the command writes `specflow/INDEX.md` and prints, in order: review and commit the move; `cortex store map`; `cortex hooks install`; then the two agentic steps in `specflow-onboard`. It runs none of them.
 11. **Promise conversion (agentic; output contract).** Each business spec that is not retired becomes one promise of schema S12.1, with `serves: [<promise id>]` added to the frontmatter of every live spec that implements it, and `implements:` removed from those specs. This is the one text rewrite, and the owner approves it per repository. Drafts sit in `.cortex-port/promises/` at the path they will take. Reasoning a promise drops goes to `cortex/world/decisions/`, not nowhere.
 12. **Tagging pass (agentic; output contract).** The files `.cortex-port/tagging/<area>.jsonl` together have one line for every untagged case: `file`, `name`, `line`, `action` (`tag`, `new-criterion` or `delete`), `reason`, plus `criterion` for `tag` and `spec` and `title` for `new-criterion`. A case matching no criterion proposes `new-criterion` first; `delete` is only for behaviour nobody wants (P5), and a case that proves only a retired spec's behaviour proposes it, naming that spec in `reason`. The owner approves the proposals, and the skill applies them.
-13. **`cortex specs port --verify`** reads `.cortex-port/tagging/*.jsonl` and the current tests, and prints each untagged case with no proposal, each `tag` proposal naming no criterion, and each malformed line. Exit 1 if any, 0 otherwise. It writes nothing.
+13. **`cortex specs port --verify`** reads `.cortex-port/tagging/*.jsonl` and the current tests, and prints each untagged case with no proposal, each `tag` proposal naming no criterion, and each malformed line. A proposal matches a case by file and name, not line, so an edit above a test breaks nothing. Exit 1 if any, 0 otherwise. It writes nothing.
 14. **Going live.** Rules (b) and (c) are switched on by editing `specflow.rules`, and only once `Untagged tests: 0` holds. `lint.rules-early` enforces it (A11).
 15. **Retired specs are records.** A dev or business spec with `status: retired` moves like any other (Rule 3), and its links are rewritten (Rule 5). Nothing else happens to it, now or in the agentic steps:
     - it gains no criterion ids, and an id it already has stays;
@@ -204,6 +204,12 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 - **Given** 3 test cases, none tagged
 - **When** `cortex specs port` runs
 - **Then** `report.json` lists all 3 with file, name and line, and `report.md` gives the per-file count
+
+### Names built at run time are counted
+
+- **Given** a test file with ``it(`${x} pays`, …)`` and `it('a', …)`
+- **When** `cortex specs port` runs
+- **Then** `report.json` has `dynamicNames` 1 and `report.md` states it
 
 ### The working folder stays out of git
 

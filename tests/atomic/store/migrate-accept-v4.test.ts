@@ -16,6 +16,7 @@ import { SPECS_SECTION_STAGE2 } from '../../../src/store/managed-block.js';
 import { migrationAccepted, loadStore } from '../../../src/store/layout.js';
 import { tmpRepo, cleanRepos, gitInit, commitAll } from '../../fixtures/store.js';
 import { writeLegacyStore } from '../../fixtures/legacy-store.js';
+import { specsRoot } from '../../../src/paths.js';
 
 afterEach(cleanRepos);
 
@@ -78,7 +79,7 @@ describe('store.migrate at 4.0: exports', () => {
   });
 
   it('the retired list holds the spec names and no final bundle', () => {
-    const spec = fs.readFileSync(path.join(REPO, '.specflow/specs/store/migrate.spec.md'), 'utf8');
+    const spec = fs.readFileSync(path.join(specsRoot(REPO), 'store/migrate.spec.md'), 'utf8');
     const line = spec.split('\n').find((l) => l.includes('**The retired list**'))!;
     const names = [...line.slice(line.indexOf('):')).matchAll(/`([^`]+)`/g)].map((m) => m[1]!);
     expect([...RETIRED_SKILL_NAMES].sort()).toEqual([...names].sort());
