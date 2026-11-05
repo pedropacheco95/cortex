@@ -136,3 +136,61 @@ Renders validation reports.
     expect(violations).toEqual([]);
   });
 });
+
+describe('schema.validator Rule 16: retired', () => {
+  it('a retired dev spec and business spec are valid: no status finding from either check', async () => {
+    const root = makeFixtureCopy('retired-valid');
+    setStatus(root, DEV_REL, 'draft', 'retired');
+    setStatus(root, BIZ_REL, 'draft', 'retired');
+    expect(fs.readFileSync(path.join(root, DEV_REL), 'utf-8')).toContain('status: retired');
+    expect(fs.readFileSync(path.join(root, BIZ_REL), 'utf-8')).toContain('status: retired');
+    const { violations } = await validate(root);
+    const statusFindings = violations.filter(
+      (v) => (v.check === 'check.dev-spec' || v.check === 'check.business-spec') && v.location.key === 'status',
+    );
+    expect(statusFindings).toEqual([]);
+  });
+
+  it('a status outside the enum is still an error', async () => {
+    const root = makeFixtureCopy('bad-status');
+    setStatus(root, DEV_REL, 'draft', 'withdrawn');
+    const { violations } = await validate(root);
+    expect(violations.some((v) => v.check === 'check.dev-spec' && v.location.key === 'status')).toBe(true);
+  });
+
+  it('a retired implementer is ignored: one implemented and one retired still lags', async () => {
+    const root = makeFixtureCopy('retired-mixed');
+    const second = path.join('.specflow', 'specs', 'schema', 'old.spec.md');
+    fs.writeFileSync(path.join(root, second), fs.readFileSync(path.join(root, DEV_REL), 'utf-8').replace('status: draft', 'status: retired'));
+    setStatus(root, DEV_REL, 'draft', 'implemented');
+    setStatus(root, BIZ_REL, 'draft', 'implementing');
+    const biz = path.join(root, BIZ_REL);
+    fs.writeFileSync(biz, fs.readFileSync(biz, 'utf-8').replace(/^implemented_by:\n/m, 'implemented_by:\n  - ../../specs/schema/old.spec.md\n'));
+    const found = await checkBusinessStatus(root);
+    expect(found).toHaveLength(1);
+    expect(found[0].location.path).toBe(biz);
+  });
+
+  it('a business spec with only retired implementers is not flagged', async () => {
+    const root = makeFixtureCopy('retired-all');
+    setStatus(root, DEV_REL, 'draft', 'retired');
+    setStatus(root, BIZ_REL, 'draft', 'implementing');
+    expect(await checkBusinessStatus(root)).toEqual([]);
+  });
+
+  it('a retired business spec does not lag its implemented implementers', async () => {
+    const root = makeFixtureCopy('retired-biz');
+    setStatus(root, DEV_REL, 'draft', 'implemented');
+    setStatus(root, BIZ_REL, 'draft', 'retired');
+    expect(await checkBusinessStatus(root)).toEqual([]);
+  });
+
+  it("a retired spec's dead link is still an error without specflow/", async () => {
+    const root = makeFixtureCopy('retired-dead-link');
+    setStatus(root, DEV_REL, 'draft', 'retired');
+    const dev = path.join(root, DEV_REL);
+    fs.writeFileSync(dev, fs.readFileSync(dev, 'utf-8').replace(/^implements: .*$/m, 'implements: ../../specs-business/schema/gone.business.md'));
+    const { violations } = await validate(root);
+    expect(violations.some((v) => v.check === 'check.dev-spec' && v.message.includes('does not resolve'))).toBe(true);
+  });
+});

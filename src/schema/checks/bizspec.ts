@@ -67,7 +67,8 @@ export async function checkBizSpecs(root: string, index: ProjectIndex): Promise<
  * whose `implemented_by:` dev specs are ALL `status: implemented` but whose
  * own `status` is not `implemented` lags — warning. Partially-implemented
  * implementers (or unresolvable entries — check.business-spec's territory)
- * stay silent.
+ * stay silent. `retired` implementers are ignored, so a spec whose implementers
+ * are all retired stays silent too, as does a retired business spec.
  */
 export async function checkBusinessStatus(root: string): Promise<Violation[]> {
   const violations: Violation[] = [];
@@ -87,10 +88,11 @@ export async function checkBusinessStatus(root: string): Promise<Violation[]> {
 
     const status = data['status'];
     const implementedBy = data['implemented_by'];
-    if (status === 'implemented') continue;
+    if (status === 'implemented' || status === 'retired') continue;
     if (!Array.isArray(implementedBy) || implementedBy.length === 0) continue;
 
     let allImplemented = true;
+    let liveImplementers = 0;
     for (const ref of implementedBy) {
       if (typeof ref !== 'string') {
         allImplemented = false;
@@ -103,6 +105,8 @@ export async function checkBusinessStatus(root: string): Promise<Violation[]> {
       }
       try {
         const devData = matter(fs.readFileSync(resolved, 'utf-8')).data as Record<string, unknown>;
+        if (devData['status'] === 'retired') continue;
+        liveImplementers += 1;
         if (devData['status'] !== 'implemented') {
           allImplemented = false;
           break;
@@ -113,7 +117,7 @@ export async function checkBusinessStatus(root: string): Promise<Violation[]> {
       }
     }
 
-    if (allImplemented) {
+    if (allImplemented && liveImplementers > 0) {
       violations.push({
         severity: 'warning',
         check: 'check.business-status',

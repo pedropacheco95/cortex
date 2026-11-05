@@ -7,7 +7,7 @@ import { resolveId, resolveRelativePath } from '../index-build.js';
 import { globMatchesNothing } from './compass.js';
 import { specsRoot } from '../../paths.js';
 
-const STATUS_ENUM = ['draft', 'implementing', 'implemented'] as const;
+const STATUS_ENUM = ['draft', 'implementing', 'implemented', 'retired'] as const;
 
 export async function checkDevSpecs(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
