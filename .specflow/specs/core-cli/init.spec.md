@@ -399,6 +399,12 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **When** `cortex init` runs
 - **Then** it exits 1 and the update route did not start
 
+### A package lacking part of the final set writes nothing
+
+- **Given** a new project and a package with no `cortex-quality`
+- **When** `cortex init` runs
+- **Then** it exits 1 with `cortex init: refused — this package lacks cortex-quality. Nothing was written.`, and the directory is still empty
+
 ### Old flags are ignored and named
 
 - **Given** an empty git repository

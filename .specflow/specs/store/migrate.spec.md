@@ -495,3 +495,39 @@ These use an accepted store with fixture bundles under `.claude/skills/`.
 - **Given** `.claude/skills/verification-before-completion/` holding that bundle as of an earlier commit of `main`, with no marker, naming `.cortex/`
 - **When** `cortex migrate --accept` runs
 - **Then** no line of the `project skills to adjust` section names that bundle
+
+### The final set is the nine of Rule 18 step 2, without cortex-migrate
+
+- **Given** `FINAL_BUNDLES`
+- **When** it is read
+- **Then** it holds the nine names of Rule 18 step 2 and not `cortex-migrate`
+
+### The retired list holds the spec names and no final bundle
+
+- **Given** `RETIRED_SKILL_NAMES` and `isRetiredName`
+- **When** they are compared with Rule 18 step 5
+- **Then** the list equals the spec's, no final bundle and not `cortex-migrate` is retired, and the two patterns match `cortex-loop-hygiene` and `cortex-pulse-distil` and not `my-cortex-loop`
+
+### A store is accepted only by a date
+
+- **Given** a `migration.accepted` of `soon`, and separately a date
+- **When** `migrationAccepted` reads each
+- **Then** the first is not accepted and the second is
+
+### A plain file or a folder marker at a bundle name does not crash accept
+
+- **Given** a plain file at `.claude/skills/cortex-remember`, and a copy of `specflow-spec` identical to the package's with a folder at its marker path
+- **When** `cortex migrate --accept` runs
+- **Then** it exits 0, the file is byte-identical with its `left alone` line, and the copy has `skills: specflow-spec: marker not written; left alone` and no `installed` line
+
+### An accept that cannot finish reports it and records no date
+
+- **Given** a plain file at `.claude/skills/.cortex-tmp-cortex-learn`
+- **When** `cortex migrate --accept` runs, and runs again with the file gone
+- **Then** the first exits 1 with the `is in the way` line and `migration.accepted` is still `null`, and the second exits 0 and records the date
+
+### Accept leaves a settings file without cortex hooks unwritten
+
+- **Given** a `.claude/settings.json` holding no `cortex hook` entry
+- **When** `cortex migrate --accept` runs
+- **Then** the file is byte-identical

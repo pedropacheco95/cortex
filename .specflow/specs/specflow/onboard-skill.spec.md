@@ -33,7 +33,7 @@ Two jobs need agents and a person's approval, and both start from work that alre
 1. **Bundle.** The bundle is `skills/specflow-onboard/SKILL.md`, mirrored byte for byte to `.claude/skills/specflow-onboard/SKILL.md`. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, and `store.migrate` Rule 18 step 2 installs it. Its tier in `TIERS` is **B**, and its required trigger phrases are `onboard this codebase` and `port mode`.
 2. **Description**, exactly: `Bring existing work under the specs. Port mode: turn business specs into promises and tag every test. Onboard mode: write specs from code. Proposals for approval. "onboard this codebase", "port mode".`
 3. **Working folder.** `cortex specs port` leaves its report in `.cortex-port/report.md` and `.cortex-port/report.json`. Port-mode proposals live in `.cortex-port/`: `promises/` (one draft per business spec, at the path it will take), `tagging/<area>.jsonl` (`specflow.port` Rule 12), `decisions.md` (what the person decided). Onboard-mode work lives in `.cortex-port/onboard/<concern>/`.
-4. **Agents.** Every spawned agent is awaited before its output is used (`specflow.review-skill` Rule 6). Every spawned agent writes its output to a file under `.cortex-port/`, which the skill reads: the file is the delivery, because a hand-back can fail after the agent has finished. Work is split so that one agent reads one area or one test folder.
+4. **Agents.** Every spawned agent is awaited before its output is used (`specflow.review-skill` Rule 6). Every spawned agent writes its output to a file under `.cortex-port/`, which the skill reads: the file is the delivery, because a hand-back can fail after the agent has finished. Work is split so that one agent reads one area or one test folder. A test folder that spans several specs is still one agent, which reads those specs' criteria.
 5. **Mode choice**, checked in this order:
    1. `.specflow/` exists and `specflow/` does not: the skill stops and says `Run cortex specs port first.`
    2. `specflow/` and `.cortex-port/report.json` exist: port mode.
@@ -42,13 +42,13 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 ### Port mode
 
-6. **Promise conversion.** `specflow.port` Rule 11 and schema S12.1 say what the output must be. For each business spec under `specflow/promises/`, an agent drafts one promise of at most 40 lines, with frontmatter `id` (`P-<AREA>-<n>`: `<AREA>` is the uppercased first folder, `<n>` counts the area's promises from 1, in path order), `title` and `status`, a `#` title, and a `## Outcome` section. It keeps every commitment the business spec makes, including what the product does not promise, and drops journey and metric detail. The draft goes in `.cortex-port/promises/`. Each impl spec's `implements:` link gives its frontmatter `serves: [<promise id>]`, mechanically, one entry per spec. Reasoning that belongs to no promise is listed for `cortex/world/decisions/`, not dropped. This is the one text rewrite of a port. A `status: retired` file is a record (`specflow.port` Rule 15): a retired business spec gets no promise and a retired spec gets no `serves:`. A live spec that implements a retired business spec is not converted: it keeps its `implements:`, stays `needs-edit` in the report, and the person decides where it belongs.
+6. **Promise conversion.** `specflow.port` Rule 11 and schema S12.1 say what the output must be. For each business spec under `specflow/promises/`, an agent drafts one promise of at most 40 lines, with frontmatter `id` (`P-<AREA>-<n>`: `<AREA>` is the uppercased first folder, `<n>` counts the area's promises from 1, in path order), `title` and `status`, a `#` title, and a `## Outcome` section. It keeps every commitment the business spec makes, including what the product does not promise, and drops journey and metric detail. The draft goes in `.cortex-port/promises/`. Each impl spec's `implements:` link gives its frontmatter `serves: [<promise id>]`, mechanically, one entry per spec. Reasoning that belongs to no promise is listed for `cortex/world/decisions/`, not dropped. This is the one text rewrite of a port. A `status: retired` file is a record (`specflow.port` Rule 15): a retired business spec gets no promise and a retired spec gets no `serves:`. A live spec that implements a retired business spec is not converted: it keeps its `implements:`, stays `needs-edit` in the report, and the person decides where it belongs. A spec the report marks `needs-edit` for another reason is converted like any other: the mark is about its criteria.
 7. **Tagging pass.** `specflow.port` Rule 12 gives the line format. Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Each case gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl`, with `file`, `name`, `line`, `action` and `reason`. Each agent writes its lines straight into that file. Its `action` is, in this order of preference:
    - `tag`: with `criterion`, the criterion it proves;
    - `new-criterion`: no criterion matches, so it gives the `title` and the `spec` it belongs in;
    - `delete`: only when the behaviour is not wanted, with the reason.
 
-   A test the agent cannot place is proposed as `new-criterion`, never left out and never proposed for deletion for lack of a match. No line names a retired spec's criterion; a test that proves only a retired spec's behaviour proposes `delete` and names that spec in `reason` (`specflow.port` Rules 12 and 15). The pass is finished when `cortex specs port --verify` exits 0, and the skill runs that before asking for approval.
+   A test the agent cannot place is proposed as `new-criterion`, never left out and never proposed for deletion for lack of a match. No line names a retired spec's criterion; a test that proves only a retired spec's behaviour proposes `delete` and names that spec in `reason` (`specflow.port` Rules 12 and 15). The pass is finished when `cortex specs port --verify` exits 0, and the skill runs that before asking for approval. A run the person limits to a slice says so in its counts, and it is finished when `cortex specs port --verify` lists none of that slice's files.
 8. **Approval, then application.** The skill shows the person the counts per area and the lines that are not plain tags. Nothing is applied without the person's approval, per repository; approval may be per area. The person's decisions go in `.cortex-port/decisions.md`. The main session then applies approved rows: a promise replaces its business spec; `serves:` is added to each spec and its `implements:` removed; a tag goes at the start of the test name (`[CRIT-ID]`, or `[A-1, B-2]` for several), or as `@pytest.mark.criterion("CRIT-ID")` in pytest, one marker per id; new criteria are added in commits of their own. Applying a tag adds that name prefix or marker and nothing else.
 9. **Going live.** When `specflow/INDEX.md` shows `Untagged tests: 0` (`.untagged` empty in `cortex specs index --json`), the skill says so and tells the person that rules (b) and (c) can be switched on in the `specflow.rules` key of `cortex/cortex.json`, an owner-approved edit. It never switches them on, and it never reports them live while an untagged test remains. A criterion still without a test stays `unverified`; that is the honest starting state.
 
@@ -167,3 +167,21 @@ Two jobs need agents and a person's approval, and both start from work that alre
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** it says every spawned agent writes its output to a file under `.cortex-port/`, names `.cortex-port/onboard/concerns.md` for the splitter, and says a tagging agent writes straight into its `.jsonl` file
+
+### A needs-edit spec on a live promise is converted
+
+- **Given** the SKILL.md text
+- **When** its promise step is read
+- **Then** it says a spec marked `needs-edit` for a reason other than a retired business spec is converted like any other
+
+### A test folder spanning several specs is one agent
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it says such a folder is one agent, which reads those specs' criteria
+
+### A limited run says what it covered
+
+- **Given** the SKILL.md text
+- **When** its tagging step is read
+- **Then** it says a run limited to a slice says so in its counts, and is finished when `--verify` lists none of that slice's files

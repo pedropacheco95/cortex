@@ -657,3 +657,57 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 - **Given** a `.cortex/` folder with no `cortex.config.json`, a `cortex/cortex.json` with no `migration` field, and an unedited retired skill
 - **When** `cortex sync` runs
 - **Then** it exits 3 with the Rule 16 message naming `cortex migrate`, and the project is byte-identical
+
+### Every retired name with a shipped copy is on the list, and no other name is
+
+- **Given** `SHIPPED_3X_HASHES`
+- **When** its names are read
+- **Then** each is a retired name, `cortex-register-tasks` or `verification-before-completion`, and `specflow-change-router` has an entry
+
+### Sync refuses off darwin before anything else
+
+- **Given** an accepted store on a platform that is not `darwin`
+- **When** `cortex sync` runs
+- **Then** it exits 2 with Rule 1's message, and the project is byte-identical
+
+### A plain file with a bundle name is left alone
+
+- **Given** a plain file at a retired name and at a final name
+- **When** `cortex sync` runs
+- **Then** it exits 0, both are byte-identical, and the final name has its `left alone` line
+
+### A failed copy leaves the old bundle and a partial temp folder the next run clears
+
+- **Given** an unedited bundle and a package copy that fails partway
+- **When** `installWhole` throws, and `cortex sync` then runs
+- **Then** the bundle was byte-identical after the failure, and no `.cortex-tmp-*` folder is left after the run
+
+### A person's file at an unused temp name blocks nothing
+
+- **Given** an unedited retired bundle and a plain file at `.cortex-tmp-old-<that name>`
+- **When** `cortex sync` runs
+- **Then** it exits 0, the bundle is gone, and the file is byte-identical
+
+### A folder at the marker path does not stop sync
+
+- **Given** a final bundle identical to the package's, with a folder at its marker path
+- **When** `cortex sync` runs, and separately `cortex sync --dry-run`
+- **Then** each exits 0 with `skills: <name>: marker not written; left alone`, the second prefixed `would: `
+
+### A commit-msg that is a folder is not an install
+
+- **Given** `core.hooksPath` set to `.githooks`, `specflow/`, and a folder at `.githooks/commit-msg`
+- **When** `cortex sync` runs
+- **Then** it exits 0 with `hooks: not installed; run cortex hooks install`
+
+### With no home passed, payloads land under os.homedir()
+
+- **Given** `HOME` pointing at a temp folder and no `home` option
+- **When** the update route runs
+- **Then** the three payloads are under that folder (B-011)
+
+### A marked older final bundle is not listed by a dry run
+
+- **Given** a marked, unedited older final bundle naming a retired skill
+- **When** `cortex sync --dry-run` runs
+- **Then** the output has `project skills to adjust: 0`
