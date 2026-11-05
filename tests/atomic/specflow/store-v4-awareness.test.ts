@@ -7,9 +7,10 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { specsRoot } from '../../../src/paths.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const SPEC = fs.readFileSync(path.join(ROOT, '.specflow/specs/specflow/store-v4-awareness.spec.md'), 'utf8');
+const SPEC = fs.readFileSync(path.join(specsRoot(ROOT), 'specflow/store-v4-awareness.spec.md'), 'utf8');
 const PARAGRAPH = /\n   > (\*\*Which store \(Cortex 4\.0 transition\)\.\*\*[^\n]+)\n/.exec(SPEC)![1]!;
 
 const GOVERNED = [

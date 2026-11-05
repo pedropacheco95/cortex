@@ -9,6 +9,7 @@ import * as path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { listSkillBundles } from '../../../src/cli/scaffold.js';
+import { specsRoot } from '../../../src/paths.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const SKILL = path.join(ROOT, 'skills', 'cortex-migrate', 'SKILL.md');
@@ -72,7 +73,7 @@ describe('store.migrate-skill', () => {
   });
 
   it('The replacement table is complete', () => {
-    const spec = fs.readFileSync(path.join(ROOT, '.specflow', 'specs', 'store', 'migrate.spec.md'), 'utf8');
+    const spec = fs.readFileSync(path.join(specsRoot(ROOT), 'store', 'migrate.spec.md'), 'utf8');
     const listLine = spec.split('\n').find((l) => l.includes('**The retired list**'))!;
     const names = [...listLine.slice(listLine.indexOf('):')).matchAll(/`([^`]+)`/g)].map((m) => m[1]!);
     expect(names.length).toBeGreaterThan(20);

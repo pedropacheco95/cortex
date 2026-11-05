@@ -12,13 +12,16 @@ import * as path from 'path';
 import { validate } from '../schema/validate.js';
 import type { Violation } from '../schema/types.js';
 import { writePulseReport } from './report.js';
-import { SPECS_REL, BUSINESS_REL } from '../paths.js';
+import { specsRoot, businessRoot } from '../paths.js';
 
 export const LINT_REPORT_FILE = 'lint.md';
 
 /** Spec Rule 2: the spec tree = these three roots. `tests/scenario/specs/`
  *  stays at the project root (§2.3); the two moved trees live under `.specflow/`. */
-const SPEC_TREE_PREFIXES = [SPECS_REL, BUSINESS_REL, path.join('tests', 'scenario', 'specs')];
+function specTreePrefixes(root: string): string[] {
+  const rel = (abs: string): string => path.relative(root, abs).split(path.sep).join('/');
+  return [rel(specsRoot(root)), rel(businessRoot(root)), path.join('tests', 'scenario', 'specs')];
+}
 
 /** Project-relative form of a violation's location path. */
 export function violationRelPath(root: string, locationPath: string): string {
@@ -29,7 +32,7 @@ export function violationRelPath(root: string, locationPath: string): string {
 /** True when a violation's location lies under specs/, specs-business/, or tests/scenario/specs/. */
 export function isSpecTreeViolation(root: string, v: Violation): boolean {
   const rel = violationRelPath(root, v.location.path);
-  return SPEC_TREE_PREFIXES.some((prefix) => {
+  return specTreePrefixes(root).some((prefix) => {
     const p = prefix.split(path.sep).join('/');
     return rel === p || rel.startsWith(`${p}/`);
   });

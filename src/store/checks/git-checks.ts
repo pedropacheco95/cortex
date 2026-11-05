@@ -80,7 +80,7 @@ export const TRAILER_WINDOW = 50;
 
 function knownSpecIds(root: string): Set<string> {
   const ids = new Set<string>();
-  for (const rel of fg.sync(['.specflow/specs/**/*.md', '.specflow/specs-business/**/*.md', 'specs/**/*.md', 'specs-business/**/*.md'], { cwd: root, dot: true })) {
+  for (const rel of fg.sync(['specflow/impl/**/*.md', 'specflow/promises/**/*.md', '.specflow/specs/**/*.md', '.specflow/specs-business/**/*.md', 'specs/**/*.md', 'specs-business/**/*.md'], { cwd: root, dot: true })) {
     ids.add(rel);
     try {
       const id = matter(fs.readFileSync(path.join(root, rel), 'utf8'), {}).data['id'];
