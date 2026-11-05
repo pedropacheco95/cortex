@@ -47,7 +47,7 @@ In-session capture does not happen on its own: an audit of five sessions found a
 
    A file over `CONDENSE_PART_CHARS` (200,000) is split at an entry boundary into `<id>-part<n>.md`.
 4. **Redaction, before anything is written.** Every match of `SECRET_PATTERNS` is replaced by `[redacted:<label>]`. The list is data and holds at least, as `label`: pattern: `private-key`: private key blocks; `api-key`: `sk-` keys; `github-token`: `ghp_`, `gho_`, `ghs_`, `github_pat_`; `aws-key`: AWS access key ids; `slack-token`: `xox[abprs]-`; `bearer`: `Bearer <token>`; `credential`: `password|passwd|secret|token|api[_-]?key` followed by `=` or `:` and a value. The count per session is `redactions` in the JSON.
-5. **`cortex store amendments [--apply] [--json] [--today YYYY-MM-DD]`.** Reads every commit on `HEAD` carrying a `Specflow-Amends:` trailer, parsed per schema S10: target `\S+` split at the last `#` into spec id and item, then a separator of an em dash, `-` or `--`, then the reason. A short sha is the first 7 hex characters, and a commit date is the author date as `YYYY-MM-DD`. A commit is recorded when its short sha is in a file `history/changes/*-spec-amendments*.md`. Without `--apply` it lists the unrecorded trailers and the malformed ones. With `--apply`, when at least one is unrecorded, it writes a new file `history/changes/<today>-spec-amendments.md` (first free name by the `-2`, `-3` rule of `store.freshness` Rule 6) with `kind: spec-amendment`, `status: recorded`, `origin` one `commit:<sha>` per commit, and one body line per trailer: `- <short sha> <commit date> <spec id>#<item> — <reason>`. A malformed trailer is listed on stdout and not written. With nothing unrecorded it writes nothing. Exit 0. Outside a git repository it prints `not a git repository` and exits 0.
+5. **`cortex store amendments [--apply] [--json] [--today YYYY-MM-DD]`.** Reads every commit on `HEAD` carrying a `Specflow-Amends:` trailer, parsed per schema S10: target `\S+` split at the last `#` into spec id and item, then a separator of an em dash, `-` or `--`, then the reason. A short sha is the first 7 hex characters, and a commit date is the author date as `YYYY-MM-DD`. A commit is recorded when its short sha is in a file `history/changes/*-spec-amendments*.md`. Without `--apply` it lists the unrecorded trailers and the malformed ones. With `--apply`, when at least one is unrecorded, it writes a new file `history/changes/<today>-spec-amendments.md` (first free name by the `-2`, `-3` rule of `store.freshness` Rule 6) with `kind: spec-amendment`, `status: recorded`, `origin` one `commit:<sha>` per commit, and one body line per trailer: `- <short sha> <commit date> <spec id>#<item> — <reason>`. A malformed trailer is listed on stdout and not written, and only from commits after `specflow.since` when that key is set; well-formed trailers before it are recorded as usual. With nothing unrecorded it writes nothing. Exit 0. Outside a git repository it prints `not a git repository` and exits 0.
 6. **The skill's steps, in order:**
    - (1) the write gate of `store.remember-skill`: unaccepted store, print the refusal line and stop;
    - (2) run `cortex store amendments --apply`;
@@ -138,6 +138,12 @@ In-session capture does not happen on its own: an audit of five sessions found a
 - **Given** a commit with `Specflow-Amends: core-cli.init wording`
 - **When** `--apply` runs
 - **Then** the output names the commit as malformed and no history file holds it
+
+### Malformed trailers before specflow.since are not listed
+
+- **Given** `specflow.since` set to a commit, an older commit with a malformed trailer and a well-formed one, and a newer commit with a malformed trailer
+- **When** `--apply` runs
+- **Then** only the newer malformed trailer is listed, and the older well-formed one is recorded
 
 ### Without --apply nothing changes
 
