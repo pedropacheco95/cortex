@@ -22,7 +22,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 ## Entities
 
 - **READS:** spec files, the code and tests they describe, and in diff mode a commit range or patch.
-- **WRITES:** the goldfish write nothing. The main session writes only the resolutions in Rule 7.
+- **WRITES:** each goldfish writes only its findings file, outside the repository (Rule 6). The main session writes only the resolutions in Rule 7.
 - **NEVER WRITES:** a goldfish never edits a spec, a test or code.
 
 ## Rules
@@ -36,7 +36,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
    - **Diff mode**, available on request and never required. Input: the criterion ids a change claims to implement, the diff (a commit range or a patch file) and the repository root.
 6. **How the main session runs it, in order:**
    1. decide the concerns: a spec spanning more than one area is split into concerns by area;
-   2. for each concern × lens, spawn one goldfish with this brief and nothing more: the mode, the input paths or ids of that concern, the repository root, the lens, and the finding format;
+   2. for each concern × lens, spawn one goldfish with this brief and nothing more: the mode, the input paths or ids of that concern, the repository root, the lens, the finding format, and the file to write its findings to. Every goldfish writes its findings to a file outside the repository, which the main session names and reads: the file is the delivery, because a hand-back can fail after the agent has finished;
    3. **wait for every goldfish.** The SKILL.md says: `Spawn every goldfish in the foreground, or wait for every one to finish, before you merge. A session that ends with a goldfish still running loses its work.`;
    4. merge the findings: drop duplicates, keep the strongest severity, sort blockers first;
    5. hand the list to the person, who resolves it. A scheduled run hands it to its caller, which files it (`loops.quality-task`) and resolves nothing.
@@ -88,7 +88,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 
 - **Given** the SKILL.md text
 - **When** it is read
-- **Then** it says one goldfish per concern and lens, names the four lenses, and lists the five items of the brief
+- **Then** it says one goldfish per concern and lens, names the four lenses, and lists the six items of the brief
 
 ### Diff mode is optional
 
@@ -155,3 +155,9 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** it contains the Rule 12 sentence byte for byte on one line, and says a disagreement is settled by the spec, a rule or a command, never by who said it
+
+### The findings file is the delivery
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it says every goldfish writes its findings to a file outside the repository, which the main session names and reads, and that step comes before the merge step

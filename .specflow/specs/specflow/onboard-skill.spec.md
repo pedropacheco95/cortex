@@ -33,7 +33,7 @@ Two jobs need agents and a person's approval, and both start from work that alre
 1. **Bundle.** The bundle is `skills/specflow-onboard/SKILL.md`, mirrored byte for byte to `.claude/skills/specflow-onboard/SKILL.md`. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, and `store.migrate` Rule 18 step 2 installs it. Its tier in `TIERS` is **B**, and its required trigger phrases are `onboard this codebase` and `port mode`.
 2. **Description**, exactly: `Bring existing work under the specs. Port mode: turn business specs into promises and tag every test. Onboard mode: write specs from code. Proposals for approval. "onboard this codebase", "port mode".`
 3. **Working folder.** `cortex specs port` leaves its report in `.cortex-port/report.md` and `.cortex-port/report.json`. Port-mode proposals live in `.cortex-port/`: `promises/` (one draft per business spec, at the path it will take), `tagging/<area>.jsonl` (`specflow.port` Rule 12), `decisions.md` (what the person decided). Onboard-mode work lives in `.cortex-port/onboard/<concern>/`.
-4. **Agents.** Every spawned agent is awaited before its output is used (`specflow.review-skill` Rule 6). Work is split so that one agent reads one area or one test folder.
+4. **Agents.** Every spawned agent is awaited before its output is used (`specflow.review-skill` Rule 6). Every spawned agent writes its output to a file under `.cortex-port/`, which the skill reads: the file is the delivery, because a hand-back can fail after the agent has finished. Work is split so that one agent reads one area or one test folder.
 5. **Mode choice**, checked in this order:
    1. `.specflow/` exists and `specflow/` does not: the skill stops and says `Run cortex specs port first.`
    2. `specflow/` and `.cortex-port/report.json` exist: port mode.
@@ -43,7 +43,7 @@ Two jobs need agents and a person's approval, and both start from work that alre
 ### Port mode
 
 6. **Promise conversion.** `specflow.port` Rule 11 and schema S12.1 say what the output must be. For each business spec under `specflow/promises/`, an agent drafts one promise of at most 40 lines, with frontmatter `id` (`P-<AREA>-<n>`: `<AREA>` is the uppercased first folder, `<n>` counts the area's promises from 1, in path order), `title` and `status`, a `#` title, and a `## Outcome` section. It keeps every commitment the business spec makes, including what the product does not promise, and drops journey and metric detail. The draft goes in `.cortex-port/promises/`. Each impl spec's `implements:` link gives its frontmatter `serves: [<promise id>]`, mechanically, one entry per spec. Reasoning that belongs to no promise is listed for `cortex/world/decisions/`, not dropped. This is the one text rewrite of a port. A `status: retired` file is a record (`specflow.port` Rule 15): a retired business spec gets no promise and a retired spec gets no `serves:`. A live spec that implements a retired business spec is not converted: it keeps its `implements:`, stays `needs-edit` in the report, and the person decides where it belongs.
-7. **Tagging pass.** `specflow.port` Rule 12 gives the line format. Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Each case gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl`, with `file`, `name`, `line`, `action` and `reason`. Its `action` is, in this order of preference:
+7. **Tagging pass.** `specflow.port` Rule 12 gives the line format. Agents read every test that `.cortex-port/report.json` or the `.untagged` list of `cortex specs index --json` names. Each case gets exactly one JSON line in `.cortex-port/tagging/<area>.jsonl`, with `file`, `name`, `line`, `action` and `reason`. Each agent writes its lines straight into that file. Its `action` is, in this order of preference:
    - `tag`: with `criterion`, the criterion it proves;
    - `new-criterion`: no criterion matches, so it gives the `title` and the `spec` it belongs in;
    - `delete`: only when the behaviour is not wanted, with the reason.
@@ -56,7 +56,7 @@ Two jobs need agents and a person's approval, and both start from work that alre
 
 10. **Untested.** The SKILL.md says, at the top of this mode: `This mode has not been tested. It runs on a client repository only after a blind run on one area of a repository has been reviewed.` It asks the person to confirm that before it starts on a repository.
 11. **Steps, in order:**
-    1. a **splitter** agent divides the codebase into concerns;
+    1. a **splitter** agent divides the codebase into concerns, in `.cortex-port/onboard/concerns.md`;
     2. for each concern, **two independent elephants** each write a spec draft from the code into `.cortex-port/onboard/<concern>/`, neither seeing the other's output. An elephant here is a spawned agent with the concern and the code. It writes rules and criteria as `specflow.spec-skill` Rule 5 steps 2 and 3 say, and it does not run that skill: it names no test, and it commits nothing;
     3. a **reconciler** per concern keeps what both agree on, and lists every disagreement as an open question in the spec;
     4. a **goldfish** per concern reviews the reconciled spec in spec mode (`specflow.review-skill`);
@@ -161,3 +161,9 @@ Two jobs need agents and a person's approval, and both start from work that alre
 - **Given** the SKILL.md text
 - **When** its onboard section is read
 - **Then** it says a disagreement becomes an open question, the reconciler never settles it, and the main session decides only in a run told the user can't answer
+
+### Every agent delivers through a file
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it says every spawned agent writes its output to a file under `.cortex-port/`, names `.cortex-port/onboard/concerns.md` for the splitter, and says a tagging agent writes straight into its `.jsonl` file
