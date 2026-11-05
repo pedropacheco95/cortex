@@ -8,12 +8,13 @@ import { loadStore } from './layout.js';
 import { NO_STORE_MESSAGE, formatFinding, validateStore } from './validate.js';
 import { writeMapAndBlocks } from './managed-block.js';
 import { expire, staleFacts } from './freshness.js';
+import { amendmentLines, storeAmendments } from './amendments.js';
 import { isGitRepo } from './git.js';
 import { localToday } from './types.js';
 
 export interface StoreCliIO { stdout?: (line: string) => void; stderr?: (line: string) => void }
 
-export const STORE_USAGE = 'cortex store init | validate [--json] [--today YYYY-MM-DD] | map [--no-agents] | expire [--apply] [--today YYYY-MM-DD] | stale [--json]';
+export const STORE_USAGE = 'cortex store init | validate [--json] [--today YYYY-MM-DD] | map [--no-agents] | expire [--apply] [--today YYYY-MM-DD] | stale [--json] | amendments [--apply] [--json] [--today YYYY-MM-DD]';
 
 function flagValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);
@@ -50,6 +51,18 @@ export async function storeCli(args: string[], root = '.', io: StoreCliIO = {}):
     if (rest.includes('--json')) stdout(JSON.stringify({ findings: r.findings, exitCode: r.exitCode }, null, 2));
     else for (const f of r.findings) stdout(formatFinding(f));
     return r.exitCode;
+  }
+  if (verb === 'amendments') {
+    const today = todayFrom(rest, stderr);
+    if (today === null) return 2;
+    if (!isGitRepo(root)) {
+      stdout('not a git repository');
+      return 0;
+    }
+    const r = storeAmendments(root, today, rest.includes('--apply'));
+    if (rest.includes('--json')) stdout(JSON.stringify(r, null, 2));
+    else for (const l of amendmentLines(r)) stdout(l);
+    return 0;
   }
   const store = loadStore(root);
   if (!store.exists && ['map', 'expire', 'stale'].includes(verb ?? '')) {

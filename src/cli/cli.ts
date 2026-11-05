@@ -68,7 +68,7 @@ import { specsIndex } from '../specflow/index.js';
 const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['init', 'init [target] [--force] [--yes] [--no-llm] [--partial] [--profile <name>] [--timeout-ms <n>]'],
   ['sync', 'sync [target] [--yes]'],
-  ['store', 'store init|validate|map|expire|stale … (the 4.0 store, cortex/)'],
+  ['store', 'store init|validate|map|expire|stale|amendments … (the 4.0 store, cortex/)'],
   ['specs', 'specs index [--staged] [--json]'],
   ['check', 'check --commit-msg <file> | --range <base>..<head>'],
   ['migrate', 'migrate [--plan <file>] [--report <file>] [--json] [--apply|--accept]'],
@@ -82,7 +82,7 @@ const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['id', 'id next rule|bug [--slug <slug>]'],
   ['hook', 'hook <name>'],
   ['constellation', 'constellation [--port <n>]'],
-  ['tasks', 'tasks rename|plan|register|verify|heartbeat'],
+  ['tasks', 'tasks rename|plan|register|verify|collect|heartbeat'],
   ['pulse-list', 'pulse-list'],
   ['pulse-accept', 'pulse-accept <id>'],
   ['pulse-reject', 'pulse-reject <id>'],
@@ -658,6 +658,10 @@ export async function run(argv: string[]): Promise<number> {
       else console.error(result.output);
       return result.exitCode;
     }
+    if (argv[1] === 'collect') {
+      const { tasksCollect } = await import('../tasks/collect.js');
+      return tasksCollect(argv.slice(2), process.cwd());
+    }
     if (argv[1] === 'heartbeat') {
       const { heartbeatTask, HEARTBEAT_USAGE } = await import('./tasks-register.js');
       const { localToday } = await import('../store/types.js');
@@ -672,7 +676,7 @@ export async function run(argv: string[]): Promise<number> {
       else console.error(result.output);
       return result.exitCode;
     }
-    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|plan|register|verify|heartbeat`.');
+    console.error('cortex tasks: unknown subcommand — expected `cortex tasks rename|plan|register|verify|collect|heartbeat`.');
     return 1;
   }
 
