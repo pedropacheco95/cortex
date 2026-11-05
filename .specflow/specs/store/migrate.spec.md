@@ -77,12 +77,9 @@ Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's
 8. **`--apply`** refuses (exit 1, nothing written) while any entry is unmapped, while any file is undecided (Rule 16), or while any file a migrated entry accounts for would not be written (Rule 15). Otherwise it writes `cortex/` (refusing if `cortex/` exists with files not written by a previous apply of the same inputs), runs `cortex store map` (which leaves a 3.x block alone), and then runs `cortex store validate`, printing its result. It is re-runnable: the same inputs give a byte-identical tree.
 9. **`--accept`** requires a previous `--apply`. It records `"migration": { "from": "<3.x version>", "accepted": "<date>" }` in `cortex/cortex.json`, retires the 3.x system around the store (Rule 18), and then rewrites the managed blocks to 4.0, last, so that the blocks see the bundles just installed (`store.managed-block` Rule 9). It deletes nothing. It is re-runnable, also after `.cortex/` is gone: a re-run keeps the recorded date, runs Rule 18 again, and rewrites the blocks.
 10. **Never dropped.** Pending proposals (`S-NNN` whose status is pending, `G-NNN`) go to `now/proposals.md`. Each is one item: a heading `## <id>: <first line>`, then `until: <apply date + 30 days>`, then `status: pending decision`, then its full text. They also appear in the report's `pending decision` list. What happens when they expire unreviewed is specified in `store.freshness` Rule 2.
-11. **The 3.x commands leave a 4.0 store alone.** When `cortex/cortex.json` exists with a 4.0 `schemaVersion`:
-   - **Before acceptance** (`migration.accepted` is `null`), `cortex init` never writes the `CLAUDE.md` or `AGENTS.md` managed block. It prints `managed block owned by the 4.0 store (cortex/); left untouched`, and otherwise behaves as before on `.cortex/`.
-   - **After acceptance, or on a 4.0 store with no `migration` field** (a fresh `cortex store init`), `cortex init` refuses, with exit 2 and the message `this project uses the 4.0 store (cortex/); use cortex store init or cortex store map`, and writes nothing.
-   - **`cortex sync`** no longer has a 3.x path (amendment 2026-11-04). `core-cli.sync` Rule 16 decides what it does in each of these states.
+11. **Init and sync on a 4.0 store.** When `cortex/cortex.json` exists with a 4.0 `schemaVersion`, neither command has a 3.x path (amendment 2026-11-04). `core-cli.init` Rule 20 and `core-cli.sync` Rule 16 decide what each does in each state. Before acceptance (`migration.accepted` is `null`) both refuse and write nothing, so neither touches the `CLAUDE.md` or `AGENTS.md` managed block.
 
-   These are the only changes this spec makes to the 3.x code path. A sync can protect a foreign project only once the installed `cortex` binary carries this rule: no foreign project is accepted before that.
+   A sync can protect a foreign project only once the installed `cortex` binary carries this rule: no foreign project is accepted before that.
 12. **Insight is dropped by decision** (2026-10-14; schema S9.3). The 3.x inferred code summaries are neither migrated nor kept: `insight/anatomy/**`, `insight/concepts/**`, the insight graph with its indexes (`insight/{graph,tags,clusters,reverse-index,ledger}.json`), and the scoped layout's `insight/scopes/**`. Each file is one entry with disposition `dropped by decision`, so coverage still reaches 100%.
    - The report shows them as one row per group, with a file count, not one row per file. A scoped file's group is the first folder inside its scope, with a trailing ` <n>` stripped: `anatomy`, `concepts`, `graph` (for `graph.json` or `graph/`), else `other`. The report also shows the number of scopes.
    - The report prints the removal command, covering `.cortex/insight/anatomy`, `.cortex/insight/concepts`, `.cortex/insight/scopes` and the five graph files. `migrate` never runs it, with or without `--apply` or `--accept`.
@@ -211,11 +208,11 @@ Amendment 2026-11-04 (Specflow; owner decision: migration also fixes a project's
 - **When** `cortex migrate --apply` runs
 - **Then** `now/proposals.md` contains its full text with an `until:` 30 days after the apply date, and the report lists it under `pending decision`
 
-### 3.x init leaves the 4.0 block untouched
+### Init before acceptance leaves the 4.0 block untouched
 
 - **Given** an applied migration that is not yet accepted (`cortex/cortex.json` at 4.0 with `migration.accepted: null`, and a hand-written v4.0 block in `CLAUDE.md`) and the 3.x store still present
 - **When** `cortex init` runs
-- **Then** the `CLAUDE.md` and `AGENTS.md` blocks are byte-identical to before, and it prints that the block is owned by the 4.0 store
+- **Then** it refuses as `core-cli.init` Rule 20 step 5 says, and the `CLAUDE.md` and `AGENTS.md` blocks are byte-identical to before
 
 ### Accept switches the blocks and deletes nothing
 
@@ -368,12 +365,6 @@ All of these use the foreign fixture (`writeForeignStore`). It holds a 3.3 confi
   - `.claude/skills/cortex-remember/` exists with a marker;
   - the output lists `cortex-loop` as `unmodified`, `cortex-archive-ingest` and `cortex-loop-hygiene` as `modified or unmarked`, both payloads for this root and no other, and `project skills to adjust: 1`;
   - no file under `.claude/skills/`, the tasks folder or `.cortex/` was deleted.
-
-### 3.x init refuses after acceptance
-
-- **Given** an accepted migration, and separately a fresh `cortex store init` project with no `.cortex/`
-- **When** `cortex init` runs
-- **Then** it exits 2 with the 4.0 message, and `.claude/`, `CLAUDE.md` and `.cortex/` are byte-identical
 
 ## Acceptance Criteria: project skills (amendment 2026-11-04)
 

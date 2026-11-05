@@ -2,7 +2,6 @@
 id: core-cli.sync
 status: draft
 depends_on:
-  - core-cli.init
   - core-cli.task-scoping
   - core-cli.tasks-register
   - schema.validator
@@ -75,7 +74,7 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     3. `cortex/cortex.json` exists and `migration.accepted` is set, or it has no `migration` field: the update route, Rule 17;
     4. `cortex/cortex.json` exists and `migration.accepted` is `null`: exit 3, `cortex sync: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`;
     5. `.cortex/cortex.config.json` exists: exit 3, `cortex sync: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.`;
-    6. otherwise: exit 2, `cortex sync: refused — no Cortex store found at <root>; set one up with cortex store init. Nothing was written.`
+    6. otherwise: exit 2, `cortex sync: refused — no Cortex store found at <root>; set one up with cortex init. Nothing was written.`
 17. **The update route, in order:** remove retired skills (Rule 18); install and update the final set (Rule 19); refresh `MAP.md` and the managed blocks (Rule 20); refresh the git hooks (Rule 21); register the tasks (Rule 22); list project skills (Rule 23); validate (Rule 24). The blocks come after the skills, so that they see `specflow-spec` (`store.managed-block` Rule 9).
 18. **Retired skills.** A bundle under `.claude/skills/` whose name matches `RETIRED_SKILL_NAMES` (`store.migrate` Rule 18 step 5) is a candidate.
     - Its `.cortex-installed.json` marker matches its content: it is removed, with the line `skills: removed <name>`.
@@ -296,7 +295,7 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 
 - **Given** a project with neither store
 - **When** `cortex sync` runs
-- **Then** it exits 2 with the message naming `cortex store init`
+- **Then** it exits 2 with the message naming `cortex init`
 
 ### A store of another major version is refused
 
