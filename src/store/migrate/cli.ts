@@ -7,7 +7,7 @@ import { migrate } from './run.js';
 
 export const MIGRATE_USAGE = 'cortex migrate [--plan <file>] [--redact <file>] [--visibility public|private] [--report <file>] [--json] [--apply|--accept] [--today YYYY-MM-DD]';
 
-export interface MigrateCliIO { stdout?: (line: string) => void; stderr?: (line: string) => void; home?: string }
+export interface MigrateCliIO { stdout?: (line: string) => void; stderr?: (line: string) => void; home?: string; packageDir?: string }
 
 export async function migrateCli(args: string[], root = '.', io: MigrateCliIO = {}): Promise<number> {
   const stdout = io.stdout ?? ((l: string) => console.log(l));
@@ -41,7 +41,7 @@ export async function migrateCli(args: string[], root = '.', io: MigrateCliIO = 
   }
   const r = migrate(root, {
     plan: value('--plan'), redact: value('--redact'), report: value('--report'), json: args.includes('--json'),
-    apply: args.includes('--apply'), accept: args.includes('--accept'), today, visibility, home: io.home,
+    apply: args.includes('--apply'), accept: args.includes('--accept'), today, visibility, home: io.home, packageDir: io.packageDir,
   });
   for (const l of r.out) (r.exitCode === 0 ? stdout : stderr)(l);
   return r.exitCode;

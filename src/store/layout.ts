@@ -124,11 +124,16 @@ export function loadStore(root: string): Store {
   return store;
 }
 
-/** The S9.1 acceptance rule: no `migration` field, or one whose `accepted` is set. */
+/** A `migration.accepted` value that counts: a `YYYY-MM-DD` date. */
+export function isAcceptedDate(v: unknown): v is string {
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+/** The S9.1 acceptance rule: no `migration` field, or one whose `accepted` is a date. */
 export function migrationAccepted(store: Store): boolean {
   const m = store.config?.['migration'];
   if (m === undefined) return true;
-  return typeof m === 'object' && m !== null && typeof (m as Record<string, unknown>)['accepted'] === 'string';
+  return typeof m === 'object' && m !== null && isAcceptedDate((m as Record<string, unknown>)['accepted']);
 }
 
 export function fileStem(rel: string): string {

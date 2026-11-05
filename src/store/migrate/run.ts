@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
-import { STORE_CONFIG, STORE_FOLDERS, MAP_FILE, loadStore, storeDir } from '../layout.js';
+import { STORE_CONFIG, STORE_FOLDERS, MAP_FILE, isAcceptedDate, loadStore, storeDir } from '../layout.js';
 import { ensureGitignore } from '../init.js';
 import { writeMapAndBlocks } from '../managed-block.js';
 import { validateLoaded, formatFinding } from '../validate.js';
@@ -339,6 +339,8 @@ export interface MigrateOptions {
   visibility?: string;
   /** Home directory holding `.claude/scheduled-tasks/` (tests pass their own). */
   home?: string;
+  /** Package root holding `skills/` (tests pass their own). */
+  packageDir?: string;
   today: string;
 }
 
@@ -362,7 +364,7 @@ const asBuffer = (v: string | Buffer | undefined): Buffer | undefined => (v === 
 
 export function migrate(root: string, opts: MigrateOptions): MigrateResult {
   const out: string[] = [];
-  if (opts.accept) return accept(root, opts.today, opts.home ?? os.homedir());
+  if (opts.accept) return accept(root, opts.today, opts.home ?? os.homedir(), opts.packageDir ?? packageRoot());
   const read = readLegacyStore(root);
   if (!read) return { exitCode: 1, out: [`no 3.x store (${LEGACY_DIR}/ not found)`] };
   let plan: PlanFile | null = null;
@@ -423,7 +425,7 @@ export function migrate(root: string, opts: MigrateOptions): MigrateResult {
   const tree = buildTree(legacy, planned, { sha, today: opts.today, fileDate, visibility: opts.visibility });
   const dir = storeDir(root);
   const existing = existingTree(dir);
-  const strangers = [...existing].filter(([rel, content]) => rel !== MAP_FILE && !asBuffer(tree.files.get(rel))?.equals(content)).map(([rel]) => rel);
+  const strangers = [...existing].filter(([rel, content]) => rel !== MAP_FILE && !(rel === STORE_CONFIG && isBareStoreConfig(content)) && !asBuffer(tree.files.get(rel))?.equals(content)).map(([rel]) => rel);
   if (strangers.length) {
     return refuse(`cortex/ holds files a previous apply of these inputs did not write: ${strangers.slice(0, 10).join(', ')}${strangers.length > 10 ? ', …' : ''}`);
   }
@@ -447,7 +449,17 @@ export function migrate(root: string, opts: MigrateOptions): MigrateResult {
   return { exitCode: 0, out };
 }
 
-function accept(root: string, today: string, home: string): MigrateResult {
+/** The `cortex.json` of `cortex store init`, holding nothing a person or a migration added (Rule 8). */
+function isBareStoreConfig(content: Buffer): boolean {
+  try {
+    const cfg: unknown = JSON.parse(content.toString('utf8'));
+    return cfg !== null && typeof cfg === 'object' && Object.keys(cfg).every((k) => k === 'schemaVersion' || k === 'visibility');
+  } catch {
+    return false;
+  }
+}
+
+function accept(root: string, today: string, home: string, pkg: string): MigrateResult {
   const p = path.join(storeDir(root), STORE_CONFIG);
   let cfg: Record<string, unknown> | null = null;
   try {
@@ -457,9 +469,10 @@ function accept(root: string, today: string, home: string): MigrateResult {
   }
   const mig = cfg?.['migration'] as Record<string, unknown> | undefined;
   if (!cfg || !mig || typeof mig !== 'object') return { exitCode: 1, out: ['refusing --accept: no applied migration (run cortex migrate --apply first)'] };
-  cfg['migration'] = { from: mig['from'], accepted: typeof mig['accepted'] === 'string' ? mig['accepted'] : today };
+  cfg['migration'] = { from: mig['from'], accepted: isAcceptedDate(mig['accepted']) ? mig['accepted'] : today };
   fs.writeFileSync(p, JSON.stringify(cfg, null, 2) + '\n');
+  const system = retireLegacySystem(root, home, pkg);
+  // Last, so that the blocks see the bundles just installed (Rule 9).
   const r = writeMapAndBlocks(root, { force: true });
-  const system = retireLegacySystem(root, home);
   return { exitCode: 0, out: [...r.lines, `migration accepted on ${(cfg['migration'] as Record<string, unknown>)['accepted']}; .cortex/ is left in place (remove it yourself: ${removal([LEGACY_DIR])})`, ...system.lines] };
 }

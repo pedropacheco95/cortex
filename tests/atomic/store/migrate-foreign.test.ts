@@ -286,7 +286,8 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(text).toContain('demo-weekly-quality');
     expect(text).not.toContain('other-daily');
     expect(text).not.toContain('demo-tickets');
-    expect(text).toContain('installed skills that still name .cortex/: 2 (ref-skill, specflow-bugs)');
+    expect(text).toContain('project skills to adjust: 1');
+    expect(text).toContain('- ref-skill/references/paths.md: .cortex/');
     for (const f of before.skills) expect(fs.existsSync(path.join(root, '.claude/skills', f)), f).toBe(true);
     expect(bytes(path.join(home, '.claude/scheduled-tasks'))).toEqual(before.tasks);
     expect(bytes(path.join(root, '.cortex'))).toEqual(before.legacy);
