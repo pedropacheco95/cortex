@@ -345,7 +345,7 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'anatomy-refresh-fast') {
     console.error(
       'cortex anatomy-refresh-fast: retired in v3 — anatomy is absorbed into insight (design §5.10). ' +
-        'The post-commit fast tier is `cortex insight-refresh-fast`; re-run `cortex init --force` to refresh the git hook.',
+        'The post-commit fast tier is `cortex insight-refresh-fast`; change that line in .git/hooks/post-commit.',
     );
     return 0; // hook-safe: a stale post-commit hook must never fail the commit
   }

@@ -51,7 +51,7 @@ function readConfigSchemaVersion(root: string): string | null {
 export function checkClaudeMdVersion(root: string): DriftFinding[] {
   const claudeMdPath = path.join(root, 'CLAUDE.md');
   const schemaVersion = readConfigSchemaVersion(root);
-  const refresh = 'run `cortex sync` to refresh the managed block';
+  const refresh = 'run `cortex sync` to refresh the managed block; a 3.x project migrates first, with `cortex migrate`';
 
   if (!fs.existsSync(claudeMdPath)) {
     return [{ finding: 'CLAUDE.md is missing (no managed block directs Claude into Cortex)', action: refresh }];
@@ -64,7 +64,7 @@ export function checkClaudeMdVersion(root: string): DriftFinding[] {
     return [
       {
         finding: 'cortex.config.json has no readable schemaVersion — the managed block version cannot be compared',
-        action: 'restore .cortex/cortex.config.json (e.g. via `cortex init --force`)',
+        action: 'restore .cortex/cortex.config.json from git, then run `cortex migrate`',
       },
     ];
   }
