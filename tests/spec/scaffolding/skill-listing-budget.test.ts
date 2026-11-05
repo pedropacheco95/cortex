@@ -30,7 +30,7 @@ const REWRITTEN = [
 ];
 
 describe('AC: the guard covers every bundle without a flag', () => {
-  it('measures every directory under skills/ that has a SKILL.md', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-7] measures every directory under skills/ that has a SKILL.md', () => {
     const onDisk = fs
       .readdirSync(SKILLS, { withFileTypes: true })
       .filter((e) => e.isDirectory() && fs.existsSync(path.join(SKILLS, e.name, 'SKILL.md')))
@@ -61,7 +61,7 @@ describe('AC: the shipped listing conforms to its tier ceilings', () => {
     expect(evaluate(rows)).toEqual([]);
   });
 
-  it.each(REWRITTEN)('%s is within its tier ceiling', (bundle) => {
+  it.each(REWRITTEN)('[SCAFFOLDING-SKILL-LISTING-BUDGET-1] %s is within its tier ceiling', (bundle) => {
     const row = byName.get(bundle) as { after: number; tier: string };
     const ceiling = TIER_CEILING[row.tier];
     expect(ceiling).not.toBeNull();
@@ -76,7 +76,7 @@ describe('AC: the shipped listing conforms to its tier ceilings', () => {
 });
 
 describe('AC: a name-dispatched bundle fits Tier A', () => {
-  it('verification-before-completion is at most 120 chars and keeps its pinned phrases', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-1] verification-before-completion is at most 120 chars and keeps its pinned phrases', () => {
     const row = byName.get('verification-before-completion') as { after: number; description: string };
     expect(row.after).toBeLessThanOrEqual(120);
     expect(row.description.toLowerCase()).toContain('evidence gate');
@@ -84,7 +84,7 @@ describe('AC: a name-dispatched bundle fits Tier A', () => {
 });
 
 describe('AC: a cold-phrasing entry point keeps its surface', () => {
-  it('specflow-spec is at most 250 chars and keeps its pinned phrases', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-2] specflow-spec is at most 250 chars and keeps its pinned phrases', () => {
     const row = byName.get('specflow-spec') as { after: number; description: string };
     expect(row.after).toBeLessThanOrEqual(250);
     const d = row.description.toLowerCase();
@@ -108,11 +108,11 @@ describe('AC: a callable-only bundle carries no trigger surface', () => {
     }
   });
 
-  it.each(tierD)('%s is at most 60 chars', (bundle) => {
+  it.each(tierD)('[SCAFFOLDING-SKILL-LISTING-BUDGET-3] %s is at most 60 chars', (bundle) => {
     expect((byName.get(bundle) as { after: number }).after).toBeLessThanOrEqual(60);
   });
 
-  it.each(tierD)('%s advertises no triggers', (bundle) => {
+  it.each(tierD)('[SCAFFOLDING-SKILL-LISTING-BUDGET-3] %s advertises no triggers', (bundle) => {
     const d = (byName.get(bundle) as { description: string }).description;
     expect(d).not.toMatch(/PROACTIVELY/i);
     expect(d).not.toMatch(/trigger/i);
@@ -143,14 +143,14 @@ describe('AC: shed content survives in the body', () => {
     expect(Object.keys(SHED_PHRASE).sort()).toEqual([...REWRITTEN].sort());
   });
 
-  it.each(REWRITTEN)('%s has a non-empty "## When to use" section', (bundle) => {
+  it.each(REWRITTEN)('[SCAFFOLDING-SKILL-LISTING-BUDGET-11] %s has a non-empty "## When to use" section', (bundle) => {
     const raw = fs.readFileSync(path.join(SKILLS, bundle, 'SKILL.md'), 'utf-8');
     expect(raw).toMatch(/^## When to use$/m);
     const section = raw.split(/^## When to use$/m)[1]?.split(/^## /m)[0] ?? '';
     expect(section.trim().length, `${bundle}'s section is empty`).toBeGreaterThan(80);
   });
 
-  it.each(REWRITTEN)('%s keeps a distinctive phrase from its pre-shrink description', (bundle) => {
+  it.each(REWRITTEN)('[SCAFFOLDING-SKILL-LISTING-BUDGET-11] %s keeps a distinctive phrase from its pre-shrink description', (bundle) => {
     const raw = fs.readFileSync(path.join(SKILLS, bundle, 'SKILL.md'), 'utf-8');
     // Normalised: the moved text is re-wrapped, so a phrase may span lines.
     expect(raw.replace(/\s+/g, ' ')).toContain(SHED_PHRASE[bundle]);
@@ -158,13 +158,13 @@ describe('AC: shed content survives in the body', () => {
 });
 
 describe('AC: the mirror matches the source', () => {
-  it.each(REWRITTEN)('%s is byte-identical in .claude/skills/', (bundle) => {
+  it.each(REWRITTEN)('[SCAFFOLDING-SKILL-LISTING-BUDGET-12] %s is byte-identical in .claude/skills/', (bundle) => {
     const src = fs.readFileSync(path.join(SKILLS, bundle, 'SKILL.md'));
     const mirrored = fs.readFileSync(path.join(MIRROR, bundle, 'SKILL.md'));
     expect(mirrored.equals(src)).toBe(true);
   });
 
-  it('mirrors every shipped bundle, not only the rewritten ones', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-12] mirrors every shipped bundle, not only the rewritten ones', () => {
     for (const bundle of Object.keys(TIERS)) {
       const src = fs.readFileSync(path.join(SKILLS, bundle, 'SKILL.md'));
       const mirrored = fs.readFileSync(path.join(MIRROR, bundle, 'SKILL.md'));
@@ -198,12 +198,12 @@ describe('AC: the package ships exactly the ten', () => {
     .map((e) => e.name)
     .sort();
 
-  it('lists FINAL_BUNDLES and cortex-migrate, and nothing else', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-13] lists FINAL_BUNDLES and cortex-migrate, and nothing else', () => {
     expect(shipped).toHaveLength(10);
     expect(shipped).toEqual(SHIPPED);
   });
 
-  it('ships no bundle with a retired name', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-13] ships no bundle with a retired name', () => {
     const patterns = RETIRED_SKILL_NAMES.map((n) => new RegExp(`^${n.replace('*', '.+')}$`));
     for (const name of shipped) {
       expect(patterns.some((p) => p.test(name)), `${name} is retired`).toBe(false);
@@ -212,7 +212,7 @@ describe('AC: the package ships exactly the ten', () => {
 });
 
 describe('AC: the mirror holds the same ten', () => {
-  it('lists the ten and coordinate-sessions, and nothing else', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-14] lists the ten and coordinate-sessions, and nothing else', () => {
     const mirrored = fs
       .readdirSync(MIRROR, { withFileTypes: true })
       .filter((e) => e.isDirectory())
@@ -221,7 +221,7 @@ describe('AC: the mirror holds the same ten', () => {
     expect(mirrored).toEqual([...SHIPPED, 'coordinate-sessions'].sort());
   });
 
-  it.each(SHIPPED)('%s is byte-identical, with no strays on either side', (bundle) => {
+  it.each(SHIPPED)('[SCAFFOLDING-SKILL-LISTING-BUDGET-14] %s is byte-identical, with no strays on either side', (bundle) => {
     const files = filesUnder(path.join(SKILLS, bundle));
     expect(files).toContain('SKILL.md');
     expect(filesUnder(path.join(MIRROR, bundle))).toEqual(files);

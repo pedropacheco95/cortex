@@ -27,14 +27,14 @@ const okRow = {
 const okTriggers = { 'fixture-a': ['run the thing'] };
 
 describe('AC: an unclassified bundle fails the guard', () => {
-  it('fails a bundle with no tier and names it', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-8] fails a bundle with no tier and names it', () => {
     const failures = evaluate([{ ...okRow, tier: undefined }], okTriggers);
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('fixture-a');
     expect(failures[0]).toContain('no tier');
   });
 
-  it('does not fall back to a default ceiling for it', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-8] does not fall back to a default ceiling for it', () => {
     // A 5,000-char unclassified bundle must not pass because nothing checked it.
     const failures = evaluate([{ ...okRow, tier: undefined, after: 5000 }], okTriggers);
     expect(failures).toHaveLength(1);
@@ -43,7 +43,7 @@ describe('AC: an unclassified bundle fails the guard', () => {
 });
 
 describe('AC: an over-ceiling description fails the guard', () => {
-  it('fails a Tier A row at 200 chars and reports size and ceiling', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-9] fails a Tier A row at 200 chars and reports size and ceiling', () => {
     const failures = evaluate([{ ...okRow, after: 200 }], okTriggers);
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('200 chars');
@@ -62,7 +62,7 @@ describe('AC: an over-ceiling description fails the guard', () => {
 
 
 describe('AC: a dropped trigger phrase fails the guard', () => {
-  it('names the lost phrase', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-10] names the lost phrase', () => {
     const failures = evaluate([{ ...okRow, description: 'Does a thing.' }], okTriggers);
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('lost trigger phrase');
@@ -82,7 +82,7 @@ describe('AC: a dropped trigger phrase fails the guard', () => {
 });
 
 describe('AC: a Tier D bundle that declares trigger phrases fails the guard', () => {
-  it('fails when a phrase is pinned', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-4] fails when a phrase is pinned', () => {
     const row = { bundle: 'fixture-d', after: 40, description: 'Generate the thing.', tier: 'D' };
     const failures = evaluate([row], { 'fixture-d': ['generate the thing'] });
     expect(failures).toHaveLength(1);
@@ -99,18 +99,18 @@ describe('AC: a Tier D bundle that declares trigger phrases fails the guard', ()
 describe('AC: a typed-only bundle costs nothing and needs its header', () => {
   const eRow = { bundle: 'fixture-e', after: 0, description: 'A long description that no listing holds.', tier: 'E', typedOnly: true };
 
-  it('applies no ceiling to Tier E', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-5] applies no ceiling to Tier E', () => {
     expect(evaluate([{ ...eRow, after: 5000 }], { 'fixture-e': [] })).toEqual([]);
   });
 
-  it('fails a Tier E bundle without the header and names it', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-5] fails a Tier E bundle without the header and names it', () => {
     const failures = evaluate([{ ...eRow, typedOnly: false }], { 'fixture-e': [] });
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('fixture-e');
     expect(failures[0]).toContain('disable-model-invocation');
   });
 
-  it('fails a bundle with the header in any other tier and names it', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-5] fails a bundle with the header in any other tier and names it', () => {
     const failures = evaluate([{ ...okRow, typedOnly: true }], okTriggers);
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('fixture-a');
@@ -123,7 +123,7 @@ describe('AC: a typed-only bundle costs nothing and needs its header', () => {
     expect(failures[0]).toContain('declares no trigger phrases');
   });
 
-  it('counts the two shipped typed-only bundles as zero, each with the header', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-5] counts the two shipped typed-only bundles as zero, each with the header', () => {
     const rows = guard.measureWorkingTree();
     for (const bundle of ['cortex-register-tasks', 'cortex-migrate']) {
       const row = rows.find((r: { bundle: string }) => r.bundle === bundle);
