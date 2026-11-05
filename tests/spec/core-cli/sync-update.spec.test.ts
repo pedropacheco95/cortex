@@ -3,19 +3,24 @@
  * acceptance criterion. Every case runs on a real project tree under a test
  * package root, so a removal or an overwrite shows up as bytes on disk.
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { updateRoute, type UpdateOptions } from '../../../src/cli/update.js';
+import { run as cortex } from '../../../src/cli/cli.js';
+import { registerTasks } from '../../../src/cli/tasks-register.js';
+import { handWrittenHooks, installHooks } from '../../../src/specflow/hooks-install.js';
 import { hashDirectoryContent, INSTALLED_MARKER_FILENAME, writeInstalledMarker } from '../../../src/cli/scaffold.js';
-import { FINAL_BUNDLES, TMP_BUNDLE_PREFIX } from '../../../src/store/migrate/system.js';
+import { FINAL_BUNDLES, TMP_BUNDLE_PREFIX, installWhole } from '../../../src/store/migrate/system.js';
 import { SPECS_SECTION_STAGE2 } from '../../../src/store/managed-block.js';
 import { STORE_V4_TASKS } from '../../../src/cli/templates.js';
 import { storeInit } from '../../../src/store/init.js';
 import { scopedTaskName, hashScopedTaskName } from '../../../src/cli/task-scoping.js';
 import { tmpRepo, cleanRepos, gitInit } from '../../fixtures/store.js';
+
+vi.mock('../../../src/cli/tasks-register.js', async (original) => ({ ...(await original<object>()), registerTasks: vi.fn() }));
 
 afterEach(cleanRepos);
 
@@ -91,6 +96,12 @@ function registry(home: string, names: readonly string[]): string {
 }
 
 const canonical = STORE_V4_TASKS.map((t) => t.name);
+
+describe('the package', () => {
+  it('This repository ships every bundle of the final set', () => {
+    for (const n of [...FINAL_BUNDLES, 'cortex-migrate']) expect(fs.existsSync(path.join(REPO, 'skills', n, 'SKILL.md')), n).toBe(true);
+  });
+});
 
 describe('core-cli.sync Rule 16: which project gets what', () => {
   it('refuses off darwin before anything else', async () => {
@@ -316,6 +327,112 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     expect(fs.readdirSync(skills).filter((n) => n.startsWith(TMP_BUNDLE_PREFIX))).toEqual([]);
   });
 
+  it('a failed copy leaves the old bundle and a partial temp folder the next run clears', async () => {
+    const root = accepted('realfail');
+    const dir = bundle(root, 'cortex-remember', 'old\n', true);
+    const before = tree(dir);
+    const src = tmpRepo('src');
+    fs.writeFileSync(path.join(src, 'a.md'), 'a\n');
+    fs.writeFileSync(path.join(src, 'SKILL.md'), 'new\n');
+    fs.chmodSync(path.join(src, 'SKILL.md'), 0o000);
+    const skills = path.join(root, '.claude/skills');
+    expect(() => installWhole(skills, 'cortex-remember', src)).toThrow();
+    fs.chmodSync(path.join(src, 'SKILL.md'), 0o644);
+    expect(tree(dir)).toEqual(before);
+    expect(fs.existsSync(path.join(skills, `${TMP_BUNDLE_PREFIX}cortex-remember`))).toBe(true);
+    const r = await run(root);
+    expect(r.code, r.text).toBe(0);
+    expect(fs.readdirSync(skills).filter((n) => n.startsWith(TMP_BUNDLE_PREFIX))).toEqual([]);
+  });
+
+  it('A failed removal leaves the bundle whole', async () => {
+    const root = accepted('nomove');
+    const dir = bundle(root, 'specflow-develop', 'dev\n', true);
+    const before = tree(dir);
+    const skills = path.join(root, '.claude/skills');
+    fs.chmodSync(skills, 0o555);
+    const r = await run(root);
+    fs.chmodSync(skills, 0o755);
+    expect(r.code).toBe(1);
+    expect(r.text).toContain('cortex sync: stopped at skills:');
+    expect(tree(dir)).toEqual(before);
+  });
+
+  it('A read-only subfolder does not wedge the next runs', async () => {
+    const root = accepted('readonly');
+    const dir = bundle(root, 'cortex-remember', 'old\n');
+    fs.mkdirSync(path.join(dir, 'sub'));
+    fs.writeFileSync(path.join(dir, 'sub/x.md'), 'x\n');
+    writeInstalledMarker(path.join(dir, INSTALLED_MARKER_FILENAME), hashDirectoryContent(dir, [INSTALLED_MARKER_FILENAME]));
+    fs.chmodSync(path.join(dir, 'sub'), 0o555);
+    const first = await run(root);
+    expect(first.code, first.text).toBe(0);
+    expect(first.text).toContain('skills: updated cortex-remember');
+    const leftovers = fs.readdirSync(path.join(root, '.claude/skills')).filter((n) => n.startsWith(TMP_BUNDLE_PREFIX));
+    expect(leftovers).toEqual([]);
+  });
+
+  it('Something in the way of a temp name is named', async () => {
+    const root = accepted('blocked');
+    bundle(root, 'specflow-plan', 'p\n', true);
+    fs.writeFileSync(path.join(root, `.claude/skills/${TMP_BUNDLE_PREFIX}specflow-plan`), 'a note\n');
+    const p = pkg();
+    for (const dryRun of [true, false]) {
+      const r = await run(root, { pkgDir: p, dryRun });
+      expect(r.code).toBe(1);
+      expect(r.text).toContain(`${TMP_BUNDLE_PREFIX}specflow-plan is in the way; move it and run this again`);
+    }
+    expect(fs.readFileSync(path.join(root, `.claude/skills/${TMP_BUNDLE_PREFIX}specflow-plan`), 'utf8')).toBe('a note\n');
+    expect(fs.existsSync(path.join(root, '.claude/skills/specflow-plan/SKILL.md'))).toBe(true);
+  });
+
+  it("A person's temp-looking folder stays, and a generated leftover is named", async () => {
+    const root = accepted('leftovers');
+    const skills = path.join(root, '.claude/skills');
+    fs.mkdirSync(path.join(skills, `${TMP_BUNDLE_PREFIX}notes`), { recursive: true });
+    fs.writeFileSync(path.join(skills, `${TMP_BUNDLE_PREFIX}notes/mine.md`), 'mine\n');
+    fs.mkdirSync(path.join(skills, `${TMP_BUNDLE_PREFIX}old-cortex-remember`));
+    fs.mkdirSync(path.join(skills, `${TMP_BUNDLE_PREFIX}specflow-plan`));
+    const r = await run(root);
+    expect(r.code, r.text).toBe(0);
+    expect(fs.readFileSync(path.join(skills, `${TMP_BUNDLE_PREFIX}notes/mine.md`), 'utf8')).toBe('mine\n');
+    expect(r.text).toContain(`skills: cleared leftover ${TMP_BUNDLE_PREFIX}old-cortex-remember`);
+    expect(r.text).toContain(`skills: cleared leftover ${TMP_BUNDLE_PREFIX}specflow-plan`);
+    expect(fs.existsSync(path.join(skills, `${TMP_BUNDLE_PREFIX}specflow-plan`))).toBe(false);
+  });
+
+  it('An empty folder at a bundle name counts as absent', async () => {
+    const root = accepted('empty');
+    const skills = path.join(root, '.claude/skills');
+    fs.mkdirSync(path.join(skills, 'cortex-remember'), { recursive: true });
+    fs.mkdirSync(path.join(skills, 'specflow-plan'));
+    const r = await run(root);
+    expect(r.code, r.text).toBe(0);
+    expect(fs.existsSync(path.join(skills, 'cortex-remember/SKILL.md'))).toBe(true);
+    expect(r.text).not.toContain('specflow-plan is retired');
+  });
+
+  it('A .DS_Store is not a local edit', async () => {
+    const root = accepted('dsstore');
+    const dir = bundle(root, 'cortex-remember', 'old\n', true);
+    fs.writeFileSync(path.join(dir, '.DS_Store'), 'finder');
+    const gone = bundle(root, 'specflow-develop', 'dev\n', true);
+    fs.writeFileSync(path.join(gone, '.DS_Store'), 'finder');
+    const r = await run(root);
+    expect(r.text).toContain('skills: updated cortex-remember');
+    expect(r.text).toContain('skills: removed specflow-develop');
+  });
+
+  it('a folder at the marker path does not stop sync', async () => {
+    const root = accepted('markerdir');
+    const p = pkg();
+    const dir = bundle(root, 'specflow-spec', fs.readFileSync(path.join(p, 'skills/specflow-spec/SKILL.md'), 'utf8'));
+    fs.mkdirSync(path.join(dir, INSTALLED_MARKER_FILENAME));
+    const r = await run(root, { pkgDir: p });
+    expect(r.code, r.text).toBe(0);
+    expect(r.text).toContain('skills: specflow-spec: marker not written; left alone');
+  });
+
   it('A missing or stale marker on an identical copy is written', async () => {
     const root = accepted('backfill');
     const p = pkg();
@@ -424,7 +541,7 @@ describe('core-cli.sync Rule 21: hooks', () => {
     expect(fs.existsSync(path.join(root, '.githooks'))).toBe(false);
     expect(JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf8')).specflow).toBeUndefined();
     expect(r.text).toContain('hooks: not installed; run cortex hooks install');
-    expect(before['cortex/cortex.json']).toBeDefined();
+    expect(tree(root)['cortex/cortex.json']).toBe(before['cortex/cortex.json']);
   });
 
   it('A hooks path elsewhere gets no install advice', async () => {
@@ -452,42 +569,34 @@ describe('core-cli.sync Rule 21: hooks', () => {
     expect(r.text).toContain('hooks: not a git repository; skipped');
   });
 
-  it('A hand-written hook does not fail sync', async () => {
-    const root = accepted('hooks-refused');
+  const installed = (label: string): string => {
+    const root = accepted(label);
     gitInit(root);
-    execFileSync('git', ['config', 'core.hooksPath', '.githooks'], { cwd: root });
-    fs.mkdirSync(path.join(root, '.githooks'));
-    fs.writeFileSync(path.join(root, '.githooks/commit-msg'), '#!/bin/sh\n# cortex-managed: cortex hooks install rewrites this file\n');
+    expect(installHooks(root, { writeSince: false }, { stdout: () => {}, stderr: () => {} })).toBe(0);
+    return root;
+  };
+  const refusal = 'specflow: .githooks/pre-commit is not a Cortex hook; nothing was changed. Move it to .git/hooks/pre-commit, where it keeps running, and run this again.';
+
+  it('A hand-written hook does not fail sync', async () => {
+    const root = installed('hooks-refused');
     fs.writeFileSync(path.join(root, '.githooks/pre-commit'), '#!/bin/sh\necho ours\n');
     const before = tree(path.join(root, '.githooks'));
-    const line = 'specflow: .githooks/pre-commit is not a Cortex hook; nothing was changed. Move it to .git/hooks/pre-commit, where it keeps running, and run this again.';
-    const r = await run(root, { refreshHooks: () => ({ refused: [line] }) });
+    const r = await run(root);
     expect(r.code, r.text).toBe(0);
-    expect(r.text).toContain(`hooks: ${line}`);
+    expect(r.text).toContain(`hooks: ${refusal}`);
     expect(r.text).not.toContain('refreshed');
     expect(tree(path.join(root, '.githooks'))).toEqual(before);
   });
 
   it('Installed hooks are refreshed', async () => {
-    const root = accepted('hooks-refresh');
-    gitInit(root);
-    execFileSync('git', ['config', 'core.hooksPath', '.githooks'], { cwd: root });
-    fs.mkdirSync(path.join(root, '.githooks'));
-    fs.writeFileSync(path.join(root, '.githooks/commit-msg'), '#!/bin/sh\n# cortex-managed: cortex hooks install rewrites this file\n');
-    let called = 0;
-    const r = await run(root, { refreshHooks: () => { called++; return { refused: [] }; } });
-    expect(called).toBe(1);
-    expect(r.text).toContain('hooks: refreshed .githooks');
-  });
-
-  it('no refresher means no claim of a refresh', async () => {
-    const root = accepted('hooks-nofn');
-    gitInit(root);
-    execFileSync('git', ['config', 'core.hooksPath', '.githooks'], { cwd: root });
-    fs.mkdirSync(path.join(root, '.githooks'));
-    fs.writeFileSync(path.join(root, '.githooks/commit-msg'), '#!/bin/sh\n# cortex-managed: cortex hooks install rewrites this file\n');
+    const root = installed('hooks-refresh');
+    const want = fs.readFileSync(path.join(root, '.githooks/commit-msg'), 'utf8');
+    fs.appendFileSync(path.join(root, '.githooks/commit-msg'), '# out of date\n');
     const r = await run(root);
-    expect(r.text).not.toContain('refreshed');
+    expect(r.code, r.text).toBe(0);
+    expect(fs.readFileSync(path.join(root, '.githooks/commit-msg'), 'utf8')).toBe(want);
+    expect(r.text).toContain('hooks: refreshed .githooks');
+    expect(JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf8')).specflow).toBeUndefined();
   });
 
   it('A dry run reports the hook case a real run would take', async () => {
@@ -497,15 +606,38 @@ describe('core-cli.sync Rule 21: hooks', () => {
     execFileSync('git', ['config', 'core.hooksPath', '.githooks'], { cwd: root });
     const empty = await run(root, { dryRun: true });
     expect(empty.text).toContain('would: hooks: not installed; run cortex hooks install');
-    fs.mkdirSync(path.join(root, '.githooks'));
-    fs.writeFileSync(path.join(root, '.githooks/commit-msg'), '#!/bin/sh\n# cortex-managed: cortex hooks install rewrites this file\n');
-    fs.writeFileSync(path.join(root, '.githooks/pre-commit'), '#!/bin/sh\necho ours\n');
-    const before = tree(root);
-    const line = 'specflow: .githooks/pre-commit is not a Cortex hook; nothing was changed. Move it to .git/hooks/pre-commit, where it keeps running, and run this again.';
-    const refused = await run(root, { dryRun: true, checkHooks: () => [line] });
-    expect(refused.text).toContain(line);
+    const done = installed('hooks-dry-2');
+    fs.writeFileSync(path.join(done, '.githooks/pre-commit'), '#!/bin/sh\necho ours\n');
+    expect(handWrittenHooks(done)).toEqual(['pre-commit']);
+    const before = tree(done);
+    const refused = await run(done, { dryRun: true });
+    expect(refused.text).toContain(refusal);
     expect(refused.text).not.toContain('refreshed');
-    expect(tree(root)).toEqual(before);
+    expect(tree(done)).toEqual(before);
+  });
+
+  it('A symlinked skills folder is left alone', async () => {
+    const root = accepted('skillslink');
+    const shared = tmpRepo('shared');
+    bundle(shared, 'specflow-develop', 'dev\n', true);
+    const before = tree(shared);
+    fs.mkdirSync(path.join(root, '.claude'));
+    fs.symlinkSync(path.join(shared, '.claude/skills'), path.join(root, '.claude/skills'));
+    const r = await run(root);
+    expect(r.code, r.text).toBe(0);
+    expect(r.text).toContain('skills: .claude/skills is a symlink; left alone');
+    expect(tree(shared)).toEqual(before);
+  });
+
+  it('a commit-msg that is a folder is not an install', async () => {
+    const root = accepted('hooks-dir');
+    gitInit(root);
+    fs.mkdirSync(path.join(root, 'specflow'));
+    execFileSync('git', ['config', 'core.hooksPath', '.githooks'], { cwd: root });
+    fs.mkdirSync(path.join(root, '.githooks/commit-msg'), { recursive: true });
+    const r = await run(root);
+    expect(r.code, r.text).toBe(0);
+    expect(r.text).toContain('hooks: not installed; run cortex hooks install');
   });
 });
 
@@ -560,7 +692,7 @@ describe('core-cli.sync Rule 22: tasks', () => {
     const before = fs.readFileSync(p, 'utf8');
     await run(root, { home });
     expect(fs.readFileSync(p, 'utf8')).toBe(before);
-    expect(fs.readFileSync(path.join(REPO, 'src/cli/update.ts'), 'utf8')).not.toMatch(/\bregisterTasks\b/);
+    expect(registerTasks).not.toHaveBeenCalled();
   });
 
   it('The task payloads arrive', async () => {
@@ -654,6 +786,57 @@ describe('core-cli.sync Rules 23–26', () => {
     expect(r.text).toContain(`would: tasks: installed payload ${scopedTaskName(root, canonical[0]!)}`);
     expect(fs.existsSync(path.join(home, '.claude/scheduled-tasks'))).toBe(false);
     expect(r.text).toMatch(/^project skills to adjust: /m);
+  });
+
+  it('An unreadable project file keeps the report', async () => {
+    const root = accepted('unreadable');
+    const dir = bundle(root, 'release', 'run specflow-develop\n');
+    fs.chmodSync(path.join(dir, 'SKILL.md'), 0o000);
+    const r = await run(root);
+    fs.chmodSync(path.join(dir, 'SKILL.md'), 0o644);
+    expect(r.code, r.text).toBe(0);
+    expect(r.text).toContain('skills: installed cortex-remember');
+    expect(r.text).toContain('- release/SKILL.md: not read');
+    expect(r.text).toContain('project skills to adjust: 0');
+  });
+
+  it('A marked older final bundle is not listed by a dry run', async () => {
+    const root = accepted('marked-older');
+    bundle(root, 'cortex-remember', 'run specflow-develop\n', true);
+    const dry = await run(root, { dryRun: true });
+    expect(dry.text).toContain('project skills to adjust: 0');
+  });
+
+  it('A dry run prints what a real run then does', async () => {
+    const root = accepted('parity');
+    bundle(root, 'specflow-develop', 'dev\n', true);
+    bundle(root, 'specflow-plan', 'edited\n');
+    bundle(root, 'cortex-remember', 'old\n', true);
+    bundle(root, 'specflow-review', 'ours\n');
+    bundle(root, 'release', 'run specflow-develop\n');
+    const p = pkg();
+    const home = tmpRepo('home');
+    const dry = await run(root, { pkgDir: p, home, dryRun: true });
+    const real = await run(root, { pkgDir: p, home });
+    const skillLines = (t: string): string[] => t.split('\n').map((l) => l.replace(/^would: /, '')).filter((l) => /^(skills|tasks|hooks|project skills|- )/.test(l));
+    expect(skillLines(dry.text)).toEqual(skillLines(real.text));
+  });
+
+  it('The verb refuses a flag it does not know', async () => {
+    const root = accepted('flags');
+    bundle(root, 'specflow-develop', 'dev\n', true);
+    const before = tree(root);
+    const errors: string[] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((m: string) => void errors.push(m));
+    try {
+      for (const flag of ['--help', '-h', '--dryrun', '--dry-rnu', '-n', '--dry-run=true', '--force']) {
+        expect(await cortex(['sync', root, flag]), flag).toBe(2);
+        expect(errors.at(-1)).toBe(`cortex sync: unknown flag ${flag}. Nothing was written.`);
+      }
+    } finally {
+      spy.mockRestore();
+    }
+    expect(tree(root)).toEqual(before);
   });
 
   it('A second run changes nothing', async () => {

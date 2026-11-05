@@ -697,6 +697,11 @@ export async function run(argv: string[]): Promise<number> {
   // takes no prompt; `--yes` is accepted and ignored so old scripts keep working.
   if (argv[0] === 'sync') {
     const dryRun = argv.includes('--dry-run');
+    const stray = argv.slice(1).find((a) => a.startsWith('-') && !['--dry-run', '--yes', '-y'].includes(a));
+    if (stray !== undefined) {
+      console.error(`cortex sync: unknown flag ${stray}. Nothing was written.`);
+      return 2;
+    }
     const positional = argv.slice(1).filter((a) => !a.startsWith('-'));
     const target = positional[0] ?? '.';
     try {

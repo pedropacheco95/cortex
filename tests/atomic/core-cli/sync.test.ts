@@ -133,9 +133,9 @@ describe('Rule 12: sync has no --force flag', () => {
       // B-011: this exercises the real CLI dispatcher (no `home` seam on the
       // actual `cortex sync` surface), so `os.homedir()` MUST be redirected
       // to the fixture for the duration of the call — see withHomeEnv.
-      // The verb is the 4.0 route now, which refuses this 3.x project (Rule 16).
+      // The verb is the 4.0 route now, and it refuses a flag it does not know.
       const exitCode = await withHomeEnv(home, () => run(['sync', root, '--force']));
-      expect(exitCode).toBe(3);
+      expect(exitCode).toBe(2);
     } finally {
       console.log = origLog;
     }

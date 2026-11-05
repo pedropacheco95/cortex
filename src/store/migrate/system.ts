@@ -56,6 +56,9 @@ export const RETIRED_SKILL_NAMES: readonly string[] = [
 ];
 /** A bundle being built or removed; a leftover one is cleared by the next sync. */
 export const TMP_BUNDLE_PREFIX = '.cortex-tmp-';
+const OLD_BUNDLE_PREFIX = `${TMP_BUNDLE_PREFIX}old-`;
+/** Finder's `.DS_Store` is not a local edit: no shipped version holds one. */
+const NOT_BUNDLE_CONTENT = [INSTALLED_MARKER_FILENAME, '.DS_Store'];
 const OWNER_MARKER_RE = /<!--\s*cortex-project-root:\s*(.+?)\s*-->/;
 
 type HookEntry = { command?: unknown };
@@ -126,9 +129,48 @@ export function holdsSymlink(dir: string): boolean {
   return false;
 }
 
+export function bundleHash(dir: string): string {
+  return hashDirectoryContent(dir, NOT_BUNDLE_CONTENT);
+}
+
 /** core-cli.sync Rule 27: the bundle is byte for byte a version Cortex shipped. */
 export function isShippedCopy(name: string, dir: string): boolean {
-  return SHIPPED_3X_HASHES[name]?.includes(hashDirectoryContent(dir, [INSTALLED_MARKER_FILENAME])) ?? false;
+  return SHIPPED_3X_HASHES[name]?.includes(bundleHash(dir)) ?? false;
+}
+
+export function markerMatches(dir: string): boolean {
+  return readInstalledMarker(path.join(dir, INSTALLED_MARKER_FILENAME))?.sha256 === bundleHash(dir);
+}
+
+/** An empty folder at a bundle name counts as absent (core-cli.sync Rule 19). */
+export function isEmptyBundle(dir: string): boolean {
+  return fs.lstatSync(dir).isDirectory() && fs.readdirSync(dir).every((n) => n === '.DS_Store');
+}
+
+/** A generated folder the next sync may delete (core-cli.sync Rule 19): never a person's `.cortex-tmp-notes`. */
+export function isLeftover(name: string): boolean {
+  if (name.startsWith(OLD_BUNDLE_PREFIX) && FINAL_BUNDLES.includes(name.slice(OLD_BUNDLE_PREFIX.length))) return true;
+  if (!name.startsWith(TMP_BUNDLE_PREFIX)) return false;
+  const bundle = name.slice(TMP_BUNDLE_PREFIX.length);
+  return FINAL_BUNDLES.includes(bundle) || isRetiredName(bundle);
+}
+
+/** `rmSync`, through read-only subfolders too. Links are not followed. */
+export function removeTree(dir: string): void {
+  const open = (d: string): void => {
+    fs.chmodSync(d, 0o755);
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) if (e.isDirectory()) open(path.join(d, e.name));
+  };
+  if (fs.lstatSync(dir, { throwIfNoEntry: false })?.isDirectory()) open(dir);
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+/** A non-folder at a temp name is a person's: it stops the step, named, and stays. */
+export function assertTempFree(skillsDir: string, name: string): void {
+  for (const tmp of [`${TMP_BUNDLE_PREFIX}${name}`, `${OLD_BUNDLE_PREFIX}${name}`]) {
+    const stat = fs.lstatSync(path.join(skillsDir, tmp), { throwIfNoEntry: false });
+    if (stat && !stat.isDirectory()) throw new Error(`.claude/skills/${tmp} is in the way; move it and run this again`);
+  }
 }
 
 function copyDir(src: string, dst: string): void {
@@ -143,22 +185,46 @@ function copyDir(src: string, dst: string): void {
 
 /**
  * Put a whole bundle in place: built beside the target with its marker, then
- * renamed, so an interrupted run leaves the old bundle or the new one
- * (core-cli.sync Rule 19).
+ * renamed, so a run that fails leaves the old bundle or the new one, never part
+ * of one (core-cli.sync Rule 19).
  */
 export function installWhole(skillsDir: string, name: string, src: string): void {
+  assertTempFree(skillsDir, name);
   const tmp = path.join(skillsDir, `${TMP_BUNDLE_PREFIX}${name}`);
+  const old = path.join(skillsDir, `${OLD_BUNDLE_PREFIX}${name}`);
   const dst = path.join(skillsDir, name);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  removeTree(tmp);
   copyDir(src, tmp);
-  writeInstalledMarker(path.join(tmp, INSTALLED_MARKER_FILENAME), hashDirectoryContent(src, [INSTALLED_MARKER_FILENAME]));
-  const old = path.join(skillsDir, `${TMP_BUNDLE_PREFIX}old-${name}`);
-  if (fs.existsSync(dst)) fs.renameSync(dst, old);
-  fs.renameSync(tmp, dst);
-  fs.rmSync(old, { recursive: true, force: true });
+  writeInstalledMarker(path.join(tmp, INSTALLED_MARKER_FILENAME), bundleHash(src));
+  const replacing = fs.existsSync(dst);
+  if (replacing) fs.renameSync(dst, old);
+  try {
+    fs.renameSync(tmp, dst);
+  } catch (err) {
+    if (replacing) fs.renameSync(old, dst);
+    throw err;
+  }
+  if (replacing) removeTree(old);
+}
+
+/** True when `.claude` or `.claude/skills` is a link: writing there reaches its target (core-cli.sync Rule 17). */
+export function skillsFolderIsLink(root: string): boolean {
+  return [path.join(root, '.claude'), path.join(root, '.claude', 'skills')].some((p) => fs.lstatSync(p, { throwIfNoEntry: false })?.isSymbolicLink() === true);
+}
+
+/** Write the marker of a copy identical to the package's. False when something else holds that path. */
+export function backfillMarker(dir: string, hash: string): boolean {
+  const markerPath = path.join(dir, INSTALLED_MARKER_FILENAME);
+  if (fs.lstatSync(markerPath, { throwIfNoEntry: false })?.isDirectory()) return false;
+  if (readInstalledMarker(markerPath)?.sha256 !== hash) writeInstalledMarker(markerPath, hash);
+  return true;
 }
 
 function installBundles(root: string, pkg: string, lines: string[]): void {
+  if (skillsFolderIsLink(root)) {
+    lines.push('skills: .claude/skills is a symlink; left alone');
+    return;
+  }
   const skillsDir = path.join(root, '.claude', 'skills');
   for (const name of FINAL_BUNDLES) {
     const src = path.join(pkg, 'skills', name);
@@ -167,13 +233,13 @@ function installBundles(root: string, pkg: string, lines: string[]): void {
       continue;
     }
     const dst = path.join(skillsDir, name);
-    const want = hashDirectoryContent(src, [INSTALLED_MARKER_FILENAME]);
-    if (present(dst)) {
-      if (holdsSymlink(dst) || hashDirectoryContent(dst, [INSTALLED_MARKER_FILENAME]) !== want) {
-        lines.push(`skills: .claude/skills/${name} exists with different content; left alone`);
+    const differs = `skills: .claude/skills/${name} exists with different content; left alone`;
+    if (present(dst) && !isEmptyBundle(dst)) {
+      if (!fs.lstatSync(dst).isDirectory() || holdsSymlink(dst) || bundleHash(dst) !== bundleHash(src)) {
+        lines.push(differs);
         continue;
       }
-      writeInstalledMarker(path.join(dst, INSTALLED_MARKER_FILENAME), want);
+      if (!backfillMarker(dst, bundleHash(src))) lines.push(`skills: ${name}: marker not written; left alone`);
     } else {
       fs.mkdirSync(skillsDir, { recursive: true });
       installWhole(skillsDir, name, src);
@@ -201,7 +267,7 @@ function listSuperseded(root: string, lines: string[]): void {
   for (const n of names) {
     const b = path.join(dir, n);
     const marker = readInstalledMarker(path.join(b, INSTALLED_MARKER_FILENAME));
-    const unmodified = marker !== undefined && !holdsSymlink(b) && marker.sha256 === hashDirectoryContent(b, [INSTALLED_MARKER_FILENAME]);
+    const unmodified = marker !== undefined && !holdsSymlink(b) && marker.sha256 === bundleHash(b);
     lines.push(`- ${n}: ${unmodified ? 'unmodified' : 'modified or unmarked: check before removing'}`);
   }
   const paths = names.map((n) => `.claude/skills/${n}`).join(' ');
@@ -228,12 +294,18 @@ function leftOutOfScan(name: string, dir: string, pkg: string): boolean {
   if (isRetiredName(name) || name === 'cortex-migrate' || name.startsWith(TMP_BUNDLE_PREFIX)) return true;
   if (!FINAL_BUNDLES.includes(name) || holdsSymlink(dir)) return false;
   const shipped = path.join(pkg, 'skills', name);
-  const identical = fs.existsSync(shipped) && hashDirectoryContent(shipped, [INSTALLED_MARKER_FILENAME]) === hashDirectoryContent(dir, [INSTALLED_MARKER_FILENAME]);
-  return identical || isShippedCopy(name, dir);
+  if (!fs.existsSync(shipped)) return isShippedCopy(name, dir);
+  return bundleHash(shipped) === bundleHash(dir) || markerMatches(dir) || isShippedCopy(name, dir);
 }
 
 function scanFile(abs: string, rel: string, out: { line: string; counted: boolean }[]): void {
-  const bytes = fs.readFileSync(abs);
+  let bytes: Buffer;
+  try {
+    bytes = fs.readFileSync(abs);
+  } catch {
+    out.push({ line: `- ${rel}: not read`, counted: false });
+    return;
+  }
   if (bytes.subarray(0, 8000).includes(0)) return;
   const terms = termsIn(bytes.toString('utf8'));
   if (terms.length) out.push({ line: `- ${rel}: ${terms.join(', ')}`, counted: true });

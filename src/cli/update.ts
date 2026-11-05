@@ -9,16 +9,17 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
-import { hashDirectoryContent, INSTALLED_MARKER_FILENAME, packageRoot, readInstalledMarker, writeInstalledMarker } from './scaffold.js';
+import { packageRoot } from './scaffold.js';
 import { registrationStatus, writeTaskPayloads } from './tasks-register.js';
 import { isAcceptedDate, STORE_CONFIG, storeDir } from '../store/layout.js';
 import { writeMapAndBlocks } from '../store/managed-block.js';
-import { FINAL_BUNDLES, TMP_BUNDLE_PREFIX, holdsSymlink, installWhole, isRetiredName, isShippedCopy, projectSkillLines } from '../store/migrate/system.js';
+import { FINAL_BUNDLES, TMP_BUNDLE_PREFIX, assertTempFree, backfillMarker, bundleHash, holdsSymlink, installWhole, isEmptyBundle, isLeftover, isRetiredName, isShippedCopy, markerMatches, projectSkillLines, removeTree, skillsFolderIsLink } from '../store/migrate/system.js';
+import { handWrittenHooks, installHooks } from '../specflow/hooks-install.js';
 import { formatFinding, validateStore } from '../store/validate.js';
 import { localToday } from '../store/types.js';
 
 const SUPPORTED_MAJOR = 4;
-const MANAGED_HOOK_LINE = '# cortex-managed';
+const MANAGED_HOOK_MARK = '# cortex-managed';
 
 export interface UpdateOptions {
   platform?: string;
@@ -32,10 +33,6 @@ export interface UpdateOptions {
   writeBlocks?: (root: string) => { lines: string[] };
   /** Rule 19's install. */
   install?: (skillsDir: string, name: string, src: string) => void;
-  /** Rule 21's refresh: `cortex hooks install` without `specflow.since`. `refused` holds its Rule 12 lines. */
-  refreshHooks?: (root: string) => { refused: string[] };
-  /** Rule 21's read-only check of `specflow.git-hooks` Rule 12, for a dry run. */
-  checkHooks?: (root: string) => string[];
 }
 
 export interface UpdateResult { exitCode: number; out: string[] }
@@ -70,11 +67,6 @@ function gate(root: string, platform: string): UpdateResult | null {
 
 const lstat = (p: string): fs.Stats | undefined => fs.lstatSync(p, { throwIfNoEntry: false });
 
-function markerMatches(dir: string): boolean {
-  const marker = readInstalledMarker(path.join(dir, INSTALLED_MARKER_FILENAME));
-  return marker !== undefined && marker.sha256 === hashDirectoryContent(dir, [INSTALLED_MARKER_FILENAME]);
-}
-
 /** Rule 18. A bundle is renamed away first, so an interrupted removal never leaves part of one under its name. */
 function removeRetired(skillsDir: string, pkg: string, dry: boolean, say: (l: string) => void): void {
   if (!fs.existsSync(skillsDir)) return;
@@ -84,11 +76,14 @@ function removeRetired(skillsDir: string, pkg: string, dry: boolean, say: (l: st
     const dir = path.join(skillsDir, e.name);
     if (holdsSymlink(dir)) {
       say(`skills: ${e.name} is a symlink; left alone`);
+    } else if (e.isDirectory() && isEmptyBundle(dir)) {
+      continue;
     } else if (e.isDirectory() && (markerMatches(dir) || isShippedCopy(e.name, dir))) {
+      assertTempFree(skillsDir, e.name);
       if (!dry) {
         const gone = path.join(skillsDir, `${TMP_BUNDLE_PREFIX}${e.name}`);
         fs.renameSync(dir, gone);
-        fs.rmSync(gone, { recursive: true, force: true });
+        removeTree(gone);
       }
       say(`skills: removed ${e.name}`);
     } else if (e.isDirectory()) {
@@ -102,7 +97,8 @@ function installFinal(skillsDir: string, pkg: string, dry: boolean, install: Non
   for (const name of FINAL_BUNDLES) {
     const src = path.join(pkg, 'skills', name);
     const dst = path.join(skillsDir, name);
-    if (!lstat(dst)) {
+    if (!lstat(dst) || isEmptyBundle(dst)) {
+      assertTempFree(skillsDir, name);
       if (!dry) {
         fs.mkdirSync(skillsDir, { recursive: true });
         install(skillsDir, name, src);
@@ -118,11 +114,11 @@ function installFinal(skillsDir: string, pkg: string, dry: boolean, install: Non
       say(`skills: .claude/skills/${name} exists with different content; left alone`);
       continue;
     }
-    const want = hashDirectoryContent(src, [INSTALLED_MARKER_FILENAME]);
-    if (hashDirectoryContent(dst, [INSTALLED_MARKER_FILENAME]) === want) {
-      const markerPath = path.join(dst, INSTALLED_MARKER_FILENAME);
-      if (!dry && readInstalledMarker(markerPath)?.sha256 !== want) writeInstalledMarker(markerPath, want);
+    const want = bundleHash(src);
+    if (bundleHash(dst) === want) {
+      if (!dry && !backfillMarker(dst, want)) say(`skills: ${name}: marker not written; left alone`);
     } else if (markerMatches(dst) || isShippedCopy(name, dst)) {
+      assertTempFree(skillsDir, name);
       if (!dry) install(skillsDir, name, src);
       say(`skills: updated ${name}`);
     } else {
@@ -131,10 +127,13 @@ function installFinal(skillsDir: string, pkg: string, dry: boolean, install: Non
   }
 }
 
-function clearLeftovers(skillsDir: string): void {
+/** Rule 19: only folders Cortex generated, each named. */
+function clearLeftovers(skillsDir: string, dry: boolean, say: (l: string) => void): void {
   if (!fs.existsSync(skillsDir)) return;
   for (const e of fs.readdirSync(skillsDir, { withFileTypes: true })) {
-    if (e.isDirectory() && e.name.startsWith(TMP_BUNDLE_PREFIX)) fs.rmSync(path.join(skillsDir, e.name), { recursive: true, force: true });
+    if (!e.isDirectory() || !isLeftover(e.name)) continue;
+    if (!dry) removeTree(path.join(skillsDir, e.name));
+    say(`skills: cleared leftover ${e.name}`);
   }
 }
 
@@ -144,16 +143,22 @@ const git = (root: string, args: string[]): { ok: boolean; out: string } => {
 };
 
 /** Rule 21, the first case that holds. */
-function hooks(root: string, opts: UpdateOptions, dry: boolean, say: (l: string) => void): void {
+function hooks(root: string, dry: boolean, say: (l: string) => void): void {
   if (!git(root, ['rev-parse', '--git-dir']).ok) return say('hooks: not a git repository; skipped');
   const hooksPath = git(root, ['config', 'core.hooksPath']).out;
   const commitMsg = path.join(root, '.githooks', 'commit-msg');
-  const installed = hooksPath === '.githooks' && fs.existsSync(commitMsg) && fs.readFileSync(commitMsg, 'utf8').includes(MANAGED_HOOK_LINE);
-  if (installed) {
-    if (!opts.refreshHooks && !opts.checkHooks) return say('hooks: refresh not available in this build; left alone');
-    const blockers = dry ? (opts.checkHooks?.(root) ?? []) : (opts.refreshHooks?.(root).refused ?? []);
-    if (blockers.length) for (const l of blockers) say(`hooks: ${l}`);
-    else say('hooks: refreshed .githooks');
+  const isInstalled = hooksPath === '.githooks' && lstat(commitMsg)?.isFile() === true && fs.readFileSync(commitMsg, 'utf8').includes(MANAGED_HOOK_MARK);
+  if (isInstalled) {
+    if (dry) {
+      const blockers = handWrittenHooks(root);
+      for (const name of blockers) say(`hooks: specflow: .githooks/${name} is not a Cortex hook; nothing was changed. Move it to .git/hooks/${name}, where it keeps running, and run this again.`);
+      if (!blockers.length) say('hooks: refreshed .githooks');
+      return;
+    }
+    const refusals: string[] = [];
+    const code = installHooks(root, { writeSince: false }, { stdout: () => {}, stderr: (l) => void refusals.push(l) });
+    if (code === 0) say('hooks: refreshed .githooks');
+    else for (const l of refusals) say(`hooks: ${l}`);
     return;
   }
   if (!fs.existsSync(path.join(root, 'specflow'))) return say('hooks: no specflow/ folder; skipped');
@@ -200,7 +205,8 @@ export async function updateRoute(target: string, opts: UpdateOptions = {}): Pro
 
   const ran =
     step('skills', () => {
-      if (!dry) clearLeftovers(skillsDir);
+      if (skillsFolderIsLink(root)) return say('skills: .claude/skills is a symlink; left alone');
+      clearLeftovers(skillsDir, dry, say);
       removeRetired(skillsDir, pkg, dry, say);
       installFinal(skillsDir, pkg, dry, opts.install ?? installWhole, say);
     }) &&
@@ -208,15 +214,18 @@ export async function updateRoute(target: string, opts: UpdateOptions = {}): Pro
       if (dry) return say('blocks: refresh MAP.md and the managed blocks');
       out.push(...(opts.writeBlocks ?? writeMapAndBlocks)(root).lines);
     }) &&
-    step('hooks', () => hooks(root, opts, dry, say)) &&
+    step('hooks', () => hooks(root, dry, say)) &&
     step('tasks', () => tasks(root, home, appSupportDir, dry, say, plain));
   if (!ran) return { exitCode: 1, out };
 
-  out.push(...projectSkillLines(root, pkg));
+  if (!step('skills', () => out.push(...projectSkillLines(root, pkg)))) return { exitCode: 1, out };
   if (dry) return { exitCode: 0, out };
 
-  const validation = validateStore(root, opts.today ?? localToday());
-  const errors = validation.findings.filter((f) => f.level === 'error');
-  for (const f of errors) out.push(formatFinding(f));
-  return { exitCode: errors.length ? 1 : 0, out };
+  let failed = false;
+  const validated = step('validate', () => {
+    const errors = validateStore(root, opts.today ?? localToday()).findings.filter((f) => f.level === 'error');
+    for (const f of errors) out.push(formatFinding(f));
+    failed = errors.length > 0;
+  });
+  return { exitCode: validated && !failed ? 0 : 1, out };
 }

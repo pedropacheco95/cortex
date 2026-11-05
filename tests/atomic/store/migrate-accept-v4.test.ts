@@ -205,6 +205,19 @@ describe('store.migrate Rule 18: bundles', () => {
     expect(text).toContain('skills: .claude/skills/specflow-review exists with different content; left alone');
   });
 
+  it('a plain file or a folder marker at a bundle name does not crash accept', async () => {
+    const root = project('oddshapes');
+    fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.claude/skills/cortex-remember'), 'a note\n');
+    const p = pkg();
+    const dir = bundle(root, 'specflow-spec', fs.readFileSync(path.join(p, 'skills/specflow-spec/SKILL.md'), 'utf8'));
+    fs.mkdirSync(path.join(dir, INSTALLED_MARKER_FILENAME));
+    const { code, text } = await accept(root, p);
+    expect(code, text).toBe(0);
+    expect(text).toContain('skills: .claude/skills/cortex-remember exists with different content; left alone');
+    expect(fs.readFileSync(path.join(root, '.claude/skills/cortex-remember'), 'utf8')).toBe('a note\n');
+  });
+
   it('A bundle the package lacks is skipped', async () => {
     const root = project('lacks');
     const { code, text } = await accept(root, pkg(FINAL_BUNDLES.filter((n) => n !== 'specflow-spec')));
