@@ -1,12 +1,14 @@
 ---
 id: specflow.diagnoses-and-tests-mean-what-they-say
-status: implemented
+status: retired
 implemented_by:
   - ../../specs/specflow/bugs-root-cause-gate.spec.md
   - ../../specs/specflow/tests-red-green.spec.md
 ---
 
 # A diagnosis names the cause, and a test proves the behaviour
+
+> **RETIRED (Pedro, P13, 2026-11-04).** Root-cause-first diagnosis and watch-the-test-fail-first have no 4.0 implementer: a bug is a quick-path ticket, and the approved skills carry neither. See `../../specs/loops/_retirements.md`.
 
 ## Outcome
 

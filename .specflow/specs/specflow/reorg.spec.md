@@ -1,6 +1,6 @@
 ---
 id: specflow.reorg
-status: implemented
+status: retired
 depends_on: []
 implements: ../../specs-business/specflow/developer-knows-the-specs-stay-sound.business.md
 governed_by:
@@ -11,6 +11,8 @@ governs:
 ---
 
 # SpecFlow Tree Reorganization — `specs/` → `.specflow/`
+
+> **RETIRED for 4.0 stores (Specflow batch, 2026-11-04).** New home and any behaviour left without one: `../loops/_retirements.md`. The old skills leave the package in Round 2 (P12); a project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
 
 ## Intent
 

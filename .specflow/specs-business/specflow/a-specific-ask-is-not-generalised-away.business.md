@@ -1,11 +1,13 @@
 ---
 id: specflow.a-specific-ask-is-not-generalised-away
-status: implemented
+status: retired
 implemented_by:
   - ../../specs/specflow/intent-reconcile.spec.md
 ---
 
 # What someone specifically asked for is still pinned after the spec absorbs it
+
+> **RETIRED (Pedro, P16, 2026-11-05).** The pin test and its record have no 4.0 implementer. The line that survives, every quoted ask maps to a criterion or an open question (`specflow.spec-skill` Rule 14), is folded into `nothing-is-built-before-it-is-agreed`. See `../../specs/loops/_retirements.md`.
 
 ## Outcome
 

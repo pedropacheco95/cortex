@@ -1,6 +1,6 @@
 ---
 id: insight.extract-skill
-status: implemented
+status: retired
 depends_on:
   - insight.storage-format
   - insight.cli
@@ -11,6 +11,8 @@ governs:
 ---
 
 # Insight Extraction Skill — the plan-not-pipeline codebase-understanding builder
+
+> **RETIRED for 4.0 stores (Specflow batch, 2026-11-04).** New home and any behaviour left without one: `../loops/_retirements.md`. The old skills leave the package in Round 2 (P12); a project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
 
 > **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** A 4.0 store (`cortex/`, `cortex-schema.md` Part II) has no insight layer: the inferred code summaries (anatomy, concepts and the graph) are dropped by decision, not migrated and not kept frozen (S9.3, `store.migrate` Rule 12). The extraction skill that builds the layer is retired with it. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
 

@@ -1,6 +1,6 @@
 ---
 id: loops.verify-scheduled
-status: implemented
+status: retired
 depends_on:
   - schema.validator
   - core-cli.init
@@ -12,6 +12,8 @@ governed_by:
 ---
 
 # Scheduled Test-Coverage Verification Loop
+
+> **RETIRED for 4.0 stores (Pedro, sitting item 10, 2026-11-05).** New home and any behaviour left without one: `_retirements.md`. A project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
 
 ## Intent
 

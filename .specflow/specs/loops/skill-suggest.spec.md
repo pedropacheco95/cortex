@@ -1,6 +1,6 @@
 ---
 id: loops.skill-suggest
-status: implemented
+status: retired
 depends_on:
   - loops.session-reading
   - pulse.review-cli
@@ -11,6 +11,8 @@ governed_by:
 ---
 
 # Skill-Suggest Loop
+
+> **RETIRED for 4.0 stores (Pedro, sitting item 10, 2026-11-05).** New home and any behaviour left without one: `_retirements.md`. A project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
 
 > **SUPERSEDED (owner decision; consolidation round — same 5e banner style as the v3 lineage banners).**
 > `cortex-loop-skill-suggest` is **retired entirely** as a standalone loop and

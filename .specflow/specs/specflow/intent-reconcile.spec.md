@@ -1,6 +1,6 @@
 ---
 id: specflow.intent-reconcile
-status: implemented
+status: retired
 depends_on:
   - archive.intent-register
   - specflow.tests-red-green
@@ -12,6 +12,8 @@ governs:
 ---
 
 # `specflow-intent-reconcile` — pin the ask, then check the spec still requires it
+
+> **RETIRED for 4.0 stores (Specflow batch, 2026-11-04).** New home and any behaviour left without one: `../loops/_retirements.md`. The old skills leave the package in Round 2 (P12); a project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
 
 ## Intent
 

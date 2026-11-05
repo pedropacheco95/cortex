@@ -5,6 +5,9 @@ depends_on:
   - loops.session-reading
   - loops.learn-task
   - store.remember-skill
+  - specflow.index
+  - specflow.lint
+  - specflow.review-skill
   - core-cli.tasks-register
 implements: ../../specs-business/specflow/developer-knows-the-specs-stay-sound.business.md
 governed_by: []

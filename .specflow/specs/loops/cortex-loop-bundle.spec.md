@@ -1,6 +1,6 @@
 ---
 id: loops.cortex-loop-bundle
-status: implemented
+status: retired
 depends_on:
   - core-cli.task-scoping
   - core-cli.init-profile
@@ -16,6 +16,8 @@ governs:
 ---
 
 # One `cortex-loop` Bundle — eleven loop skills become one callable-only skill
+
+> **RETIRED for 4.0 stores (Specflow batch, 2026-11-04).** New home and any behaviour left without one: `_retirements.md`. The old skills leave the package in Round 2 (P12); a project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
 
 > **PARTLY SUPERSEDED at schema 4.0 (draft, 2026-10-14).** The two insight members, `insight-refresh-daily` and `insight-refresh-full` (and their `references/insight-refresh-*.md` files), are retired in a 4.0 store: the insight layer is dropped by decision (`cortex-schema.md` Part II S9.3; `insight.refresh-loops` carries the full banner). **The whole spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted**, and the bundle keeps its eleven members until then. Retired with a banner, not deleted.
 

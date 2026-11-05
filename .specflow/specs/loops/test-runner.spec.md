@@ -1,6 +1,6 @@
 ---
 id: loops.test-runner
-status: implemented
+status: retired
 depends_on:
   - loops.writer-verifier
   - loops.bug-triage
@@ -15,6 +15,8 @@ governed_by:
 ---
 
 # Test-Runner Loop
+
+> **RETIRED for 4.0 stores (Pedro, sitting item 10, 2026-11-05).** New home and any behaviour left without one: `_retirements.md`. A project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
 
 ## Intent
 
