@@ -15,7 +15,7 @@ describe('Spec-level: full validator over valid fixture', () => {
     expect(report.target).toBe(VALID_FIXTURE);
   });
 
-  it('report has correct shape', async () => {
+  it('[SCHEMA-VALIDATOR-34] report has correct shape', async () => {
     const report = await validate(VALID_FIXTURE);
     expect(typeof report.schemaVersion).toBe('string');
     expect(typeof report.target).toBe('string');

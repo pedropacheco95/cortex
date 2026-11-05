@@ -194,6 +194,78 @@ In-session capture does not happen on its own: an audit of five sessions found a
 - **Given** the SKILL.md text
 - **Then** it says every `cortex` command runs in the background and is polled with a 10-minute limit, and it forbids a nested `claude` process
 
+### LOOPS-LEARN-TASK-23: Nothing to mine still prints the shape
+
+- **Given** a project with no qualifying session
+- **When** `cortex tasks collect learn --json` runs
+- **Then** it exits 0 and prints `today`, `remaining: 0` and `sessions: []`
+
+### LOOPS-LEARN-TASK-24: `--today` moves the horizon, not the quiet window
+
+- **Given** a session 480 hours old, past the horizon of `--now`
+- **When** collect runs with `--today` set inside the horizon of that session
+- **Then** the session is listed
+
+### LOOPS-LEARN-TASK-25: An unknown task is a usage error
+
+- **Given** `cortex tasks collect daily`
+- **When** it runs
+- **Then** it exits 2 and prints `Usage: cortex tasks <collect|heartbeat> <learn|fresh|quality>` on stderr
+
+### LOOPS-LEARN-TASK-26: Collect refuses a 3.x project
+
+- **Given** a project whose store is not accepted
+- **When** `cortex tasks collect learn` runs
+- **Then** it exits 1, says there are no 4.0 tasks until its store is accepted, and writes nothing
+
+### LOOPS-LEARN-TASK-27: Sparse entries condense to what they hold
+
+- **Given** a user entry with no timestamp, and a `Grep` tool use with only a pattern
+- **When** each is condensed
+- **Then** the block heading is `USER -:`, and the tool line is `TOOL Grep`
+
+### LOOPS-LEARN-TASK-29: Split files are numbered
+
+- **Given** a session condensed into two parts, with the id `big`
+- **When** collect runs
+- **Then** the parts are `big-part1.md` and `big-part2.md`
+
+### LOOPS-LEARN-TASK-30: Each known secret kind is redacted, tool lines included
+
+- **Given** a private key, an `sk-` key, an AWS key, a Slack token and a bearer token in a user message, and `token=abc123` in a `Bash` command
+- **When** each is condensed
+- **Then** each is replaced by its `[redacted:<kind>]` label and the secret is gone
+
+### LOOPS-LEARN-TASK-31: Quoted, JSON, env-style, URL and cut-off secrets are redacted
+
+- **Given** a lower-case bearer token, quoted and JSON credentials, `GITHUB_TOKEN=…`, `MY-API-KEY: …`, a credential in a URL, and a private key with no end line
+- **When** each is condensed
+- **Then** each is replaced by its label and the secret is gone
+
+### LOOPS-LEARN-TASK-32: A high-entropy string is redacted; hashes and names are not
+
+- **Given** a 39-character mixed string with no known prefix, and in turn a 40-hex hash, a long hyphenated name and a long run of one letter
+- **When** each is condensed
+- **Then** the first gets `[redacted:high-entropy]`, and the others count no redaction
+
+### LOOPS-LEARN-TASK-33: A credential around a token counts once
+
+- **Given** `token: ghp_…`
+- **When** it is condensed
+- **Then** `redactions` is 1
+
+### LOOPS-LEARN-TASK-34: A sibling path keeps its own slug
+
+- **Given** the paths `/a/b` and `/a/b-other`
+- **When** `projectSlug` runs on each
+- **Then** the slugs differ
+
+### LOOPS-LEARN-TASK-35: The skill forbids staging
+
+- **Given** the `cortex-learn` SKILL.md
+- **When** it is read
+- **Then** it says `` do not stage or commit: no `git rm`, no `git add` ``
+
 ## Notes
 
 - **Acceptance test for the whole task (Pedro, 2026-10-21; journey layer).** A fixture repository with a 4.0 store and an empty `world/rules/`, plus a synthesized transcript in which the user states 5 to 10 rules in passing, in their own phrasing, among ordinary work: some with a clear trigger (worktree, pushing, pnpm), some general, one correction of an earlier statement, one one-off instruction. Run the skill. Score: rules filed against rules said (each told rule `(told)`, never `(inferred)`); wrong filings (the one-off, duplicates); every filed rule carries the quote, `origin: session:<id>`, `verified (told)` and a usable `applies_when`. The Senses half of that test is out of scope: Senses is not in 4.0.

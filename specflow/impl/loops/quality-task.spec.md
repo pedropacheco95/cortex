@@ -224,6 +224,30 @@ It may write anywhere in `cortex/` (P11), but its two spec jobs only propose: sp
 - **When** the job ends, including when the stub fails midway
 - **Then** `git worktree list` shows only the main checkout, no branch was added, and `git status` shows no change outside `cortex/`
 
+### LOOPS-QUALITY-TASK-27: A spec's last review is its newest date across measurements
+
+- **Given** `x.a` reviewed 2026-09-01 in one measurement and 2026-10-01 in a later one, and `x.b` reviewed 2026-09-15
+- **When** collect runs
+- **Then** `rotation` is `x.b`, then `x.a`
+
+### LOOPS-QUALITY-TASK-28: The name flags skip what the job itself deletes
+
+- **Given** a throwaway folder with `specflow/` and `cortex/` deleted
+- **When** `--flags` runs
+- **Then** `governed` is `[]`
+
+### LOOPS-QUALITY-TASK-29: `--flags` needs `--base` and has one shape
+
+- **Given** `cortex tasks collect quality --flags <dir>`
+- **When** it runs without `--base`, then with `--base <sha> --json`
+- **Then** the first exits 2, and the second exits 0 and prints the keys `base`, `flagged`, `governed` and `named`
+
+### LOOPS-QUALITY-TASK-30: The skill forbids staging
+
+- **Given** the `cortex-quality` SKILL.md
+- **When** it is read
+- **Then** it says `` do not stage or commit: no `git rm`, no `git add` ``
+
 ## Notes
 
 - **"None writes code" (A9) holds in substance.** The nothing-agent edits code, but only in a folder deleted in the same run. Nothing reaches a branch. It is stated here so it is not read as a breach.

@@ -208,6 +208,60 @@ determines whether a description can be short: **whether it is the bundle's only
 - **Then** they are the ten shipped bundles and `coordinate-sessions`, and nothing else
 - **And** every file in each of the ten is byte-identical to the file in `skills/`, with no strays on either side, `.cortex-installed.json` aside
 
+### SCAFFOLDING-SKILL-LISTING-BUDGET-15: The guard applies the tier table, its ceilings and its phrase rules
+
+- **Given** rows and tables that test each rule: 200 characters in Tier B; 120 and 121 in Tier A; a pinned phrase in capitals; a routed bundle with no `REQUIRED_TRIGGERS` entry; a Tier D row with no phrases at 40 and 61 characters; a Tier E row with a phrase; and the shipped `TIERS`, `TIER_CEILING` and `REQUIRED_TRIGGERS`
+- **When** the guard evaluates each row, and the tables are compared
+- **Then** a ceiling is per tier and inclusive, so 200 passes in Tier B, 120 passes and 121 fails in Tier A, and 61 fails in Tier D; phrases match in any case; a routed bundle needs an entry and at least one phrase; Tiers D and E declare none, and a Tier E row that does fails; and every assigned tier is a key of `TIER_CEILING`
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-24: No shipped bundle is unclassified
+
+- **Given** the bundles under `skills/`
+- **When** they are measured
+- **Then** every row has a tier
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-25: The table names only bundles on disk
+
+- **Given** `TIERS`
+- **When** each entry is checked
+- **Then** its `skills/<name>/SKILL.md` exists, and at least one bundle is in Tier D
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-26: Every shipped frontmatter parses
+
+- **Given** the bundles under `skills/`
+- **When** they are measured
+- **Then** no row is unparseable
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-27: The shipped listing passes the guard
+
+- **Given** the bundles under `skills/`
+- **When** the guard evaluates them
+- **Then** it reports no failures
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-28: The whole listing stays under budget
+
+- **Given** the measured sizes of every bundle
+- **When** they are summed and divided by 4
+- **Then** the estimate is under 1,600 tokens
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-29: A Tier D body says it is callable-only
+
+- **Given** each Tier D bundle
+- **When** its SKILL.md is read
+- **Then** it contains `callable-only` and `/<name>`
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-30: Every rewritten bundle has a pinned shed phrase
+
+- **Given** the rewritten bundles
+- **When** their list is compared with the shed-phrase table
+- **Then** the two hold the same names
+
+### SCAFFOLDING-SKILL-LISTING-BUDGET-31: A rewritten description is one quoted line
+
+- **Given** each rewritten bundle
+- **When** its frontmatter is read
+- **Then** `description:` uses no block scalar and is a single-quoted line
+
 ## Notes
 
 - **Round 2 removal, 2026-11-05 (P12, P15).** The 19 bundles the plan retires left `skills/` and the mirror. Tier C went with `specflow-entry`, its only member, and criterion 6 went with it; ids are not reused. Criteria 1 to 3 moved to bundles that still ship, and Rule 9 and criteria 13 and 14 pin the set. The Intent and the measurements below are the record of the 31-bundle listing.

@@ -235,14 +235,14 @@ describe('Tool uses are extracted in order with paths', () => {
     expect(JSON.stringify(uses)).not.toContain('file body that must not leak');
   });
 
-  it('a user-role entry carrying tool_use-shaped parts is not an assistant tool use', () => {
+  it('[LOOPS-SESSION-READING-13] a user-role entry carrying tool_use-shaped parts is not an assistant tool use', () => {
     const entries = [
       { type: 'user', message: { role: 'user', content: [{ type: 'tool_use', name: 'Bash', input: { command: 'x' } }] } },
     ];
     expect(extractToolUses(entries)).toEqual([]);
   });
 
-  it('an entry without a timestamp yields a record without a timestamp key', () => {
+  it('[LOOPS-SESSION-READING-13] an entry without a timestamp yields a record without a timestamp key', () => {
     const turn = toolTurn(read('/tmp/proj/a.ts'));
     delete turn['timestamp'];
     expect(extractToolUses([turn as { type: string }])).toEqual([{ name: 'Read', filePath: '/tmp/proj/a.ts' }]);
@@ -260,7 +260,7 @@ describe('Bash commands are truncated', () => {
     expect(uses[0]).not.toHaveProperty('description');
   });
 
-  it('a short command is carried whole', () => {
+  it('[LOOPS-SESSION-READING-13] a short command is carried whole', () => {
     const uses = extractToolUses([toolTurn(bash('pnpm vitest run'))]);
     expect(uses[0]?.command).toBe('pnpm vitest run');
   });
@@ -287,7 +287,7 @@ describe('Malformed tool-use parts are skipped, not thrown', () => {
     expect(JSON.stringify(uses)).not.toContain('SECRET RESULT BODY');
   });
 
-  it('a tool_use whose input is a non-string file_path / command yields a name-only record', () => {
+  it('[LOOPS-SESSION-READING-13] a tool_use whose input is a non-string file_path / command yields a name-only record', () => {
     const entry = rawAssistantTurn([
       { type: 'tool_use', name: 'Write', input: { file_path: 42 } },
       { type: 'tool_use', name: 'Bash', input: { command: ['not', 'a', 'string'] } },
@@ -295,7 +295,7 @@ describe('Malformed tool-use parts are skipped, not thrown', () => {
     expect(extractToolUses([entry as { type: string }])).toEqual([{ name: 'Write' }, { name: 'Bash' }]);
   });
 
-  it('assistant entries with string content or no message do not throw', () => {
+  it('[LOOPS-SESSION-READING-13] assistant entries with string content or no message do not throw', () => {
     const entries = [
       { type: 'assistant', message: { role: 'assistant', content: 'just text' } },
       { type: 'assistant' },

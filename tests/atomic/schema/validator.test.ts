@@ -456,7 +456,7 @@ describe('check.business-spec: Given/When/Then → warning fires', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('biz-gwthen'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('business spec with **Given** marker in body fires warning', async () => {
+  it('[SCHEMA-VALIDATOR-26] business spec with **Given** marker in body fires warning', async () => {
     const bizPath = path.join(tmpDir, '.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
     fs.writeFileSync(bizPath, `---
 id: schema.contributor-trusts-project-knowledge
@@ -475,7 +475,7 @@ implemented_by:
     expect(v!.severity).toBe('warning');
   });
 
-  it('prose "When this works, …" does NOT fire (template-recommended phrasing)', async () => {
+  it('[SCHEMA-VALIDATOR-27] prose "When this works, …" does NOT fire (template-recommended phrasing)', async () => {
     const bizPath = path.join(tmpDir, '.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
     fs.writeFileSync(bizPath, `---
 id: schema.contributor-trusts-project-knowledge
@@ -546,7 +546,7 @@ describe('check.xref-acyclic: dep cycle → fires', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('xref-cycle'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('circular depends_on → fires check.xref-acyclic', async () => {
+  it('[SCHEMA-VALIDATOR-28] circular depends_on → fires check.xref-acyclic', async () => {
     const schemaDir = path.join(tmpDir, '.specflow', 'specs', 'schema');
     // Modify validator.spec.md to depend on schema.other
     const validatorPath = path.join(schemaDir, 'validator.spec.md');
@@ -662,7 +662,7 @@ describe('check.overview-shape: _overview.md missing heading → fires', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('overview-shape'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('_overview.md without ## What it covers fires warning', async () => {
+  it('[SCHEMA-VALIDATOR-29] _overview.md without ## What it covers fires warning', async () => {
     const overviewPath = path.join(tmpDir, '.specflow', 'specs', 'schema', '_overview.md');
     fs.writeFileSync(overviewPath, `## What this is\nSchema domain.\n\n## Why it's grouped this way\nGrouped for clarity.\n`);
     const report = await validate(tmpDir);
@@ -676,7 +676,7 @@ describe('check.id-matches-path: spec with wrong id → fires', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('id-path'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('spec with id not matching path fires error', async () => {
+  it('[SCHEMA-VALIDATOR-30] spec with id not matching path fires error', async () => {
     const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     fs.writeFileSync(specPath, `---
 id: schema.wrong-id
@@ -794,7 +794,7 @@ describe('check.dev-spec-governs-resolves: dev-spec governs glob', () => {
   beforeAll(() => { tmpDir = makeTmpFixture('devspec-governs'); });
   afterAll(() => cleanup(tmpDir));
 
-  it('unmatched glob → warning; matching glob → no warning; still conformant', async () => {
+  it('[SCHEMA-VALIDATOR-31] unmatched glob → warning; matching glob → no warning; still conformant', async () => {
     const specPath = path.join(tmpDir, '.specflow', 'specs', 'schema', 'validator.spec.md');
     const raw = fs.readFileSync(specPath, 'utf-8');
     fs.writeFileSync(specPath, raw.replace(

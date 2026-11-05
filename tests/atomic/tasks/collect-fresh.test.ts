@@ -45,7 +45,7 @@ describe('An old person file is aged, a recent one is not', () => {
     expect(collectFresh(root, TODAY).aged.map((a) => a.file)).toEqual(['world/people/rui.md']);
   });
 
-  it('covers orgs, systems and agreements, and not terms or rules', () => {
+  it('[LOOPS-FRESH-TASK-15] covers orgs, systems and agreements, and not terms or rules', () => {
     const root = store();
     for (const f of ['world/orgs/a.md', 'world/systems/b.md', 'world/agreements/c.md', 'world/terms/d.md']) {
       writeStoreFile(root, f, fm('2026-01-01 (told)'));
@@ -94,7 +94,7 @@ describe('A lagging managed block is reported', () => {
     expect(hits[0]!.message).toContain('4.0');
   });
 
-  it('names a missing block', () => {
+  it('[LOOPS-FRESH-TASK-16] names a missing block', () => {
     const root = store();
     fs.rmSync(path.join(root, 'CLAUDE.md'));
     expect(collectFresh(root, TODAY).scaffolding.map((s) => s.message).join()).toContain('missing');
@@ -122,7 +122,7 @@ describe('Collect does not expire anything', () => {
 });
 
 describe('near-duplicates and stale', () => {
-  it('reports the pair, and no stale outside git', () => {
+  it('[LOOPS-FRESH-TASK-17, LOOPS-FRESH-TASK-18] reports the pair, and no stale outside git', () => {
     const root = store();
     writeStoreFile(root, 'world/terms/fare.md', baseFm({ about: 'What a fare means here' }));
     writeStoreFile(root, 'world/systems/fare.md', baseFm({ about: 'The fare service' }));

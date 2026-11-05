@@ -50,11 +50,11 @@ describe('AC: an over-ceiling description fails the guard', () => {
     expect(failures[0]).toContain('120');
   });
 
-  it('passes the same 200 chars under Tier B', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] passes the same 200 chars under Tier B', () => {
     expect(evaluate([{ ...okRow, tier: 'B', after: 200 }], okTriggers)).toEqual([]);
   });
 
-  it('passes at exactly the ceiling and fails one char over', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] passes at exactly the ceiling and fails one char over', () => {
     expect(evaluate([{ ...okRow, after: 120 }], okTriggers)).toEqual([]);
     expect(evaluate([{ ...okRow, after: 121 }], okTriggers)).toHaveLength(1);
   });
@@ -69,12 +69,12 @@ describe('AC: a dropped trigger phrase fails the guard', () => {
     expect(failures[0]).toContain('run the thing');
   });
 
-  it('matches phrases case-insensitively', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] matches phrases case-insensitively', () => {
     const row = { ...okRow, description: 'Does a thing. "RUN THE THING".' };
     expect(evaluate([row], okTriggers)).toEqual([]);
   });
 
-  it('fails a bundle with no REQUIRED_TRIGGERS entry at all', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] fails a bundle with no REQUIRED_TRIGGERS entry at all', () => {
     const failures = evaluate([okRow], {});
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('no REQUIRED_TRIGGERS entry');
@@ -89,7 +89,7 @@ describe('AC: a Tier D bundle that declares trigger phrases fails the guard', ()
     expect(failures[0]).toContain('tier D declares no trigger phrases');
   });
 
-  it('passes with an empty phrase list, and still enforces the 60-char ceiling', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] passes with an empty phrase list, and still enforces the 60-char ceiling', () => {
     const row = { bundle: 'fixture-d', after: 40, description: 'Generate the thing.', tier: 'D' };
     expect(evaluate([row], { 'fixture-d': [] })).toEqual([]);
     expect(evaluate([{ ...row, after: 61 }], { 'fixture-d': [] })).toHaveLength(1);
@@ -117,7 +117,7 @@ describe('AC: a typed-only bundle costs nothing and needs its header', () => {
     expect(failures[0]).toContain('tier E');
   });
 
-  it('fails a Tier E bundle that declares a phrase', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] fails a Tier E bundle that declares a phrase', () => {
     const failures = evaluate([eRow], { 'fixture-e': ['run it'] });
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('declares no trigger phrases');
@@ -134,19 +134,19 @@ describe('AC: a typed-only bundle costs nothing and needs its header', () => {
 });
 
 describe('the tier table is internally consistent', () => {
-  it('assigns every tier a known ceiling key', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] assigns every tier a known ceiling key', () => {
     for (const [bundle, tier] of Object.entries(TIERS)) {
       expect(Object.keys(TIER_CEILING), `${bundle} has unknown tier ${tier}`).toContain(tier);
     }
   });
 
-  it('declares an empty phrase list for every Tier D and Tier E bundle', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] declares an empty phrase list for every Tier D and Tier E bundle', () => {
     for (const [bundle, tier] of Object.entries(TIERS)) {
       if (tier === 'D' || tier === 'E') expect(REQUIRED_TRIGGERS[bundle]).toEqual([]);
     }
   });
 
-  it('declares at least one phrase for every routed bundle', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-15] declares at least one phrase for every routed bundle', () => {
     for (const [bundle, tier] of Object.entries(TIERS)) {
       if (tier !== 'D' && tier !== 'E') expect(REQUIRED_TRIGGERS[bundle]?.length, bundle).toBeGreaterThan(0);
     }

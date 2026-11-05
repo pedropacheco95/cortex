@@ -39,25 +39,25 @@ describe('AC: the guard covers every bundle without a flag', () => {
     expect(rows.map((r: { bundle: string }) => r.bundle)).toEqual(onDisk);
   });
 
-  it('classifies every measured bundle — none falls through unclassified', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-24] classifies every measured bundle — none falls through unclassified', () => {
     const unclassified = rows.filter((r: { tier?: string }) => !r.tier);
     expect(unclassified.map((r: { bundle: string }) => r.bundle)).toEqual([]);
   });
 
-  it('lists no bundle in TIERS that is not on disk', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-25] lists no bundle in TIERS that is not on disk', () => {
     for (const bundle of Object.keys(TIERS)) {
       expect(fs.existsSync(path.join(SKILLS, bundle, 'SKILL.md')), `${bundle} in TIERS but not on disk`).toBe(true);
     }
   });
 
-  it('parses every bundle frontmatter', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-26] parses every bundle frontmatter', () => {
     const unparseable = rows.filter((r: { unparseable?: boolean }) => r.unparseable);
     expect(unparseable.map((r: { bundle: string }) => r.bundle)).toEqual([]);
   });
 });
 
 describe('AC: the shipped listing conforms to its tier ceilings', () => {
-  it('reports no failures across all bundles', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-27] reports no failures across all bundles', () => {
     expect(evaluate(rows)).toEqual([]);
   });
 
@@ -68,7 +68,7 @@ describe('AC: the shipped listing conforms to its tier ceilings', () => {
     expect(row.after).toBeLessThanOrEqual(ceiling);
   });
 
-  it('keeps the whole listing well under the ~2k-token budget', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-28] keeps the whole listing well under the ~2k-token budget', () => {
     const chars = rows.reduce((sum: number, r: { after: number }) => sum + r.after, 0);
     // chars/4 is the estimate the budget conversation uses.
     expect(Math.round(chars / 4)).toBeLessThan(1600);
@@ -98,7 +98,7 @@ describe('AC: a callable-only bundle carries no trigger surface', () => {
     .filter(([, t]) => t === 'D')
     .map(([b]) => b);
 
-  it('every Tier D member is on disk and none is silently mis-tiered', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-25] every Tier D member is on disk and none is silently mis-tiered', () => {
     // Derived from TIERS rather than pinned to a literal: adding a Tier D bundle
     // is a deliberate act that updates TIERS, and it should not break a test
     // about an unrelated bundle.
@@ -120,7 +120,7 @@ describe('AC: a callable-only bundle carries no trigger surface', () => {
     expect(d).not.toMatch(/\buse this skill\b/i);
   });
 
-  it.each(tierD)('%s says in its body that it is callable-only', (bundle) => {
+  it.each(tierD)('[SCAFFOLDING-SKILL-LISTING-BUDGET-29] %s says in its body that it is callable-only', (bundle) => {
     const body = fs.readFileSync(path.join(SKILLS, bundle, 'SKILL.md'), 'utf-8');
     expect(body).toContain('callable-only');
     expect(body).toContain(`/${bundle}`);
@@ -139,7 +139,7 @@ const SHED_PHRASE: Record<string, string> = {
 };
 
 describe('AC: shed content survives in the body', () => {
-  it('pins a phrase for every rewritten bundle', () => {
+  it('[SCAFFOLDING-SKILL-LISTING-BUDGET-30] pins a phrase for every rewritten bundle', () => {
     expect(Object.keys(SHED_PHRASE).sort()).toEqual([...REWRITTEN].sort());
   });
 
@@ -174,7 +174,7 @@ describe('AC: the mirror matches the source', () => {
 });
 
 describe('descriptions are single-line quoted scalars (Rule 5)', () => {
-  it.each(REWRITTEN)('%s uses no block scalar', (bundle) => {
+  it.each(REWRITTEN)('[SCAFFOLDING-SKILL-LISTING-BUDGET-31] %s uses no block scalar', (bundle) => {
     const raw = fs.readFileSync(path.join(SKILLS, bundle, 'SKILL.md'), 'utf-8');
     const fm = /^---\n([\s\S]*?\n)---\n/.exec(raw)![1];
     expect(fm).not.toMatch(/^description:[ \t]*(>-|>|\|-|\|)[ \t]*$/m);

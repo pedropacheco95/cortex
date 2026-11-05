@@ -34,7 +34,7 @@ describe('buildIndex keeps duplicates', () => {
     expect(resolveId(index, 'R-026')).toBeUndefined();
   });
 
-  it('one rule → idToFiles has one path and resolveId returns it', async () => {
+  it('[SCHEMA-VALIDATOR-32] one rule → idToFiles has one path and resolveId returns it', async () => {
     const index = await buildIndex(singleRoot);
     const expected = path.join(rulesDir(singleRoot), 'R-001-sample-rule.md');
     expect(index.idToFiles?.get('R-001')).toEqual([expected]);

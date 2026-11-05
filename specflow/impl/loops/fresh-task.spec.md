@@ -134,6 +134,36 @@ Knowledge rots in a different way per module (schema S1). Core already detects t
 - **Given** the SKILL.md text
 - **Then** it names the twelve counted lines of Rule 9 and the line `Nothing went stale this cycle.`
 
+### LOOPS-FRESH-TASK-15: `aged` covers orgs, systems and agreements, not terms
+
+- **Given** old files in `world/orgs/`, `world/systems/`, `world/agreements/` and `world/terms/`
+- **When** collect runs
+- **Then** `aged` holds the first three and not the term
+
+### LOOPS-FRESH-TASK-16: A missing managed block is reported
+
+- **Given** a store with no `CLAUDE.md`
+- **When** collect runs
+- **Then** `scaffolding` names the block as missing
+
+### LOOPS-FRESH-TASK-17: Two files on one subject are reported as a pair
+
+- **Given** `world/terms/fare.md` and `world/systems/fare.md`
+- **When** collect runs
+- **Then** `nearDuplicates` holds one entry naming both
+
+### LOOPS-FRESH-TASK-18: Outside git nothing is stale
+
+- **Given** a store in a folder that is not a git repository
+- **When** collect runs
+- **Then** `stale` is `[]`
+
+### LOOPS-FRESH-TASK-19: The skill bounds its commands
+
+- **Given** the `cortex-fresh` SKILL.md
+- **When** it is read
+- **Then** it says a command runs in the background and is polled with a 10-minute limit, and forbids a nested `claude` process
+
 ## Notes
 
 - **What it inherits.** rule-decay's dead-`governs` signal is `deadRules`; atlas-staleness's old-cited-decision signal is `aged` with `citedBy`, and its dead links are `check.links` under `validate`; onboarding-drift's version lag is `scaffolding`. The full mapping, including what is dropped, is `.specflow/specs/loops/_retirements.md`.

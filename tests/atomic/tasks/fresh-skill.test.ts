@@ -72,7 +72,7 @@ describe('The skill specifies the record', () => {
 });
 
 describe('Bounded commands', () => {
-  it('names the limit and forbids a nested claude', () => {
+  it('[LOOPS-FRESH-TASK-19] names the limit and forbids a nested claude', () => {
     expect(text).toContain('runs in the background and is polled with a 10-minute limit');
     expect(text).toContain('Never spawn a nested `claude` process');
   });

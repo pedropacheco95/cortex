@@ -110,7 +110,7 @@ describe('The rotation prefers the never-reviewed, then the oldest', () => {
     expect(collect(fx).rotation).toEqual(['x.f', 'x.g', 'x.a', 'x.b', 'x.c']);
   });
 
-  it('takes the newest date a spec has across measurements', () => {
+  it('[LOOPS-QUALITY-TASK-27] takes the newest date a spec has across measurements', () => {
     const fx = repo();
     ported(fx.root);
     for (const n of ['a', 'b']) spec(fx.root, 'x', n);
@@ -256,7 +256,7 @@ describe('A file no criterion names is flagged', () => {
     expect(r.named).toEqual([{ file: 'src/api/users.py', by: ['API-USERS-1'] }]);
   });
 
-  it('skips what the job itself deletes', () => {
+  it('[LOOPS-QUALITY-TASK-28] skips what the job itself deletes', () => {
     const { root, dir, sha } = flagsRepo();
     fs.rmSync(path.join(dir, 'specflow'), { recursive: true, force: true });
     fs.rmSync(path.join(dir, 'cortex'), { recursive: true, force: true });
@@ -291,7 +291,7 @@ describe('Untracked files count as changed', () => {
 });
 
 describe('collect quality --flags', () => {
-  it('needs --base, and prints the JSON shape', () => {
+  it('[LOOPS-QUALITY-TASK-29] needs --base, and prints the JSON shape', () => {
     const { root, dir, sha } = flagsRepo();
     const out: string[] = [];
     const io = { home: root, stdout: (l: string) => out.push(l), stderr: () => undefined };

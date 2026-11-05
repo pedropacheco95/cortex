@@ -134,7 +134,7 @@ describe('Collect leaves the repository untouched', () => {
 });
 
 describe('collect output and dispatch', () => {
-  it('prints the JSON shape, exit 0 also when nothing qualifies', () => {
+  it('[LOOPS-LEARN-TASK-23] prints the JSON shape, exit 0 also when nothing qualifies', () => {
     const fx = fixture();
     const out: string[] = [];
     const code = tasksCollect(['learn', '--json', '--now', NOW.toISOString()], fx.root, {
@@ -144,7 +144,7 @@ describe('collect output and dispatch', () => {
     expect(JSON.parse(out.join('\n'))).toMatchObject({ today: TODAY, remaining: 0, sessions: [] });
   });
 
-  it('--today sets the horizon without moving the quiet window', () => {
+  it('[LOOPS-LEARN-TASK-24] --today sets the horizon without moving the quiet window', () => {
     const fx = fixture();
     session(fx.home, fx.root, 'old', hoursAgo(480));
     const out: string[] = [];
@@ -154,14 +154,14 @@ describe('collect output and dispatch', () => {
     expect(JSON.parse(out.join('\n')).sessions.map((s: { id: string }) => s.id)).toEqual(['old']);
   });
 
-  it('Collect rejects an unknown task: exit 2 and the Rule 16 usage line', () => {
+  it('[LOOPS-LEARN-TASK-25] Collect rejects an unknown task: exit 2 and the Rule 16 usage line', () => {
     const fx = fixture();
     const err: string[] = [];
     expect(tasksCollect(['daily'], fx.root, { stdout: () => undefined, stderr: (l) => err.push(l) })).toBe(2);
     expect(err).toEqual(['Usage: cortex tasks <collect|heartbeat> <learn|fresh|quality>']);
   });
 
-  it('refuses on the 3.x roster with the Rule 13 message and writes nothing', () => {
+  it('[LOOPS-LEARN-TASK-26] refuses on the 3.x roster with the Rule 13 message and writes nothing', () => {
     const root = makeTmpDir('learn-3x');
     dirs.push(root);
     unacceptedProject(root);
@@ -195,12 +195,12 @@ describe('Condensing labels who spoke', () => {
     expect(text).not.toContain('RESULT-TEXT');
   });
 
-  it('gives - for a missing timestamp', () => {
+  it('[LOOPS-LEARN-TASK-27] gives - for a missing timestamp', () => {
     const { timestamp: _t, ...noStamp } = textTurn('user', 'hi') as Record<string, unknown>;
     expect(condenseSession(entries([noStamp])).parts[0]).toContain('USER -:\nhi');
   });
 
-  it('a tool with no path or command is its bare name', () => {
+  it('[LOOPS-LEARN-TASK-27] a tool with no path or command is its bare name', () => {
     const turn = rawAssistantTurn([{ type: 'tool_use', id: 't', name: 'Grep', input: { pattern: 'x' } }]);
     expect(condenseSession(entries([turn])).parts[0]).toBe('TOOL Grep');
     expect(editTool('b.ts').name).toBe('Edit');
@@ -219,7 +219,7 @@ describe('Long sessions split at an entry boundary', () => {
     for (let i = 0; i < 9; i++) expect(joined).toContain(`${i}:${body}`);
   });
 
-  it('collect names split files <id>-part<n>.md', () => {
+  it('[LOOPS-LEARN-TASK-29] collect names split files <id>-part<n>.md', () => {
     const fx = fixture();
     const body = 'y'.repeat(120_000);
     session(fx.home, fx.root, 'big', hoursAgo(72), [textTurn('user', body), textTurn('user', body)]);
@@ -242,7 +242,7 @@ describe('Secrets are redacted before writing', () => {
     expect(r.sessions[0]!.redactions).toBe(2);
   });
 
-  it('redacts each listed kind, tool lines included', () => {
+  it('[LOOPS-LEARN-TASK-30] redacts each listed kind, tool lines included', () => {
     const samples: [string, string][] = [
       ['private-key', '-----BEGIN RSA PRIVATE KEY-----\nabc\n-----END RSA PRIVATE KEY-----'],
       ['api-key', `sk-${'b'.repeat(30)}`],
@@ -259,7 +259,7 @@ describe('Secrets are redacted before writing', () => {
     expect(condenseSession(entries([turn])).parts[0]).toBe('TOOL Bash curl -u [redacted:credential] x');
   });
 
-  it('redacts the forms a first pass let through', () => {
+  it('[LOOPS-LEARN-TASK-31] redacts the forms a first pass let through', () => {
     const samples: [string, string, string][] = [
       ['bearer', 'bearer abcdefgh12345678', 'abcdefgh12345678'],
       ['credential', 'password: "two words"', 'two words'],
@@ -277,7 +277,7 @@ describe('Secrets are redacted before writing', () => {
     }
   });
 
-  it('redacts a long high-entropy string with no known prefix, and leaves hashes and names alone', () => {
+  it('[LOOPS-LEARN-TASK-32] redacts a long high-entropy string with no known prefix, and leaves hashes and names alone', () => {
     const key = 'aB3dE9gH1jK7mN2pQ8sT4vW6yZ0cF5hL3nR9tX1';
     const c = condenseSession(entries([textTurn('user', `use ${key} now`)]));
     expect(c.parts[0]).toContain('[redacted:high-entropy]');
@@ -287,14 +287,14 @@ describe('Secrets are redacted before writing', () => {
     }
   });
 
-  it('a credential around a token counts once', () => {
+  it('[LOOPS-LEARN-TASK-33] a credential around a token counts once', () => {
     const c = condenseSession(entries([textTurn('user', `token: ghp_${'c'.repeat(36)}`)]));
     expect(c.redactions).toBe(1);
   });
 });
 
 describe('fixtures', () => {
-  it('projectSlug keeps the slug of a sibling distinct', () => {
+  it('[LOOPS-LEARN-TASK-34] projectSlug keeps the slug of a sibling distinct', () => {
     expect(projectSlug('/a/b')).not.toBe(projectSlug('/a/b-other'));
   });
 });
