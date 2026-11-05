@@ -39,13 +39,9 @@ cortex init
 cortex validate .
 ```
 
-`cortex init` only scaffolds an *empty* insight module — it never runs LLM extraction itself (Core makes no LLM calls, ever). To actually build the understanding layer, open the project in a **Claude Code session** and say:
+`cortex init` makes no LLM calls (Core never does). A 4.0 project has no insight layer: the extraction skill left the package, and the project's knowledge lives in `cortex/`, filed by the `cortex-remember` skill. The `cortex insight` commands below serve a project still on a 3.x store that already has an extraction.
 
-> **"run the initial extraction"**
-
-That invokes the `cortex-extract-insight` skill: a deterministic structural pass, then a scope plan, then parallel per-file extraction, then a cross-file unification pass. It's resumable if interrupted.
-
-Once it's done, query it — no LLM at query time, so these are instant:
+On such a project, query it — no LLM at query time, so these are instant:
 
 ```bash
 cortex insight file src/auth/session.ts     # the rich per-file entry
@@ -91,7 +87,7 @@ The idea most worth understanding before you use Cortex: **compass, atlas, and t
 | `cortex tasks plan [--json]` | Show the five-bundle scheduled-task registration plan. |
 | `cortex tasks verify` | Check whether the scheduled bundles are registered with Claude Code Desktop. |
 
-There's no `cortex extract-insight` command — extraction is agentic, so it lives in the `cortex-extract-insight` **skill**, invoked from a Claude Code session instead of the CLI. The same is true of document ingestion (`cortex-archive-ingest`) and every scheduled loop's judgment step.
+Core makes no LLM calls, so judgment lives in **skills**, invoked from a Claude Code session instead of the CLI. That covers filing a document (`cortex-remember`) and every scheduled task's judgment step.
 
 ## How it stays fresh
 
