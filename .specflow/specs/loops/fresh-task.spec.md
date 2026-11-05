@@ -49,9 +49,9 @@ Knowledge rots in a different way per module (schema S1). Core already detects t
    - (7) run `cortex tasks heartbeat fresh`.
 4. **How a store file is changed.** Every edit follows the MAP filing rules: `verified` set to `<today> (observed)` only after reading the evidence, the run's `session:<id>` added to the file's `origin` list, one fact in one file. **Retiring** a file removes it and repoints or removes links to it; the record names it with its `about` line, and git keeps the text. **Merging** two files keeps one, adds the other's name and aliases to its `aliases`, joins the `origin` lists, repoints links, and removes the other. A file under `history/` is never edited (S7).
 5. **Stale `code/` files.** For each `stale` file the skill reads the file and the code its `depends_on` names. If the file still holds, it updates `verified`. If not, it corrects the text. If the subject is gone, it retires the file.
-6. **Aged, dead and duplicate.** An `aged` file is updated when the repository, the store or a session shows it still holds, or corrected when they show otherwise. When nothing the task can read confirms it, the file is left alone, counted as `unconfirmed`, and one proposal asks a person; the proposal names `citedBy`, and a file nobody cites says so. A `deadRules` file is retired when the code its globs named is gone, and corrected when the code moved; its dead globs go in the record. A near-duplicate pair is read, and merged only if the two files hold one subject; otherwise it is counted as `not a duplicate`. A `scaffolding` finding is fixed with `cortex store map`. A `validate` error is fixed. `openPitfalls.aged` files are read against the code: a pitfall the code no longer has is closed by `store.remember-skill` Rule 12, and the rest are named in the record.
+6. **Aged, dead and duplicate.** An `aged` file is updated when the repository, the store or a session shows it still holds, or corrected when they show otherwise. When nothing the task can read confirms it, the file is left alone, counted as `unconfirmed`, and one proposal asks a person; the proposal names `citedBy`, and a file nobody cites says so. A `deadRules` file is retired when the code its globs named is gone, and corrected when the code moved; its dead globs go in the record. A near-duplicate pair is read, and merged only if the two files hold one subject; otherwise it is counted as `not a duplicate`. A `scaffolding` finding is fixed with `cortex store map`. A `validate` error is fixed. `openPitfalls.aged` files are read against the code. A pitfall is closed by `store.remember-skill` Rule 12 only on observed evidence that the fix landed: a commit or a change that shows it. A missing file or symbol is not evidence, because the code may have moved. Without that evidence, one proposal asks a person, and the file is named in the record.
 7. **Proposals and the boundary.** A finding that would change a spec, or that needs a person, is one item appended to `now/proposals.md` by `store.remember-skill` Rule 8, with the id `P-<today>-fresh-<slug of the file's path>` and its evidence: the commit, the age, the dead glob. If a pending item already names the same file, no new item is written and the finding is counted as `already proposed`. `now/proposals.md` is only ever appended to; the skill never rewrites or reorders it.
-8. **Reach.** The skill writes nothing outside `cortex/`, never a spec, and does not commit (`loops.learn-task` Notes).
+8. **Reach.** The skill writes nothing outside `cortex/`, never a spec, and neither stages nor commits (`loops.learn-task` Notes).
 9. **The record.** Each run writes one new `history/changes/<today>-fresh.md` (first free name by `store.freshness` Rule 6), also when nothing was found: `kind: other`, `status: done`, `origin: session:<id>`, and one body line each with a count, followed by the paths: `expired`, `re-verified`, `corrected`, `retired`, `merged`, `not a duplicate`, `unconfirmed`, `scaffolding`, `open pitfalls`, `open pitfalls aged`, `proposed`, `already proposed`. A quiet run says `Nothing went stale this cycle.` as the last line.
 10. **Bounded commands**, as `loops.learn-task` Rule 11.
 
@@ -119,10 +119,15 @@ Knowledge rots in a different way per module (schema S1). Core already detects t
 - **Given** the SKILL.md text
 - **Then** it says an `aged` file nothing confirms is left alone, counted as `unconfirmed`, and proposed
 
+### The skill closes a pitfall only on evidence
+
+- **Given** the SKILL.md text
+- **Then** it closes a pitfall only on observed evidence that the fix landed, says a missing file or symbol is not evidence, and sends the rest to a proposal
+
 ### Specs stay proposals
 
 - **Given** the SKILL.md text
-- **Then** it forbids writing a spec, sends a finding that would change one to `now/proposals.md` with the id `P-<today>-fresh-<slug>`, says that file is only appended to, and skips a file already proposed, counted as `already proposed`
+- **Then** it forbids writing a spec and staging or committing, sends a finding that would change one to `now/proposals.md` with the id `P-<today>-fresh-<slug>`, says that file is only appended to, and skips a file already proposed, counted as `already proposed`
 
 ### The skill specifies the record
 

@@ -79,7 +79,7 @@ It may write anywhere in `cortex/` (P11), but its two spec jobs only propose: sp
     - `## Silent-spec job`: tickets, blind, flags, flags over the limit, `described`, `not described`, worktrees removed;
     - `## Store use`: Rule 4's counts, and `filed` against `alreadyThere` as a ratio;
     - `## Store shape`: the `store` key.
-12. **Bounded commands**, as `loops.learn-task` Rule 11, except the suite (Rule 7). The task writes nothing outside `cortex/` and the throwaway worktrees, never a spec, and does not commit (`loops.learn-task` Notes).
+12. **Bounded commands**, as `loops.learn-task` Rule 11, except the suite (Rule 7). The task writes nothing outside `cortex/` and the throwaway worktrees, never a spec, and neither stages nor commits (`loops.learn-task` Notes).
 
 ## Acceptance Criteria
 
