@@ -1,6 +1,6 @@
 ---
 id: specflow.index
-status: draft
+status: implemented
 depends_on:
   - core-cli.init
 implements: ../../specs-business/specflow/developer-knows-the-specs-stay-sound.business.md

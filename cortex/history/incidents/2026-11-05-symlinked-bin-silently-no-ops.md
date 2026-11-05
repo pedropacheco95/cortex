@@ -4,6 +4,7 @@ permanence: changing
 verified: "2026-09-28 (observed)"
 origin:
   - migrated:compass/bugs/B-026-symlinked-bin-silently-no-ops.md@ff385a4
+  - commit:bf5835a
 need:
   - src/cli/cli.ts
   - src/hooks/cli.ts
@@ -11,7 +12,6 @@ need:
 aliases:
   - B-026
   - B-026-symlinked-bin-silently-no-ops
-status: open
 ---
 
 # B-026 — A symlinked bin silently no-ops
@@ -105,3 +105,5 @@ proposed_fix: >-
   a string suffix match, in all three copies of the guard. Add ACs for a symlinked bin
   running a verb, and for a symlinked bare `cortex` getting Rule 18's usage text and exit 2.
 ```
+
+Fixed: 2026-11-05, bf5835a (`src/entry.ts` compares resolved real paths; `tests/spec/core-cli/entry-point.spec.test.ts`).
