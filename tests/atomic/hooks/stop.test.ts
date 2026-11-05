@@ -93,7 +93,7 @@ describe('AC — the Stop companion is silent on missing input', () => {
     ['empty stdin', {}],
     ['non-string last_assistant_message', { session_id: 'abc', last_assistant_message: 42 }],
     ['missing session_id', { last_assistant_message: 'text?' }],
-  ])('%s → exit 0, empty stdout, no file, no hook-errors.md', async (_label, stdin) => {
+  ])('[HOOKS-SESSION-END-3] %s → exit 0, empty stdout, no file, no hook-errors.md', async (_label, stdin) => {
     const root = tmp('silent');
     makeCortexProject(root);
     const before = snapshotTree(root);

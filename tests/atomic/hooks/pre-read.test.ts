@@ -679,7 +679,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     }
   });
 
-  it('AC: a tiny file (39 lines) or one without an entry is never deferred; an entry lacking size_lines is unreadable today (silent + logged), still never a deny', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-16] AC: a tiny file (39 lines) or one without an entry is never deferred; an entry lacking size_lines is unreadable today (silent + logged), still never a deny', async () => {
     const root = makeProject('tiny', DEFER_ON);
     const transcript = interactiveTranscript(root);
     writeInsightEntry(root, 'src/tiny.ts', { purpose: 'Tiny.', lines: 39, tokens: 300, connections: A_CONNECTIONS });

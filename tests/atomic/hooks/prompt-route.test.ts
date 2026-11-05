@@ -364,7 +364,7 @@ describe('AC: harness-injected prompts never fire', () => {
   ];
 
   for (const prompt of HARNESS_PROMPTS) {
-    it(`${JSON.stringify(prompt.slice(0, 40))}… → silent and no memory file, even on a first prompt whose record names T-004`, async () => {
+    it(`[HOOKS-PROMPT-ROUTE-7] ${JSON.stringify(prompt.slice(0, 40))}… → silent and no memory file, even on a first prompt whose record names T-004`, async () => {
       const root = project('harness');
       writeThreadFile(root, { id: 'T-004', kind: 'question', body: COUNTER_TEXT });
       writeRecord(root, 's1', { threads_opened: ['T-004'] });
