@@ -184,9 +184,9 @@ describe('AC: CLI dispatch — tiers required, v2 verbs retired', () => {
     expect(err.join('\n')).toContain('exactly one of --fast, --daily, or --full');
   });
 
-  it('loop-insight-gaps is retired with a pointer to cortex-loop-session-observe', async () => {
+  it('loop-insight-gaps is retired with a pointer to cortex loop-session-observe', async () => {
     expect(await run(['loop-insight-gaps', '--collect'])).toBe(1);
-    expect(err.join('\n')).toContain('cortex-loop-session-observe');
+    expect(err.join('\n')).toContain('cortex loop-session-observe');
   });
 
   it('--fast dispatches identically to insight-refresh-fast (exit 0, hook-safe, even on a bare dir)', async () => {

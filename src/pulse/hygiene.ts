@@ -172,7 +172,7 @@ export async function checkInsightDrift(root: string): Promise<HygieneSection> {
   const title = 'Insight drift';
   const ledgerPath = path.join(root, '.cortex', 'insight', 'ledger.json');
   if (!fs.existsSync(ledgerPath)) {
-    return { title, findings: [], skipped: 'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)' };
+    return { title, findings: [], skipped: 'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing)' };
   }
   let raw: string;
   try {

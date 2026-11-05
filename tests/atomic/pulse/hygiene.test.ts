@@ -173,7 +173,7 @@ describe('check (c): insight drift — ledger entries whose source vanished', ()
     writeAt(root, 'src/a.ts', 'export {};\n');
     const section = await checkInsightDrift(root);
     expect(section.skipped).toBe(
-      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)',
+      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing)',
     );
     expect(section.findings).toEqual([]);
   });

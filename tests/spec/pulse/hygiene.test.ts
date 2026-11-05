@@ -127,7 +127,7 @@ describe('AC: Insight drift — vanished ledger entries flagged, unextracted fil
     await runHygiene(root, { ghBin: emptyGhStub() });
     const { body } = parsePulseReport(path.join(root, REPORT_REL));
     expect(body).toContain(
-      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing; run cortex-extract-insight)',
+      'skipped — no insight staleness ledger (.cortex/insight/ledger.json missing)',
     );
   });
 });
