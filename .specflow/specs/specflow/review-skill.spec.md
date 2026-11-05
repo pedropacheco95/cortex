@@ -27,8 +27,8 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 
 ## Rules
 
-1. **Bundle.** The bundle is `skills/specflow-review/SKILL.md`, mirrored byte for byte to `.claude/skills/specflow-review/SKILL.md`. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, and `store.migrate` Rule 18 step 2 installs it. Its tier in `TIERS` is **B**, and its required trigger phrases are `review the spec` and `review this diff`.
-2. **Description**, exactly: `Fresh-agent review of a spec against the code (before code, or weekly at rest) or of a diff against its criteria (on request). Read-only; findings only. "review the spec", "review this diff".`
+1. **Bundle.** The bundle is `skills/specflow-review/SKILL.md`, mirrored byte for byte to `.claude/skills/specflow-review/SKILL.md`. It is 4.0-only: it is listed in `STORE_V4_BUNDLES`, and `store.migrate` Rule 18 step 2 installs it. Its tier in `TIERS` is **B**, and its required trigger phrases are `review the spec`, `review this diff` and `here is the feedback`.
+2. **Description**, exactly: `Fresh-agent review of a spec against the code (before code, or weekly at rest) or of a diff against its criteria (on request). Read-only; findings only. "review the spec", "review this diff", "here is the feedback".`
 3. **The Iron Law**, exactly: `NO FINDING WITHOUT A CRITERION ID, A LOCATION AND A PROPOSED CHANGE`, followed by: `Violating the letter of this law is violating the spirit. If you find yourself constructing a reading under which an observation is useful without being specific, that construction is the violation.`
 4. **What a goldfish is.** A fresh agent that receives only what this skill hands it, and never the conversation that led here. The main session spawns it (the Agent tool, a new session, or a scheduled run). A fork of the current session, or the current session reviewing its own work, does not count.
 5. **Two modes.**
@@ -58,7 +58,7 @@ The skill starts from the owner-approved draft, with two required changes. Diff 
 
 - **Given** the repository
 - **When** the skill bundles are listed and `pnpm check:skill-budget` runs
-- **Then** `skills/specflow-review/SKILL.md` and its `.claude/skills/` mirror are byte-identical, the tier is B, and the check passes with the two required phrases
+- **Then** `skills/specflow-review/SKILL.md` and its `.claude/skills/` mirror are byte-identical, the tier is B, and the check passes with the three required phrases
 
 ### 3.x init and sync never install it
 

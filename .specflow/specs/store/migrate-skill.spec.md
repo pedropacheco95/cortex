@@ -74,9 +74,9 @@ governs:
     | `specflow-onboard-codebase`, `specflow-deep-onboard` | `specflow-onboard` |
     | `specflow-lint` | `cortex specs lint` |
     | `specflow-viewer` | `cortex specs view` |
-    | `specflow-entry`, `specflow-develop`, `specflow-bugs` | none: `open`, noting that the `## Specs` block's rules now do this work |
+    | `specflow-entry`, `specflow-change-router`, `specflow-develop`, `specflow-bugs` | none: `open`, noting that the `## Specs` block's rules now do this work |
     | `cortex-archive-ingest`, `cortex-ingest` | `cortex-remember` (its source digest) |
-    | `cortex-extract-insight`, `cortex-loop`, `cortex-loop-*`, `cortex-pulse-*` | none: `open` |
+    | `_conventions`, `cortex-extract-insight`, `cortex-loop`, `cortex-loop-*`, `cortex-pulse-*` | none: `open` |
     | `.cortex/<path>` | the target `.cortex-migrate/report.json` gives that path, else the S9.3 mapping; no target: `open` |
     | `.specflow/specs/` | `specflow/impl/` |
     | `.specflow/specs-business/` | `specflow/promises/` |
