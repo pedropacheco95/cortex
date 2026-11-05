@@ -1,198 +1,113 @@
 # Onboarding to Cortex
 
-How to bring Cortex onto a project and use it day to day. Assumes you've skimmed [`presentation.md`](./presentation.md) for what Cortex is and why.
+How to use Cortex on a project, start to finish. For what it is, see [`README.md`](./README.md).
 
-> **Platform:** macOS only (v1). Scheduled loops depend on Claude Code Desktop's local scheduled tasks.
-> **Runtime:** Node.js. Cortex is a global CLI (`cortex`) plus Claude Code skill bundles.
+## 1. The idea
 
----
+An agent can reread your code. It can't reread why the code is this way, who asked for it, or how you like to work. Cortex keeps those in `cortex/`, a folder of plain notes you can read and correct yourself. Only `cortex/MAP.md` is loaded every session.
 
-## 0. The mental model in 30 seconds
+Core (the CLI) never calls an LLM. It validates, generates, expires and reports. Judgment belongs to the skills, and to you.
 
-- `.cortex/` holds five modules: **atlas** (why), **compass** (rules/bugs), **archive** (ingested docs), **insight** (inferred understanding), **pulse** (transient loop output).
-- **Core** (the `cortex` CLI) is deterministic and never calls an LLM. **Skills** (in Claude Code) do the thinking.
-- **Insight** is the thing you'll use most: a queryable, per-file understanding of the code.
-- Loops keep it fresh and **propose** improvements to a gate you approve — they never silently change your rules.
-- **Specs are the source of truth** (`.specflow/`); code is derived from them.
-
----
-
-## 1. Install & initialize
+## 2. Set up a project
 
 ```bash
-# Install the global CLI (once per machine)
-pnpm add -g cortex        # or your published install path
-
-# In your project root:
 cortex init
+cortex store validate
 ```
 
-`cortex init` scaffolds `.cortex/` (all five modules, each with an active-prompt `_index.md`), writes the managed **CLAUDE.md** block that teaches Claude how to use insight, installs the warn-never-block git/read/write hooks, updates `.gitignore`, and prepares the scheduled-task payloads.
+`cortex init` is safe to rerun: on a project already set up it runs the update. Later, `cortex sync` updates a project to the Cortex you have installed, and `cortex sync --dry-run` shows what it would do.
 
-It's safe to re-run: it merges and appends, never clobbering your curated content (overwrites are `--force`-gated). At the end it self-validates and prints next steps — including the scheduled-task activation instruction (see §6).
+Commit what it created: `cortex/`, `.claude/`, `CLAUDE.md`, `AGENTS.md` and `.gitignore`.
 
-Verify any time:
+## 3. Turn on the scheduled tasks
+
+Once per project, open it in **Claude Code Desktop** and type:
+
+```
+/cortex-register-tasks
+```
+
+It has to be typed; plain words won't run it. Then check:
 
 ```bash
-cortex validate .     # Conformant: YES, 0 errors, 0 warnings — the goal state
+cortex tasks verify
 ```
 
-## 2. Insight extraction (3.x stores only)
+`cortex-learn` runs daily, `cortex-fresh` on Saturdays and `cortex-quality` on Sundays. Each writes only inside `cortex/` and commits nothing, so their changes appear in your working tree for you to read and commit. A change to a spec, or anything that needs a person, is only proposed, in `cortex/now/proposals.md`.
 
-The extraction skill left the package at 4.0, and a 4.0 project has no insight layer: its knowledge lives in `cortex/`, filed by the `cortex-remember` skill. A project still on a 3.x store keeps the extraction it already has, and the queries below read that. Core makes no LLM calls, so there is no extraction command either.
+## 4. Day to day
 
-## 3. Query insight — your daily driver
+Work as usual. When you say something worth keeping, the agent files it with `cortex-remember` and shows you one line:
 
-Once extracted, three deterministic commands (fast, no LLM):
+```
+Filing: <fact> → <path> (origin: <origin>)
+```
+
+Correct it on the spot if it's wrong. You can also ask directly:
+
+- *"remember this"*, *"from now on…"*: a fact, or a rule in `cortex/world/rules/`.
+- *"file this bug"*: an open item in `cortex/code/<area>/`, moved to `history/` when it is fixed.
+- A document you hand over: a dated digest in `cortex/history/sources/`, the original copied beside it (gitignored), and every ask in it filed as a spec request in `cortex/now/proposals.md`.
+
+To look something up, the agent starts from the map. So can you: it's plain markdown, and `rg` works.
+
+## 5. Add specs
+
+Specs are optional. To start with an empty tree:
+
+1. Create `specflow/promises/` and `specflow/impl/`. Every folder under them needs an `_overview.md`.
+2. Add a `specflow` key to `cortex/cortex.json`:
+
+   ```json
+   "specflow": {
+     "tests": [{ "runner": "vitest", "include": ["tests/**/*.test.ts"], "exclude": [] }],
+     "testCommand": "pnpm test"
+   }
+   ```
+
+3. Run `cortex sync`, which adds a `## Specs` section to the managed blocks.
+4. Run `cortex hooks install`, then `cortex specs lint`.
+
+`core.hooksPath` isn't cloned, so everyone who clones the repository runs `cortex hooks install` once.
+
+If the project has an old `.specflow/` tree, run `cortex specs port --dry-run`, then `cortex specs port`. To bring existing code or tests under specs, say *"onboard this codebase"* (`specflow-onboard`). It proposes promises, specs and tags, and applies nothing until you approve.
+
+## 6. Work with specs
+
+**Small work** is an ordinary change. It updates or adds the criterion for each behaviour it touches, and a test that cites the criterion. The commit check holds it honest.
+
+**Big work** is a request no criterion covers, or one that touches more than one spec:
+
+1. `specflow-spec` writes the spec, with a named test per criterion, and no code.
+2. `specflow-review` has fresh agents read it against the code.
+3. You resolve the findings.
+4. The main session builds it wave by wave, each wave an ordinary change.
+
+A request that contradicts a rule or a recorded decision isn't built: the conflict is written down as an open question and the work stops.
+
+**When the commit check refuses**, it says why:
+
+- Code or config changed with no test changed: change a test.
+- A spec's rules changed together with code: commit the spec on its own.
+- Existing rule or criterion text changed: add `Specflow-Amends: <spec-id>#<rule-7 or criterion id> — <reason>`.
+
+`cortex specs view` writes one HTML page for browsing the specs. `specflow/INDEX.md` is generated, so never edit it.
+
+## 7. Coming from 3.x
+
+A project with a `.cortex/` folder has to migrate first; `cortex init` and `cortex sync` refuse it.
 
 ```bash
-cortex insight file src/auth/session.ts     # the rich per-file entry
-cortex insight concept authentication       # files touching a concept + related concepts
-cortex insight element validateToken        # a function/class/constant, with connections
+cortex migrate                # dry run: every entry and where it would go
+cortex migrate --apply        # writes cortex/; .cortex/ stays
+cortex migrate --accept       # after you've checked the result
 ```
 
-Add `--json` to any of them for structured output. `element` returns "no rich entry" for symbols that weren't identified as main players — those are still discoverable via their file entry.
+The dry run prints the path of the `cortex-migrate` skill in the package. Ask the agent to read and follow it: it decides the working files Core can't judge and writes the plan for `--plan <file>`. Accepting retires the old hooks and tasks, and leaves `.cortex/` on disk.
 
-For open-ended questions ("how does billing work here?"), just ask Claude in-session — it uses these primitives to gather what it needs and reasons over them.
+## 8. Troubleshooting
 
-## 4. Investigate an unfamiliar repo (the "understand anything" workflow)
-
-The headline use case: you're dropped into a codebase you don't know — a client's, a legacy service, an acquisition — and need to *understand* it. This is the Understand-Anything / Graphify equivalent, except the output is persistent and stays fresh instead of being a one-shot artifact that rots.
-
-The flow, start to finish:
-
-**1 — Scaffold and extract.** `cortex init` in the repo (§1), then run the initial extraction (§2). On an unfamiliar codebase, **review the plan** the extraction presents before it runs — the scope tree *is* your first map: which subsystems exist, how large each is, what's shared between them. You've learned the shape of the repo before a single deep pass runs.
-
-**2 — See the whole thing at once.**
-
-```bash
-cortex scan            # compile the map → .cortex/constellation.json
-cortex constellation   # serve it read-only on localhost; prints a URL (never auto-opens)
-```
-
-The constellation is a visual map of the project — files, concepts, rules, and specs with the relationships between them. It's strictly read-only: it observes the knowledge layer, never edits it.
-
-**3 — Start from what matters, not from file #1.** Extraction ranks files by **centrality** and surfaces the **concepts** that span the codebase, so you don't have to guess where to begin:
-
-```bash
-cortex insight concept authentication   # (or billing, retry, caching, …)
-```
-
-A concept entry tells you which files implement it, *how*, and which concepts relate to it — the fastest way in.
-
-**4 — Follow the graph, along meaning.** From a concept, jump to its files; a file entry gives you Purpose, **Main players** (with line ranges), non-obvious **Insights**, and — the load-bearing part for navigation — **Connections** (uses / used-by / semantically-related) and **Query pointers** ("if you need to do X, also read Y"):
-
-```bash
-cortex insight file src/auth/session.ts
-cortex insight element validateToken
-```
-
-Following Connections and Query pointers lets you traverse the codebase by *concern*, not just by imports — files that handle the same thing without importing each other are linked.
-
-**5 — Just ask.** In a Claude Code session, ask in plain language:
-
-> *"How does auth work in this repo?"* · *"Where's the retry logic?"* · *"What would I touch to add a new payment provider?"*
-
-Claude answers by gathering the relevant insight entries and reasoning over them — grounded in the extracted understanding of *this* codebase, not in priors about how similar codebases usually work.
-
-**6 — (Optional) Reverse-engineer specs for the deepest model.** To go from "I understand the code" to a durable, structural model of *what it's supposed to do*, turn the code into a spec tree — in a session: *"onboard this codebase"* (`specflow-onboard`). You get proposals for promises and specs with acceptance criteria, and nothing is applied until you approve it.
-
-**Why this beats a one-shot tool:** the understanding you just built is committed to `.cortex/insight/`, queryable by every future session, and kept current by the daily refresh loop as the code changes. You investigate once; it stays true. And because the query surface is deterministic Core, consulting it later costs no tokens.
-
-## 5. How Claude uses it automatically
-
-The CLAUDE.md block `cortex init` installed teaches the core discipline:
-
-> **Consult insight to understand; read the file to modify.** The per-file entry is a far richer resume than reading 500 lines and remembering fragments. Query it first; open the file when you need exactness.
->
-> Before substantive work on a file, query its insight entry. Before cross-file changes, query the concept. Where insight conflicts with a compass rule or a spec, **the gated layer wins** — insight is context, not authority.
-
-You don't have to do anything for this — it's in every session's context.
-
-## 6. Activate the scheduled loops (one-time, needs a Desktop session)
-
-Cortex's self-maintenance runs as **five scheduled bundles**. Registering them with the Claude Desktop app is the one step Cortex can't do headlessly — the app only accepts task registration from a session it spawned. `cortex init` prints the instruction; here it is:
-
-1. Open the project folder in **Claude Code Desktop** (a new session).
-2. Say: **"run cortex-register-tasks"**
-3. The app will ask you to **approve each task registration** (5 prompts) — "always allow" isn't offered for task creation, so stay at the keyboard and approve each.
-4. Confirm: `cortex tasks verify` → *all five registered, enabled, backed by payloads.*
-
-You'll then see them in the app's **Routines** list as "Cortex daily", "Cortex weekly curation", etc.
-
-The five bundles:
-
-| Shows as | When | What it tends |
-|---|---|---|
-| Cortex daily | 02:00 daily | health, bug triage, spec-drift, insight refresh, session observation |
-| Cortex weekly curation | Sat 04:00 | distil sessions → rule/skill candidates; rule decay |
-| Cortex weekly quality | Sun 04:00 | spec lint, verification, full insight regeneration |
-| Cortex test runner | Sun 06:00 | the code-writing test-fix loop (isolated) |
-| Cortex monthly review | 1st, 06:00 | project-memory & scaffolding staleness |
-
-> **After a Desktop app update:** updates have been observed to wipe the app's task registry. If `cortex tasks verify` ever fails, just re-run **"run cortex-register-tasks"** in a Desktop session.
-
-## 7. The weekly rhythm — the pulse gate
-
-Loops **propose, they never mutate.** Anything they'd change to a gated layer (a compass rule, an atlas decision, a new skill) lands as a typed suggestion. Your part is a few minutes of review:
-
-```bash
-cortex pulse-list             # what's queued, by id
-cortex pulse-accept S-007     # apply it (transactional write to the gated layer)
-cortex pulse-reject S-007     # decline — remembered, so it won't be re-proposed
-```
-
-Loop reports (never gated, just informational) live in `.cortex/pulse/reports/` — one clean-named file per loop (`hygiene.md`, `spec-drift.md`, `insight-refresh.md`, …). The gate itself is `.cortex/pulse/suggestions.md`; rejection memory is `dismissed.md`. Everything else under `pulse/` is machine state (`state/`) or extraction artifacts (`extraction/`) — you never edit those by hand.
-
-## 8. Bring documents into the system (archive)
-
-When a document authorizes downstream content — a client spec, a contract, a meeting transcript, an RFC — ingest it so its derived rules and decisions stay traceable:
-
-> In a session: **"ingest this client spec"** (or drop the document and ask to ingest it)
-
-This invokes `cortex-remember`: it writes a dated digest to `cortex/history/sources/`, copies the original file byte for byte to `history/sources/raw/` (gitignored), files the facts with the digest as their source, and files every ask in the document as a spec request in `cortex/now/proposals.md`.
-
-## 9. Working under SpecFlow (if the project is spec-managed)
-
-Specs are the source of truth. The build loop for any change:
-
-1. Read the **business spec** (via the dev spec's `implements:` link) — understand *why*.
-2. Check `depends_on` — prerequisites first.
-3. Read the **dev spec** — schema, API, Given/When/Then.
-4. **Write tests first** — every acceptance criterion becomes a test.
-5. Implement the minimum to satisfy the spec.
-6. Run tests; update the spec's status.
-7. Re-check the business spec for drift; fix it in the same change if the dev change invalidated it.
-
-If a change is reported as broken, say *"file this bug"*: the `cortex-remember` skill files it as an open item in `cortex/code/<area>/`, and moves it to `history/` when it is fixed. Onboarding an *existing* codebase into specs: `specflow-onboard`.
-
-## 10. Command cheat-sheet
-
-```bash
-cortex init                         # scaffold / re-scaffold .cortex/
-cortex validate .                   # check conformance to the schema (aim: 0/0)
-cortex scan                         # (re)compile the constellation view
-cortex insight file|concept|element # query the understanding layer
-cortex tasks plan                   # show the 5-bundle registration plan
-cortex tasks verify                 # are the scheduled bundles registered?
-cortex pulse-list | -accept | -reject   # the human gate
-```
-
-And in a Claude Code session (skills, not CLI):
-
-```
-remember this / file this bug     → cortex-remember
-keep this <document>              → cortex-remember
-run cortex-register-tasks         → register the 5 bundles (Desktop session)
-```
-
-## 11. Troubleshooting
-
-- **`cortex validate` reports errors** — read them; they name the file and the schema clause. Most are missing frontmatter or a broken cross-reference.
-- **Scheduled tasks don't appear in the app** — they register only via a Desktop session (`run cortex-register-tasks`), not by file-drop, and the app loads its registry at launch. Fully quit and reopen if the list looks stale; re-run the skill if `cortex tasks verify` fails after an app update.
-- **Insight looks stale after big changes** — say *"refresh insight for `<file>`"* in a session, or let the daily loop catch up. The daily refresh scales with meaningful change, so trivial edits won't trigger deep re-extraction.
-- **A loop wants to change something you disagree with** — reject it (`cortex pulse-reject <id>`); it won't be proposed again.
-
----
-
-*Cortex is spec-managed and self-hosting: it uses its own five modules, loops, and gate to maintain itself. If you want to see it work, `cortex insight file src/schema/validate.ts` on the Cortex repo returns an entry Cortex extracted about its own validator.*
+- **`cortex store validate` reports errors:** they name the file. Most are missing frontmatter or a broken link.
+- **"managed block is out of date":** run `cortex store map`.
+- **Tasks don't appear in the app:** type `/cortex-register-tasks` in a Desktop session for the project, then run `cortex tasks verify`. If the session can't register them, fully quit the app and run `cortex tasks register`.
+- **The commit hook says `cortex` isn't found:** install Cortex on that machine, or use `--no-verify` and say so.
