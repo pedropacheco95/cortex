@@ -49,7 +49,7 @@ describe('schema.validator Rule 15: a 4.0 project', () => {
     expect(await exitOf(root)).toBe(0);
   });
 
-  it('a governed_by id that is no alias in cortex/ stays an error', async () => {
+  it('[SCHEMA-VALIDATOR-33] a governed_by id that is no alias in cortex/ stays an error', async () => {
     const root = project('noalias', false);
     fs.rmSync(path.join(root, 'cortex/world/rules/validator-read-only.md'));
     const report = await validate(root);

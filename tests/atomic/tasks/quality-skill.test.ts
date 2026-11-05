@@ -89,7 +89,7 @@ describe('The skill specifies the measurement', () => {
 });
 
 describe('Tasks neither stage nor commit', () => {
-  it('says so', () => {
+  it('[LOOPS-QUALITY-TASK-30] says so', () => {
     expect(text).toContain('do not stage or commit: no `git rm`, no `git add`');
   });
 });

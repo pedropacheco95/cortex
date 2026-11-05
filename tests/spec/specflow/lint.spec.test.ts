@@ -60,6 +60,24 @@ function withOther(body: string): string {
   return root;
 }
 
+describe('schema.validator: the spec-tree checks on the 4.0 route', () => {
+  it('[SCHEMA-VALIDATOR-28, SCHEMA-VALIDATOR-29, SCHEMA-VALIDATOR-30] cortex specs lint reports the cycle, the overview and the id on a specflow/ tree', async () => {
+    const root = clean(['other', 'moved']);
+    const dependsOn = (id: string) => `implements: ${LINK}\ndepends_on:\n  - ${id}\n`;
+    write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { front: dependsOn('billing.other') }));
+    write(root, 'specflow/impl/billing/other.spec.md', spec('billing.other', { front: dependsOn('billing.refunds') }));
+    write(root, 'specflow/impl/billing/moved.spec.md', spec('billing.wrong-id'));
+    write(root, 'specflow/impl/billing/_overview.md', "# x\n\n## What this is\n\nx\n\n## Why it's grouped this way\n\nx\n");
+    const r = await lint(root);
+    expect(r.code).toBe(1);
+    expect(hits(r, 'check.xref-acyclic').map((l) => l.split(' ')[0])).toContain('error');
+    const overview = hits(r, 'check.overview-shape');
+    expect(overview.map((l) => l.split(' ')[0])).toEqual(['warning']);
+    expect(overview[0]).toContain('## What it covers');
+    expect(hits(r, 'check.id-matches-path').map((l) => l.split(' ')[0])).toEqual(['error']);
+  });
+});
+
 describe('specflow.lint: the command', () => {
   it('[SPECFLOW-LINT-1] A clean tree exits 0', async () => {
     const r = await lint(clean());
