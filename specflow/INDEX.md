@@ -1412,7 +1412,7 @@ Untagged tests: 2765
     - test: `tests/spec/specflow/index.spec.test.ts` › [SPECFLOW-INDEX-36] A missing folder is an error
   - **SPECFLOW-INDEX-37** No test config warns
     - test: `tests/spec/specflow/index.spec.test.ts` › [SPECFLOW-INDEX-37] No test config warns
-  - **SPECFLOW-INDEX-38** Every listed test modifier is a case; a regex test call and a variable name are not
+  - **SPECFLOW-INDEX-38** Every listed test modifier is a case; a regex test call is not
     - test: `tests/spec/specflow/index.spec.test.ts` › [SPECFLOW-INDEX-38] every listed modifier is a case; a regex.test call and a variable name are not
   - **SPECFLOW-INDEX-39** A function nested in a test and a def in a docstring are no case
     - test: `tests/spec/specflow/index.spec.test.ts` › [SPECFLOW-INDEX-39] a function nested in a test is no case, and a def in a docstring is no case

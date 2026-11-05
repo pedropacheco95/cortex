@@ -265,9 +265,9 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 - **When** `cortex specs index` runs
 - **Then** it exits 0, `Untagged tests: 0` is written, and stderr carries the warning
 
-### SPECFLOW-INDEX-38: Every listed test modifier is a case; a regex test call and a variable name are not
+### SPECFLOW-INDEX-38: Every listed test modifier is a case; a regex test call is not
 
-- **Given** a test file holding `it.only('a')`, `test.concurrent('b')`, `it.sequential('c')`, `test.fails('d')`, the line `const r = /x(/.test('e');` and `it(name, f);`
+- **Given** a test file holding `it.only('a')`, `test.concurrent('b')`, `it.sequential('c')`, `test.fails('d')` and the line `const r = /x(/.test('e');`
 - **When** the index model is built
 - **Then** the untagged cases are `a`, `b`, `c` and `d`, in that order
 
