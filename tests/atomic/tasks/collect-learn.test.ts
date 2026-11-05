@@ -259,6 +259,34 @@ describe('Secrets are redacted before writing', () => {
     expect(condenseSession(entries([turn])).parts[0]).toBe('TOOL Bash curl -u [redacted:credential] x');
   });
 
+  it('redacts the forms a first pass let through', () => {
+    const samples: [string, string, string][] = [
+      ['bearer', 'bearer abcdefgh12345678', 'abcdefgh12345678'],
+      ['credential', 'password: "two words"', 'two words'],
+      ['credential', "token='Plain1234'", 'Plain1234'],
+      ['credential', '{"password":"Json12345"}', 'Json12345'],
+      ['credential', 'GITHUB_TOKEN=Env123456', 'Env123456'],
+      ['credential', 'MY-API-KEY: Dash12345', 'Dash12345'],
+      ['url-credential', 'postgres://user:Url123456@host/db', 'Url123456'],
+      ['private-key', '-----BEGIN PRIVATE KEY-----\nCutOffKey123', 'CutOffKey123'],
+    ];
+    for (const [label, text, secret] of samples) {
+      const c = condenseSession(entries([textTurn('user', `value ${text}`)]));
+      expect(c.parts[0], text).toContain(`[redacted:${label}]`);
+      expect(c.parts[0], text).not.toContain(secret);
+    }
+  });
+
+  it('redacts a long high-entropy string with no known prefix, and leaves hashes and names alone', () => {
+    const key = 'aB3dE9gH1jK7mN2pQ8sT4vW6yZ0cF5hL3nR9tX1';
+    const c = condenseSession(entries([textTurn('user', `use ${key} now`)]));
+    expect(c.parts[0]).toContain('[redacted:high-entropy]');
+    expect(c.parts[0]).not.toContain(key);
+    for (const safe of ['0123456789abcdef0123456789abcdef01234567', 'Cortex-Design-Notes-2026-10-20-final-final', 'a'.repeat(50) + 'B1']) {
+      expect(condenseSession(entries([textTurn('user', `see ${safe} now`)])).redactions, safe).toBe(0);
+    }
+  });
+
   it('a credential around a token counts once', () => {
     const c = condenseSession(entries([textTurn('user', `token: ghp_${'c'.repeat(36)}`)]));
     expect(c.redactions).toBe(1);
