@@ -1,6 +1,6 @@
 ---
 id: specflow.check
-status: draft
+status: implementing
 depends_on:
   - specflow.index
   - core-cli.init

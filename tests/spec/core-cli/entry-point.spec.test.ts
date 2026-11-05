@@ -74,6 +74,22 @@ describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
     expect(hook.stdout.length).toBeGreaterThan(0);
   });
 
+  it('a refusal survives a symlinked bin', () => {
+    const repo = path.join(tmp, 'repo');
+    fs.mkdirSync(path.join(repo, 'specflow'), { recursive: true });
+    fs.mkdirSync(path.join(repo, 'src'));
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: repo });
+    git('init', '-q', '-b', 'main');
+    git('-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '--allow-empty', '-m', 'base');
+    fs.writeFileSync(path.join(repo, 'src/a.ts'), 'x');
+    git('add', '-A');
+    const msg = path.join(tmp, 'msg');
+    fs.writeFileSync(msg, 'm');
+    const r = spawnSync(path.join(tmp, 'cortex'), ['check', '--commit-msg', msg], { encoding: 'utf-8', cwd: repo });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('rule (a)');
+  });
+
   it('importing the module does not run it', () => {
     const script = path.join(tmp, 'import.mjs');
     fs.writeFileSync(script, `await import(${JSON.stringify(path.join(out, 'cli/cli.js'))});\nconsole.log('imported');\n`);
