@@ -74,11 +74,11 @@ function snapshot(dir: string): Record<string, string> {
 const section = (text: string): string => text.slice(text.indexOf('project skills to adjust:'));
 
 describe('store.migrate at 4.0: exports', () => {
-  it('the final set is the nine of Rule 18 step 2, without cortex-migrate', () => {
+  it('The final set is the nine of Rule 18 step 2, without cortex-migrate', () => {
     expect([...FINAL_BUNDLES].sort()).toEqual(['cortex-fresh', 'cortex-learn', 'cortex-quality', 'cortex-register-tasks', 'cortex-remember', 'specflow-onboard', 'specflow-review', 'specflow-spec', 'verification-before-completion']);
   });
 
-  it('the retired list holds the spec names and no final bundle', () => {
+  it('The retired list holds the spec names and no final bundle', () => {
     const spec = fs.readFileSync(path.join(specsRoot(REPO), 'store/migrate.spec.md'), 'utf8');
     const line = spec.split('\n').find((l) => l.includes('**The retired list**'))!;
     const names = [...line.slice(line.indexOf('):')).matchAll(/`([^`]+)`/g)].map((m) => m[1]!);
@@ -108,7 +108,7 @@ describe('core-cli.sync Rule 27: the shipped list', () => {
     }
   });
 
-  it('every retired name with a shipped copy is on the list, and no other name is', () => {
+  it('Every retired name with a shipped copy is on the list, and no other name is', () => {
     for (const n of Object.keys(SHIPPED_3X_HASHES)) {
       expect(isRetiredName(n) || n === 'cortex-register-tasks' || n === 'verification-before-completion', n).toBe(true);
     }
@@ -156,7 +156,7 @@ describe('store.migrate Rules 8 and 9', () => {
     expect(read()).toBe(TODAY);
   });
 
-  it('a store is accepted only by a date', () => {
+  it('A store is accepted only by a date', () => {
     const root = project('dates', 'soon');
     expect(migrationAccepted(loadStore(root))).toBe(false);
     const dated = project('dated', '2026-11-01');
@@ -205,7 +205,7 @@ describe('store.migrate Rule 18: bundles', () => {
     expect(text).toContain('skills: .claude/skills/specflow-review exists with different content; left alone');
   });
 
-  it('a plain file or a folder marker at a bundle name does not crash accept', async () => {
+  it('A plain file or a folder marker at a bundle name does not crash accept', async () => {
     const root = project('oddshapes');
     fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
     fs.writeFileSync(path.join(root, '.claude/skills/cortex-remember'), 'a note\n');
@@ -220,7 +220,7 @@ describe('store.migrate Rule 18: bundles', () => {
     expect(text).not.toContain('skills: installed specflow-spec');
   });
 
-  it('an accept that cannot finish reports it and records no date', async () => {
+  it('An accept that cannot finish reports it and records no date', async () => {
     const root = project('blocked');
     fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
     fs.writeFileSync(path.join(root, '.claude/skills/.cortex-tmp-cortex-learn'), 'a note\n');

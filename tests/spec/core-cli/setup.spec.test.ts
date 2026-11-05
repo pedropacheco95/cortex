@@ -286,7 +286,7 @@ describe('core-cli.init Rule 20', () => {
     expect(started).toBe(false);
   });
 
-  it('a package lacking part of the final set writes nothing', async () => {
+  it('A package lacking part of the final set writes nothing', async () => {
     const root = tmpRepo('lacks');
     const r = await run(root, { packageDir: pkg(FINAL_BUNDLES.filter((n) => n !== 'cortex-quality')) });
     expect(r.code).toBe(1);
@@ -300,15 +300,13 @@ describe('core-cli.init Rule 20', () => {
     expect(parseInitArgs(['--force', 'proj', '-y', '--partial'])).toEqual({ target: 'proj', ignored: ['--force', '-y', '--partial'] });
   });
 
-  it('An unknown flag writes nothing', () => {
-    expect(parseInitArgs(['--nope'])).toEqual({ unknown: '--nope' });
-  });
 
-  it('The verb names ignored flags first, and refuses an unknown one with nothing written', async () => {
+  it('An unknown flag writes nothing', async () => {
     const root = tmpRepo('flags');
     const errors: string[] = [];
     const spy = vi.spyOn(console, 'error').mockImplementation((m: string) => void errors.push(m));
     try {
+      expect(parseInitArgs(['--nope'])).toEqual({ unknown: '--nope' });
       expect(await cortex(['init', root, '--nope'])).toBe(2);
       expect(errors).toEqual(['cortex init: unknown flag --nope. Nothing was written.']);
       expect(fs.readdirSync(root)).toEqual([]);

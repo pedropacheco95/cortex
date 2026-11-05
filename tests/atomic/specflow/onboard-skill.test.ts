@@ -124,4 +124,16 @@ describe('specflow.onboard-skill', () => {
     expect(onboard).toContain('`.cortex-port/onboard/concerns.md`');
     expect(port).toContain('Each agent writes its lines straight into `.cortex-port/tagging/<area>.jsonl`.');
   });
+
+  it('A needs-edit spec on a live promise is converted', () => {
+    expect(port).toContain('A spec the report marks `needs-edit` for another reason is converted like any other: the mark is about its criteria.');
+  });
+
+  it('A test folder spanning several specs is one agent', () => {
+    expect(text).toContain('A test folder that spans several specs is still one agent, which reads those specs\' criteria.');
+  });
+
+  it('A limited run says what it covered', () => {
+    expect(port).toContain('A run the person limits to a slice says so in its counts, and it is finished when `cortex specs port --verify` lists none of that slice\'s files.');
+  });
 });

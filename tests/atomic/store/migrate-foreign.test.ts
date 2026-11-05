@@ -293,7 +293,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(bytes(path.join(root, '.cortex'))).toEqual(before.legacy);
   });
 
-  it('accept leaves a settings file without cortex hooks unwritten', async () => {
+  it('Accept leaves a settings file without cortex hooks unwritten', async () => {
     const root = foreign('accept-nohooks');
     const home = tmpRepo('accept-nohooks-home');
     fs.mkdirSync(path.join(root, '.claude'), { recursive: true });

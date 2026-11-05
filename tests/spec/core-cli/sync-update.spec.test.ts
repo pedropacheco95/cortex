@@ -104,7 +104,7 @@ describe('the package', () => {
 });
 
 describe('core-cli.sync Rule 16: which project gets what', () => {
-  it('refuses off darwin before anything else', async () => {
+  it('Sync refuses off darwin before anything else', async () => {
     const root = accepted('linux');
     const before = tree(root);
     const r = await run(root, { platform: 'linux' });
@@ -307,7 +307,7 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     expect({ skills: tree(path.join(root, '.claude/skills/specflow-bugs')), target: tree(target) }).toEqual(before);
   });
 
-  it('a plain file with a bundle name is left alone', async () => {
+  it('A plain file with a bundle name is left alone', async () => {
     const root = accepted('plainfile');
     fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
     fs.writeFileSync(path.join(root, '.claude/skills/specflow-plan'), 'a note\n');
@@ -340,7 +340,7 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     expect(fs.readdirSync(skills).filter((n) => n.startsWith(TMP_BUNDLE_PREFIX))).toEqual([]);
   });
 
-  it('a failed copy leaves the old bundle and a partial temp folder the next run clears', async () => {
+  it('A failed copy leaves the old bundle and a partial temp folder the next run clears', async () => {
     const root = accepted('realfail');
     const dir = bundle(root, 'cortex-remember', 'old\n', true);
     const before = tree(dir);
@@ -399,7 +399,7 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     expect(fs.existsSync(path.join(root, '.claude/skills/specflow-plan/SKILL.md'))).toBe(true);
   });
 
-  it("a person's file at an unused temp name blocks nothing", async () => {
+  it("A person's file at an unused temp name blocks nothing", async () => {
     const root = accepted('oldretired');
     const dir = bundle(root, 'cortex-loop', 'l\n', true);
     const note = path.join(root, `.claude/skills/${TMP_BUNDLE_PREFIX}old-cortex-loop`);
@@ -449,7 +449,7 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     expect(r.text).toContain('skills: removed specflow-develop');
   });
 
-  it('a folder at the marker path does not stop sync', async () => {
+  it('A folder at the marker path does not stop sync', async () => {
     const root = accepted('markerdir');
     const p = pkg();
     const dir = bundle(root, 'specflow-spec', fs.readFileSync(path.join(p, 'skills/specflow-spec/SKILL.md'), 'utf8'));
@@ -657,7 +657,7 @@ describe('core-cli.sync Rule 21: hooks', () => {
     expect(tree(shared)).toEqual(before);
   });
 
-  it('a commit-msg that is a folder is not an install', async () => {
+  it('A commit-msg that is a folder is not an install', async () => {
     const root = accepted('hooks-dir');
     gitInit(root);
     fs.mkdirSync(path.join(root, 'specflow'));
@@ -699,7 +699,7 @@ describe('core-cli.sync Rule 22: tasks', () => {
     expect(r.text).not.toContain('/cortex-register-tasks');
   });
 
-  it('B-011: with no home passed, payloads land under os.homedir(), which a test can redirect', async () => {
+  it('With no home passed, payloads land under os.homedir()', async () => {
     const root = accepted('b011');
     const home = tmpRepo('home');
     const saved = process.env['HOME'];
