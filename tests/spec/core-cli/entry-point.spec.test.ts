@@ -90,6 +90,16 @@ describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
     expect(r.stderr).toContain('rule (a)');
   });
 
+  it('output past a pipe buffer arrives whole', () => {
+    const repo = path.join(tmp, 'big');
+    fs.mkdirSync(path.join(repo, 'specflow/impl/a'), { recursive: true });
+    const criteria = Array.from({ length: 3000 }, (_, i) => `### A-B-${i + 1}: A title long enough to fill a pipe\n\n- **Then** ok\n`).join('\n');
+    fs.writeFileSync(path.join(repo, 'specflow/impl/a/b.spec.md'), `---\nid: a.b\nstatus: draft\n---\n\n## Acceptance Criteria\n\n${criteria}`);
+    const r = spawnSync('sh', ['-c', `"${path.join(tmp, 'cortex')}" specs index --json | cat`], { encoding: 'utf-8', cwd: repo, maxBuffer: 64 * 1024 * 1024 });
+    expect(r.stdout.length).toBeGreaterThan(200_000);
+    expect(JSON.parse(r.stdout).counts.criteria).toBe(3000);
+  });
+
   it('importing the module does not run it', () => {
     const script = path.join(tmp, 'import.mjs');
     fs.writeFileSync(script, `await import(${JSON.stringify(path.join(out, 'cli/cli.js'))});\nconsole.log('imported');\n`);

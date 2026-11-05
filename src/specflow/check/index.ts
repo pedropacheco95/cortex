@@ -122,6 +122,11 @@ function judgeChange(root: string, paths: string[], base: Tree, head: Tree, at: 
   if (b !== 'off' && model) {
     const known = new Set(model.specs.flatMap((s) => s.criteria.map((c) => c.id)));
     const bad = cases.filter((c) => !c.tags.some((t) => known.has(t))).map((c) => `${c.file} › ${c.name}`);
+    const typos = cases.flatMap((c) => {
+      const stray = c.tags.filter((t) => !known.has(t));
+      return stray.length > 0 && stray.length < c.tags.length ? stray.map((t) => `[${t}] on ${c.file} › ${c.name}`) : [];
+    });
+    if (typos.length > 0) warnings.push({ letter: 'b', text: `tag naming no criterion: ${named(typos)}` });
     if (bad.length > 0 && b === 'refuse') {
       refusals.push({ letter: 'b', line: `- rule (b) test-needs-tag: test case without a resolving criterion tag: ${named(bad)}. Start its name with [CRIT-ID]; see specflow/INDEX.md.` });
     } else if (bad.length > 0) {

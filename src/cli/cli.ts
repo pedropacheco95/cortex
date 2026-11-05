@@ -3,7 +3,7 @@
  * Thin argv wrapper for `cortex init` (spec core-cli.init), `cortex sync`
  * (spec core-cli.sync — the existing-project repair/upgrade path init's own
  * refusal message now names), the `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
- * `cortex specs index [--staged] [--json]` (spec specflow.index), `cortex specs port` (spec specflow.port), `cortex specs lint` (spec specflow.lint),
+ * `cortex specs index [--staged] [--json]` (spec specflow.index), `cortex specs port` (spec specflow.port), `cortex specs lint` (spec specflow.lint), `cortex specs view [--out <file>] [--title <text>]` (spec specflow.viewer),
  * `cortex check --commit-msg <file> | --range <base>..<head> | --pre-push` (spec specflow.check),
  * `cortex hooks install` (spec specflow.git-hooks),
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
@@ -59,6 +59,7 @@ import { check } from '../specflow/check/index.js';
 import { installHooks } from '../specflow/hooks-install.js';
 import { specsIndex } from '../specflow/index.js';
 import { specsLint } from '../specflow/lint.js';
+import { specsView } from '../specflow/view/index.js';
 import { specsPort } from '../specflow/port.js';
 
 /**
@@ -72,7 +73,7 @@ const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['init', 'init [target]'],
   ['sync', 'sync [target] [--dry-run]'],
   ['store', 'store init|validate|map|expire|stale|amendments … (the 4.0 store, cortex/)'],
-  ['specs', 'specs index [--staged] [--json] | port [--dry-run] [--ticket-pattern <regex>] [--verify] | lint [--json] [--fix]'],
+  ['specs', 'specs index [--staged] [--json] | port [--dry-run] [--ticket-pattern <regex>] [--verify] | lint [--json] [--fix] | view [--out <file>] [--title <text>]'],
   ['check', 'check --commit-msg <file> | --range <base>..<head> | --pre-push'],
   ['hooks', 'hooks install'],
   ['migrate', 'migrate [--plan <file>] [--report <file>] [--json] [--apply|--accept]'],
@@ -599,6 +600,7 @@ export async function run(argv: string[]): Promise<number> {
     if (argv[1] === 'index') return specsIndex(argv.slice(2));
     if (argv[1] === 'port') return specsPort(argv.slice(2));
     if (argv[1] === 'lint') return specsLint(argv.slice(2));
+    if (argv[1] === 'view') return specsView(argv.slice(2));
     process.stderr.write(`cortex specs: unknown command ${argv[1] ?? '(none)'}. Nothing was written.\n`);
     return 2;
   }
@@ -750,5 +752,9 @@ export async function run(argv: string[]): Promise<number> {
 
 // Guard: only run CLI when invoked directly.
 if (isEntryPoint(import.meta.url)) {
-  run(process.argv.slice(2)).then(process.exit);
+  // Exit only once the pipes have drained: process.exit drops what is still queued,
+  // which cut `specs index --json` off at 64 KB.
+  run(process.argv.slice(2)).then((code) => {
+    process.stderr.write('', () => process.stdout.write('', () => process.exit(code)));
+  });
 }

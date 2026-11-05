@@ -565,6 +565,14 @@ describe('specflow.check: rule (b)', () => {
     expect(r.err).toContain('rule (b)');
   });
 
+  it('A second tag naming nothing warns', () => {
+    const root = repo(config('refuse'));
+    stage(root, { 'tests/a.test.ts': "it('[BILLING-REFUNDS-3, BILLING-REFUNDS-99] adds up', f);\n" });
+    const r = run(root);
+    expect(r.code).toBe(0);
+    expect(r.err).toContain('specflow: warning: tag naming no criterion: [BILLING-REFUNDS-99]');
+  });
+
   it('A helper change is not a changed case', () => {
     const root = repo();
     commit(root, { 'tests/a.test.ts': "const help = 1;\nit('old', f);\n" });

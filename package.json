@@ -33,6 +33,7 @@
   "files": [
     "dist",
     "skills",
+    "assets",
     "README.md",
     "LICENSE"
   ],

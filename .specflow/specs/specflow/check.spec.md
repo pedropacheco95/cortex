@@ -46,21 +46,21 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    - An **amendment** is a changed or removed item. A commit that edits a rule and inserts another still needs the trailer for the edited rule's base number.
    - **A retired spec has no items.** A spec with `status: retired` in both the base and the staged tree is never judged, so correcting a record needs no trailer. A commit that sets `status: retired` removes every item the spec had, and a commit that clears it adds them. So retiring a spec cannot share a commit with code (Rule 9).
 6. **Rule (a) code-needs-test.** A commit with a `code` path and no `test` path is refused. Measured. Always on.
-7. **Rule (b) test-needs-tag.** Each test case added or changed in the commit must carry a tag naming a criterion that resolves in the staged tree. A case changed means its title or body differs from the base after collapsing whitespace. A helper or import change changes no case. New. Controlled by `specflow.rules.b`.
+7. **Rule (b) test-needs-tag.** Each test case added or changed in the commit must carry a tag naming a criterion that resolves in the staged tree. A case changed means its title or body differs from the base after collapsing whitespace. A helper or import change changes no case. A case passes when at least one of its tags resolves, and each other tag on it that resolves to nothing is a warning whatever the level, unless (b) is `off`. New. Controlled by `specflow.rules.b`.
 8. **Rule (c) criterion-needs-test.** Each changed criterion needs a test tagged with it, added or changed. Added and removed criteria are not judged. Text is compared as in Rule 5, so whitespace and emphasis edits never fire it. New, reasoned and not run. Controlled by `specflow.rules.c`.
-   - **In `--commit-msg` mode** it can see only one commit, so it never refuses. It passes silently when the tagged test changed in this commit or in `HEAD`, and otherwise warns. A spec committed ahead of its code is normal.
-   - **In range mode** it judges the range as a whole and refuses when no commit in the range changed a test tagged with that criterion.
+   - **In `--commit-msg` mode** it can see only one commit, so it never refuses. It passes silently when the tagged test changed in this commit or in `HEAD`, and otherwise warns. During an amend, `HEAD` is the commit being amended. A spec committed ahead of its code is normal.
+   - **In range mode** it judges the range as a whole and refuses when no commit in the range changed a test tagged with that criterion, printing `specflow: REFUSED (range)` after the commit blocks.
    - **Limit:** the refusal comes at push, not at commit. In a repository that rarely pushes it arrives late, after many commits; until then (c) is a warning only.
    - **OPEN:** that commit mode never refuses (c) is a recommendation awaiting the owner, who also decides the `pre-push` hook. The plan's wording was "refuses".
 9. **Rule (d) spec-commit-alone.** A commit with any added, changed or removed rule or criterion and any `code` path is refused. Edits to other sections of a spec (Intent, Notes) may share a commit with code. Measured. Always on.
 10. **Rule (e) amend-needs-trailer.** Each amendment needs a `Specflow-Amends:` trailer in the commit message that names it exactly: `<spec-id>#rule-<n>` or `<spec-id>#<criterion-id>`, with a non-empty reason (schema S10). An added item needs none (A14). One trailer `<spec-id>#retired` covers every item a commit removes by retiring that spec. Measured as a record; the refusal is new. Always on.
-11. **Rule (f) touched-criteria.** For each `code` path, the check lists the criteria whose tagged test files statically reach it, by following relative imports transitively from each tagged test file (JS and TS `import`, `export … from`, `require`; Python `import` and `from … import`, resolved against the test file's folder and the repository root). Unresolved imports are skipped. It lists at most 20 criteria and then `… and <n> more`. New. Warns only. Needs tags, so it lists nothing where no test is tagged.
+11. **Rule (f) touched-criteria.** For each `code` path, the check lists the criteria whose tagged test files statically reach it, by following relative imports transitively from each tagged test file (JS and TS `import`, `export … from`, `require`; Python `import` and `from … import`, resolved against the test file's folder and the repository root). Unresolved imports are skipped. It lists at most 20 criteria and then `… and <n> more`. New. Warns only, in commit mode and in each range block. Needs tags, so it lists nothing where no test is tagged.
 12. **Rule (g) stale-literal.** For each constant whose value changed in a `constants.md`, the check lists tracked files outside `specflow/` that still hold the old value as a whole word (`git grep -w -F`), at most 20. An old value shorter than 2 characters is not searched, and the warning says so. New. Warns only.
 13. **Rule levels.** Rules (a), (d), (e) always refuse and (f), (g) always warn. `specflow.rules.b` and `.c` take `off`, `warn` or `refuse`, and an absent key means `off` (A11). The config cannot turn off a measured rule. The lint rule `lint.rules-early` guards turning (b) or (c) on early.
 14. **Merge commits.** In `--commit-msg` mode, when `MERGE_HEAD` exists, the check judges only what the merge adds beyond the automatic merge: the staged tree against the `git merge-tree --write-tree` result of merging each `MERGE_HEAD` in turn, minus files that conflicted. A conflict resolution is not judged. A clean merge therefore passes.
 15. **Range mode.** Commits come from `git rev-list --reverse <base>..<head>`, leaving out `specflow.since` and its ancestors when that key is set (`specflow.git-hooks` Rule 10): commits made before the hooks existed are never judged. Each non-merge commit is judged against its first parent, using its own message. A merge commit is judged as in Rule 14, from its parents. Rule (c) then runs once over the whole range. Output has one block per commit with a verdict, headed by its short hash and subject. Each block ends `specflow: allowed (<short hash>)` or the refusal. An empty range prints `specflow: 0 commits in range` to stderr and exits 0. Range mode exits 1 if any commit is refused.
 16. **No `specflow/` folder.** `cortex/cortex.json` is read from the working tree in every mode. With no `specflow/` folder, the check prints `specflow: no specflow/ folder here; nothing was checked` to stderr and exits 0. It never passes silently.
-17. **Messages.** Verdicts go to stderr. A refusal prints `specflow: REFUSED (<commit|merge commit|<short hash>>)` and then one line per refused rule, exactly as in the table below. A warning prints `specflow: warning: <text>`. At most 8 paths or items are named, then ` …`.
+17. **Messages.** Verdicts go to stderr. A refusal prints `specflow: REFUSED (<commit|merge commit|<short hash>|range>)` and then one line per refused rule, exactly as in the table below. A warning prints `specflow: warning: <text>`. At most 8 paths or items are named, then ` …`.
 
     | Rule | Line |
     |---|---|
@@ -249,6 +249,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** `specflow.rules.b` is `refuse` and a staged new case tagged `[BILLING-REFUNDS-99]`, which does not exist
 - **When** the check runs
 - **Then** it exits 1 with the rule (b) line
+
+### A second tag naming nothing warns
+
+- **Given** `specflow.rules.b` is `refuse` and a staged new case tagged `[BILLING-REFUNDS-3, BILLING-REFUNDS-99]`, where only the first exists
+- **When** the check runs
+- **Then** it exits 0 and stderr carries a warning naming `BILLING-REFUNDS-99`
 
 ### A helper change is not a changed case
 

@@ -1,6 +1,6 @@
 ---
 id: specflow.viewer
-status: draft
+status: implemented
 depends_on:
   - specflow.index
 implements: ../../specs-business/specflow/developer-knows-the-specs-stay-sound.business.md
