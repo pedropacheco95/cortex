@@ -153,9 +153,10 @@ describe('AC: no tracked file still points at the old name', () => {
     path.join('.specflow', 'specs', 'specflow', 'entry-gate.spec.md'),
   ];
 
-  // Specs that must name the retired bundle on these lines, and only these: the
+  // Files that must name the retired bundle on these lines, and only these: the
   // update route removes it, and the skill-adjust table says what replaces it.
   // Any other mention in the same file still routes a reader to the old name.
+  const SKILL_ADJUST_ROW = '| `specflow-entry`, `specflow-change-router`, `specflow-develop`, `specflow-bugs` | none: `open`,';
   const RETIREMENT_RECORD_LINES: Record<string, readonly string[]> = {
     [path.join('.specflow', 'specs', 'core-cli', 'sync.spec.md')]: [
       '- **Given** an unedited `.claude/skills/specflow-change-router` with no marker',
@@ -164,6 +165,8 @@ describe('AC: no tracked file still points at the old name', () => {
     [path.join('.specflow', 'specs', 'store', 'migrate-skill.spec.md')]: [
       '    | `specflow-entry`, `specflow-change-router`, `specflow-develop`, `specflow-bugs` | none: `open`,',
     ],
+    [path.join('skills', 'cortex-migrate', 'SKILL.md')]: [SKILL_ADJUST_ROW],
+    [path.join('.claude', 'skills', 'cortex-migrate', 'SKILL.md')]: [SKILL_ADJUST_ROW],
   };
 
   function livePointerLines(content: string, target = ''): string[] {

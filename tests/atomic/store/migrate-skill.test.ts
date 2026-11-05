@@ -50,4 +50,65 @@ describe('store.migrate-skill', () => {
     expect(listed).not.toContain('cortex-migrate');
     expect(listed).not.toContain('cortex-remember');
   });
+
+  const adjust = text.slice(text.indexOf('## The skill-adjust step'), text.indexOf('## Never'));
+  const lines = text.split('\n');
+
+  it('The step comes after acceptance and after the plan steps', () => {
+    expect(text.indexOf('## Deciding')).toBeLessThan(text.indexOf('## The skill-adjust step'));
+    expect(adjust).toContain('after a person has run `cortex migrate --accept`');
+    expect(adjust).toContain('If `migration.accepted` is not set, stop and say so.');
+  });
+
+  it("The step's order is stated", () => {
+    const marks = ['`cortex sync --dry-run`', 'Read each listed file', 'Decide each mention', 'Make the edits', '`.cortex-migrate/skill-edits.md`', 'Show the person'];
+    const at = marks.map((m) => adjust.indexOf(m));
+    expect(at.every((i) => i >= 0), JSON.stringify(at)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+
+  it('The three decisions are stated', () => {
+    for (const n of ['**edited**', '**left**', '**open**', 'A mention is never silently skipped', 'A skill is never deleted', 'dropping one is an `open`']) expect(adjust, n).toContain(n);
+  });
+
+  it('The replacement table is complete', () => {
+    const spec = fs.readFileSync(path.join(ROOT, '.specflow', 'specs', 'store', 'migrate.spec.md'), 'utf8');
+    const listLine = spec.split('\n').find((l) => l.includes('**The retired list**'))!;
+    const names = [...listLine.slice(listLine.indexOf('):')).matchAll(/`([^`]+)`/g)].map((m) => m[1]!);
+    expect(names.length).toBeGreaterThan(20);
+    const rows = adjust.split('\n').filter((l) => l.trim().startsWith('|'));
+    for (const n of [...names, '.cortex/', '.specflow/specs/', '.specflow/specs-business/']) {
+      expect(rows.some((r) => r.includes(n)), n).toBe(true);
+    }
+  });
+
+  it('A replacement must exist first', () => {
+    expect(adjust).toContain('`replacement not there yet`');
+    expect(adjust).toContain('a `specflow/` one only when `specflow/` exists at the root, which is after `cortex specs port`');
+  });
+
+  it('Every edit is reported', () => {
+    expect(adjust).toContain('file, line, term, decision, the text before and after, and a one-line reason');
+  });
+
+  it('A retired skill with edits goes to the person', () => {
+    const body = adjust.slice(adjust.indexOf('### A retired skill with local edits'));
+    for (const n of ['`is retired but has local edits`', 'decision `open`', 'remove it, or keep that content under a new name', 'Delete nothing yourself']) expect(body, n).toContain(n);
+  });
+
+  it('The Never list still holds', () => {
+    const never = text.slice(text.indexOf('## Never'));
+    for (const n of ['--apply', '--accept', '`.cortex/`', '`cortex/`', 'commit']) expect(never, n).toContain(n);
+    expect(adjust).toContain('A person commits');
+  });
+
+  it('The skill is typed only', () => {
+    for (const name of ['cortex-migrate', 'cortex-register-tasks']) {
+      const fm = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8').split('---')[1]!;
+      expect(fm, name).toMatch(/^disable-model-invocation: true$/m);
+      expect(fm, name).toMatch(/^name: /m);
+      expect(fm, name).toMatch(/^description: \S/m);
+    }
+    expect(lines[2]).toMatch(/^description: '.+'$/);
+  });
 });

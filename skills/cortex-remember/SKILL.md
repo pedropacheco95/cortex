@@ -1,7 +1,7 @@
 ---
 name: cortex-remember
 description: >
-  File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", or explains something the store doesn't hold.
+  File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", "file this bug", or explains something the store doesn't hold.
 ---
 
 # Cortex: remember
@@ -47,6 +47,8 @@ When the user hands over a document or transcript to keep:
 2. If the original is a file, copy it byte for byte to `history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>` (that folder is gitignored), and add `raw: history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>` to the digest's frontmatter.
 3. File each durable fact taken from it by the steps above, with `origin: source:history/sources/<file>.md`.
 
+Every ask listed in the digest is filed as one spec request, so no ask rests in a digest unread. For each ask, append one propose-mode item to `now/proposals.md` (see below): the heading `## P-<YYYY-MM-DD>-<slug>: Spec request: <ask in ≤ 12 words>`, then `until: <today + 30 days>` and `status: pending decision`, then the line `Run specflow-spec on this ask.`, the ask quoted verbatim from the document, and `source: <digest path>`. Its `origin` is `source:<digest path>`. Do not judge the ask, reconcile it against the specs, or run specflow-spec: that session does. End each with the readback `Spec request: <ask> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: source:<digest path>)`. A digest with no asks files no spec request.
+
 ## Propose mode: a proposal, not a fact
 
 Use this when the thing to keep needs someone's approval: a rule you inferred (never one the user stated), a suggested change, or a gap found while working.
@@ -60,6 +62,14 @@ Use this when the thing to keep needs someone's approval: a rule you inferred (n
 4. Run `cortex store validate`, then end with exactly one line: `Proposed: <proposal> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: <origin>)`.
 
 A proposal is approved when a person, or an agent holding that authority, moves its text to its home in the store and removes the item. The skill never approves its own proposal.
+
+## A bug
+
+**Filing.** A bug goes in `code/<area>/<slug>.md` with the S3 frontmatter and `status: open`, with no `B-NNN` id. `<area>` is the first folder of the affected path, else `repo`. Its diagnosis (type, severity, owner, fix in flight, the commit it was found at) goes in body lines, as far as they are known. The steps above otherwise apply, and the readback is the `Filing:` line.
+
+**Closing.** When the bug is fixed, write `history/incidents/<today>-<slug>.md` holding the bug's text, `aliases` and `origin` list with this session's origin added, drop `status`, and add the body line `Fixed: <today>, <commit or change>`. Then remove the `code/` file and re-point any link to it found by `rg '<old path>' cortex/`. Run `cortex store validate`, and end with `Closed: <bug in ≤ 12 words> → <path> (origin: <origin>)`.
+
+Only a person's word or observed evidence that the fix landed closes a bug; a fix in flight does not.
 
 ## Never
 
