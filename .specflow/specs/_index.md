@@ -59,6 +59,11 @@ Current edges (`A → depends on B`):
 - `core-cli.tasks-register` → `core-cli.init`, `core-cli.task-scoping`
 - `loops.test-runner` → `loops.writer-verifier`, `loops.bug-triage`, `schema.validator`, `core-cli.init`
 - `specflow.cortex-awareness` → `core-cli.init`, `schema.validator`
+- `specflow.index` → `core-cli.init`
+- `specflow.check` → `specflow.index`, `core-cli.init`
+- `specflow.git-hooks` → `specflow.check`, `specflow.index`
+- `specflow.port`, `specflow.viewer` → `specflow.index`
+- `specflow.lint` → `specflow.index`, `schema.validator`
 - `discipline.verification-skill` → `core-cli.init`
 - `discipline.hardening-convention` → (no dependencies — a standalone authoring recipe)
 - `scaffolding.coverage-map` → `hooks.session-start`, `insight.storage-format` (RETIRED 2026-09-16, unbuilt — schema 3.4 fourth revision; coverage is delivered by `hooks.pre-read-writeback` Rule 6, `hooks.search-annotate`, `recall.index-blocks`, `hooks.prompt-route`; spec retained for lineage)

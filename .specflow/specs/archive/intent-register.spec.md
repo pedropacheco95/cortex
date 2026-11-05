@@ -130,6 +130,7 @@ because Core makes no LLM calls (RULES 3).
 
 ## Notes
 
+- **No writer at 4.0 (owner, 2026-11-05).** The anchor test ended, so nothing adds entries to the register. This spec stays `implemented` because its check and reader still run, for 3.x stores and for `cortex migrate`. Retire it when `.cortex/` support leaves.
 - **Schema-version discrepancy, surfaced not silently fixed.** `cortex-schema.md` declared
   `3.1` while `src/schema/version.ts` still declares `SUPPORTED_MINOR = 0` and this project's
   `cortex.config.json` says `3.0`. This spec follows the existing precedent — the 3.1 addition

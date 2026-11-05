@@ -18,6 +18,13 @@ The spec-and-test lineage absorbed into Cortex: the conventions of the two spec 
 - `specflow.bugs-root-cause-gate` — the Phase-1 root-cause investigation gate prepended to `specflow-bugs`: no bug type may be named until the failure has been read, reproduced, dated against recent changes, and localised by instrumenting component boundaries. The seven-type tree and ledger output are unchanged.
 - `specflow.tests-red-green` — watch-it-fail-correctly and delete-premature-code in `specflow-tests`: a new test must be observed failing *for the right reason* before its implementation exists, and code written ahead of its test is deleted rather than adapted.
 
+- `specflow.check` — `cortex check`: the deterministic commit and range check, rules (a) to (g), the one Cortex check that may refuse.
+- `specflow.git-hooks` — `cortex hooks install`: wires the check into git without losing existing hooks.
+- `specflow.index` — `cortex specs index`: the spec and test model, criterion ids, test tags, `unverified` marks, constants, `specflow/INDEX.md`.
+- `specflow.port` — `cortex specs port`: moves an existing tree into `specflow/` and reports what it cannot govern; defines the outputs of promise conversion and the tagging pass.
+- `specflow.lint` — `cortex specs lint`: tree checks and the constants rules, replacing the specflow-lint skill.
+- `specflow.viewer` — `cortex specs view`: the static spec page, replacing the specflow-viewer skill.
+
 _Planned (not yet written):_
 
 - The conventions of the two spec trees (`specs/` and `specs-business/`)

@@ -1,6 +1,6 @@
 ---
 id: schema.validator
-status: implemented
+status: implementing
 depends_on: []
 implements: ../../specs-business/schema/contributor-trusts-project-knowledge.business.md
 governs:
@@ -38,6 +38,7 @@ The validator operates on files, not database records. It reads artefacts and pr
 13. **Rule and bug self-agreement.** A compass rule's or bug's number must agree in three places: the filename prefix (`R-NNN-<slug>.md` / `B-NNN-<slug>.md`), the `id:` field, and the H1 heading (`# R-NNN — …` / `# B-NNN — …`). Filename versus `id:` disagreement is an `error` from `check.rule` / `check.bug` — already enforced in `src/schema/checks/compass.ts`, restated here so the rule is complete. The H1 is prose the schema does not shape (§4.1, §4.2), so its disagreement is a `warning` from `check.compass-heading`, raised only when the body's first H1 begins with an `R-NNN` / `B-NNN` token that differs from `id:`; a file with no H1, or an H1 with no such token, is not a finding.
 14. **Index completeness.** `compass/rules/_index.md` should reference every `R-NNN` file in `compass/rules/`, and `compass/bugs/_index.md` every `B-NNN` file in `compass/bugs/`. An id counts as referenced when its literal token appears anywhere in the index, or when it lies inside a same-prefix range written `R-001–R-003` (en dash, em dash or hyphen between two ids) — the collapsed forms the indexes already use. An index that carries a `… and N more` line (the §7.1 generated-block tail) or a generated block (`<!-- cortex:recall:start`) counts as **complete** without a scan: it collapsed to fit the <300-token budget by design, and completeness cannot be read off it. Otherwise the missing ids produce, per index, exactly one `warning` from `check.index-completeness` (clause §7.1) at the index file, whose message reads `index lists N of M rules` / `… bugs` and names up to five missing ids. The check never asks an index to grow past its budget — an over-budget index is `check.index-shape`'s warning, and the remedy for both at once is a range or the `… and N more` line, not more rows. An absent directory or index is not this check's finding (`check.index-present` owns absence).
 15. **A 4.0 project** (2026-10-19, schema S11). When the project root has `cortex/cortex.json` and no `.cortex/cortex.config.json`, `cortex validate` does not run the 3.x store checks. It runs `cortex store validate`'s checks (store.validate), each finding reported as a violation with the same check name and level and the clause `S11`, and Part I's spec-tree checks `check.overview-present`, `check.id-matches-path`, `check.dev-spec`, `check.business-spec` and `check.xref-symmetry`. A `governed_by` id that does not resolve in the spec index but is an `aliases` entry of a `cortex/` file resolves, and is not reported. `--json` emits the same `ValidationReport` shape. The CLI exits `1` on any error and `0` otherwise. When both stores exist, Rules 1–14 apply unchanged.
+16. **`retired` (4.0 batch).** `retired` is a valid `status` for dev and business specs (§4.6, §4.7). `check.business-status` ignores `retired` implementers, and does not flag a business spec whose implementers are all `retired`. When `specflow/` exists, a `retired` spec's links are not checked (`specflow.lint` Rule 8): `check.dev-spec` does not test its `implements:` path, and `check.xref-symmetry` and `check.xref-resolve` do not start from it. Its required fields are still checked. A live spec's link to a `retired` file must still resolve.
 
 ## Acceptance Criteria
 
@@ -154,6 +155,48 @@ The validator operates on files, not database records. It reads artefacts and pr
 - **Given** a project with both `.cortex/cortex.config.json` and `cortex/cortex.json`
 - **When** `cortex validate` runs
 - **Then** it runs the 3.x checks, and the report carries no `S11` violation
+
+### A retired spec is valid
+
+- **Given** a dev spec and a business spec with `status: retired`
+- **When** `cortex validate` runs
+- **Then** neither `check.dev-spec` nor `check.business-spec` reports its status
+
+### A retired implementer is ignored by the status check
+
+- **Given** a business spec with `status: implementing` whose implementers are one `implemented` and one `retired` dev spec
+- **When** `cortex validate` runs
+- **Then** `check.business-status` warns that it lags
+
+### A retired spec's dead link is not an error under specflow/
+
+- **Given** a repository with `specflow/` and `specflow/impl/billing/old.spec.md`, `status: retired`, whose `implements:` names a file that no longer exists
+- **When** `cortex validate` runs
+- **Then** it reports no `check.dev-spec` or `check.xref-*` finding on that file
+
+### A retired spec's dead link is still an error without specflow/
+
+- **Given** a dev spec under `.specflow/specs/` with `status: retired` whose `implements:` names a file that does not exist
+- **When** `cortex validate` runs
+- **Then** `check.dev-spec` reports that the path does not resolve
+
+### A live link to a retired spec must resolve
+
+- **Given** a repository with `specflow/` and a live spec whose `implements:` names a missing file
+- **When** `cortex validate` runs
+- **Then** `check.dev-spec` reports that the path does not resolve
+
+### A retired spec without required fields is still an error
+
+- **Given** a repository with `specflow/` and a `status: retired` spec with no `id`
+- **When** `cortex validate` runs
+- **Then** `check.dev-spec` reports the missing field
+
+### A business spec with only retired implementers is not flagged
+
+- **Given** a business spec with `status: implementing` whose implementers are all `retired`
+- **When** `cortex validate` runs
+- **Then** `check.business-status` reports nothing for it
 
 ## Notes
 

@@ -1,6 +1,6 @@
 ---
 id: store.validate
-status: implemented
+status: implementing
 depends_on:
   - store.layout
 implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.business.md
@@ -25,6 +25,7 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 5. Without a `cortex/` folder, the command prints `no 4.0 store (cortex/cortex.json not found)` and exits 1.
 6. `check.visibility` also warns on a line containing the literal text `(private)` when `visibility.repo` is `public`: a public store that calls something private is either wrong about the repository or leaking a private pointer.
 7. Checks are pure functions over the loaded store (plus git reads for append-only, stale and trailers), so each is tested alone.
+8. **Specflow additions (4.0 batch).** `specflow` is a known key of `cortex/cortex.json` (S9.1, S12.6). `spec-amendment` is a known `kind` (S5). `check.trailers` also reads `Specflow-Amends:`, taking the spec id before the `#` (S10).
 
 ## Acceptance Criteria
 
@@ -101,3 +102,21 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 - **Given** a repo with no `cortex/` folder
 - **When** `cortex store validate` runs
 - **Then** it prints `no 4.0 store (cortex/cortex.json not found)` and exits 1
+
+### The specflow config key is known
+
+- **Given** `cortex.json` with a `specflow` key
+- **When** the store is validated
+- **Then** `check.store-config` reports no unknown key
+
+### The spec-amendment kind is known
+
+- **Given** a `history/changes/` file with `kind: spec-amendment`
+- **When** the store is validated
+- **Then** `check.change` reports nothing for that field
+
+### A Specflow-Amends trailer naming no spec warns
+
+- **Given** a commit in the last 50 with `Specflow-Amends: nope.nothing#rule-1 — x`
+- **When** the store is validated
+- **Then** `check.trailers` warns naming `nope.nothing`
