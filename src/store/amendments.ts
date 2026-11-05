@@ -56,6 +56,28 @@ function trailerCommits(root: string): { sha: string; date: string; values: stri
   return commits;
 }
 
+/** The commits after `specflow.since`, or null when it is unset or git cannot resolve it. */
+function commitsSince(root: string): Set<string> | null {
+  let since: unknown;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'cortex', 'cortex.json'), 'utf-8')) as { specflow?: { since?: unknown } };
+    since = cfg.specflow?.since;
+  } catch {
+    return null;
+  }
+  if (typeof since !== 'string' || since.length === 0) return null;
+  try {
+    const out = execFileSync('git', ['-C', root, 'log', '--format=%H', 'HEAD', `^${since}`], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 256 * 1024 * 1024,
+    });
+    return new Set(out.split('\n').filter((l) => l.length > 0));
+  } catch {
+    return null;
+  }
+}
+
 function recordedShas(root: string): Set<string> {
   const dir = path.join(root, CHANGES_DIR);
   const shas = new Set<string>();
@@ -91,14 +113,18 @@ function renderRecord(items: Amendment[], today: string): string {
 
 export function storeAmendments(root: string, today: string, apply: boolean): AmendmentsResult {
   const recorded = recordedShas(root);
+  const after = commitsSince(root);
   const unrecorded: Amendment[] = [];
   const malformed: MalformedTrailer[] = [];
   for (const commit of trailerCommits(root)) {
     const shortSha = commit.sha.slice(0, 7);
     for (const value of commit.values) {
       const parsed = parseAmendsValue(value);
-      if (parsed === null) malformed.push({ shortSha, value });
-      else if (!recorded.has(shortSha)) unrecorded.push({ sha: commit.sha, shortSha, date: commit.date, ...parsed });
+      if (parsed === null) {
+        if (after === null || after.has(commit.sha)) malformed.push({ shortSha, value });
+      } else if (!recorded.has(shortSha)) {
+        unrecorded.push({ sha: commit.sha, shortSha, date: commit.date, ...parsed });
+      }
     }
   }
   let written: string | null = null;

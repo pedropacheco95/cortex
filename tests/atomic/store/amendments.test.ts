@@ -99,6 +99,43 @@ describe('A malformed trailer is reported, not written', () => {
   });
 });
 
+describe('Malformed trailers before specflow.since are not listed', () => {
+  function setSince(root: string, since: unknown): void {
+    const p = path.join(root, 'cortex', 'cortex.json');
+    fs.writeFileSync(p, JSON.stringify({ ...JSON.parse(fs.readFileSync(p, 'utf-8')), specflow: { since } }, null, 2) + '\n');
+  }
+
+  function history(root: string): { oldShort: string; newShort: string; since: string } {
+    amend(root, 'old wording');
+    const oldShort = git(root, ['rev-parse', '--short=7', 'HEAD']).trim();
+    amend(root, 'a.b#rule-1 — kept');
+    const since = git(root, ['rev-parse', 'HEAD']).trim();
+    amend(root, 'new wording');
+    return { oldShort, newShort: git(root, ['rev-parse', '--short=7', 'HEAD']).trim(), since };
+  }
+
+  it('lists only the newer malformed trailer, and records the older well-formed one', async () => {
+    const root = repo();
+    const { oldShort, newShort, since } = history(root);
+    setSince(root, since);
+    const { out } = await run(root, '--apply', '--today', TODAY);
+    expect(out.join('\n')).toContain(`malformed: ${newShort}`);
+    expect(out.join('\n')).not.toContain(`malformed: ${oldShort}`);
+    expect(fs.readFileSync(path.join(changes(root), `${TODAY}-spec-amendments.md`), 'utf-8')).toContain('a.b#rule-1 — kept');
+  });
+
+  it('lists every malformed trailer with no since, or a since git cannot resolve', async () => {
+    for (const since of [undefined, 'no-such-ref']) {
+      const root = repo();
+      const { oldShort, newShort } = history(root);
+      if (since !== undefined) setSince(root, since);
+      const { out } = await run(root, '--today', TODAY);
+      expect(out.join('\n')).toContain(`malformed: ${newShort}`);
+      expect(out.join('\n')).toContain(`malformed: ${oldShort}`);
+    }
+  });
+});
+
 describe('Without --apply nothing changes', () => {
   it('lists them and writes nothing', async () => {
     const root = repo();
