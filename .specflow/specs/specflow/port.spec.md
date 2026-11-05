@@ -39,7 +39,7 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
    - `clean`: the rest.
 
    Tickets are matches of `--ticket-pattern`; with none given, there are no tickets. A ticket cited by exactly this spec counts as a link to it.
-9. **Report.** `.cortex-port/report.md` has: source layout, HEAD, counts of specs, criteria, test files, test cases and names built at run time (`specflow.index` Rule 5), specs per class, each non-clean spec with its class and reason, and untagged cases per test file. `.cortex-port/report.json` holds the same and the full untagged list (`file`, `name`, `line`). `.cortex-port/` is added to `.git/info/exclude`. A spec that is not `clean` still moves; the class says what the check cannot yet rely on.
+9. **Report.** `.cortex-port/report.md` has: source layout, HEAD, counts of specs, criteria, test files, test cases and names built at run time (`specflow.index` Rule 5), every heading in a live spec that holds `acceptance` or `criteria` in any case and is not a counted section or inside one, so a section cannot hide by its spelling, specs per class, each non-clean spec with its class and reason, and untagged cases per test file. `.cortex-port/report.json` holds the same and the full untagged list (`file`, `name`, `line`). `.cortex-port/` is added to `.git/info/exclude`. A spec that is not `clean` still moves; the class says what the check cannot yet rely on.
 10. **Next steps.** On success the command writes `specflow/INDEX.md` and prints, in order: review and commit the move; `cortex store map`; `cortex hooks install`; then the two agentic steps in `specflow-onboard`. It runs none of them.
 11. **Promise conversion (agentic; output contract).** Each business spec that is not retired becomes one promise of schema S12.1, with `serves: [<promise id>]` added to the frontmatter of every live spec that implements it, and `implements:` removed from those specs. This is the one text rewrite, and the owner approves it per repository. Drafts sit in `.cortex-port/promises/` at the path they will take. Reasoning a promise drops goes to `cortex/world/decisions/`, not nowhere.
 12. **Tagging pass (agentic; output contract).** The files `.cortex-port/tagging/<area>.jsonl` together have one line for every untagged case: `file`, `name`, `line`, `action` (`tag`, `new-criterion` or `delete`), `reason`, plus `criterion` for `tag` and `spec` and `title` for `new-criterion`. A case matching no criterion proposes `new-criterion` first; `delete` is only for behaviour nobody wants (P5), and a case that proves only a retired spec's behaviour proposes it, naming that spec in `reason`. The owner approves the proposals, and the skill applies them.
@@ -234,6 +234,18 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 - **Given** a test file with ``it(`${x} pays`, …)`` and `it('a', …)`
 - **When** `cortex specs port` runs
 - **Then** `report.json` has `dynamicNames` 1 and `report.md` states it
+
+### Ids run on through several sections
+
+- **Given** a spec with `## Acceptance Criteria` holding `A`, and `## Acceptance Criteria: more` holding `B`
+- **When** `cortex specs port` runs
+- **Then** the headings read `BILLING-REFUNDS-1: A` and `BILLING-REFUNDS-2: B`
+
+### A heading that nearly matches is reported
+
+- **Given** a spec with `## Acceptance Criteria` and `## Acceptance criteria for mobile`
+- **When** `cortex specs port` runs
+- **Then** `report.json` `nearHeadings` lists that heading with file and line, and `report.md` shows it
 
 ### The working folder stays out of git
 

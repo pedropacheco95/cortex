@@ -292,6 +292,16 @@ describe('specflow.check: rule (e)', () => {
     expect(run(root, 'm\n\nSpecflow-Amends: billing.refunds#rule-3 — why\n').code).toBe(0);
   });
 
+  it('a criterion in a later section is judged', () => {
+    const root = repo();
+    const later = (t: string): string => `${BASE}\n## Acceptance Criteria: amendment\n\n### BILLING-REFUNDS-7: ${t}\n\n- **Then** ok\n`;
+    commit(root, { [SPEC]: later('Old') });
+    stage(root, { [SPEC]: later('New') });
+    const r = run(root);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('billing.refunds#BILLING-REFUNDS-7');
+  });
+
   it('Rules are found on both heading layouts', () => {
     const root = repo();
     const second = 'specflow/impl/billing/other.spec.md';

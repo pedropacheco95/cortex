@@ -90,7 +90,7 @@ export function splitSections(body: string): Sections {
     intent: get('intent'),
     entities: get('entities'),
     rules: get('rules'),
-    criteria: get('acceptance criteria'),
+    criteria: Object.keys(found).filter((k) => /^acceptance criteria(:|$)/.test(k)).map(get).join('\n\n'),
     notes: get('notes'),
   };
 }

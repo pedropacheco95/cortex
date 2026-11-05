@@ -17,7 +17,7 @@ import { withoutStoreAliases } from '../schema/validate.js';
 import { loadStore } from '../store/layout.js';
 import type { SpecsIO } from './index.js';
 import { type Model, type SpecflowConfig, buildModel, naturalCompare, readConfig, resolveConstant } from './model/model.js';
-import { criteriaSection, criterionPrefix, frontmatter, headings, parseCriteria } from './model/spec.js';
+import { criteriaSections, criterionPrefix, frontmatter, headings, parseCriteria } from './model/spec.js';
 import { workTree } from './model/tree.js';
 import { parseRules } from './check/items.js';
 import { stampIds } from './port.js';
@@ -64,6 +64,7 @@ const first = (v: unknown): string => {
 function sectionBody(lines: string[], title: string): string[] | null {
   const all = headings(lines);
   const at = all.findIndex((h) => h.title === title && (h.level === 2 || h.level === 3));
+  if (at < 0 && title === 'Acceptance Criteria' && criteriaSections(lines).length > 0) return lines;
   const start = all[at];
   if (!start) return null;
   const close = all.slice(at + 1).find((h) => h.level <= start.level);
@@ -369,7 +370,7 @@ function fixFrontmatter(root: string, s: SpecFile): void {
 
 function fixIds(root: string, s: SpecFile): void {
   const lines = s.text.split('\n');
-  if (!criteriaSection(lines) || s.id === s.file) return;
+  if (criteriaSections(lines).length === 0 || s.id === s.file) return;
   const edits: { line: number; from: string; to: string }[] = [];
   stampIds(lines, s.id, edits);
   if (edits.length > 0) fs.writeFileSync(path.join(root, s.file), lines.join('\n'));

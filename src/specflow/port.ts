@@ -12,7 +12,7 @@ import picomatch from 'picomatch';
 import { PORT_LAYOUTS, type PortLayout as Layout } from '../paths.js';
 import { isAcceptedDate } from '../store/layout.js';
 import { buildModel, readConfig, selectTestFiles, testCases, type SpecflowConfig, type TestEntry } from './model/model.js';
-import { criteriaSection, criterionPrefix, frontmatter, parseCriteria, splitHeading } from './model/spec.js';
+import { criteriaSections, criterionPrefix, frontmatter, nearCriteriaHeadings, parseCriteria, splitHeading } from './model/spec.js';
 import { workTree } from './model/tree.js';
 import { specsIndex, type SpecsIO } from './index.js';
 
@@ -55,16 +55,15 @@ export function reversible(before: string, after: string, edits: LineEdit[]): bo
 
 /** Rule 4: `<ID>: ` before each criterion title with none, numbered past the file's highest. */
 export function stampIds(lines: string[], specId: string, edits: LineEdit[]): void {
-  const section = criteriaSection(lines);
-  if (!section) return;
+  const criteria = criteriaSections(lines).flatMap((s) => s.headings);
   const prefix = criterionPrefix(specId);
   let next = 1;
-  for (const h of section.headings) {
+  for (const h of criteria) {
     const id = splitHeading(h.title).id;
     const n = id ? Number(id.slice(id.lastIndexOf('-') + 1)) : 0;
     if (n >= next) next = n + 1;
   }
-  for (const h of section.headings) {
+  for (const h of criteria) {
     if (splitHeading(h.title).id) continue;
     const from = lines[h.line] as string;
     const to = from.replace(/^(#+\s+)/, `$1${prefix}-${next}: `);
@@ -182,8 +181,9 @@ function classify(specs: Planned[], businessRetired: Set<string>, tests: string,
     const row = (c: SpecClass, reason = ''): SpecRow => ({ id, file: s.target, class: c, reason });
     if (fm['status'] === 'retired') return row('retired');
     const lines = s.after.split('\n');
-    const section = criteriaSection(lines);
-    if (!section || section.headings.length === 0) return row('no-ACs', 'no criterion heading');
+    const sections = criteriaSections(lines);
+    const criteria = sections.flatMap((x) => x.headings);
+    if (criteria.length === 0) return row('no-ACs', 'no criterion heading');
 
     const cited = ticketsOf(s.after).filter((t) => testTickets.has(t));
     const direct = tests.includes(id) || tests.includes(s.target) || tests.includes(s.source);
@@ -191,11 +191,9 @@ function classify(specs: Planned[], businessRetired: Set<string>, tests: string,
 
     const noThen = parseCriteria(s.after).filter((c) => !/\bthen\b/i.test(c.text.split('\n').slice(1).join('\n')));
     if (noThen.length > 0) return row('needs-edit', `no Then clause: ${noThen.map((c) => c.title).join(', ')}`);
-    const first = section.headings[0]?.line ?? section.end;
-    if (lines.slice(section.line + 1, first).some((l) => l.trim() !== '')) {
-      return row('needs-edit', 'text in the Acceptance Criteria section outside any criterion');
-    }
-    const titles = section.headings.map((h) => splitHeading(h.title).title);
+    const stray = sections.some((x) => lines.slice(x.line + 1, x.headings[0]?.line ?? x.end).some((l) => l.trim() !== ''));
+    if (stray) return row('needs-edit', 'text in the Acceptance Criteria section outside any criterion');
+    const titles = criteria.map((h) => splitHeading(h.title).title);
     const repeated = titles.find((t, i) => titles.indexOf(t) !== i);
     if (repeated) return row('needs-edit', `repeated heading: ${repeated}`);
     if (!direct && cited.every((t) => (citedBy.get(t) ?? 0) > 1)) {
@@ -217,6 +215,8 @@ interface Report {
   counts: { specs: number; criteria: number; testFiles: number; testCases: number; dynamicNames: number };
   classes: Record<SpecClass, number>;
   specs: SpecRow[];
+  /** Headings that read like a criteria section but are not counted. */
+  nearHeadings: { file: string; line: number; title: string }[];
   untagged: { file: string; name: string; line: number }[];
 }
 
@@ -237,6 +237,10 @@ function reportText(r: Report): string {
     '## Specs the check cannot yet rely on',
     '',
     ...r.specs.filter((s) => s.class !== 'clean' && s.class !== 'retired').map((s) => `- \`${s.file}\`: ${s.class}: ${s.reason}`),
+    '',
+    '## Headings that look like criteria and are not counted',
+    '',
+    ...r.nearHeadings.map((h) => `- \`${h.file}\`:${h.line}: ${h.title}`),
     '',
     '## Untagged cases per test file',
     '',
@@ -274,6 +278,7 @@ function buildReport(root: string, layout: Layout, files: Planned[], config: Spe
     },
     classes,
     specs: rows,
+    nearHeadings: live.flatMap((s) => nearCriteriaHeadings(s.after.split('\n')).map((h) => ({ file: s.target, line: h.line + 1, title: h.title }))),
     untagged: cases.filter((c) => c.tags.length === 0).map(({ file, name, line }) => ({ file, name, line })),
   };
 }

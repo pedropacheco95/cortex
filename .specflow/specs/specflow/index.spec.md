@@ -25,7 +25,7 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 ## Rules
 
 1. `cortex specs index` writes `specflow/INDEX.md` from the working tree. `--staged` reads the git index, and writes and stages the file only when it differs. `--json` writes nothing and prints the model to stdout (schema S12.5). Exit 0 on success, 1 when `specflow/` does not exist (`specflow: no specflow/ folder here`).
-2. **Criteria.** A spec's Acceptance Criteria section is the first heading titled exactly `Acceptance Criteria`, at level 2 or 3, up to the next heading of that level or higher. Its criteria are the headings exactly one level below it. So `## Acceptance Criteria` holds `###` criteria, and `### Acceptance Criteria` holds `####` criteria. A criterion runs to the next heading of its own level or higher. Deeper headings inside it are part of its text.
+2. **Criteria.** A spec's Acceptance Criteria sections are the headings titled exactly `Acceptance Criteria`, or starting `Acceptance Criteria:`, at level 2 or 3, each up to the next heading of that level or higher. A spec may have several, and ids run on through the file. A section's criteria are the headings exactly one level below it. So `## Acceptance Criteria` holds `###` criteria, and `### Acceptance Criteria` holds `####` criteria. A criterion runs to the next heading of its own level or higher. Deeper headings inside it are part of its text.
 3. **Criterion ids.** A criterion heading reads `<ID>: <title>`. `<ID>` is the spec's prefix, `-`, and a positive integer. The prefix is the spec id uppercased with each run of other characters replaced by `-`: `core-cli.init` gives `CORE-CLI-INIT`. Ids are written in the heading, so adding a criterion never renumbers another (schema S12.2). The bench's shorter prefixes (`PAY-REFUND-3` for `payments.refund`) are accepted when already present: any id matching `[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-[0-9]+` is an id, unique across the tree.
 4. A heading with no id is a criterion without an id. It has no entry in the criteria list, and its spec is listed under `Specs without criterion ids`. A spec with some ids and some not is listed too. The check does not govern a criterion without an id.
 5. **Tags, vitest, jest, node.** A test case is a call to `it` or `test`, with any of `.skip`, `.todo`, `.only`, `.concurrent`, `.sequential`, `.fails`, whose first argument is a string literal. A tag is `[ID]` or `[ID, ID]` at the very start of that string. The `describe` title is not read for tags. Calls inside comments or strings are not cases.
@@ -53,6 +53,12 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 - **Given** a spec with `### Acceptance Criteria`, two `####` criteria with ids, and `### Notes` after them
 - **When** `cortex specs index --json` runs
 - **Then** the spec has exactly those two criteria
+
+### Several sections are all read
+
+- **Given** a spec with `## Acceptance Criteria` holding `BILLING-REFUNDS-1: A`, `## Notes`, and `## Acceptance Criteria: the 2026 amendment` holding `BILLING-REFUNDS-2: B`
+- **When** the model is built
+- **Then** the spec has both criteria
 
 ### A deeper heading stays inside its criterion
 

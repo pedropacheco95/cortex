@@ -412,6 +412,21 @@ describe('specflow.port: report and next steps', () => {
     expect(read(root, '.cortex-port/report.md')).toContain('names built at run time: 1');
   });
 
+  it('Ids run on through several sections', () => {
+    const root = twoTree({ [DEV]: `${devSpec('billing.refunds', ['A'])}\n## Acceptance Criteria: more\n\n### B\n\n- **Then** y\n` });
+    port(root);
+    const moved = read(root, NEW_DEV);
+    expect(moved).toContain('### BILLING-REFUNDS-1: A\n');
+    expect(moved).toContain('### BILLING-REFUNDS-2: B\n');
+  });
+
+  it('A heading that nearly matches is reported', () => {
+    const root = twoTree({ [DEV]: `${devSpec('billing.refunds', ['A'])}\n## Acceptance criteria for mobile\n\n### B\n` });
+    port(root);
+    expect(report(root).nearHeadings).toEqual([{ file: NEW_DEV, line: expect.any(Number), title: 'Acceptance criteria for mobile' }]);
+    expect(read(root, '.cortex-port/report.md')).toContain('Acceptance criteria for mobile');
+  });
+
   it('The working folder stays out of git', () => {
     const root = twoTree();
     port(root);

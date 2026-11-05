@@ -1812,7 +1812,7 @@ specflow/
 
 ### S12.2 Criterion ids
 
-A criterion is a heading one level below the Acceptance Criteria heading: `###` under `##`, `####` under `###`. It reads `<ID>: <title>`. `<ID>` matches `[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-[0-9]+` and is unique across the tree. A new id is the spec id, uppercased, with each run of other characters replaced by `-`, then `-<n>`: `core-cli.init` gives `CORE-CLI-INIT-3`. Numbers are assigned upward and never reordered.
+A criterion is a heading one level below an Acceptance Criteria heading: `###` under `##`, `####` under `###`. That heading reads `Acceptance Criteria`, or starts `Acceptance Criteria:`, and a spec may have several. It reads `<ID>: <title>`. `<ID>` matches `[A-Z][A-Z0-9]*(-[A-Z0-9]+)*-[0-9]+` and is unique across the tree. A new id is the spec id, uppercased, with each run of other characters replaced by `-`, then `-<n>`: `core-cli.init` gives `CORE-CLI-INIT-3`. Numbers are assigned upward and never reordered.
 
 Tests cite criteria by tag:
 

@@ -44,5 +44,8 @@ export async function run(argv: string[]): Promise<number> {
 
 // Guard: only run CLI when invoked directly
 if (isEntryPoint(import.meta.url)) {
-  run(process.argv.slice(2)).then(process.exit);
+  // Exit only once the pipes have drained (see src/cli/cli.ts).
+  run(process.argv.slice(2)).then((code) => {
+    process.stderr.write('', () => process.stdout.write('', () => process.exit(code)));
+  });
 }

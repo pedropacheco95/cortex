@@ -82,6 +82,12 @@ describe('specflow.index: criteria', () => {
     expect(json(root).specs[0].criteria.map((x: any) => x.id)).toEqual(['BILLING-REFUNDS-1', 'BILLING-REFUNDS-2']);
   });
 
+  it('Several sections are all read', () => {
+    const root = repo();
+    write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A']) + '\n## Notes\n\n### Not one\n\n## Acceptance Criteria: the 2026 amendment\n\n### BILLING-REFUNDS-2: B\n\n- **Then** ok\n');
+    expect(json(root).specs[0].criteria.map((x: any) => x.id)).toEqual(['BILLING-REFUNDS-1', 'BILLING-REFUNDS-2']);
+  });
+
   it('A deeper heading stays inside its criterion', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', ['BILLING-REFUNDS-1: A\n\n#### Deeper']));
