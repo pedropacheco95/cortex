@@ -82,7 +82,7 @@ describe('A later amendment gets a new file', () => {
     expect(fs.readFileSync(first, 'utf-8')).toBe(bytes);
     const findings = validateStore(root, TODAY).findings.filter((f) => f.path.includes('spec-amendments'));
     expect(findings.filter((f) => f.check === 'check.append-only')).toEqual([]);
-    expect(findings.filter((f) => f.level === 'error')).toEqual([]);
+    expect(findings).toEqual([]);
   });
 });
 

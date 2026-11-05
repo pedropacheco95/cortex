@@ -154,7 +154,7 @@ export function checkDecision(store: Store): Finding[] {
   return out;
 }
 
-const CHANGE_KINDS = new Set(['change-request', 'decision-change', 'other']);
+const CHANGE_KINDS = new Set(['change-request', 'decision-change', 'spec-amendment', 'other']);
 
 export function checkChange(store: Store): Finding[] {
   const out: Finding[] = [];
