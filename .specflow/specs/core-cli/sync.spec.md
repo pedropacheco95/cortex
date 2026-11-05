@@ -82,6 +82,8 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     **A step that fails** stops the route: it prints `cortex sync: stopped at <skills, blocks, hooks or tasks>: <error>`, exits 1, and what it wrote stays. Every step is idempotent, so running sync again continues. A Rule 21 refusal and a Rule 22 status are not failures.
 
     **A symbolic link.** A bundle that is a symbolic link, or holds one, is not followed, removed or replaced: `skills: <name> is a symlink; left alone`.
+
+    **A symbolic skills folder.** When `.claude` or `.claude/skills` is a symbolic link, writing there would reach its target, which other projects may share. The skills step is skipped, with the line `skills: .claude/skills is a symlink; left alone`.
 18. **Retired skills.** A bundle under `.claude/skills/` whose name matches `RETIRED_SKILL_NAMES` (`store.migrate` Rule 18 step 5) is a candidate.
     - Its `.cortex-installed.json` marker matches its content, or it is an unedited shipped copy (Rule 27): it is removed, with the line `skills: removed <name>`.
     - Otherwise: it is left alone, with the line `skills: <name> is retired but has local edits; left for the skill-adjust step of <packaged path of cortex-migrate's SKILL.md>`. There is no prompt and no `--yes`: the skill-adjust step decides it (`store.migrate-skill` Rule 13).
@@ -92,7 +94,11 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     - differs, and its marker matches its content or it is an unedited shipped copy (Rule 27) (no local edit): replaced by the package's copy, `skills: updated <name>`;
     - differs otherwise (a local edit): left alone, `skills: .claude/skills/<name> exists with different content; left alone`;
 
-    **Whole bundles only.** An install or replacement is built in a `.cortex-tmp-<name>` folder under `.claude/skills/`, marker included, and renamed into place; a Rule 18 removal renames the bundle to such a folder first. An interrupted run so leaves the old bundle or the new one, never part of one. A leftover `.cortex-tmp-*` folder is deleted at the start of the next run.
+    **Whole bundles only.** An install or replacement is built in a `.cortex-tmp-<name>` folder under `.claude/skills/`, marker included, and renamed into place, the old bundle moving to `.cortex-tmp-old-<name>` first; a Rule 18 removal renames the bundle to a `.cortex-tmp-<name>` folder first. A step that fails leaves the old bundle or the new one, never part of one. A process killed between the two renames leaves the name empty, with the unedited old bundle aside, and the next run installs it fresh.
+
+    **Leftovers.** At the start of the next run a leftover folder `.cortex-tmp-<final or retired name>` or `.cortex-tmp-old-<final name>` is deleted, with the line `skills: cleared leftover <folder>`. Any other `.cortex-tmp-*` entry is a person's and stays. A file at one of those names stops the step: `cortex sync: stopped at skills: .claude/skills/<name> is in the way; move it and run this again`.
+
+    **Empty and odd entries.** An empty folder at a retired or final name counts as absent. A `.DS_Store` is not content: no shipped version holds one, so it never reads as a local edit. A plain file at a final name is `left alone` like a local edit. When a folder holds the marker's path on an identical copy, the line is `skills: <name>: marker not written; left alone`.
 20. **Blocks.** It runs `cortex store map`, which writes `MAP.md` and both blocks, and prints its lines. Text outside the blocks stays untouched (`store.managed-block`).
 21. **Git hooks.** The first case that holds:
     - outside a git repository: `hooks: not a git repository; skipped`;
@@ -119,8 +125,8 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     The skill is typed, never triggered by words (`store.migrate-skill` Rule 14). Whatever the status, sync's exit code does not change.
 23. **Project skills.** It prints the `project skills to adjust` section of `store.migrate` Rule 18 step 5, from the same code.
 24. **Validation and exit.** It runs `cortex store validate`. Exit 0 when that reports no errors; otherwise it prints them and exits 1. Warnings do not fail sync.
-25. **`--dry-run`** writes nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:`, `hooks:` and payload `tasks:` line prefixed `would: `, and the Rule 22 status line and the Rule 23 section unprefixed, and it exits 0 without validating. Rule 20 does not run: it prints `would: blocks: refresh MAP.md and the managed blocks` in its place. Rule 21 picks its case as a real run does, with the read-only check of `specflow.git-hooks` Rule 12, and prints that case's lines; only the refresh itself does not run. The payload lines come from `dryRun: true`. Where Rule 16 or Rule 17's package check refuses, it refuses the same way.
-26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md`, `.githooks/` and what `writeTaskPayloads` writes (Rule 22), which removes nothing. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
+25. **`--dry-run`** writes nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:`, `hooks:` and payload `tasks:` line prefixed `would: `, and the Rule 22 status line and the Rule 23 section unprefixed, and it exits 0 without validating. Rule 20 does not run: it prints `would: blocks: refresh MAP.md and the managed blocks` in its place. Rule 21 picks its case as a real run does, with the read-only check of `specflow.git-hooks` Rule 12, and prints that case's lines; only the refresh itself does not run. `--yes` and `-y` are accepted and ignored, so old scripts keep working. Any other flag, `--help` included, exits 2 with `cortex sync: unknown flag <flag>. Nothing was written.`, because a mistyped `--dry-run` must never do a real run. The payload lines come from `dryRun: true`. Where Rule 16 or Rule 17's package check refuses, it refuses the same way.
+26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md`, `.githooks/` and what `writeTaskPayloads` writes (Rule 22), which removes nothing. Apart from that validation it reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `skills:` or payload `tasks:` line for a removal, an install or an update, and changes no file. Rule 24's validation only reads the store.
 27. **Unedited shipped copies** (2026-11-05). `cortex init` at 3.x wrote no marker, so a missing marker does not prove a local edit. `SHIPPED_3X_HASHES`, exported from `src/store/migrate/system.ts`, maps each name that `RETIRED_SKILL_NAMES` matches, plus `cortex-register-tasks` and `verification-before-completion`, to the `hashDirectoryContent` value of every distinct version of `skills/<name>` in the history of `main` up to commit `88895ca`. A bundle whose hash, marker excluded, is in its name's list is an unedited shipped copy, whatever its marker says. The list is frozen: every copy 4.0 writes has a marker. A copy no entry matches counts as a local edit.
 
 ## Acceptance Criteria
@@ -257,6 +263,8 @@ The criteria in this section and under `## Notes` describe the 3.x path (Rules 1
 - **And given** no `onProgress` is supplied at all, nothing about the run's behaviour or output changes from a build that predates Rule 13
 
 ## Notes
+
+- **Limit (hash depth).** `hashDirectoryContent` leaves out the marker's file name at every depth, so a person's `notes/.cortex-installed.json` inside a bundle is invisible to the hash and goes with the bundle. It stays that way because every value in `SHIPPED_3X_HASHES` depends on that function.
 
 - **Factoring (Notes-level implementation decision, not an observable behaviour change).** `cortex init`'s Rules 4, 10, 11, 12, 13 are implemented by calling the same internal scaffolding module this spec exposes as `cortex sync`; init additionally creates the `.cortex/` skeleton and runs the anatomy/purpose/preferences/spec-tree/migration steps sync never touches. Init's own observable behaviour (Rules, ACs) is unchanged by this factoring.
 - **Judgment call (`.cortex-installed.json` marker, Rules 5 and 8).** Neither `cortex-schema.md` nor `core-cli.init` defines a mechanism for telling "upgraded since install, unmodified" apart from "developer edited this." This spec introduces a small sidecar marker (content hash at install/last-sync time) per skill bundle and per scheduled-task payload to make that judgment call decidable without guessing. It is this spec's own bookkeeping file, not a schema-committed artefact — the same category as `core-cli.tasks-register`'s `.cortex-backup-<stamp>` convention, which also isn't in `cortex-schema.md`.
@@ -577,3 +585,69 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 - **Given** an unedited `.claude/skills/specflow-change-router` with no marker
 - **When** `cortex sync` runs
 - **Then** it is gone, and the output has `skills: removed specflow-change-router`
+
+### The verb refuses a flag it does not know
+
+- **Given** an unedited retired skill
+- **When** `cortex sync --help`, `-h`, `--dryrun`, `--dry-rnu`, `-n`, `--dry-run=true` and `--force` each run
+- **Then** each exits 2 with its `unknown flag` line, and the project is byte-identical
+
+### A symlinked skills folder is left alone
+
+- **Given** `.claude/skills` as a symbolic link to a folder holding a marked retired bundle
+- **When** `cortex sync` runs
+- **Then** it exits 0 with the line `skills: .claude/skills is a symlink; left alone`, and the folder is byte-identical
+
+### A person's temp-looking folder stays, and a generated leftover is named
+
+- **Given** `.cortex-tmp-notes/mine.md`, and empty folders `.cortex-tmp-old-cortex-remember` and `.cortex-tmp-specflow-plan`
+- **When** `cortex sync` runs
+- **Then** the first is byte-identical, the others are gone, and each has its `cleared leftover` line
+
+### Something in the way of a temp name is named
+
+- **Given** a plain file at `.cortex-tmp-specflow-plan` and an unedited `specflow-plan`
+- **When** `cortex sync` runs, and separately `cortex sync --dry-run`
+- **Then** each exits 1 with the `is in the way` line, and both are byte-identical
+
+### An empty folder at a bundle name counts as absent
+
+- **Given** empty folders `cortex-remember` and `specflow-plan`
+- **When** `cortex sync` runs
+- **Then** the first is installed, and the second has no `is retired` line
+
+### A .DS_Store is not a local edit
+
+- **Given** a marked, unedited final bundle and a marked, unedited retired bundle, each with a `.DS_Store`
+- **When** `cortex sync` runs
+- **Then** the first is updated and the second is removed
+
+### A read-only subfolder does not wedge the next runs
+
+- **Given** a marked, unedited bundle with a read-only subfolder, and a package update due
+- **When** `cortex sync` runs
+- **Then** it exits 0 with `skills: updated <name>`, and no `.cortex-tmp-*` folder is left
+
+### A failed removal leaves the bundle whole
+
+- **Given** an unedited retired bundle in a read-only `.claude/skills/`
+- **When** `cortex sync` runs
+- **Then** it exits 1 with a `stopped at skills` line, and the bundle is byte-identical
+
+### An unreadable project file keeps the report
+
+- **Given** a project bundle with an unreadable `SKILL.md`
+- **When** `cortex sync` runs
+- **Then** it exits 0, its install lines are printed, and the file has `- <path>: not read`, not counted
+
+### A dry run prints what a real run then does
+
+- **Given** retired, final and project bundles in every state
+- **When** `cortex sync --dry-run` runs, then `cortex sync`
+- **Then** their `skills:`, `tasks:`, `hooks:` and project-skill lines match, with `would: ` removed
+
+### This repository ships every bundle of the final set
+
+- **Given** the repository's `skills/`
+- **When** it is read
+- **Then** it holds every `FINAL_BUNDLES` name and `cortex-migrate`
