@@ -24,6 +24,22 @@ function shim(name: string, body: string): string {
   ].join('\n');
 }
 
+/** A hook reading stdin: the existing hook and the check each get the same lines. */
+function stdinShim(name: string, command: string): string {
+  return [
+    '#!/bin/sh',
+    MANAGED_LINE,
+    'input="$(cat)"',
+    `existing="$(git rev-parse --git-common-dir)/hooks/${name}"`,
+    'if [ -x "$existing" ]; then',
+    '  printf \'%s\\n\' "$input" | "$existing" "$@" || exit $?',
+    'fi',
+    REFUSING_START,
+    `printf '%s\\n' "$input" | ${command}`,
+    '',
+  ].join('\n');
+}
+
 const REFUSING_START = `if ! command -v cortex >/dev/null 2>&1; then
   echo "${NOT_FOUND}" >&2
   exit 1
@@ -55,6 +71,7 @@ function git(root: string, ...args: string[]): { ok: boolean; out: string } {
 /** The hook files an install writes: Cortex's, and a passthrough per other existing hook. */
 function plannedHooks(root: string): Map<string, string> {
   const planned = new Map(Object.entries(HOOKS).map(([name, body]) => [name, shim(name, body)]));
+  planned.set('pre-push', stdinShim('pre-push', 'cortex check --pre-push'));
   const dir = path.resolve(root, git(root, 'rev-parse', '--git-common-dir').out, 'hooks');
   if (!fs.existsSync(dir)) return planned;
   for (const name of fs.readdirSync(dir).sort()) {
@@ -107,6 +124,7 @@ export function installHooks(root = '.', options: InstallOptions = {}, io: Specs
     err('  commit-msg: cortex check --commit-msg "$1"');
     err('  pre-commit and pre-merge-commit: cortex specs index --staged');
     err('  prepare-commit-msg: on an amend, write HEAD to $(git rev-parse --git-path specflow-amend)');
+    err('  pre-push: cortex check --pre-push, with git\'s stdin');
     return 1;
   }
   const handWritten = handWrittenHooks(root);

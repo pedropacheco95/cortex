@@ -13,7 +13,7 @@ import { MANAGED_LINE, handWrittenHooks, installHooks } from '../../../src/specf
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const BUILD_TIMEOUT = 120_000;
-const FIVE_TO_COME = ['commit-msg', 'pre-commit', 'pre-merge-commit', 'prepare-commit-msg'];
+const FIVE = ['commit-msg', 'pre-commit', 'pre-merge-commit', 'prepare-commit-msg', 'pre-push'];
 
 let out = '';
 let bin = '';
@@ -71,7 +71,7 @@ describe('specflow.git-hooks: install', () => {
     const r = install(root);
     expect(r.code).toBe(0);
     expect(git(root, ['config', 'core.hooksPath']).stdout.trim()).toBe('.githooks');
-    for (const name of FIVE_TO_COME) {
+    for (const name of FIVE) {
       const file = path.join(root, '.githooks', name);
       expect(fs.statSync(file).mode & 0o111, name).not.toBe(0);
       expect(fs.readFileSync(file, 'utf-8').split('\n')[1]).toBe(MANAGED_LINE);
@@ -309,5 +309,106 @@ describe('specflow.git-hooks: real commits', () => {
     expect(git(root, ['commit', '-q', '-m', 'one']).code).toBe(0);
     expect(git(root, ['commit', '-q', '--amend', '-m', 'one, reworded']).code).toBe(0);
     expect(fs.existsSync(path.join(root, '.git/specflow-amend'))).toBe(false);
+  });
+});
+
+describe('specflow.git-hooks: push', () => {
+  /** A repository with hooks installed and committed, pushed to a bare origin. */
+  function pushed(): string {
+    const root = repo();
+    install(root);
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '--no-verify', '-m', 'hooks']);
+    const bare = path.join(tmpRepo('bare'), 'o.git');
+    execFileSync('git', ['init', '-q', '--bare', '-b', 'main', bare]);
+    git(root, ['remote', 'add', 'origin', bare]);
+    git(root, ['push', '-q', '--no-verify', '-u', 'origin', 'main']);
+    git(root, ['remote', 'set-head', 'origin', 'main']);
+    return root;
+  }
+  function commitCodeOnly(root: string): void {
+    write(root, 'src/a.ts', 'x');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '--no-verify', '-m', 'code only']);
+  }
+  function commitValid(root: string): void {
+    write(root, 'src/b.ts', 'x');
+    write(root, 'tests/b.test.ts', 'y');
+    git(root, ['add', '-A']);
+    expect(git(root, ['commit', '-q', '-m', 'valid']).code).toBe(0);
+  }
+
+  it('A push of a bad range is refused', () => {
+    const root = pushed();
+    commitCodeOnly(root);
+    const r = git(root, ['push', '-q', 'origin', 'main']);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain('rule (a)');
+  });
+
+  it('A branch deletion is not judged', () => {
+    const root = pushed();
+    git(root, ['checkout', '-q', '-b', 'old']);
+    commitCodeOnly(root);
+    git(root, ['push', '-q', '--no-verify', 'origin', 'old']);
+    git(root, ['checkout', '-q', 'main']);
+    const r = git(root, ['push', '-q', 'origin', '--delete', 'old']);
+    expect(r.code).toBe(0);
+    expect(r.stderr).not.toContain('rule (a)');
+  });
+
+  it('A new branch is compared with its merge base', () => {
+    const root = pushed();
+    git(root, ['checkout', '-q', '-b', 'new']);
+    commitValid(root);
+    const r = git(root, ['push', '-u', 'origin', 'new']);
+    expect(r.code).toBe(0);
+    expect(r.stderr.match(/specflow: allowed/g)).toHaveLength(1);
+  });
+
+  it('A first push does not judge old commits', () => {
+    const root = repo();
+    for (let i = 0; i < 30; i += 1) {
+      write(root, 'src/a.ts', `${i}`);
+      git(root, ['add', '-A']);
+      git(root, ['commit', '-q', '--no-verify', '-m', 'old, no tests']);
+    }
+    install(root);
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '--no-verify', '-m', 'hooks']);
+    commitValid(root);
+    const bare = path.join(tmpRepo('bare'), 'o.git');
+    execFileSync('git', ['init', '-q', '--bare', '-b', 'main', bare]);
+    git(root, ['remote', 'add', 'origin', bare]);
+    const r = git(root, ['push', 'origin', 'main']);
+    expect(r.code).toBe(0);
+    expect(r.stderr).not.toContain('old, no tests');
+    expect(r.stderr).toContain(' valid\n');
+  });
+
+  it('A new branch with no base says so', () => {
+    const root = pushed();
+    git(root, ['remote', 'set-head', 'origin', '--delete']);
+    const config = JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf-8'));
+    delete config.specflow.since;
+    git(root, ['checkout', '-q', '-b', 'new']);
+    write(root, 'cortex/cortex.json', JSON.stringify(config));
+    commitValid(root);
+    const r = git(root, ['push', 'origin', 'new']);
+    expect(r.code).toBe(0);
+    expect(r.stderr).toContain('specflow: no base to compare for refs/heads/new; nothing was checked');
+  });
+
+  it('an existing pre-push gets the same stdin', () => {
+    const root = repo();
+    write(root, '.git/hooks/pre-push', '#!/bin/sh\ncat > seen\n', 0o755);
+    install(root);
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-q', '--no-verify', '-m', 'hooks']);
+    const bare = path.join(tmpRepo('bare'), 'o.git');
+    execFileSync('git', ['init', '-q', '--bare', '-b', 'main', bare]);
+    git(root, ['remote', 'add', 'origin', bare]);
+    git(root, ['push', '-q', 'origin', 'main']);
+    expect(fs.readFileSync(path.join(root, 'seen'), 'utf-8')).toContain('refs/heads/main');
   });
 });

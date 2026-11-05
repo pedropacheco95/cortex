@@ -4,7 +4,7 @@
  * (spec core-cli.sync — the existing-project repair/upgrade path init's own
  * refusal message now names), the `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
  * `cortex specs index [--staged] [--json]` (spec specflow.index), `cortex specs port` (spec specflow.port),
- * `cortex check --commit-msg <file> | --range <base>..<head>` (spec specflow.check),
+ * `cortex check --commit-msg <file> | --range <base>..<head> | --pre-push` (spec specflow.check),
  * `cortex hooks install` (spec specflow.git-hooks),
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
  * `cortex insight file|concept|element [--json]` — the read-only insight
@@ -73,7 +73,7 @@ const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['sync', 'sync [target] [--yes]'],
   ['store', 'store init|validate|map|expire|stale|amendments … (the 4.0 store, cortex/)'],
   ['specs', 'specs index [--staged] [--json] | port [--dry-run] [--ticket-pattern <regex>] [--verify]'],
-  ['check', 'check --commit-msg <file> | --range <base>..<head>'],
+  ['check', 'check --commit-msg <file> | --range <base>..<head> | --pre-push'],
   ['hooks', 'hooks install'],
   ['migrate', 'migrate [--plan <file>] [--report <file>] [--json] [--apply|--accept]'],
   ['validate', 'validate [path] [--json]'],

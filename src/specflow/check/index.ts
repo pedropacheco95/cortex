@@ -13,12 +13,15 @@ import { itemChanges } from './items.js';
 import { Log } from './log.js';
 import { type Refusal, amendTrailers, judge, trailerFor } from './rules.js';
 
-const USAGE = 'usage: cortex check --commit-msg <file> | --range <base>..<head>';
+const USAGE = 'usage: cortex check --commit-msg <file> | --range <base>..<head> | --pre-push';
+const NO_COMMIT = /^0+$/;
 const MAX_BUFFER = 1024 * 1024 * 1024;
 
 export interface CheckIO {
   stdout?: (line: string) => void;
   stderr?: (line: string) => void;
+  /** Git's pre-push lines; read from stdin when absent. */
+  stdin?: string;
 }
 
 function git(root: string, ...args: string[]): string {
@@ -179,12 +182,36 @@ function rangeMode(root: string, range: string, config: SpecflowConfig, log: Log
   return refused ? 1 : 0;
 }
 
+/** Rule 1 and `specflow.git-hooks` Rule 6: range mode for each pushed ref. */
+function prePushMode(root: string, input: string, config: SpecflowConfig, log: Log, err: (l: string) => void): number {
+  let code = 0;
+  for (const line of input.split('\n').filter((l) => l.trim() !== '')) {
+    const [, local = '', remoteRef = '', remote = ''] = line.trim().split(/\s+/);
+    if (NO_COMMIT.test(local)) continue;
+    let base = remote;
+    if (NO_COMMIT.test(remote) || !has(root, `${remote}^{commit}`)) {
+      const merged = has(root, 'origin/HEAD')
+        ? spawnSync('git', ['merge-base', local, 'origin/HEAD'], { cwd: root, encoding: 'utf-8' })
+        : null;
+      // A first push to an empty remote has no merge base; where judging starts is the base.
+      base = merged?.status === 0 ? merged.stdout.trim() : (config.since ?? '');
+      if (base === '') {
+        err(`specflow: no base to compare for ${remoteRef}; nothing was checked`);
+        continue;
+      }
+    }
+    code = Math.max(code, rangeMode(root, `${base}..${local}`, config, log, err));
+  }
+  return code;
+}
+
 export function check(args: string[], root = '.', io: CheckIO = {}): number {
   const out = io.stdout ?? ((l: string) => console.log(l));
   const err = io.stderr ?? ((l: string) => console.error(l));
   const [mode, value, extra] = args;
   const validRange = mode === '--range' && value !== undefined && /^[^.]+(\.[^.]+)*\.\.[^.].*$/.test(value);
-  if (extra !== undefined || !(validRange || (mode === '--commit-msg' && value !== undefined))) {
+  const prePush = mode === '--pre-push' && value === undefined;
+  if (extra !== undefined || !(validRange || prePush || (mode === '--commit-msg' && value !== undefined))) {
     out(USAGE);
     return 2;
   }
@@ -197,6 +224,7 @@ export function check(args: string[], root = '.', io: CheckIO = {}): number {
     const common = path.resolve(root, git(root, 'rev-parse', '--git-common-dir').trim());
     log = new Log(path.join(common, 'specflow'), err);
     const config = readConfig(workTree(root));
+    if (prePush) return prePushMode(root, io.stdin ?? fs.readFileSync(0, 'utf-8'), config, log, err);
     return validRange
       ? rangeMode(root, value as string, config, log, err)
       : commitMode(root, value as string, config, log, err);
