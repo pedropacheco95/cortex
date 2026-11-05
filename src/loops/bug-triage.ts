@@ -448,7 +448,7 @@ function judgmentPrompt(): string {
   return (
     `Read .cortex/pulse/state/${TRIAGE_WORKLIST_FILE} — this project's open bugs partitioned into unclassified and ` +
     `classified. Classify EVERY listed bug against the seven-type taxonomy ` +
-    `(${BUG_TYPES.join(', ')}) with the specflow-bugs diagnostic discipline: walk the spec-model layers to the ` +
+    `(${BUG_TYPES.join(', ')}) with diagnostic discipline: walk the spec-model layers to the ` +
     `root cause before naming a type. Output ONLY a JSON array of results, each shaped ` +
     `{"bugId": "B-NNN", "type": "<one of the seven>", "severity": "critical|high|medium|low", ` +
     `"proposedFix": string, "reasoning": string}. Do not write any files.`

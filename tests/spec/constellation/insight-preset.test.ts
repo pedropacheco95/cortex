@@ -194,7 +194,7 @@ describe('composeInsightPreset: absent/empty insight is an honest empty result, 
     expect(body.nodes).toEqual([]);
     expect(body.edges).toEqual([]);
     expect(body.groups).toEqual([]);
-    expect(body.emptyHint).toContain('cortex-extract-insight');
+    expect(body.emptyHint).toBe('no insight extracted yet');
   });
 
   it('[CONSTELLATION-INSIGHT-PRESET-V3-5] never depends on constellation.json existing (no curated map, insight present) → still composes', async () => {

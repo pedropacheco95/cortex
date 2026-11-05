@@ -632,7 +632,7 @@ describe('CLI dispatch (spec Rule 1 / core surface)', () => {
     expect(await run(['loop-session-observe', '--collect'])).toBe(0);
     expect(fs.existsSync(path.join(root, '.cortex', 'pulse', 'state', SESSION_OBSERVE_WORKLIST_FILE))).toBe(true);
     expect(await run(['loop-session-observe'])).toBe(0);
-    expect(out.join('\n')).toContain('cortex-loop-session-observe skill');
+    expect(out.join('\n')).toContain('runs in a Claude session');
     expect(await run(['loop-session-observe', '--collect', '--apply'])).toBe(1);
     expect(await run(['loop-session-observe', '--apply', '--proposals'])).toBe(1);
   });

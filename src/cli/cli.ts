@@ -356,7 +356,7 @@ export async function run(argv: string[]): Promise<number> {
     console.error(
       'cortex loop-anatomy-refresh: retired in v3 — anatomy is absorbed into insight (design §5.10). ' +
         'Fast tier: `cortex insight-refresh-fast` (git post-commit hook). Deep/daily maintenance: the insight refresh ' +
-        'loops — `cortex loop-insight-refresh --daily|--full` with the cortex-loop-insight-refresh-* skills.',
+        'loops — `cortex loop-insight-refresh --daily|--full`.',
     );
     return 1;
   }
@@ -473,7 +473,7 @@ export async function run(argv: string[]): Promise<number> {
   if (argv[0] === 'loop-insight-gaps') {
     console.error(
       'cortex loop-insight-gaps: retired in v3 — the session-observation role moved to ' +
-        'cortex-loop-session-observe (design §9); the five-gap-signal mechanism no longer exists.',
+        '`cortex loop-session-observe` (design §9); the five-gap-signal mechanism no longer exists.',
     );
     return 1;
   }
