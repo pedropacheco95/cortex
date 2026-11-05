@@ -1,12 +1,13 @@
 ---
 id: loops.developer-gets-upkeep-proposals-without-asking
-status: implemented
+status: implementing
 implemented_by:
   - ../../specs/loops/rule-decay.spec.md
   - ../../specs/loops/atlas-staleness.spec.md
   - ../../specs/loops/onboarding-drift.spec.md
   - ../../specs/loops/spec-drift.spec.md
   - ../../specs/loops/cortex-loop-bundle.spec.md
+  - ../../specs/loops/fresh-task.spec.md
 ---
 
 # The knowledge layer proposes its own upkeep — the developer just decides
@@ -45,5 +46,7 @@ Developers maintaining a Cortex-managed project over months — the timescale wh
 - Judging spec *content* quality — only structural and temporal drift signals.
 
 ## Notes
+
+- **On a 4.0 store this promise changes (P11).** One weekly task, `loops.fresh-task`, does the work of the reviewers and fixes what it finds in the store: it edits, merges and retires knowledge files itself, and each run leaves one dated record naming every change, for the developer to verify when they choose. Business Rule 1, journey step 4 and the "zero knowledge mutations" metric above describe a 3.x store. Specs are the boundary: a change to a spec is still only proposed.
 
 - These four compose with the health sweep: it reports what is broken now; these report what is quietly going stale.

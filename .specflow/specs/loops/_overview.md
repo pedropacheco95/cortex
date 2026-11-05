@@ -6,6 +6,14 @@ The Cortex loops plus the shared loop infrastructure built once and reused. A Co
 
 ## What it covers
 
+**The 4.0 tasks.** A 4.0 store has three scheduled tasks, each one skill and one Core `cortex tasks collect` half, none writing code:
+
+- `loops.learn-task`: daily, mines finished sessions into the store, one digest per session, and records `Specflow-Amends:` trailers.
+- `loops.fresh-task`: weekly, runs expiry and the staleness signals; every change to a store file is a proposal.
+- `loops.quality-task`: weekly, spec checks, coverage, the suite, the at-rest review, the silent-spec job, and the store-use measurement.
+
+`_retirements.md` maps every spec below to what replaces it. All are retired for 4.0 stores except `loops.session-reading`, which stays. The text below describes the 3.x loops.
+
 **Specs written:**
 
 - `loops.session-reading` — the shared transcript substrate: project-slug resolution, project-isolated session enumeration, tolerant JSONL parsing, message extraction; read-only, format-drift-defensive.
