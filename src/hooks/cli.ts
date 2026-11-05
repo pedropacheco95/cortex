@@ -23,6 +23,7 @@ import { run as stop } from './stop.js';
 import { run as searchAnnotate } from './search-annotate.js';
 import { run as promptRoute } from './prompt-route.js';
 import type { HookRunResult } from './session-start.js';
+import { isEntryPoint } from '../entry.js';
 
 export async function runHook(name: string, stdinRaw: string): Promise<HookRunResult> {
   let stdinJson: unknown = {};
@@ -87,8 +88,6 @@ export async function main(argv: string[]): Promise<number> {
 }
 
 // Guard: only run when invoked directly (node dist/hooks/cli.js <name>).
-const scriptUrl = import.meta.url;
-const scriptPath = process.argv[1];
-if (scriptPath && (scriptUrl.endsWith(scriptPath) || scriptUrl.endsWith(scriptPath.replace(/\\/g, '/')))) {
+if (isEntryPoint(import.meta.url)) {
   main(process.argv.slice(2)).then(process.exit);
 }
