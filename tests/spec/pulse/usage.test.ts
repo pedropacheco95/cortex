@@ -22,7 +22,7 @@ function tmpHome(label: string): string {
 }
 
 describe('pulse.usage — the report is a valid pulse report', () => {
-  it('carries kind: pulse-usage and a parseable generated timestamp', async () => {
+  it('[PULSE-USAGE-22] carries kind: pulse-usage and a parseable generated timestamp', async () => {
     const root = project('valid');
     const home = tmpHome('valid');
     writeSessionTranscript(home, root, 's1', [toolTurn(bash('cortex insight file src/a.ts'))]);
@@ -37,7 +37,7 @@ describe('pulse.usage — the report is a valid pulse report', () => {
     expect(Number.isNaN(new Date(String(data['generated'])).getTime())).toBe(false);
   });
 
-  it('reports every Rule 4 figure with its session denominator', async () => {
+  it('[PULSE-USAGE-4, PULSE-USAGE-1, PULSE-USAGE-2, PULSE-USAGE-3] reports every Rule 4 figure with its session denominator', async () => {
     const root = project('figures');
     const home = tmpHome('figures');
     writeSessionTranscript(home, root, 's1', [
@@ -102,7 +102,7 @@ describe('pulse.usage — Rules 8–11 land in the written report', () => {
     expect(body).toMatch(/fired 0, followed 0/);
   });
 
-  it('marks the new figures not measurable when no session is readable', async () => {
+  it('[PULSE-USAGE-5] marks the new figures not measurable when no session is readable', async () => {
     const root = project('rules-8-11-empty');
     const home = tmpHome('rules-8-11-empty');
 
@@ -123,7 +123,7 @@ import { evidenceProject, evidenceHome } from '../../fixtures/evidence.js';
 import { grep } from '../../fixtures/sessions.js';
 
 describe('`usage --record` writes evidence from the same counts as the report', () => {
-  it('41 sessions (2026-07-01 to 2026-09-15): the report as before, plus a check.evidence-valid file whose body equals the report body', async () => {
+  it('[ATLAS-EVIDENCE-6] 41 sessions (2026-07-01 to 2026-09-15): the report as before, plus a check.evidence-valid file whose body equals the report body', async () => {
     const root = evidenceProject('record');
     const home = evidenceHome('record');
     const NOW = new Date('2026-09-15T15:58:00.000Z');
@@ -196,7 +196,7 @@ import { vi } from 'vitest';
 import { hookContext, glob } from '../../fixtures/sessions.js';
 
 describe('pulse.usage — Rule 11 id-shaped pointers in the written report', () => {
-  it('counts a Decided: id line followed by its decision read, and one followed by cortex why, as 2 fired / 2 followed', async () => {
+  it('[PULSE-USAGE-16] counts a Decided: id line followed by its decision read, and one followed by cortex why, as 2 fired / 2 followed', async () => {
     const root = project('rule-11-ids');
     const home = tmpHome('rule-11-ids');
     const line = 'Decided: decision.2026-08-05-x · Open: T-004 Do you want the counter… · more: cortex why R-003';

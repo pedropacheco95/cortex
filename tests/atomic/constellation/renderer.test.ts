@@ -72,7 +72,7 @@ function unwrap(result: ReturnType<typeof applyPreset>): Constellation {
 }
 
 describe('applyPreset: default', () => {
-  it('returns every node and edge unchanged, with the §4.9 top-level keys', () => {
+  it('[CONSTELLATION-RENDERER-2] returns every node and edge unchanged, with the §4.9 top-level keys', () => {
     const input = makeConstellation();
     const out = unwrap(applyPreset(input, 'default'));
     expect(Object.keys(out).sort()).toEqual(['counters', 'edges', 'generated', 'groups', 'nodes', 'schemaVersion']);
@@ -96,25 +96,25 @@ describe('applyPreset: default', () => {
 });
 
 describe('applyPreset: orphans', () => {
-  it('keeps only nodes with zero connected edges in EITHER direction', () => {
+  it('[CONSTELLATION-RENDERER-4] keeps only nodes with zero connected edges in EITHER direction', () => {
     const out = unwrap(applyPreset(makeConstellation(), 'orphans'));
     // D-002 and preferences.md touch no edge; everything else is an
     // endpoint somewhere (from OR to — the deliberate widening, spec Notes).
     expect(out.nodes.map((n) => n.id)).toEqual(['atlas:D-002', 'compass:preferences.md']);
   });
 
-  it('excludes nodes with only outgoing edges (from-endpoint counts as connected)', () => {
+  it('[CONSTELLATION-RENDERER-4] excludes nodes with only outgoing edges (from-endpoint counts as connected)', () => {
     const out = unwrap(applyPreset(makeConstellation(), 'orphans'));
     expect(out.nodes.map((n) => n.id)).not.toContain('atlas:D-001'); // only appears as `from`
   });
 
-  it('excludes nodes with only incoming edges (to-endpoint counts as connected)', () => {
+  it('[CONSTELLATION-RENDERER-4] excludes nodes with only incoming edges (to-endpoint counts as connected)', () => {
     const out = unwrap(applyPreset(makeConstellation(), 'orphans'));
     expect(out.nodes.map((n) => n.id)).not.toContain('bug:B-001'); // only appears as `to`
     expect(out.nodes.map((n) => n.id)).not.toContain('business:schema.trust');
   });
 
-  it('always returns an empty edge set', () => {
+  it('[CONSTELLATION-RENDERER-4] always returns an empty edge set', () => {
     const out = unwrap(applyPreset(makeConstellation(), 'orphans'));
     expect(out.edges).toEqual([]);
     expect(out.counters.edges).toBe(0);
@@ -138,7 +138,7 @@ describe('applyPreset: orphans', () => {
 });
 
 describe('applyPreset: domain', () => {
-  it('keeps only spec-dev/spec-business nodes whose id domain segment matches', () => {
+  it('[CONSTELLATION-RENDERER-5] keeps only spec-dev/spec-business nodes whose id domain segment matches', () => {
     const out = unwrap(applyPreset(makeConstellation(), 'domain', 'schema'));
     expect(out.nodes.map((n) => n.id)).toEqual(['business:schema.trust', 'spec:schema.validator']);
     expect(out.edges).toEqual([
@@ -150,14 +150,14 @@ describe('applyPreset: domain', () => {
     expect(out.counters).toEqual({ compass: 0, atlas: 0, specs: 2, edges: 1, droppedRefs: 4 });
   });
 
-  it('never admits non-spec modules even when the id segment matches', () => {
+  it('[CONSTELLATION-RENDERER-5] never admits non-spec modules even when the id segment matches', () => {
     const input = makeConstellation();
     // rule id segment would be "R-001" — ask for it explicitly.
     const out = unwrap(applyPreset(input, 'domain', 'R-001'));
     expect(out.nodes).toEqual([]);
   });
 
-  it('a domain matching nothing is an honest empty lens: 200-shaped, empty sets, zeroed counters', () => {
+  it('[CONSTELLATION-RENDERER-5] a domain matching nothing is an honest empty lens: 200-shaped, empty sets, zeroed counters', () => {
     const out = unwrap(applyPreset(makeConstellation(), 'domain', 'nonexistent'));
     expect(out.nodes).toEqual([]);
     expect(out.edges).toEqual([]);
@@ -165,7 +165,7 @@ describe('applyPreset: domain', () => {
     expect(out.counters).toEqual({ compass: 0, atlas: 0, specs: 0, edges: 0, droppedRefs: 4 });
   });
 
-  it('missing domain parameter → 400 naming the requirement', () => {
+  it('[CONSTELLATION-RENDERER-5] missing domain parameter → 400 naming the requirement', () => {
     const result = applyPreset(makeConstellation(), 'domain');
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
@@ -175,7 +175,7 @@ describe('applyPreset: domain', () => {
 });
 
 describe('applyPreset: unknown preset', () => {
-  it('rejects with 400 naming all four valid presets (the switcher-facing set, incl. insight)', () => {
+  it('[CONSTELLATION-RENDERER-6] rejects with 400 naming all four valid presets (the switcher-facing set, incl. insight)', () => {
     const result = applyPreset(makeConstellation(), 'pretty');
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('unreachable');
@@ -184,7 +184,7 @@ describe('applyPreset: unknown preset', () => {
     expect(PRESET_NAMES).toEqual(['default', 'orphans', 'domain', 'insight']);
   });
 
-  it('the retired v2 anatomy lenses are unknown presets now (v3.0)', () => {
+  it('[CONSTELLATION-RENDERER-3] the retired v2 anatomy lenses are unknown presets now (v3.0)', () => {
     for (const retired of ['anatomy-only', 'knowledge-only']) {
       const result = applyPreset(makeConstellation(), retired);
       expect(result.ok).toBe(false);

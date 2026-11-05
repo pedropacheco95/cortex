@@ -63,7 +63,7 @@ describe('Rule 1 — thread file contract (§4.5.3)', () => {
     expect(THREAD_COUNTER_FILE).toBe('thread-counter');
   });
 
-  it('serialises the frontmatter in the §4.5.3 field order with the body verbatim and a trailing newline', () => {
+  it('[PULSE-THREADS-1] serialises the frontmatter in the §4.5.3 field order with the body verbatim and a trailing newline', () => {
     const t = makeThread({
       bears_on: [
         '.cortex/compass/rules/R-001-core-no-llm-calls.md',
@@ -92,14 +92,14 @@ describe('Rule 1 — thread file contract (§4.5.3)', () => {
     );
   });
 
-  it('writes an empty bears_on as an empty list and omits answered/resolved_by while open', () => {
+  it('[PULSE-THREADS-1] writes an empty bears_on as an empty list and omits answered/resolved_by while open', () => {
     const raw = serialiseThread(makeThread());
     expect(raw).toContain('\nbears_on: []\n');
     expect(raw).not.toContain('answered:');
     expect(raw).not.toContain('resolved_by:');
   });
 
-  it('places answered and resolved_by after expires on an answered thread', () => {
+  it('[PULSE-THREADS-1] places answered and resolved_by after expires on an answered thread', () => {
     const raw = serialiseThread(
       makeThread({
         status: 'answered',
@@ -115,7 +115,7 @@ describe('Rule 1 — thread file contract (§4.5.3)', () => {
     expect(lines[at('resolved_by')]).toBe(`resolved_by: ${threadCitation('s2')}`);
   });
 
-  it('round-trips serialise → parse as identity for every kind and a multi-line body', () => {
+  it('[PULSE-THREADS-1] round-trips serialise → parse as identity for every kind and a multi-line body', () => {
     const cases = [
       makeThread(),
       makeThread({ id: 'T-002', kind: 'offer', body: 'I can move it for you.\n\nSay the word.' }),
@@ -145,7 +145,7 @@ describe('Rule 1 — thread file contract (§4.5.3)', () => {
     }
   });
 
-  it('parses the schema example verbatim and coerces the timestamps to iso strings', () => {
+  it('[PULSE-THREADS-1] parses the schema example verbatim and coerces the timestamps to iso strings', () => {
     const raw = [
       '---',
       'id: T-004',
@@ -217,14 +217,14 @@ describe('Rule 5 — slug mirrors decisionSlug with fallback `thread`', () => {
     expect(threadSlug('!!! ???')).toBe('thread');
   });
 
-  it('names the file `<id>-<slug>.md` from the key text', () => {
+  it('[PULSE-THREADS-1] names the file `<id>-<slug>.md` from the key text', () => {
     expect(threadFilename(makeThread())).toBe(
       'T-001-do-you-want-the-counter-in-state-or-at-the-pulse-root.md',
     );
     expect(threadFilename(makeThread({ id: 'T-009', body: '???' }))).toBe('T-009-thread.md');
   });
 
-  it('computes expires as opened + THREAD_TTL_DAYS', () => {
+  it('[PULSE-THREADS-1] computes expires as opened + THREAD_TTL_DAYS', () => {
     expect(threadExpires('2026-09-15T10:00:00.000Z')).toBe('2026-10-15T10:00:00.000Z');
     expect(threadExpires(new Date('2026-12-20T00:00:00Z'))).toBe('2027-01-19T00:00:00.000Z');
   });
@@ -235,7 +235,7 @@ describe('Rule 5 — slug mirrors decisionSlug with fallback `thread`', () => {
 // ---------------------------------------------------------------------------
 
 describe('Rule 2 — T-ids come from their own counter', () => {
-  it('allocates T-001..T-003 next to an untouched suggestion-counter of 41', () => {
+  it('[PULSE-THREADS-2] allocates T-001..T-003 next to an untouched suggestion-counter of 41', () => {
     const root = tmp('namespace');
     fs.mkdirSync(statePath(root, ''), { recursive: true });
     fs.writeFileSync(statePath(root, SUGGESTION_COUNTER_FILE), '41\n', 'utf-8');
@@ -275,7 +275,7 @@ describe('Rule 2 — T-ids come from their own counter', () => {
 // ---------------------------------------------------------------------------
 
 describe('Rule 7 — the dedupe key is normaliseText of the kind-specific text', () => {
-  it('question/offer: the paragraph, lowercased with whitespace collapsed', () => {
+  it('[PULSE-THREADS-6] question/offer: the paragraph, lowercased with whitespace collapsed', () => {
     const a = makeThread({ body: 'Do you want the counter in state/ or at the pulse root?' });
     const b = makeThread({
       id: 'T-002',
@@ -355,7 +355,7 @@ describe('writeThread / listThreads / updateThreadStatus', () => {
     expect(skipped).toBe(1);
   });
 
-  it('updateThreadStatus rewrites only frontmatter and leaves the body byte-identical', () => {
+  it('[PULSE-THREADS-8] updateThreadStatus rewrites only frontmatter and leaves the body byte-identical', () => {
     const root = tmp('update');
     const body = 'Line one: with a colon\n\n  indented **bold** line\n---\nnot frontmatter';
     const t = makeThread({ body });

@@ -79,7 +79,7 @@ describe('extractPromotionSource — the two accepted source kinds', () => {
 });
 
 describe('planPromotion — archive kind lands the lineage and touches no insight file', () => {
-  it('returns a plan with a null insight write and source: equal to the provenance path', () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-5] returns a plan with a null insight write and source: equal to the provenance path', () => {
     const root = tmp('archive-ok');
     write(root, `.cortex/${ARCHIVE_REL}`, '# Summary\n');
     const plan = planPromotion({
@@ -120,7 +120,7 @@ describe('planPromotion — archive kind lands the lineage and touches no insigh
     expect(plan.insightAbs).toBeNull();
   });
 
-  it('an archive source with a target outside compass/atlas is refused naming the two roots', () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-5] an archive source with a target outside compass/atlas is refused naming the two roots', () => {
     const root = tmp('archive-rules');
     write(root, `.cortex/${ARCHIVE_REL}`, '# Summary\n');
     write(root, 'RULES.md', '# Rules\n');
@@ -140,7 +140,7 @@ describe('planPromotion — archive kind lands the lineage and touches no insigh
     expect(plan.error).toContain('.cortex/atlas/');
   });
 
-  it('an archive source whose file does not exist is refused', () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-6] an archive source whose file does not exist is refused', () => {
     const root = tmp('archive-missing');
     const plan = planPromotion({
       root,
@@ -160,7 +160,7 @@ describe('planPromotion — archive kind lands the lineage and touches no insigh
 });
 
 describe('planPromotion — insight kind still stamps the trailer', () => {
-  it('returns the insight write with the promoted trailer and a target-relative source:', () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-4] returns the insight write with the promoted trailer and a target-relative source:', () => {
     const root = tmp('insight-ok');
     const insightRel = '.cortex/insight/anatomy/src/deploy.ts.md';
     write(root, insightRel, '---\nkind: anatomy\n---\n\n## Deploy\n\nRuns via the runbook.\n');
@@ -205,7 +205,7 @@ describe('planPromotion — a missing or unrecognised source refuses with the pi
   const PINNED =
     '**Source:** must name the artefact being promoted — an insight entry (.cortex/insight/anatomy/**) or an archive extraction (.cortex/archive/documents/<id>/extracted/**)';
 
-  it('a source naming neither kind names both accepted shapes and never insight/map/', () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-6] a source naming neither kind names both accepted shapes and never insight/map/', () => {
     const root = tmp('neither');
     const plan = planPromotion({
       root,
@@ -222,7 +222,7 @@ describe('planPromotion — a missing or unrecognised source refuses with the pi
     expect(plan.error).not.toContain('insight/map/');
   });
 
-  it('a null source (no **Source:** line) is the same refusal', () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-6] a null source (no **Source:** line) is the same refusal', () => {
     const root = tmp('null-source');
     const plan = planPromotion({
       root,
@@ -238,7 +238,7 @@ describe('planPromotion — a missing or unrecognised source refuses with the pi
     expect(plan.error).toBe(`promotion S-062: ${PINNED}`);
   });
 
-  it('an insight source whose file does not exist is refused, and nothing on disk changes', () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-6] an insight source whose file does not exist is refused, and nothing on disk changes', () => {
     const root = tmp('insight-missing');
     const plan = planPromotion({
       root,

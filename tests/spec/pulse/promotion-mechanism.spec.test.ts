@@ -95,7 +95,7 @@ const INSIGHT_PROSE = (topic: string, body: string): string =>
 // AC: each type accepts to the right target with the right operation
 // ---------------------------------------------------------------------------
 describe('Each type accepts to the right target with the right operation', () => {
-  it('S-050 rule-candidate appends to .cortex/compass/preferences.md', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-1] S-050 rule-candidate appends to .cortex/compass/preferences.md', async () => {
     const root = makeProject('s050', {
       suggestions:
         HEADER +
@@ -120,7 +120,7 @@ Always use pnpm, never npm.
     expect(prefs.endsWith('Always use pnpm, never npm.')).toBe(true);
   });
 
-  it('S-051 gated-layer-update byte-range-replaces in a compass rule file', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-1] S-051 gated-layer-update byte-range-replaces in a compass rule file', async () => {
     const RULE = `---
 id: R-014
 title: No camelCase columns
@@ -167,7 +167,7 @@ Columns MUST be snake_case; camelCase is a check.rule error.
     expect(rule.startsWith('---\nid: R-014')).toBe(true);
   });
 
-  it('S-052 user-directed-capture appends to .cortex/insight/map/conventions.md', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-1] S-052 user-directed-capture appends to .cortex/insight/map/conventions.md', async () => {
     const root = makeProject('s052', {
       suggestions:
         HEADER +
@@ -198,7 +198,7 @@ Test files use the .spec.test.ts suffix.
 // AC: an edit against drifted content refuses cleanly
 // ---------------------------------------------------------------------------
 describe('An edit against drifted content refuses cleanly', () => {
-  it('S-053 exits 1, changes nothing, and stays pending when current: no longer matches', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-2] S-053 exits 1, changes nothing, and stays pending when current: no longer matches', async () => {
     const root = makeProject('s053', {
       suggestions:
         HEADER +
@@ -239,7 +239,7 @@ The corrected rule text.
 // AC: an ambiguous edit refuses
 // ---------------------------------------------------------------------------
 describe('An ambiguous edit refuses', () => {
-  it('S-054 exits 1 (ambiguous) and applies nothing when current: matches twice', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-3] S-054 exits 1 (ambiguous) and applies nothing when current: matches twice', async () => {
     const root = makeProject('s054', {
       suggestions:
         HEADER +
@@ -281,7 +281,7 @@ changed line
 // `insight/map/` is the retired 2.0 layout)
 // ---------------------------------------------------------------------------
 describe('An insight-sourced promotion lands the gated write, the lineage, and the promoted marker', () => {
-  it('S-055 creates the atlas decision with a source: back-ref and marks deploy.ts.md promoted (not deleted)', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-4] S-055 creates the atlas decision with a source: back-ref and marks deploy.ts.md promoted (not deleted)', async () => {
     const DEPLOY = INSIGHT_PROSE(
       'deploy',
       '## Deploy\n\nDeploys run via the runbook script. _(observed 2026-06-01, signal 2, sessions: s1, s2)_',
@@ -372,7 +372,7 @@ ${STAKEHOLDER_PAYLOAD}
 `;
   }
 
-  it('S-060 exits 0, creates the stakeholder with source: to the extracted file, modifies nothing under insight/ or archive/, and reads accepted', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-5] S-060 exits 0, creates the stakeholder with source: to the extracted file, modifies nothing under insight/ or archive/, and reads accepted', async () => {
     const TARGET_REL = '.cortex/atlas/stakeholders/coordinator.md';
     const root = makeProject('s060', {
       suggestions: HEADER + section(TARGET_REL, 'file'),
@@ -401,7 +401,7 @@ ${STAKEHOLDER_PAYLOAD}
     expect(sugg).toContain('**Status:** accepted');
   });
 
-  it('S-060 targeting RULES.md exits 1 naming compass/atlas as the archive-sourced roots, writes nothing, stays pending', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-5] S-060 targeting RULES.md exits 1 naming compass/atlas as the archive-sourced roots, writes nothing, stays pending', async () => {
     const root = makeProject('s060-rules', {
       suggestions: HEADER + section('RULES.md', 'addition'),
       extra: {
@@ -438,7 +438,7 @@ Body.
 \`\`\`
 `;
 
-  it('S-056 (an insight/anatomy/ entry that does not exist) exits 1, lands no gated write, stamps no marker, stays pending', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-6] S-056 (an insight/anatomy/ entry that does not exist) exits 1, lands no gated write, stamps no marker, stays pending', async () => {
     const TARGET_REL = '.cortex/atlas/decisions/2026-07-06-orphan.md';
     const root = makeProject('s056', {
       suggestions:
@@ -461,7 +461,7 @@ Body.
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('S-061 (a Source naming neither kind) exits 1 naming both accepted shapes and not insight/map/, writes nothing, stays pending', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-6] S-061 (a Source naming neither kind) exits 1 naming both accepted shapes and not insight/map/, writes nothing, stays pending', async () => {
     const TARGET_REL = '.cortex/atlas/decisions/2026-07-06-orphan.md';
     const root = makeProject('s061', {
       suggestions:
@@ -493,7 +493,7 @@ Body.
 // AC: promotion and gated-layer-update may not target insight
 // ---------------------------------------------------------------------------
 describe('promotion and gated-layer-update may not target insight', () => {
-  it('S-057 promotion targeting .cortex/insight/map/setup.md is refused, naming the path', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-7] S-057 promotion targeting .cortex/insight/map/setup.md is refused, naming the path', async () => {
     const root = makeProject('s057', {
       suggestions:
         HEADER +
@@ -523,7 +523,7 @@ some content
 // AC: the shared gate still governs the typed types
 // ---------------------------------------------------------------------------
 describe('The shared gate still governs the typed types', () => {
-  it('S-058 present in two pulse files is a duplicate-id hard error naming both', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-8] S-058 present in two pulse files is a duplicate-id hard error naming both', async () => {
     const SECTION = (label: string, target: string) =>
       `## S-058: ${label}
 
@@ -560,7 +560,7 @@ loop: cortex-loop-rule-decay
     expect(snapshotTree(root)).toEqual(before);
   });
 
-  it('S-059 rejected in dismissed.md with a future Expires stays suppressed in pulse-list', async () => {
+  it('[INSIGHT-PROMOTION-MECHANISM-8] S-059 rejected in dismissed.md with a future Expires stays suppressed in pulse-list', async () => {
     const root = makeProject('s059', {
       suggestions:
         HEADER +

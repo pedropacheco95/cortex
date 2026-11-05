@@ -14,7 +14,7 @@ describe('classifyChange: deterministic no-op detectors (spec Rule 2)', () => {
     expect(classifyChange(src, src, TS).verdict).toBe('identical');
   });
 
-  it('whitespace-reformatting only → cosmetic, never L2/L3', () => {
+  it('[INSIGHT-REFRESH-LOOPS-2] whitespace-reformatting only → cosmetic, never L2/L3', () => {
     const oldSrc = 'export function f(a: number) {\n  return a + 1;\n}\n';
     const newSrc = 'export function f(a: number)\n{\n    return a + 1;\n}\n';
     const r = classifyChange(oldSrc, newSrc, TS);

@@ -96,7 +96,7 @@ function makeScopedProject(label: string): { root: string; baseline: string } {
 }
 
 describe('collectDaily: ledger sha-mismatch splitting (spec Rules 1-2)', () => {
-  it('splits flagged files into l2/l3/dropped by the structural verdicts', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-2] splits flagged files into l2/l3/dropped by the structural verdicts', async () => {
     const { root } = makeScopedProject('split');
     // Significant: new export in retry.ts. Cosmetic: reformat session.ts.
     fs.writeFileSync(
@@ -148,7 +148,7 @@ describe('collectDaily: ledger sha-mismatch splitting (spec Rules 1-2)', () => {
 });
 
 describe('scope-scoped invalidation (spec Rule 5, AC 7)', () => {
-  it('a change confined to scope billing plans only billing; auth ledger rows and entries stay byte-identical through apply', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-7] a change confined to scope billing plans only billing; auth ledger rows and entries stay byte-identical through apply', async () => {
     const { root } = makeScopedProject('scoped');
     const authEntry = path.join(root, '.cortex', 'insight', 'scopes', 'auth', 'anatomy', 'src', 'auth', 'session.ts.md');
     const authEntryBefore = fs.readFileSync(authEntry, 'utf-8');
@@ -196,7 +196,7 @@ describe('scope-scoped invalidation (spec Rule 5, AC 7)', () => {
 });
 
 describe('reverse-dependency invalidation (5e-ii; spec AC 5)', () => {
-  it('applyDaily marks every concept/edge referencing a re-extracted file stale in the ledger', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-5] applyDaily marks every concept/edge referencing a re-extracted file stale in the ledger', async () => {
     const { root } = makeScopedProject('reverse');
     fs.writeFileSync(
       path.join(root, 'src', 'billing', 'retry.ts'),
@@ -217,7 +217,7 @@ describe('reverse-dependency invalidation (5e-ii; spec AC 5)', () => {
     expect(ledger.stale).toContain('edge:semantically-similar-to:file:src/billing/retry.ts->file:src/auth/session.ts');
   });
 
-  it('the next collect surfaces the stale set, and the following apply clears what was surfaced', async () => {
+  it('[INSIGHT-REFRESH-LOOPS-5] the next collect surfaces the stale set, and the following apply clears what was surfaced', async () => {
     const { root } = makeScopedProject('stale-cycle');
     fs.writeFileSync(
       path.join(root, 'src', 'billing', 'retry.ts'),
@@ -277,7 +277,7 @@ describe('reverse-dependency invalidation (5e-ii; spec AC 5)', () => {
 });
 
 describe('confidence-aging (5e-ii; spec Rule 4, AC 6)', () => {
-  it('an inferred edge unconfirmed across N cycles is surfaced; structural edges are not', () => {
+  it('[INSIGHT-REFRESH-LOOPS-6] an inferred edge unconfirmed across N cycles is surfaced; structural edges are not', () => {
     const graph = {
       schemaVersion: '3.0',
       generated: 'x',

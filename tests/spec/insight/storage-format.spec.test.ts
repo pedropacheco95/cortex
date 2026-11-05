@@ -179,7 +179,7 @@ async function insightViolations(root: string): Promise<Violation[]> {
 // ---------------------------------------------------------------------------
 
 describe('AC: flat layout omits scope machinery and validates clean', () => {
-  it('a hand-authored flat insight/ (entries + trio + ledger + reverse-index) validates clean', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-2] a hand-authored flat insight/ (entries + trio + ledger + reverse-index) validates clean', async () => {
     const root = tmp('flat');
     makeInsightProject(root);
     writeInsight(root, 'anatomy/src/auth/session.ts.md', l3Entry('src/auth/session.ts', SHA_A));
@@ -221,7 +221,7 @@ describe('AC: flat layout omits scope machinery and validates clean', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: scoped layout separates per-scope and cross-scope content', () => {
-  it('registry + scopes/{auth,billing,notifications} with a shared scope validates clean', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-1] registry + scopes/{auth,billing,notifications} with a shared scope validates clean', async () => {
     const root = tmp('scoped');
     makeInsightProject(root);
     // Real project dirs so scope paths resolve.
@@ -278,7 +278,7 @@ scopes:
 // ---------------------------------------------------------------------------
 
 describe('AC: the ledger comparison is a pure hash compare — no LLM', () => {
-  it('an unchanged body hash matches the ledger entry deterministically', () => {
+  it('[INSIGHT-STORAGE-FORMAT-7] an unchanged body hash matches the ledger entry deterministically', () => {
     const body = 'export function validateToken() {}\n';
     const hash = crypto.createHash('sha256').update(body).digest('hex');
     const ledger = {
@@ -296,7 +296,7 @@ describe('AC: the ledger comparison is a pure hash compare — no LLM', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: dual-authority validation — a bad entry does not suppress a bad graph', () => {
-  it('one malformed entry and one malformed graph produce independent errors', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-14] one malformed entry and one malformed graph produce independent errors', async () => {
     const root = tmp('dual');
     makeInsightProject(root);
     // Malformed entry: bad sha + missing Main players for L3.
@@ -345,7 +345,7 @@ Uses:
 // ---------------------------------------------------------------------------
 
 describe('AC: absent module tolerated', () => {
-  it('a project with no .cortex/insight/ at all yields no insight violations', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-15] a project with no .cortex/insight/ at all yields no insight violations', async () => {
     const root = tmp('absent');
     makeCortexProject(root, { config: { schemaVersion: '3.0' }, modules: ['compass', 'atlas', 'pulse'] });
     expect(await insightViolations(root)).toEqual([]);
@@ -411,7 +411,7 @@ describe('cortex init scaffolds the v3 insight module (committed, not gitignored
     TEST_TIMEOUT,
   );
 
-  it('the locked _index.md template states the trust model and the v3 verbs', () => {
+  it('[INSIGHT-MODULE-CONTRACT-2] the locked _index.md template states the trust model and the v3 verbs', () => {
     expect(INSIGHT_INDEX_TEMPLATE).toContain('(ungated)');
     expect(INSIGHT_INDEX_TEMPLATE).toContain('Inferred, not');
     expect(INSIGHT_INDEX_TEMPLATE).toContain('the gated layer wins');

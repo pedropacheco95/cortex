@@ -56,7 +56,7 @@ async function capture(fn: () => Promise<number>): Promise<{ code: number; out: 
 // ---------------------------------------------------------------------------
 
 describe('AC: file returns the rich L3 entry for a known path (flat)', () => {
-  it('file src/auth/session.ts → Purpose, Main players, Insights, Connections content', async () => {
+  it('[INSIGHT-CLI-1] file src/auth/session.ts → Purpose, Main players, Insights, Connections content', async () => {
     const { code, out } = await capture(() => insightCli('file', ['src/auth/session.ts'], FLAT_ROOT));
     expect(code).toBe(0);
     expect(out).toContain('Issues, validates, and refreshes session tokens');
@@ -71,7 +71,7 @@ describe('AC: file returns the rich L3 entry for a known path (flat)', () => {
 });
 
 describe('AC: file returns the lighter L2 entry when that is all that exists', () => {
-  it('file src/util/log.ts → Purpose + Connections, no fabricated Main players', async () => {
+  it('[INSIGHT-CLI-2] file src/util/log.ts → Purpose + Connections, no fabricated Main players', async () => {
     const { code, out } = await capture(() => insightCli('file', ['src/util/log.ts'], FLAT_ROOT));
     expect(code).toBe(0);
     expect(out).toContain('structured-logging wrapper'); // Purpose
@@ -83,7 +83,7 @@ describe('AC: file returns the lighter L2 entry when that is all that exists', (
 });
 
 describe('AC: file resolves transparently across scoped and flat layouts', () => {
-  it('identical invocation returns identical entry content against both layouts', async () => {
+  it('[INSIGHT-CLI-3] identical invocation returns identical entry content against both layouts', async () => {
     const flat = await capture(() => insightCli('file', ['src/auth/session.ts', '--json'], FLAT_ROOT));
     const scoped = await capture(() => insightCli('file', ['src/auth/session.ts', '--json'], SCOPED_ROOT));
     expect(flat.code).toBe(0);
@@ -101,7 +101,7 @@ describe('AC: file resolves transparently across scoped and flat layouts', () =>
     expect(s.scope).toBe('auth');
   });
 
-  it('the scoped L2 entry resolves too (shared util scope)', async () => {
+  it('[INSIGHT-CLI-3] the scoped L2 entry resolves too (shared util scope)', async () => {
     const { code, out } = await capture(() => insightCli('file', ['src/util/log.ts'], SCOPED_ROOT));
     expect(code).toBe(0);
     expect(out).toContain('structured-logging wrapper');
@@ -114,13 +114,13 @@ describe('AC: file resolves transparently across scoped and flat layouts', () =>
 });
 
 describe('AC-adjacent: file miss is a clear message + exit 1 (v2 get convention)', () => {
-  it('file src/does/not/exist.ts → exit 1 naming the path', async () => {
+  it('[INSIGHT-CLI-17] file src/does/not/exist.ts → exit 1 naming the path', async () => {
     const { code, err } = await capture(() => insightCli('file', ['src/does/not/exist.ts'], FLAT_ROOT));
     expect(code).toBe(1);
     expect(err).toContain('src/does/not/exist.ts');
   });
 
-  it('--json miss is structured with found:false', async () => {
+  it('[INSIGHT-CLI-17] --json miss is structured with found:false', async () => {
     const { code, out } = await capture(() => insightCli('file', ['src/does/not/exist.ts', '--json'], FLAT_ROOT));
     expect(code).toBe(1);
     const parsed = JSON.parse(out) as { found: boolean; error: string };
@@ -130,14 +130,14 @@ describe('AC-adjacent: file miss is a clear message + exit 1 (v2 get convention)
 });
 
 describe('AC: concept returns touching files and related concepts', () => {
-  it('concept authentication → names src/auth/session.ts and authorization', async () => {
+  it('[INSIGHT-CLI-4] concept authentication → names src/auth/session.ts and authorization', async () => {
     const { code, out } = await capture(() => insightCli('concept', ['authentication'], FLAT_ROOT));
     expect(code).toBe(0);
     expect(out).toContain('src/auth/session.ts');
     expect(out).toContain('authorization');
   });
 
-  it('--json carries files[] and related[] structurally', async () => {
+  it('[INSIGHT-CLI-4] --json carries files[] and related[] structurally', async () => {
     const { out } = await capture(() => insightCli('concept', ['authentication', '--json'], FLAT_ROOT));
     const parsed = JSON.parse(out) as {
       found: boolean;
@@ -167,7 +167,7 @@ describe('AC: concept falls back to a scope-local concept doc', () => {
 });
 
 describe('AC: concept reports an explicit miss for an unknown concept', () => {
-  it('concept permissions → explicit not-found, exit 1, never an empty success', async () => {
+  it('[INSIGHT-CLI-5] concept permissions → explicit not-found, exit 1, never an empty success', async () => {
     const { code, err, out } = await capture(() => insightCli('concept', ['permissions'], FLAT_ROOT));
     expect(code).toBe(1);
     expect(err).toContain('no such concept');
@@ -177,7 +177,7 @@ describe('AC: concept reports an explicit miss for an unknown concept', () => {
 });
 
 describe('AC: element returns a main player with its connections', () => {
-  it('element validateToken → description, line range, connections, pointers', async () => {
+  it('[INSIGHT-CLI-6] element validateToken → description, line range, connections, pointers', async () => {
     const { code, out } = await capture(() => insightCli('element', ['validateToken'], FLAT_ROOT));
     expect(code).toBe(0);
     expect(out).toContain('Verifies signature, expiry');
@@ -186,7 +186,7 @@ describe('AC: element returns a main player with its connections', () => {
     expect(out).toContain('src/auth/keys.ts'); // query pointers
   });
 
-  it('the path#name query form works', async () => {
+  it('[INSIGHT-CLI-6] the path#name query form works', async () => {
     const { code, out } = await capture(() =>
       insightCli('element', ['src/auth/session.ts#validateToken'], FLAT_ROOT),
     );
@@ -202,7 +202,7 @@ describe('AC: element returns a main player with its connections', () => {
 });
 
 describe('AC: element returns "no rich entry" for a non-main-player, pointing at its file', () => {
-  it('element log → explicit no-rich-entry naming src/util/log.ts, exit 0', async () => {
+  it('[INSIGHT-CLI-7] element log → explicit no-rich-entry naming src/util/log.ts, exit 0', async () => {
     const { code, out } = await capture(() => insightCli('element', ['log'], FLAT_ROOT));
     expect(code).toBe(0);
     expect(out).toContain('no rich entry');
@@ -210,7 +210,7 @@ describe('AC: element returns "no rich entry" for a non-main-player, pointing at
     expect(out).toContain('cortex insight file');
   });
 
-  it('--json marks the match rich:false with the file named', async () => {
+  it('[INSIGHT-CLI-7] --json marks the match rich:false with the file named', async () => {
     const { out } = await capture(() => insightCli('element', ['log', '--json'], FLAT_ROOT));
     const parsed = JSON.parse(out) as { found: boolean; matches: Array<{ rich: boolean; file: string }> };
     expect(parsed.found).toBe(true);
@@ -228,7 +228,7 @@ describe('AC-adjacent: element with no graph match at all is an explicit miss', 
 });
 
 describe('AC: --json emits structured output equivalent to the default rendering', () => {
-  it('file --json is valid JSON with the section content as fields, not prose', async () => {
+  it('[INSIGHT-CLI-8] file --json is valid JSON with the section content as fields, not prose', async () => {
     const { code, out } = await capture(() => insightCli('file', ['src/auth/session.ts', '--json'], FLAT_ROOT));
     expect(code).toBe(0);
     const parsed = JSON.parse(out) as {
@@ -244,7 +244,7 @@ describe('AC: --json emits structured output equivalent to the default rendering
     expect(parsed.sections['Connections']).toContain('src/api/middleware.ts');
   });
 
-  it('the same data appears in the human rendering without --json', async () => {
+  it('[INSIGHT-CLI-8] the same data appears in the human rendering without --json', async () => {
     const plain = await capture(() => insightCli('file', ['src/auth/session.ts'], FLAT_ROOT));
     const json = await capture(() => insightCli('file', ['src/auth/session.ts', '--json'], FLAT_ROOT));
     const parsed = JSON.parse(json.out) as { sections: Record<string, string> };
@@ -278,7 +278,7 @@ describe('AC: v2 retired verbs are not exposed', () => {
 });
 
 describe('AC: cortex insight ask does not exist', () => {
-  it('ask → rejected as an unknown subcommand', async () => {
+  it('[INSIGHT-CLI-11] ask → rejected as an unknown subcommand', async () => {
     const { code, err, out } = await capture(() => insightCli('ask', ['how does auth work here?'], FLAT_ROOT));
     expect(code).toBe(1);
     expect(out).toBe('');
@@ -288,14 +288,14 @@ describe('AC: cortex insight ask does not exist', () => {
 });
 
 describe('AC: an absent insight module returns an explicit miss', () => {
-  it('file over a project with no .cortex/insight/ → explicit no-insight-data, no throw', async () => {
+  it('[INSIGHT-CLI-12] file over a project with no .cortex/insight/ → explicit no-insight-data, no throw', async () => {
     const root = makeTmpRoot('absent');
     const { code, err } = await capture(() => insightCli('file', ['src/auth/session.ts'], root));
     expect(code).toBe(1);
     expect(err).toContain('no insight data');
   });
 
-  it('concept and element degrade identically', async () => {
+  it('[INSIGHT-CLI-12] concept and element degrade identically', async () => {
     const root = makeTmpRoot('absent-ce');
     for (const [verb, arg] of [
       ['concept', 'authentication'],

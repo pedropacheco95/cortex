@@ -34,7 +34,7 @@ function project(label: string): string {
 }
 
 describe('pulse.usage — Rule 2: invocations counted from command fields, not prose', () => {
-  it('counts a Bash invocation and ignores three prose mentions', () => {
+  it('[PULSE-USAGE-1] counts a Bash invocation and ignores three prose mentions', () => {
     const root = project('verbs');
     const home = tmp('verbs-home');
     writeSessionTranscript(home, root, 's1', [
@@ -52,7 +52,7 @@ describe('pulse.usage — Rule 2: invocations counted from command fields, not p
     expect(counts.insightVerbs['concept'] ?? 0).toBe(0);
   });
 
-  it('does not count a verb quoted inside an echo or a grep pattern', () => {
+  it('[PULSE-USAGE-1] does not count a verb quoted inside an echo or a grep pattern', () => {
     const root = project('verbs-quoted');
     const home = tmp('verbs-quoted-home');
     writeSessionTranscript(home, root, 's1', [
@@ -82,7 +82,7 @@ describe('pulse.usage — Rule 2: invocations counted from command fields, not p
     expect(collectUsage(root, { home }).cortexGreps).toBe(1);
   });
 
-  it('does not count invocations mentioned in a Write tool payload', () => {
+  it('[PULSE-USAGE-1] does not count invocations mentioned in a Write tool payload', () => {
     const root = project('verbs-write');
     const home = tmp('verbs-write-home');
     writeSessionTranscript(home, root, 's1', [
@@ -99,7 +99,7 @@ describe('pulse.usage — Rule 2: invocations counted from command fields, not p
 });
 
 describe('pulse.usage — Rule 3: loop machinery separated from orientation', () => {
-  it('reports 4 machinery and 2 orientation reads, never a combined 6', () => {
+  it('[PULSE-USAGE-2] reports 4 machinery and 2 orientation reads, never a combined 6', () => {
     const root = project('machinery');
     const home = tmp('machinery-home');
     writeSessionTranscript(home, root, 's1', [
@@ -120,7 +120,7 @@ describe('pulse.usage — Rule 3: loop machinery separated from orientation', ()
     expect(renderUsageBody(counts)).not.toMatch(/\b6\b\s*(total|reads)/i);
   });
 
-  it('treats pulse/reports as machinery too', () => {
+  it('[PULSE-USAGE-2] treats pulse/reports as machinery too', () => {
     const root = project('machinery-reports');
     const home = tmp('machinery-reports-home');
     writeSessionTranscript(home, root, 's1', [
@@ -135,7 +135,7 @@ describe('pulse.usage — Rule 3: loop machinery separated from orientation', ()
 });
 
 describe('pulse.usage — Rule 4: index reads split root versus module', () => {
-  it('reports 11 root and 1 module-level index read', () => {
+  it('[PULSE-USAGE-3] reports 11 root and 1 module-level index read', () => {
     const root = project('indexes');
     const home = tmp('indexes-home');
     const rootReads = Array.from({ length: 11 }, () => read('.cortex/_index.md'));
@@ -151,7 +151,7 @@ describe('pulse.usage — Rule 4: index reads split root versus module', () => {
 });
 
 describe('pulse.usage — Rule 4: greps targeting .cortex/', () => {
-  it('counts both a Grep tool call and a bash grep, ignoring greps elsewhere', () => {
+  it('[PULSE-USAGE-10] counts both a Grep tool call and a bash grep, ignoring greps elsewhere', () => {
     const root = project('greps');
     const home = tmp('greps-home');
     writeSessionTranscript(home, root, 's1', [
@@ -170,7 +170,7 @@ describe('pulse.usage — Rule 4: greps targeting .cortex/', () => {
 });
 
 describe('pulse.usage — Rule 4: questions carry their denominator', () => {
-  it('reports 1 of 3 sessions and counts only AskUserQuestion', () => {
+  it('[PULSE-USAGE-4] reports 1 of 3 sessions and counts only AskUserQuestion', () => {
     const root = project('questions');
     const home = tmp('questions-home');
     // s1: asks with no prior .cortex/ read -> qualifies.
@@ -200,7 +200,7 @@ describe('pulse.usage — Rule 4: questions carry their denominator', () => {
 });
 
 describe('pulse.usage — Rule 6: missing transcripts degrade honestly', () => {
-  it('exits 0, names the absence, and does not present zeroes as observations', async () => {
+  it('[PULSE-USAGE-5] exits 0, names the absence, and does not present zeroes as observations', async () => {
     const root = project('empty');
     const home = tmp('empty-home');
 
@@ -242,7 +242,7 @@ describe('pulse.usage — Rule 7: the window is reported', () => {
 });
 
 describe('pulse.usage — Rule 8: a search is a segment that searches a path', () => {
-  it('does not count a pipe filter as a search', () => {
+  it('[PULSE-USAGE-6] does not count a pipe filter as a search', () => {
     const root = project('r8-pipe');
     const home = tmp('r8-pipe-home');
     writeSessionTranscript(home, root, 's1', [
@@ -255,7 +255,7 @@ describe('pulse.usage — Rule 8: a search is a segment that searches a path', (
     expect(counts.cortexGreps).toBe(0);
   });
 
-  it('counts a compound command once, under knowledge, ignoring its pipe filter', () => {
+  it('[PULSE-USAGE-7] counts a compound command once, under knowledge, ignoring its pipe filter', () => {
     const root = project('r8-compound');
     const home = tmp('r8-compound-home');
     writeSessionTranscript(home, root, 's1', [
@@ -268,7 +268,7 @@ describe('pulse.usage — Rule 8: a search is a segment that searches a path', (
     expect(counts.cortexGreps).toBe(1);
   });
 
-  it('counts a find into pulse under machinery', () => {
+  it('[PULSE-USAGE-8] counts a find into pulse under machinery', () => {
     const root = project('r8-find');
     const home = tmp('r8-find-home');
     writeSessionTranscript(home, root, 's1', [toolTurn(bash('find .cortex/pulse -name "*.md"'))]);
@@ -279,7 +279,7 @@ describe('pulse.usage — Rule 8: a search is a segment that searches a path', (
     expect(counts.searchesByTarget.knowledge).toBe(0);
   });
 
-  it('counts greps into the schema and .specflow/ under document, outside the .cortex/ figure', () => {
+  it('[PULSE-USAGE-9] counts greps into the schema and .specflow/ under document, outside the .cortex/ figure', () => {
     const root = project('r8-document');
     const home = tmp('r8-document-home');
     writeSessionTranscript(home, root, 's1', [
@@ -292,7 +292,7 @@ describe('pulse.usage — Rule 8: a search is a segment that searches a path', (
     expect(counts.cortexGreps).toBe(0);
   });
 
-  it('buckets Grep tool calls by their path', () => {
+  it('[PULSE-USAGE-10] buckets Grep tool calls by their path', () => {
     const root = project('r8-greptool');
     const home = tmp('r8-greptool-home');
     writeSessionTranscript(home, root, 's1', [
@@ -305,7 +305,7 @@ describe('pulse.usage — Rule 8: a search is a segment that searches a path', (
     expect(counts.searchesByTarget.other).toBe(1);
   });
 
-  it('keeps the .cortex/ figure as knowledge plus machinery', () => {
+  it('[PULSE-USAGE-11] keeps the .cortex/ figure as knowledge plus machinery', () => {
     const root = project('r8-sum');
     const home = tmp('r8-sum-home');
     writeSessionTranscript(home, root, 's1', [
@@ -362,7 +362,7 @@ describe('pulse.usage — Rule 8: a search is a segment that searches a path', (
 });
 
 describe('pulse.usage — Rule 9: recall and why are counted under their own figure', () => {
-  it('counts cortex recall and cortex why per command word, leaving insight verbs alone', () => {
+  it('[PULSE-USAGE-12] counts cortex recall and cortex why per command word, leaving insight verbs alone', () => {
     const root = project('r9');
     const home = tmp('r9-home');
     writeSessionTranscript(home, root, 's1', [
@@ -392,7 +392,7 @@ describe('pulse.usage — Rule 9: recall and why are counted under their own fig
 });
 
 describe('pulse.usage — Rule 10: tracked subdirectories', () => {
-  it('reports atlas/decisions reads and pulse/threads at zero', () => {
+  it('[PULSE-USAGE-13] reports atlas/decisions reads and pulse/threads at zero', () => {
     const root = project('r10');
     const home = tmp('r10-home');
     writeSessionTranscript(home, root, 's1', [
@@ -423,7 +423,7 @@ describe('pulse.usage — Rule 10: tracked subdirectories', () => {
 describe('pulse.usage — Rule 11: pointer follow-through', () => {
   const pointed = '.cortex/atlas/decisions/D-004-scanner.md';
 
-  it('counts a Recall: line followed by a Read within ten tool calls as followed', () => {
+  it('[PULSE-USAGE-14] counts a Recall: line followed by a Read within ten tool calls as followed', () => {
     const root = project('r11-followed');
     const home = tmp('r11-followed-home');
     writeSessionTranscript(home, root, 's1', [
@@ -439,7 +439,7 @@ describe('pulse.usage — Rule 11: pointer follow-through', () => {
     expect(renderUsageBody(counts)).toMatch(/fired 1, followed 1/);
   });
 
-  it('counts a Decided: line whose Read comes after the tenth tool call as fired but not followed', () => {
+  it('[PULSE-USAGE-15] counts a Decided: line whose Read comes after the tenth tool call as fired but not followed', () => {
     const root = project('r11-late');
     const home = tmp('r11-late-home');
     const filler = Array.from({ length: 10 }, (_, i) => glob(`src/${i}/**`));
@@ -503,7 +503,7 @@ function seededCounts(root: string, home: string): UsageCounts {
 }
 
 describe('usage --record: findings are the report figures in the Rule 5 fixed order', () => {
-  it('searches, then one insight.<verb> per verb seen (sorted, unit invocations), then recall, reads, pointers, questions', () => {
+  it('[ATLAS-EVIDENCE-6] searches, then one insight.<verb> per verb seen (sorted, unit invocations), then recall, reads, pointers, questions', () => {
     const root = project('findings');
     const home = tmp('findings-home');
     const counts = seededCounts(root, home);
@@ -531,7 +531,7 @@ describe('usage --record: findings are the report figures in the Rule 5 fixed or
     ]);
   });
 
-  it('usageEvidenceFields carries the slug, title, instrument, window denominator, bears_on and the report body; supersedes only when a previous file is named', () => {
+  it('[ATLAS-EVIDENCE-6, ATLAS-EVIDENCE-7] usageEvidenceFields carries the slug, title, instrument, window denominator, bears_on and the report body; supersedes only when a previous file is named', () => {
     const root = project('fields');
     const home = tmp('fields-home');
     const counts = seededCounts(root, home);
@@ -552,7 +552,7 @@ describe('usage --record: findings are the report figures in the Rule 5 fixed or
 });
 
 describe('Nothing measurable records nothing', () => {
-  it('a home with no transcript directory: the report names the unreadable state, no atlas/evidence/, exit 1', async () => {
+  it('[ATLAS-EVIDENCE-8] a home with no transcript directory: the report names the unreadable state, no atlas/evidence/, exit 1', async () => {
     const root = project('record-empty');
     const home = tmp('record-empty-home');
     const logs: string[] = [];
@@ -581,7 +581,7 @@ describe('Nothing measurable records nothing', () => {
 });
 
 describe('A second recording supersedes the first', () => {
-  it('2026-09-01-usage.md present → the new file supersedes it; the same day again exits 1 naming the existing file, atlas/ unchanged', async () => {
+  it('[ATLAS-EVIDENCE-7] 2026-09-01-usage.md present → the new file supersedes it; the same day again exits 1 naming the existing file, atlas/ unchanged', async () => {
     const root = project('record-supersedes');
     const home = tmp('record-supersedes-home');
     seededCounts(root, home);
@@ -620,7 +620,7 @@ import { pointerPathsIn, pointerTargetsIn } from '../../../src/pulse/usage.js';
 describe('pulse.usage — Rule 11: id-shaped pointers and the cortex why follow', () => {
   const decidedLine = 'Decided: decision.2026-08-05-x · Open: T-004 Do you want the counter… · more: cortex why R-003';
 
-  it('AC: an id-shaped pointer is followed by a read of the file it stands for, or by cortex why <ref>', () => {
+  it('[PULSE-USAGE-16] AC: an id-shaped pointer is followed by a read of the file it stands for, or by cortex why <ref>', () => {
     const root = project('r11-id');
     const home = tmp('r11-id-home');
     writeSessionTranscript(home, root, 's1', [
@@ -636,7 +636,7 @@ describe('pulse.usage — Rule 11: id-shaped pointers and the cortex why follow'
     expect(renderUsageBody(counts)).toMatch(/fired 2, followed 2/);
   });
 
-  it('pointerTargetsIn maps decision., evidence. and T-NNN ids to the paths they stand for and keeps the why ref', () => {
+  it('[PULSE-USAGE-16] pointerTargetsIn maps decision., evidence. and T-NNN ids to the paths they stand for and keeps the why ref', () => {
     expect(pointerTargetsIn(decidedLine)).toEqual([{ path: '.cortex/atlas/decisions/2026-08-05-x.md', whyRef: 'R-003', moreCommand: 'why' }]);
     expect(pointerTargetsIn('Recall: evidence 2026-09-15 usage · Evidence: evidence.2026-09-15-usage')).toEqual([
       { path: '.cortex/atlas/evidence/2026-09-15-usage.md' },
@@ -709,7 +709,7 @@ describe('pulse.usage — Rule 11 (third revision): Open: pointers and the threa
   const openLine =
     'Open: T-006 (2026-09-15) Do you want the counter in state/ or at the pulse root? (.cortex/pulse/threads/T-006-do-you-want-the-counter.md) · more: cortex thread list';
 
-  it('AC: an Open pointer is fired and followed by a thread verb, by cortex thread list, or by a Read of the thread file', () => {
+  it('[PULSE-USAGE-17] AC: an Open pointer is fired and followed by a thread verb, by cortex thread list, or by a Read of the thread file', () => {
     const root = project('r11-open');
     const home = tmp('r11-open-home');
     writeSessionTranscript(home, root, 's1', [hookContext(openLine), toolTurn(glob('src/**'), bash('cortex thread close T-006 --by .cortex/atlas/decisions/x.md'))]);
@@ -723,7 +723,7 @@ describe('pulse.usage — Rule 11 (third revision): Open: pointers and the threa
     expect(renderUsageBody(counts)).toMatch(/fired 3, followed 3/);
   });
 
-  it('AC: a marker beginning Evidence: or Open: is fired', () => {
+  it('[PULSE-USAGE-18] AC: a marker beginning Evidence: or Open: is fired', () => {
     const root = project('r11-prefixes');
     const home = tmp('r11-prefixes-home');
     writeSessionTranscript(home, root, 's1', [hookContext('Evidence: evidence.2026-09-15-usage · Open: T-004'), toolTurn(glob('src/**'))]);
@@ -735,7 +735,7 @@ describe('pulse.usage — Rule 11 (third revision): Open: pointers and the threa
     expect(counts.pointersFollowed).toBe(0);
   });
 
-  it('pointerTargetsIn: the Open: line points at its parenthesised path, not at the state/ inside the key text, and carries the thread id and the tail command', () => {
+  it('[PULSE-USAGE-17] pointerTargetsIn: the Open: line points at its parenthesised path, not at the state/ inside the key text, and carries the thread id and the tail command', () => {
     expect(targetsIn(openLine)).toEqual([
       { path: '.cortex/pulse/threads/T-006-do-you-want-the-counter.md', threadId: 'T-006', moreCommand: 'thread list' },
     ]);
@@ -745,7 +745,7 @@ describe('pulse.usage — Rule 11 (third revision): Open: pointers and the threa
     expect(targetsIn('Open: nothing · more: cortex thread list')).toEqual([]);
   });
 
-  it('the thread verbs follow only with the line\'s own id; drop and promote count like close; a quoted or echoed verb does not', () => {
+  it('[PULSE-USAGE-17] the thread verbs follow only with the line\'s own id; drop and promote count like close; a quoted or echoed verb does not', () => {
     const root = project('r11-verbs');
     const home = tmp('r11-verbs-home');
     writeSessionTranscript(home, root, 's1', [hookContext(openLine), toolTurn(bash('cortex thread close T-007'))]);
@@ -798,7 +798,7 @@ describe('pulse.usage — Rule 13: read deferrals', () => {
     expect(deferredPathsIn('')).toEqual([]);
   });
 
-  it('AC "A deferral retried within three calls is proceeded": tool_result line, one unrelated call, then the Read', () => {
+  it('[PULSE-USAGE-19] AC "A deferral retried within three calls is proceeded": tool_result line, one unrelated call, then the Read', () => {
     const root = project('r13-proceeded');
     const home = tmp('r13-proceeded-home');
     writeSessionTranscript(home, root, 's1', [
@@ -820,7 +820,7 @@ describe('pulse.usage — Rule 13: read deferrals', () => {
     expect(body).toMatch(/proceed-rate: 1\.00/);
   });
 
-  it('AC "A late retry is later, a missing one is abandoned": four unrelated calls then the Read; an attachment-carried line with no Read', () => {
+  it('[PULSE-USAGE-20] AC "A late retry is later, a missing one is abandoned": four unrelated calls then the Read; an attachment-carried line with no Read', () => {
     const root = project('r13-later');
     const home = tmp('r13-later-home');
     writeSessionTranscript(home, root, 's1', [
@@ -840,7 +840,7 @@ describe('pulse.usage — Rule 13: read deferrals', () => {
     expect(renderUsageBody(counts)).toMatch(/proceed-rate: 0\.00/);
   });
 
-  it('the third tool call is still inside the window; the window is per session and never crosses one', () => {
+  it('[PULSE-USAGE-19, PULSE-USAGE-20] the third tool call is still inside the window; the window is per session and never crosses one', () => {
     const root = project('r13-edge');
     const home = tmp('r13-edge-home');
     writeSessionTranscript(home, root, 's1', [toolResultTurn(deferred('src/a.ts')), toolTurn(glob('a/**'), glob('b/**'), read('src/a.ts'))]);
@@ -854,7 +854,7 @@ describe('pulse.usage — Rule 13: read deferrals', () => {
     expect(counts.deferralsDeferred).toBe(2);
   });
 
-  it('AC "Read deferrals are reported even at zero and recorded in order": zeros, proceed-rate -, findings after pointers.followed', () => {
+  it('[PULSE-USAGE-21] AC "Read deferrals are reported even at zero and recorded in order": zeros, proceed-rate -, findings after pointers.followed', () => {
     const root = project('r13-zero');
     const home = tmp('r13-zero-home');
     writeSessionTranscript(home, root, 's1', [toolTurn(read('src/a.ts'))]);
@@ -877,7 +877,7 @@ describe('pulse.usage — Rule 13: read deferrals', () => {
     ]);
   });
 
-  it('an unreadable transcript location renders the section as not measurable, not as zeros', () => {
+  it('[PULSE-USAGE-5] an unreadable transcript location renders the section as not measurable, not as zeros', () => {
     const root = project('r13-unreadable');
     const home = tmp('r13-unreadable-home');
     const body = renderUsageBody(collectUsage(root, { home }));

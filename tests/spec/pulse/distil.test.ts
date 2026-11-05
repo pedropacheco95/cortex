@@ -120,7 +120,7 @@ JSON
     expect(report).toContain('## S-001: chrome profile is profile-X');
   }, TEST_TIMEOUT);
 
-  it('bare mode with no claude on PATH degrades: exit 0, report states the skip, corpus retained', async () => {
+  it('[PULSE-DISTIL-6] bare mode with no claude on PATH degrades: exit 0, report states the skip, corpus retained', async () => {
     const root = makeProject('no-binary');
     process.chdir(root);
     process.env['PATH'] = tmp('empty-bin'); // no claude anywhere

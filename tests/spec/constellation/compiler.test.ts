@@ -69,7 +69,7 @@ function knowledgeFixture(root: string): void {
 
 describe('AC compiler.1: emitted artefact passes the schema check', () => {
   it(
-    'project with specs, a rule, and a bug → constellation.json exists and check.constellation reports zero errors',
+    '[CONSTELLATION-COMPILER-1] project with specs, a rule, and a bug → constellation.json exists and check.constellation reports zero errors',
     async () => {
       const root = tmp('ac1');
       knowledgeFixture(root);
@@ -144,7 +144,7 @@ describe('AC compiler.3 (v3): anatomy inputs are ignored even when present on di
 // ===========================================================================
 
 describe('AC compiler.4: implements dedupes to a single edge', () => {
-  it('symmetric implements/implemented_by pair → exactly one dev→business implements edge', async () => {
+  it('[CONSTELLATION-COMPILER-4] symmetric implements/implemented_by pair → exactly one dev→business implements edge', async () => {
     const root = tmp('ac4');
     makeCortexProject(root);
     writeDevSpec(
@@ -205,7 +205,7 @@ describe('AC compiler.6 (v3): scenario covers produce no edges and no droppedRef
 // ===========================================================================
 
 describe('AC compiler.7: dangling refs dropped and counted, never emitted', () => {
-  it('a rule whose source names a deleted file → no unresolvable endpoint, droppedRefs >= 1', async () => {
+  it('[CONSTELLATION-COMPILER-7] a rule whose source names a deleted file → no unresolvable endpoint, droppedRefs >= 1', async () => {
     const root = tmp('ac7');
     makeCortexProject(root);
     writeRule(
@@ -228,7 +228,7 @@ describe('AC compiler.7: dangling refs dropped and counted, never emitted', () =
 // ===========================================================================
 
 describe('AC compiler.8: import edges are excluded', () => {
-  it('an insight graph.json with three import edges → no constellation edge has kind import or export', async () => {
+  it('[CONSTELLATION-COMPILER-8] an insight graph.json with three import edges → no constellation edge has kind import or export', async () => {
     const root = tmp('ac8');
     makeCortexProject(root);
     knowledgeFixture(root);
@@ -255,7 +255,7 @@ describe('AC compiler.8: import edges are excluded', () => {
 
 describe('AC compiler.11 (3.4): bears_on emits edges for node-shaped refs only', () => {
   it(
-    'decision + evidence bears_on → four edges to rule:/spec:/atlas: nodes, droppedRefs up by exactly one (B-999), no edge or drop for path/concept/clause, and an atlas:evidence child',
+    '[CONSTELLATION-COMPILER-10, CONSTELLATION-COMPILER-1] decision + evidence bears_on → four edges to rule:/spec:/atlas: nodes, droppedRefs up by exactly one (B-999), no edge or drop for path/concept/clause, and an atlas:evidence child',
     async () => {
       const root = tmp('bears-on');
       knowledgeFixture(root);
@@ -330,7 +330,7 @@ bears_on:
 
 describe('AC compiler.9: deterministic modulo timestamp', () => {
   it(
-    'two runs without input changes → byte-identical after removing the generated line',
+    '[CONSTELLATION-COMPILER-9] two runs without input changes → byte-identical after removing the generated line',
     async () => {
       const root = tmp('ac9');
       knowledgeFixture(root);
@@ -350,7 +350,7 @@ describe('AC compiler.9: deterministic modulo timestamp', () => {
 // ===========================================================================
 
 describe('AC compiler.10: empty surfaces compile, orphans survive', () => {
-  it('compass only — no atlas, no spec trees → success; atlas/specs groups empty; orphan nodes emitted', async () => {
+  it('[CONSTELLATION-COMPILER-11] compass only — no atlas, no spec trees → success; atlas/specs groups empty; orphan nodes emitted', async () => {
     const root = tmp('ac10');
     makeCortexProject(root);
     writeRule(root, 'R-001-lonely.md', `id: R-001\ntitle: Lonely rule\nsource: []`);

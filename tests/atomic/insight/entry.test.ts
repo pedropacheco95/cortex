@@ -59,7 +59,7 @@ Uses:
 }
 
 describe('parseEntry — well-formed entries (AC: L3 entry matches the contract)', () => {
-  it('accepts the hand-authored L3 entry from the spec', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] accepts the hand-authored L3 entry from the spec', () => {
     const result = parseEntry(l3Entry());
     expect(result.ok).toBe(true);
     expect(result.value?.frontmatter.path).toBe('src/auth/session.ts');
@@ -71,13 +71,13 @@ describe('parseEntry — well-formed entries (AC: L3 entry matches the contract)
     expect(result.value?.sections).toContain('Connections');
   });
 
-  it('File map absent below the size threshold is not an error', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] File map absent below the size threshold is not an error', () => {
     const result = parseEntry(l3Entry());
     expect(result.ok).toBe(true);
     expect(result.value?.sections).not.toContain('File map');
   });
 
-  it('AC: an L2 entry omits Main players and Insights without failing', () => {
+  it('[INSIGHT-STORAGE-FORMAT-4] AC: an L2 entry omits Main players and Insights without failing', () => {
     const raw = l3Entry(
       { extraction_level: '2', centrality: 'low' },
       `## Purpose\n\nThin logging wrapper.\n\n## Connections\n\nUsed by:\n- src/auth/session.ts: logs decisions\n`,
@@ -89,31 +89,31 @@ describe('parseEntry — well-formed entries (AC: L3 entry matches the contract)
 });
 
 describe('parseEntry — malformed entries are rejected, naming the field', () => {
-  it('rejects a missing path', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] rejects a missing path', () => {
     const result = parseEntry(l3Entry({ path: '' }));
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('path');
   });
 
-  it('rejects a non-{2,3} extraction_level', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] rejects a non-{2,3} extraction_level', () => {
     const result = parseEntry(l3Entry({ extraction_level: '4' }));
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('extraction_level');
   });
 
-  it('rejects a centrality outside the enum', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] rejects a centrality outside the enum', () => {
     const result = parseEntry(l3Entry({ centrality: 'extreme' }));
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('centrality');
   });
 
-  it('rejects a source_sha256 that is not 64 hex chars', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] rejects a source_sha256 that is not 64 hex chars', () => {
     const result = parseEntry(l3Entry({ source_sha256: 'abc123' }));
     expect(result.ok).toBe(false);
     expect(result.errors?.join(' ')).toContain('source_sha256');
   });
 
-  it('rejects non-integer size fields and a missing built_at_commit', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] rejects non-integer size fields and a missing built_at_commit', () => {
     const result = parseEntry(l3Entry({ size_lines: 'many', built_at_commit: '' }));
     expect(result.ok).toBe(false);
     const joined = result.errors?.join(' ') ?? '';
@@ -121,7 +121,7 @@ describe('parseEntry — malformed entries are rejected, naming the field', () =
     expect(joined).toContain('built_at_commit');
   });
 
-  it('an L3 entry missing "## Main players" fails the section contract', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] an L3 entry missing "## Main players" fails the section contract', () => {
     const raw = l3Entry({}, `## Purpose\n\nX.\n\n## Connections\n\nUses:\n- y\n`);
     const result = parseEntry(raw);
     expect(result.ok).toBe(false);
@@ -137,7 +137,7 @@ describe('parseEntry — malformed entries are rejected, naming the field', () =
 });
 
 describe('primitive guards + section vocabulary', () => {
-  it('centrality and extraction-level guards agree with their enums', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] centrality and extraction-level guards agree with their enums', () => {
     for (const c of CENTRALITY_LEVELS) expect(isCentrality(c)).toBe(true);
     expect(isCentrality('critical')).toBe(false);
     expect(isExtractionLevel(2)).toBe(true);
@@ -146,7 +146,7 @@ describe('primitive guards + section vocabulary', () => {
     expect(isExtractionLevel('3')).toBe(false);
   });
 
-  it('L3 minimum is Purpose + Main players + Connections; L2 is Purpose + Connections', () => {
+  it('[INSIGHT-STORAGE-FORMAT-3, INSIGHT-STORAGE-FORMAT-4] L3 minimum is Purpose + Main players + Connections; L2 is Purpose + Connections', () => {
     expect([...L3_REQUIRED_SECTIONS]).toEqual(['Purpose', 'Main players', 'Connections']);
     expect([...L2_REQUIRED_SECTIONS]).toEqual(['Purpose', 'Connections']);
   });

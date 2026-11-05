@@ -84,14 +84,14 @@ function writerSection(payload: string): string {
 }
 
 describe('Parser/writer round-trip (B-003) — payload extracted byte-exact', () => {
-  it('a payload containing a triple-backtick fence round-trips byte-exact', () => {
+  it('[PULSE-REVIEW-CLI-10] a payload containing a triple-backtick fence round-trips byte-exact', () => {
     const payload = '---\nname: demo\n---\n\n```bash\ncortex validate\n```\n\ndone';
     const parsed = parseSuggestions(writerSection(payload).split('\n'));
     expect(parsed).toHaveLength(1);
     expect(parsed[0]!.block).toBe(payload);
   });
 
-  it('a payload containing a four-backtick fence round-trips byte-exact', () => {
+  it('[PULSE-REVIEW-CLI-10] a payload containing a four-backtick fence round-trips byte-exact', () => {
     const payload = 'Explain fences:\n\n````\nan example that itself shows ```\n````\n\nend';
     const parsed = parseSuggestions(writerSection(payload).split('\n'));
     expect(parsed).toHaveLength(1);
