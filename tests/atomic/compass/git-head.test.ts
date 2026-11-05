@@ -39,7 +39,7 @@ describe('R-001 — Core makes no LLM calls and spawns no git', () => {
 });
 
 describe('The helper reads a symbolic HEAD', () => {
-  it('HEAD `ref: refs/heads/main` + the ref file → the first seven characters', () => {
+  it('[COMPASS-BUG-CURRENCY-3] HEAD `ref: refs/heads/main` + the ref file → the first seven characters', () => {
     const root = tmp('symbolic');
     write(root, '.git/HEAD', 'ref: refs/heads/main\n');
     write(root, '.git/refs/heads/main', `${SHA_MAIN}\n`);
@@ -55,7 +55,7 @@ describe('The helper reads a symbolic HEAD', () => {
 });
 
 describe('The helper reads a packed ref, a detached head and a worktree', () => {
-  it('a missing ref file falls back to packed-refs', () => {
+  it('[COMPASS-BUG-CURRENCY-4] a missing ref file falls back to packed-refs', () => {
     const root = tmp('packed');
     write(root, '.git/HEAD', 'ref: refs/heads/main\n');
     write(
@@ -66,13 +66,13 @@ describe('The helper reads a packed ref, a detached head and a worktree', () => 
     expect(readHeadCommit(root)).toBe('2b217df');
   });
 
-  it('a detached HEAD (bare 40-hex sha) is used as-is', () => {
+  it('[COMPASS-BUG-CURRENCY-4] a detached HEAD (bare 40-hex sha) is used as-is', () => {
     const root = tmp('detached');
     write(root, '.git/HEAD', `${SHA_MAIN}\n`);
     expect(readHeadCommit(root)).toBe('2b217df');
   });
 
-  it('a linked worktree: `.git` is a `gitdir:` file; HEAD there; the ref in the main repo via commondir', () => {
+  it('[COMPASS-BUG-CURRENCY-4] a linked worktree: `.git` is a `gitdir:` file; HEAD there; the ref in the main repo via commondir', () => {
     const base = tmp('worktree');
     const main = path.join(base, 'main');
     const wt = path.join(base, 'wt');
@@ -87,7 +87,7 @@ describe('The helper reads a packed ref, a detached head and a worktree', () => 
     expect(readHeadCommit(wt)).toBe('2b217df');
   });
 
-  it('a linked worktree whose ref is only in the main repo\'s packed-refs', () => {
+  it('[COMPASS-BUG-CURRENCY-4] a linked worktree whose ref is only in the main repo\'s packed-refs', () => {
     const base = tmp('worktree-packed');
     const main = path.join(base, 'main');
     const wt = path.join(base, 'wt');
@@ -114,7 +114,7 @@ describe('The helper reads a packed ref, a detached head and a worktree', () => 
 });
 
 describe('The helper never throws', () => {
-  it('no .git at all → null', () => {
+  it('[COMPASS-BUG-CURRENCY-5] no .git at all → null', () => {
     const root = tmp('no-git');
     expect(readHeadCommit(root)).toBeNull();
   });
@@ -123,19 +123,19 @@ describe('The helper never throws', () => {
     expect(readHeadCommit(path.join(tmp('gone'), 'nope', 'deeper'))).toBeNull();
   });
 
-  it('HEAD containing garbage → null', () => {
+  it('[COMPASS-BUG-CURRENCY-5] HEAD containing garbage → null', () => {
     const root = tmp('garbage');
     write(root, '.git/HEAD', 'garbage\n');
     expect(readHeadCommit(root)).toBeNull();
   });
 
-  it('HEAD naming a ref that exists nowhere (no ref file, no packed-refs) → null', () => {
+  it('[COMPASS-BUG-CURRENCY-5] HEAD naming a ref that exists nowhere (no ref file, no packed-refs) → null', () => {
     const root = tmp('dangling');
     write(root, '.git/HEAD', 'ref: refs/heads/nowhere\n');
     expect(readHeadCommit(root)).toBeNull();
   });
 
-  it('HEAD naming a ref absent from an existing packed-refs → null', () => {
+  it('[COMPASS-BUG-CURRENCY-5] HEAD naming a ref absent from an existing packed-refs → null', () => {
     const root = tmp('dangling-packed');
     write(root, '.git/HEAD', 'ref: refs/heads/nowhere\n');
     write(root, '.git/packed-refs', `${SHA_MAIN} refs/heads/main\n`);
