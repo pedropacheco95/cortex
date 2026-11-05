@@ -57,7 +57,7 @@ function stdinFor(root: string, filePath: string, sessionId = 'sess-1'): Record<
 // AC: Summary plus invitation on a first read
 // ---------------------------------------------------------------------------
 describe('AC: summary plus invitation on a first read', () => {
-  it('additionalContext carries path, entry purpose, size_tokens, rule id, and the instruction line, within 75 tokens', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-1] additionalContext carries path, entry purpose, size_tokens, rule id, and the instruction line, within 75 tokens', async () => {
     const root = makeReadProject('ac1');
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120 });
     writeRule(root, 'R-001-no-any.md', `id: R-001\ntitle: No any\nsource:\n  - ../bugs/B-001.md\ngoverns:\n  - "src/**/*.ts"`, 'Never use any.\n');
@@ -79,7 +79,7 @@ describe('AC: summary plus invitation on a first read', () => {
 // AC: read-time provenance suppresses the invitation
 // ---------------------------------------------------------------------------
 describe('AC: a read-time provenance marker in the Purpose suppresses the invitation', () => {
-  it('summary injected without the writeback instruction, within 50 tokens', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-2] summary injected without the writeback instruction, within 50 tokens', async () => {
     const root = makeReadProject('ac2');
     writeInsightEntry(root, 'src/a.ts', {
       purpose: `Does A.\n\n${READ_TIME_MARKER}alice/sess-0)*`,
@@ -104,7 +104,7 @@ describe('AC: a read-time provenance marker in the Purpose suppresses the invita
 // AC: file without an insight entry is silent
 // ---------------------------------------------------------------------------
 describe('AC: file without an insight entry is silent (extraction owns creation)', () => {
-  it('a path with no entry → exit 0, empty stdout', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-3] a path with no entry → exit 0, empty stdout', async () => {
     const root = makeReadProject('ac3');
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
     const result = await run(stdinFor(root, path.join(root, 'src/other.ts')));
@@ -142,7 +142,7 @@ describe('AC: file without an insight entry is silent (extraction owns creation)
 // AC: Duplicate read is noted
 // ---------------------------------------------------------------------------
 describe('AC: duplicate read is noted', () => {
-  it('a second Read of the same path in one session ends with the already-read note', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-4] a second Read of the same path in one session ends with the already-read note', async () => {
     const root = makeReadProject('ac4');
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
     const first = await run(stdinFor(root, path.join(root, 'src/a.ts'), 'sess-dup'));
@@ -166,7 +166,7 @@ describe('AC: duplicate read is noted', () => {
 // ---------------------------------------------------------------------------
 describe('AC: flag off → hook not registered', () => {
   it(
-    'fresh init with hooks.preRead: false → settings.json carries neither pre-read nor post-read, and check.hook-config passes',
+    '[HOOKS-PRE-READ-WRITEBACK-5] fresh init with hooks.preRead: false → settings.json carries neither pre-read nor post-read, and check.hook-config passes',
     async () => {
       const root = tmp('ac5-proj');
       const home = tmp('ac5-home');
@@ -252,7 +252,7 @@ const VALID_FIXTURE = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 describe('Rule 6: the recall marker rides on reads of specs, rules and the schema document — never on source files', () => {
   afterEach(() => clearRecallIndexCache());
 
-  it('a compiled index marks the spec, the rule and the schema document through `cortex hook pre-read`; the source read is unchanged; nothing is logged', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-6, HOOKS-PRE-READ-WRITEBACK-8] a compiled index marks the spec, the rule and the schema document through `cortex hook pre-read`; the source read is unchanged; nothing is logged', async () => {
     const root = tmp('rule6-compiled');
     copyDir(VALID_FIXTURE, root);
     fs.writeFileSync(
@@ -355,7 +355,7 @@ describe('Rule 7: one deny per file per session, the retry always proceeds, gate
   const readVia = (root: string, transcript: string, rel: string) =>
     runHook('pre-read', JSON.stringify({ ...stdinFor(root, path.join(root, rel), 'sess-r7'), transcript_path: transcript }));
 
-  it('through the hook CLI: deny with the four-line reason, then allow without the note, then the note; the spec read is never deferred', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-13, HOOKS-PRE-READ-WRITEBACK-14, HOOKS-PRE-READ-WRITEBACK-20] through the hook CLI: deny with the four-line reason, then allow without the note, then the note; the spec read is never deferred', async () => {
     const root = tmp('rule7-on');
     const transcript = seed(root, true);
     // check.config is quiet for a well-formed `true` beside `preRead: true`.
@@ -402,7 +402,7 @@ describe('Rule 7: one deny per file per session, the retry always proceeds, gate
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   }, TEST_TIMEOUT);
 
-  it('the same first read with readDefer: false is today\'s payload and creates no ledger', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-12] the same first read with readDefer: false is today\'s payload and creates no ledger', async () => {
     const root = tmp('rule7-off');
     const transcript = seed(root, false);
     const result = await readVia(root, transcript, 'src/pulse/usage.ts');
@@ -458,7 +458,7 @@ describe('Rule 8: the stale marker rides on the deny reason and on the summary l
   const readVia = (root: string, transcript: string, rel: string) =>
     runHook('pre-read', JSON.stringify({ ...stdinFor(root, path.join(root, rel), 'sess-r8'), transcript_path: transcript }));
 
-  it('readDefer on, a stale entry: the deny reason\'s first line ends with the marker; the other three lines are unchanged; ≤1,000 chars; nothing logged', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-22] readDefer on, a stale entry: the deny reason\'s first line ends with the marker; the other three lines are unchanged; ≤1,000 chars; nothing logged', async () => {
     const root = tmp('rule8-deny');
     const transcript = seed(root, true, 'f'.repeat(64));
     const first = await readVia(root, transcript, 'src/pulse/usage.ts');
@@ -485,7 +485,7 @@ describe('Rule 8: the stale marker rides on the deny reason and on the summary l
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   }, TEST_TIMEOUT);
 
-  it('readDefer off, a stale entry: the summary line ends with the marker, the invitation follows unchanged', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-21] readDefer off, a stale entry: the summary line ends with the marker, the invitation follows unchanged', async () => {
     const root = tmp('rule8-allow');
     const transcript = seed(root, false, 'f'.repeat(64));
     const result = await readVia(root, transcript, 'src/pulse/usage.ts');
@@ -497,7 +497,7 @@ describe('Rule 8: the stale marker rides on the deny reason and on the summary l
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   }, TEST_TIMEOUT);
 
-  it('a fresh entry (source_sha256 hashes the body) is byte-identical to the Rule 7 payloads — no marker anywhere', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-21] a fresh entry (source_sha256 hashes the body) is byte-identical to the Rule 7 payloads — no marker anywhere', async () => {
     const root = tmp('rule8-fresh');
     const transcript = seed(root, true, sha256Of(BODY));
     const first = parseEnvelope((await readVia(root, transcript, 'src/pulse/usage.ts')).stdout);
@@ -518,7 +518,7 @@ import { writeRecallIndex as compileRecall } from '../../../src/recall/index.js'
 describe('Rule 6 (fifth revision): an open bug on a source file rides the marker alone through `cortex hook pre-read`', () => {
   afterEach(() => clearRecallIndexCache());
 
-  it('a compiled index with B-019 affecting src/auth/session.ts → summary, invitation, then `Bugs: B-019`; resolved → no marker', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-9] a compiled index with B-019 affecting src/auth/session.ts → summary, invitation, then `Bugs: B-019`; resolved → no marker', async () => {
     const root = tmp('rule6-bugs');
     copyDir(VALID_FIXTURE, root);
     fs.writeFileSync(

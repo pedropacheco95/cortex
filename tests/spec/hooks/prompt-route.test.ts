@@ -81,7 +81,7 @@ describe('hooks.prompt-route — a fresh project, end to end', () => {
     cleanTmp(home);
   });
 
-  it('init registers exactly one UserPromptSubmit entry — `cortex hook prompt-route`, no matcher — alongside the other eight, and the project validates clean on check.hook-config', async () => {
+  it('[HOOKS-PROMPT-ROUTE-1] init registers exactly one UserPromptSubmit entry — `cortex hook prompt-route`, no matcher — alongside the other eight, and the project validates clean on check.hook-config', async () => {
     expect(initExit).toBe(0);
     const settings = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8'));
     expect(settings.hooks.UserPromptSubmit).toEqual([PROMPT_ROW]);
@@ -102,7 +102,7 @@ describe('hooks.prompt-route — a fresh project, end to end', () => {
     expect(t?.body).toBe(QUESTION);
   });
 
-  it('first prompt of s2 → the Open: line for the thread through the real dispatcher; the fired memory records it; the thread file is untouched', async () => {
+  it('[HOOKS-PROMPT-ROUTE-2] first prompt of s2 → the Open: line for the thread through the real dispatcher; the fired memory records it; the thread file is untouched', async () => {
     const threadsDir = path.join(root, '.cortex', 'pulse', 'threads');
     const name = fs.readdirSync(threadsDir).find((f) => f.startsWith(`${threadId}-`))!;
     const bytesBefore = fs.readFileSync(path.join(threadsDir, name), 'utf-8');
@@ -124,7 +124,7 @@ describe('hooks.prompt-route — a fresh project, end to end', () => {
     }
   });
 
-  it('the second prompt of s2 naming the id is silent — the shared memory holds it — while a fresh session s3 mentioning it by words fires once', async () => {
+  it('[HOOKS-PROMPT-ROUTE-8] the second prompt of s2 naming the id is silent — the shared memory holds it — while a fresh session s3 mentioning it by words fires once', async () => {
     expect(await runHook('prompt-route', stdin(root, { prompt: `${threadId} — the counter in state or at the pulse root` }, 's2'))).toEqual({ exitCode: 0, stdout: '' });
 
     // s3 is not a first prompt (its memory exists, empty) and shares three words.
@@ -137,7 +137,7 @@ describe('hooks.prompt-route — a fresh project, end to end', () => {
     expect(fs.readFileSync(mem, 'utf-8')).toBe(`${threadId}\n`);
   });
 
-  it('a harness-shaped first prompt of s4 is silent and leaves no memory, so the human\'s real first prompt still resumes', async () => {
+  it('[HOOKS-PROMPT-ROUTE-7] a harness-shaped first prompt of s4 is silent and leaves no memory, so the human\'s real first prompt still resumes', async () => {
     const teammate = 'Another Claude session sent a message:\n<teammate-message teammate_id="lead">state/ please</teammate-message>';
     expect(await runHook('prompt-route', stdin(root, { prompt: teammate }, 's4'))).toEqual({ exitCode: 0, stdout: '' });
     expect(fs.existsSync(recallFiredPath(root, 's4'))).toBe(false);
@@ -163,7 +163,7 @@ describe('hooks.prompt-route — a fresh project, end to end', () => {
 });
 
 describe('hooks.prompt-route — check.hook-config demands the row from a Cortex-managed settings file', () => {
-  it('a settings file carrying `cortex hook session-start` but no prompt-route entry → one check.hook-config error naming `cortex hook prompt-route` and `cortex sync`', async () => {
+  it('[HOOKS-PROMPT-ROUTE-1] a settings file carrying `cortex hook session-start` but no prompt-route entry → one check.hook-config error naming `cortex hook prompt-route` and `cortex sync`', async () => {
     const root = makeTmpDir('prompt-route-spec-stale');
     try {
       fs.mkdirSync(path.join(root, '.cortex'), { recursive: true });

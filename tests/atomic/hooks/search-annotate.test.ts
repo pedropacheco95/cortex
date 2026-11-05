@@ -102,7 +102,7 @@ function ruleOnlyIndex(): RecallIndex {
 // ---------------------------------------------------------------------------
 
 describe('AC: a grep into a subject directory points at the newest current decision', () => {
-  it('Bash grep of the R-001 rule file → exactly one Recall: decision line, under 60 tokens', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-1] Bash grep of the R-001 rule file → exactly one Recall: decision line, under 60 tokens', async () => {
     const root = project('ac-rule', ruleOnlyIndex());
     const { exitCode, lines, stdout } = await fire(
       bashStdin(root, 'grep -rn "hook" .cortex/compass/rules/R-001-core-no-llm-calls.md'),
@@ -116,7 +116,7 @@ describe('AC: a grep into a subject directory points at the newest current decis
 });
 
 describe('AC: a subject with a decision and an open thread gets the Decided line', () => {
-  it('Grep on the hygiene spec → `Decided: decision.2026-07-10-x · Open: T-004 …` first', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-2] Grep on the hygiene spec → `Decided: decision.2026-07-10-x · Open: T-004 …` first', async () => {
     const root = project('ac-decided', sampleRecallIndex());
     const { lines } = await fire(grepStdin(root, 'retention', '.specflow/specs/pulse/hygiene.spec.md'));
     expect(lines[0]).toBe('Decided: decision.2026-07-10-x · Open: T-004 Do you want the counter in state/ or at…');
@@ -124,7 +124,7 @@ describe('AC: a subject with a decision and an open thread gets the Decided line
 });
 
 describe('AC: a spec path matches by its id', () => {
-  it('Grep on .specflow/specs/pulse/usage.spec.md → the pulse.usage evidence via a Recall: evidence line', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-3] Grep on .specflow/specs/pulse/usage.spec.md → the pulse.usage evidence via a Recall: evidence line', async () => {
     const index = recallIndexFixture(
       { 'pulse.usage': recallSubject({ evidence: ['evidence.2026-09-15-usage'] }) },
       { 'evidence.2026-09-15-usage': sampleRecallIndex().entries['evidence.2026-09-15-usage']! },
@@ -146,7 +146,7 @@ describe('AC: a schema grep matches clause subjects by heading text', () => {
   }
   const SCHEMA_DOC = '# Schema\n\n## 5. Hook payload contracts\n\nbody\n\n## 6. Cross-reference conventions\n';
 
-  it('`grep -n "payload" cortex-schema.md` → one Recall: evidence line (heading text carries the token)', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-4] `grep -n "payload" cortex-schema.md` → one Recall: evidence line (heading text carries the token)', async () => {
     const root = project('ac-schema-hit', schemaIndex());
     fs.writeFileSync(path.join(root, 'cortex-schema.md'), SCHEMA_DOC);
     const { lines } = await fire(bashStdin(root, 'grep -n "payload" cortex-schema.md'));
@@ -154,7 +154,7 @@ describe('AC: a schema grep matches clause subjects by heading text', () => {
     expect(lines[0]).toMatch(/^Recall: evidence 2026-09-15 /);
   });
 
-  it('`grep -n "frontmatter" cortex-schema.md` → nothing', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-4] `grep -n "frontmatter" cortex-schema.md` → nothing', async () => {
     const root = project('ac-schema-miss', schemaIndex());
     fs.writeFileSync(path.join(root, 'cortex-schema.md'), SCHEMA_DOC);
     expect(await run(bashStdin(root, 'grep -n "frontmatter" cortex-schema.md'))).toEqual(SILENT);
@@ -162,7 +162,7 @@ describe('AC: a schema grep matches clause subjects by heading text', () => {
 });
 
 describe('AC: a pipe filter never fires', () => {
-  it('`cat .cortex/compass/_index.md | grep rules` → empty stdout, exit 0, even with a `.cortex/compass` subject', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-5] `cat .cortex/compass/_index.md | grep rules` → empty stdout, exit 0, even with a `.cortex/compass` subject', async () => {
     const index = recallIndexFixture(
       { '.cortex/compass': recallSubject({ decided: ['decision.2026-07-07-five-module-architecture'] }) },
       { 'decision.2026-07-07-five-module-architecture': FIVE_MODULE },
@@ -173,7 +173,7 @@ describe('AC: a pipe filter never fires', () => {
 });
 
 describe('AC: two keyword hits qualify an entry; one plain hit does not', () => {
-  it('Grep src/ for "insight.*stance" → the 2026-08-05 decision; "insight" alone → nothing', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-6] Grep src/ for "insight.*stance" → the 2026-08-05 decision; "insight" alone → nothing', async () => {
     const root = project('ac-keywords', sampleRecallIndex());
     const { lines } = await fire(grepStdin(root, 'insight.*stance', 'src/'));
     expect(lines).toHaveLength(1);
@@ -183,7 +183,7 @@ describe('AC: two keyword hits qualify an entry; one plain hit does not', () => 
 });
 
 describe('AC: a ref-shaped token qualifies on one hit', () => {
-  it('Grep src/ for "schema:§5" → the evidence entry (keyword `schema:§5`), not T-004', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-7] Grep src/ for "schema:§5" → the evidence entry (keyword `schema:§5`), not T-004', async () => {
     const sample = sampleRecallIndex();
     // No `schema:§5` subject here — the criterion is the keyword path alone.
     const index = recallIndexFixture(
@@ -200,7 +200,7 @@ describe('AC: a ref-shaped token qualifies on one hit', () => {
 });
 
 describe('AC: subject beats keyword, open thread beats older decision', () => {
-  it('Grep src/pulse/usage.ts → the Decided line leads; the keyword-only decision never precedes it', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-8] Grep src/pulse/usage.ts → the Decided line leads; the keyword-only decision never precedes it', async () => {
     const index = recallIndexFixture(
       { 'src/pulse/usage.ts': recallSubject({ decided: ['decision.2026-07-01-a'], threads: ['T-009'] }) },
       {
@@ -218,7 +218,7 @@ describe('AC: subject beats keyword, open thread beats older decision', () => {
 });
 
 describe('AC: the more tail names the subject', () => {
-  it('R-003 with three decisions and one evidence → the last line ends with ` · more: cortex why R-003`', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-9] R-003 with three decisions and one evidence → the last line ends with ` · more: cortex why R-003`', async () => {
     const index = recallIndexFixture(
       { 'R-003': recallSubject({ decided: ['decision.2026-01-01-a', 'decision.2026-02-01-b', 'decision.2026-03-01-c'], evidence: ['evidence.2026-04-01-e'] }) },
       {
@@ -237,7 +237,7 @@ describe('AC: the more tail names the subject', () => {
 });
 
 describe('AC: budget trims the title, then drops the second line', () => {
-  it('two 200-char titles → ≤2 lines, ≤240 chars, line one ends its title with `…` and keeps its path', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-10] two 200-char titles → ≤2 lines, ≤240 chars, line one ends its title with `…` and keeps its path', async () => {
     const long = (seed: string): string => Array.from({ length: 40 }, (_, i) => `${seed}${i}`).join(' ').slice(0, 200);
     const index = recallIndexFixture(
       { 'R-002': recallSubject({ decided: ['decision.2026-05-01-a', 'decision.2026-06-01-b'] }) },
@@ -260,7 +260,7 @@ describe('AC: budget trims the title, then drops the second line', () => {
 });
 
 describe('AC: once per session', () => {
-  it('session `abc`, the same Grep twice → the first emits, the second is silent, and the memory lists the subject key', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-11] session `abc`, the same Grep twice → the first emits, the second is silent, and the memory lists the subject key', async () => {
     const root = project('ac-once', ruleOnlyIndex());
     const stdin = grepStdin(root, 'hook', '.cortex/compass/rules/R-001-x.md', 'abc');
     const first = await fire(stdin);
@@ -275,7 +275,7 @@ describe('AC: once per session', () => {
 });
 
 describe('AC: fail-open is silent and unlogged', () => {
-  it('no stdin, no index file, `{not json`, and `subjects` a string → exit 0, empty stdout, no hook-errors.md', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-12] no stdin, no index file, `{not json`, and `subjects` a string → exit 0, empty stdout, no hook-errors.md', async () => {
     const noStdin = tmp('fo-nostdin');
     makeCortexProject(noStdin);
     writeRecallIndexFixture(noStdin, ruleOnlyIndex());
@@ -462,7 +462,7 @@ describe('AC: the imperative-free grammar', () => {
   const DECIDED_SHAPE = /^Decided: (?<id>decision\.\S+) · Open: (?<thread>T-\d{3,}) (?<title>.+?)(?<tail> · more: cortex why \S+)?$/;
   const IMPERATIVES = /\b(read|consult|check|should|you)\b/i;
 
-  it('every emitted line begins `Recall: ` or `Decided: ` in the pinned shape, and the grammar around the titles carries no read/consult/check/should/you', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-15] every emitted line begins `Recall: ` or `Decided: ` in the pinned shape, and the grammar around the titles carries no read/consult/check/should/you', () => {
     expect(emitted.length).toBeGreaterThan(5);
     for (const payload of emitted) {
       for (const line of payload.split('\n')) {
@@ -480,7 +480,7 @@ describe('AC: the imperative-free grammar', () => {
 // 3.4 fifth revision — the compass kinds through the hook (Rules 7–8)
 // ---------------------------------------------------------------------------
 describe('AC (fifth revision): a keyword search lands on a compass document', () => {
-  it('`grep -rn "scheduled jobs" src/` → `Recall: compass-doc Environment (.cortex/compass/environment.md)`, no date, under 60 tokens', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-13] `grep -rn "scheduled jobs" src/` → `Recall: compass-doc Environment (.cortex/compass/environment.md)`, no date, under 60 tokens', async () => {
     const index = recallIndexFixture(
       {},
       { 'compass.environment': recallEntry('compass-doc', 'Environment', '.cortex/compass/environment.md', '', ['environment', 'jobs', 'scheduled']) },
@@ -496,13 +496,13 @@ describe('AC (fifth revision): a grep into a governed directory points at the ru
   const R014 = recallEntry('rule', 'No camelCase database columns', '.cortex/compass/rules/R-014-no-camelcase-database-columns.md', '', ['src/db']);
   const B031 = recallEntry('bug', 'camelCase column slipped into migrations', '.cortex/compass/bugs/B-031-camelcase-column.md', '2026-06-28', ['src/db']);
 
-  it('Grep path src/db pattern column with rules [R-014] alone → the one rule line', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-14] Grep path src/db pattern column with rules [R-014] alone → the one rule line', async () => {
     const root = project('ac-rule-line', recallIndexFixture({ 'src/db': recallSubject({ rules: ['R-014'] }) }, { 'R-014': R014 }));
     const { lines } = await fire(grepStdin(root, 'column', 'src/db'));
     expect(lines).toEqual(['Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)']);
   });
 
-  it('with bugs [B-031] too → the bug line first, the rule line second', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-14] with bugs [B-031] too → the bug line first, the rule line second', async () => {
     const root = project('ac-bug-first', recallIndexFixture({ 'src/db': recallSubject({ rules: ['R-014'], bugs: ['B-031'] }) }, { 'R-014': R014, 'B-031': B031 }));
     const { lines } = await fire(grepStdin(root, 'column', 'src/db'));
     expect(lines).toEqual([

@@ -135,7 +135,7 @@ describe('AC: tag captured and applied to the insight entry with provenance', ()
 // AC: Same tag not applied twice in a session
 // ---------------------------------------------------------------------------
 describe('AC: same tag not applied twice in a session', () => {
-  it('after the tag is applied and recorded, a later fire leaves the entry byte-identical', async () => {
+  it('[HOOKS-POST-READ-2] after the tag is applied and recorded, a later fire leaves the entry byte-identical', async () => {
     const root = tmp('ac2');
     makeCortexProject(root);
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Original.' });
@@ -156,7 +156,7 @@ describe('AC: same tag not applied twice in a session', () => {
 // AC: Invalid tags rejected without noise
 // ---------------------------------------------------------------------------
 describe('AC: invalid tags rejected without noise', () => {
-  it('entry-less file, multi-line payload, and 300-char payload: no entry changes, one hook-errors entry each, never retried', async () => {
+  it('[HOOKS-POST-READ-3] entry-less file, multi-line payload, and 300-char payload: no entry changes, one hook-errors entry each, never retried', async () => {
     const root = tmp('ac3');
     makeCortexProject(root);
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
@@ -210,7 +210,7 @@ describe('AC: unextracted project is a silent no-op', () => {
 // AC: No tags → no writes
 // ---------------------------------------------------------------------------
 describe('AC: no tags → no writes', () => {
-  it('a tagless transcript writes nothing anywhere', async () => {
+  it('[HOOKS-POST-READ-5] a tagless transcript writes nothing anywhere', async () => {
     const root = tmp('ac5');
     makeCortexProject(root);
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
@@ -230,7 +230,7 @@ describe('AC: no tags → no writes', () => {
 // AC: Transcript unavailable degrades silently
 // ---------------------------------------------------------------------------
 describe('AC: transcript unavailable degrades silently', () => {
-  it('missing transcript_path → exit 0, empty stdout, one hook-errors entry', async () => {
+  it('[HOOKS-POST-READ-6] missing transcript_path → exit 0, empty stdout, one hook-errors entry', async () => {
     const root = tmp('ac6');
     makeCortexProject(root);
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
@@ -243,7 +243,7 @@ describe('AC: transcript unavailable degrades silently', () => {
     expect(log).toContain('transcript_path');
   });
 
-  it('a transcript_path that does not exist on disk → same degradation', async () => {
+  it('[HOOKS-POST-READ-6] a transcript_path that does not exist on disk → same degradation', async () => {
     const root = tmp('ac6b');
     makeCortexProject(root);
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });
