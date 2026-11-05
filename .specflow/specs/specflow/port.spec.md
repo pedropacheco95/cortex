@@ -25,7 +25,7 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 ## Rules
 
 1. `cortex specs port [--dry-run] [--ticket-pattern <regex>]`. `--dry-run` writes nothing and prints the report. The command stages its moves and commits nothing. Exit 0 on success, 1 on a refusal, and it never fails half-way: all checks run before the first move.
-2. **Source layouts.** Layout A is `.specflow/specs/` with `.specflow/specs-business/`. Layout B is `specs/impl/` with `specs/promises/`. The dev tree is what identifies a layout; a missing business tree moves nothing. Refuse (exit 1, nothing written) when neither exists, when both exist, when `specflow/impl/` or `specflow/promises/` already exists, when `cortex/cortex.json` does not exist, when its `migration.accepted` is `null` and `.cortex/cortex.config.json` exists (the 3.x hooks are still live and would stop seeing the specs), or when `git status --porcelain` shows a change under the source tree.
+2. **Source layouts.** Layout A is `.specflow/specs/` with `.specflow/specs-business/`. Layout B is `specs/impl/` with `specs/promises/`. The dev tree is what identifies a layout; a missing business tree moves nothing. Refuse (exit 1, nothing written) when neither exists, when both exist, when `specflow/impl/` or `specflow/promises/` already exists, when `cortex/cortex.json` does not exist, when it cannot be parsed, when it has a `migration` field whose `accepted` is not a date, when it has no `migration` field and a `.cortex/` folder exists (the 3.x hooks are still live and would stop seeing the specs), or when `git status --porcelain` shows a change under the source tree.
 3. **The move.** Each file moves by `git mv` with its path below the root unchanged: `.specflow/specs/<p>` and `specs/impl/<p>` to `specflow/impl/<p>`; `.specflow/specs-business/<p>` and `specs/promises/<p>` to `specflow/promises/<p>`. `_overview.md` and `_index.md` files move too. Layout A's emptied `.specflow/` folder goes; Layout B's `specs/INDEX.md` is deleted, since it is regenerated.
 4. **Criterion ids.** In each file under `specflow/impl/` that is not retired (Rule 15), each criterion heading (`specflow.index` Rule 2) with no id gains `<ID>: ` before its title, numbered from 1 in file order. Numbering continues past the highest id already in the file. Heading level and title text do not change. **OPEN (owner, G2):** this is a text change. The bench's tree carried ids in headings, and positional ids are not stable.
 5. **Frontmatter links.** Relative `implements:` and `implemented_by:` values are rewritten to the new relative paths. **OPEN (owner, G2):** a second narrow text change; without it every link breaks.
@@ -138,6 +138,24 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 - **Given** `.specflow/specs/` and `specflow/impl/`
 - **When** `cortex specs port` runs
 - **Then** it exits 1 and nothing moved
+
+### A 3.x project beside a bare store is refused
+
+- **Given** `.specflow/specs/`, a `.cortex/` folder with or without its config, and a `cortex/cortex.json` with no `migration` field
+- **When** `cortex specs port` runs
+- **Then** it exits 1, names `cortex migrate`, and nothing moved
+
+### A migration with no accepted date is refused
+
+- **Given** `.specflow/specs/` and a `cortex/cortex.json` whose `migration` has no `accepted`, or one that is not a date
+- **When** `cortex specs port` runs
+- **Then** it exits 1, names `cortex migrate --accept`, and nothing moved
+
+### An unreadable store file is refused
+
+- **Given** `.specflow/specs/` and a `cortex/cortex.json` that does not parse
+- **When** `cortex specs port` runs
+- **Then** it exits 1, names `cortex/cortex.json`, and nothing moved
 
 ### An unaccepted migration is refused
 

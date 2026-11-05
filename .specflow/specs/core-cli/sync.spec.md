@@ -71,9 +71,9 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
 16. **Which project gets what**, checked in this order:
     1. the platform is not `darwin`: exit 2, with Rule 1's message;
     2. `cortex/cortex.json` exists and cannot be parsed, or has no `schemaVersion`: exit 3, `cortex sync: refused — cortex/cortex.json is not valid: <reason>. Nothing was written.`; its `schemaVersion` MAJOR differs from the package's: exit 3, `cortex sync: refused — this store is schema <version> and this package supports <major>.x. Nothing was written.`;
-    3. `cortex/cortex.json` exists and `migration.accepted` is a date, or it has no `migration` field and there is no `.cortex/cortex.config.json`: the update route, Rule 17;
+    3. `cortex/cortex.json` exists and `migration.accepted` is a date, or it has no `migration` field and there is no `.cortex/` folder: the update route, Rule 17;
     4. `cortex/cortex.json` has a `migration` field whose `accepted` is `null`, absent or not a date: exit 3, `cortex sync: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`;
-    5. `.cortex/cortex.config.json` exists, which covers a `cortex.json` with no `migration` field that `cortex store init` wrote beside it: exit 3, `cortex sync: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.`;
+    5. a `.cortex/` folder exists, with or without its config, which covers a `cortex.json` with no `migration` field that `cortex store init` wrote beside it: exit 3, `cortex sync: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.`;
     6. otherwise: exit 2, `cortex sync: refused — no Cortex store found at <root>; set one up with cortex init. Nothing was written.`
 17. **The update route, in order:** remove retired skills (Rule 18); install and update the final set (Rule 19); refresh `MAP.md` and the managed blocks (Rule 20); refresh the git hooks (Rule 21); write the task payloads and report the tasks (Rule 22); list project skills (Rule 23); validate (Rule 24). The blocks come after the skills, so that they see `specflow-spec` (`store.managed-block` Rule 9).
 
@@ -651,3 +651,9 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 - **Given** the repository's `skills/`
 - **When** it is read
 - **Then** it holds every `FINAL_BUNDLES` name and `cortex-migrate`
+
+### A .cortex folder with no config is told to migrate
+
+- **Given** a `.cortex/` folder with no `cortex.config.json`, a `cortex/cortex.json` with no `migration` field, and an unedited retired skill
+- **When** `cortex sync` runs
+- **Then** it exits 3 with the Rule 16 message naming `cortex migrate`, and the project is byte-identical
