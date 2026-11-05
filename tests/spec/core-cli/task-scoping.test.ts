@@ -28,7 +28,7 @@ const DARWIN = { platform: 'darwin' as const };
 // AC1: Scoped name construction
 // ---------------------------------------------------------------------------
 describe('AC1: scoped name construction', () => {
-  it('project "My API_v2" → my-api-v2-daily (plain form, no hash)', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] project "My API_v2" → my-api-v2-daily (plain form, no hash)', () => {
     const parent = makeTmpDir('ts-ac1');
     try {
       const root = path.join(parent, 'My API_v2');
@@ -39,7 +39,7 @@ describe('AC1: scoped name construction', () => {
     }
   });
 
-  it('collision fallback form: my-api-v2-<h6>-daily, h6 = first 6 hex of SHA256(abs path)', () => {
+  it('[CORE-CLI-TASK-SCOPING-1] collision fallback form: my-api-v2-<h6>-daily, h6 = first 6 hex of SHA256(abs path)', () => {
     const parent = makeTmpDir('ts-ac1b');
     try {
       const root = path.join(parent, 'My API_v2');
@@ -76,7 +76,7 @@ describe("AC2: two same-named projects don't collide", () => {
   }, TEST_TIMEOUT * 2);
   afterAll(() => { cleanTmp(tmp); cleanTmp(home); });
 
-  it('the home holds two disjoint task sets: the first project claims the plain names, the second falls back to hash-scoped names', () => {
+  it('[CORE-CLI-TASK-SCOPING-2] the home holds two disjoint task sets: the first project claims the plain names, the second falls back to hash-scoped names', () => {
     expect(resultA.exitCode).toBe(0);
     expect(resultB.exitCode).toBe(0);
     const base = path.join(home, '.claude', 'scheduled-tasks');
@@ -100,7 +100,7 @@ describe("AC2: two same-named projects don't collide", () => {
     expect(projectTaskHash(rootA)).not.toBe(projectTaskHash(rootB));
   });
 
-  it('zero overwrites: the second init wrote all fresh (nothing preserved) and every frontmatter name matches its dir', () => {
+  it('[CORE-CLI-TASK-SCOPING-2] zero overwrites: the second init wrote all fresh (nothing preserved) and every frontmatter name matches its dir', () => {
     expect(resultB.summary).toMatch(/Scheduled tasks: 5 written/);
     expect(resultB.summary).not.toMatch(/preserved/);
     const base = path.join(home, '.claude', 'scheduled-tasks');
@@ -125,7 +125,7 @@ describe('AC3: registration identity vs execution identity', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it("every scoped task's frontmatter name: is the scoped name and its body invokes the underlying skill's real name", () => {
+  it("[CORE-CLI-TASK-SCOPING-3] every scoped task's frontmatter name: is the scoped name and its body invokes the underlying skill's real name", () => {
     const base = path.join(home, '.claude', 'scheduled-tasks');
     for (const task of SCHEDULED_TASKS) {
       const scoped = scopedTaskName(root, CANONICAL_TASK_NAMES[task.name]!);
@@ -189,14 +189,14 @@ describe('AC4: --partial recognises only its own project', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(otherRoot); cleanTmp(home); });
 
-  it("registered/preserved counts reflect only this project's tasks (4 written + 1 preserved = 5 packaged bundles)", () => {
+  it("[CORE-CLI-TASK-SCOPING-4] registered/preserved counts reflect only this project's tasks (4 written + 1 preserved = 5 packaged bundles)", () => {
     expect(result.exitCode).toBe(0);
     expect(result.summary).toContain('Scheduled tasks (--partial): 4 written');
     expect(result.summary).toContain('1 existing preserved');
     expect(result.summary).toContain('5 bundle payloads on disk');
   });
 
-  it('the foreign entries and the unrelated user task are byte-untouched', () => {
+  it('[CORE-CLI-TASK-SCOPING-4] the foreign entries and the unrelated user task are byte-untouched', () => {
     for (const dir of foreignDirs) {
       expect(fs.readFileSync(path.join(base, dir, 'SKILL.md'), 'utf-8')).toBe(foreignRaw(dir));
     }
@@ -204,7 +204,7 @@ describe('AC4: --partial recognises only its own project', () => {
     expect(fs.readFileSync(path.join(base, scopedTaskName(root, 'daily'), 'SKILL.md'), 'utf-8')).toBe(ownEdit);
   });
 
-  it('the summary never names foreign or unrelated entries', () => {
+  it('[CORE-CLI-TASK-SCOPING-4] the summary never names foreign or unrelated entries', () => {
     expect(result.summary).not.toContain('daily-report');
     for (const dir of foreignDirs) {
       expect(result.summary).not.toContain(dir);
@@ -246,7 +246,7 @@ describe('AC5: rename migrates legacy tasks, idempotently', () => {
   });
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('first run: moves legacy entries to scoped names (frontmatter rewritten, body byte-identical), skips the collision with a notice, leaves daily-report untouched, reports each move, exit 0', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] first run: moves legacy entries to scoped names (frontmatter rewritten, body byte-identical), skips the collision with a notice, leaves daily-report untouched, reports each move, exit 0', () => {
     const r = tasksRename(home, root);
     expect(r.exitCode).toBe(0);
 
@@ -271,7 +271,7 @@ describe('AC5: rename migrates legacy tasks, idempotently', () => {
     expect(r.output).not.toContain('daily-report');
   });
 
-  it('second run: reports nothing to rename, exit 0, and moves nothing', () => {
+  it('[CORE-CLI-TASK-SCOPING-5] second run: reports nothing to rename, exit 0, and moves nothing', () => {
     const before = snapshotTree(base);
     const r = tasksRename(home, root);
     expect(r.exitCode).toBe(0);

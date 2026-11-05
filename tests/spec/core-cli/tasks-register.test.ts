@@ -56,7 +56,7 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
     cleanTmp(appSupport);
   });
 
-  it('register writes the full slice: payloads on disk, registry entries pointing at them, retired gone everywhere', () => {
+  it('[CORE-CLI-TASKS-REGISTER-1] register writes the full slice: payloads on disk, registry entries pointing at them, retired gone everywhere', () => {
     const r = registerTasks(opts());
     expect(r.exitCode).toBe(0);
 
@@ -86,13 +86,13 @@ describe('core-cli.tasks-register: register → verify → wipe → detect → h
     }
   });
 
-  it('verify passes on the registered slice', () => {
+  it('[CORE-CLI-TASKS-REGISTER-8] verify passes on the registered slice', () => {
     const v = verifyTasks(opts());
     expect(v.exitCode).toBe(0);
     expect(v.output).toContain('All 3 Cortex tasks registered');
   });
 
-  it('an app-update wipe (#49276) is detected by verify and healed by re-register', () => {
+  it('[CORE-CLI-TASKS-REGISTER-8] an app-update wipe (#49276) is detected by verify and healed by re-register', () => {
     // Simulate the wipe: the app rewrites its registry without Cortex entries.
     fs.writeFileSync(registryFile, JSON.stringify({ scheduledTasks: [], recordedSkips: {} }, null, 2) + '\n', 'utf-8');
 

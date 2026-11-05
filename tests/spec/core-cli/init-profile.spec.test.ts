@@ -46,7 +46,7 @@ function payloadBody(home: string, bundle: string): string | null {
 }
 
 describe('AC: no flag means specflow', () => {
-  it('records profile specflow when --profile is omitted', async () => {
+  it('[CORE-CLI-INIT-PROFILE-2] records profile specflow when --profile is omitted', async () => {
     const root = tmp('default-root');
     const home = tmp('default-home');
     const result = await init(root, { home, noLlm: true, yes: true, ...DARWIN });
@@ -56,7 +56,7 @@ describe('AC: no flag means specflow', () => {
 });
 
 describe('AC: an explicit profile is recorded', () => {
-  it('records profile superpowers when asked', async () => {
+  it('[CORE-CLI-INIT-PROFILE-1] records profile superpowers when asked', async () => {
     const root = tmp('sp-root');
     const home = tmp('sp-home');
     const result = await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -64,7 +64,7 @@ describe('AC: an explicit profile is recorded', () => {
     expect(readConfig(root)['profile']).toBe('superpowers');
   }, TEST_TIMEOUT);
 
-  it('a plain re-init refuses and leaves the recorded profile alone', async () => {
+  it('[CORE-CLI-INIT-6] a plain re-init refuses and leaves the recorded profile alone', async () => {
     const root = tmp('reinit-root');
     const home = tmp('reinit-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -74,7 +74,7 @@ describe('AC: an explicit profile is recorded', () => {
     expect(readConfig(root)['profile']).toBe('superpowers');
   }, TEST_TIMEOUT);
 
-  it('a FORCED re-init with no flag preserves the recorded profile rather than resetting it', async () => {
+  it('[CORE-CLI-INIT-PROFILE-3] a FORCED re-init with no flag preserves the recorded profile rather than resetting it', async () => {
     const root = tmp('preserve-root');
     const home = tmp('preserve-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -82,7 +82,7 @@ describe('AC: an explicit profile is recorded', () => {
     expect(readConfig(root)['profile']).toBe('superpowers');
   }, TEST_TIMEOUT);
 
-  it('a FORCED re-init WITH a flag overrides the recorded profile', async () => {
+  it('[CORE-CLI-INIT-PROFILE-3] a FORCED re-init WITH a flag overrides the recorded profile', async () => {
     const root = tmp('override-root');
     const home = tmp('override-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -92,7 +92,7 @@ describe('AC: an explicit profile is recorded', () => {
 });
 
 describe('AC: the spec loops are not scheduled under superpowers', () => {
-  it('writes no test-runner payload, and scopes the daily bundle', async () => {
+  it('[CORE-CLI-INIT-PROFILE-5] writes no test-runner payload, and scopes the daily bundle', async () => {
     const root = tmp('scoped-root');
     const home = tmp('scoped-home');
     const result = await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -110,7 +110,7 @@ describe('AC: the spec loops are not scheduled under superpowers', () => {
 });
 
 describe('AC: the knowledge loops are scheduled under every profile', () => {
-  it('daily, weekly-curation, weekly-quality and monthly-review are all still written', async () => {
+  it('[CORE-CLI-INIT-PROFILE-6] daily, weekly-curation, weekly-quality and monthly-review are all still written', async () => {
     const root = tmp('bucket1-root');
     const home = tmp('bucket1-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -120,7 +120,7 @@ describe('AC: the knowledge loops are scheduled under every profile', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('the scoped daily bundle still instructs its Bucket-1 members', async () => {
+  it('[CORE-CLI-INIT-PROFILE-6] the scoped daily bundle still instructs its Bucket-1 members', async () => {
     const root = tmp('bucket1-members-root');
     const home = tmp('bucket1-members-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -132,7 +132,7 @@ describe('AC: the knowledge loops are scheduled under every profile', () => {
 });
 
 describe('AC: specflow scheduling is unchanged', () => {
-  it('all five bundles are written under the default profile, with no scoping notice', async () => {
+  it('[CORE-CLI-INIT-PROFILE-7] all five bundles are written under the default profile, with no scoping notice', async () => {
     const root = tmp('unscoped-root');
     const home = tmp('unscoped-home');
     await init(root, { home, noLlm: true, yes: true, ...DARWIN });
@@ -145,7 +145,7 @@ describe('AC: specflow scheduling is unchanged', () => {
 });
 
 describe('AC: a project scaffolded with a profile validates clean', () => {
-  it('the written config passes check.config under both profiles', async () => {
+  it('[CORE-CLI-INIT-PROFILE-10] the written config passes check.config under both profiles', async () => {
     for (const profile of ['specflow', 'superpowers'] as const) {
       const root = tmp(`validate-${profile}-root`);
       const home = tmp(`validate-${profile}-home`);
@@ -163,7 +163,7 @@ describe('AC: a project scaffolded with a profile validates clean', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: sync applies the same profile scoping as init (B-016)', () => {
-  it('does not resurrect the Bucket-3 test-runner bundle a superpowers project omitted', async () => {
+  it('[CORE-CLI-INIT-PROFILE-8] does not resurrect the Bucket-3 test-runner bundle a superpowers project omitted', async () => {
     const root = tmp('sync-scope-root');
     const home = tmp('sync-scope-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -177,7 +177,7 @@ describe('AC: sync applies the same profile scoping as init (B-016)', () => {
     ).toBe(false);
   }, TEST_TIMEOUT);
 
-  it('keeps the mixed bundles scoped after a sync', async () => {
+  it('[CORE-CLI-INIT-PROFILE-8] keeps the mixed bundles scoped after a sync', async () => {
     const root = tmp('sync-mixed-root');
     const home = tmp('sync-mixed-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -188,7 +188,7 @@ describe('AC: sync applies the same profile scoping as init (B-016)', () => {
     expect(daily).toContain('**bug-triage**');
   }, TEST_TIMEOUT);
 
-  it('switching profile to specflow restores the excluded bundle on the next sync', async () => {
+  it('[CORE-CLI-INIT-PROFILE-9] switching profile to specflow restores the excluded bundle on the next sync', async () => {
     const root = tmp('sync-switch-root');
     const home = tmp('sync-switch-home');
     await init(root, { home, noLlm: true, yes: true, profile: 'superpowers', ...DARWIN });
@@ -202,7 +202,7 @@ describe('AC: sync applies the same profile scoping as init (B-016)', () => {
     expect(writtenTaskDirs(home).some((d) => d.includes('test-runner'))).toBe(true);
   }, TEST_TIMEOUT);
 
-  it('switching profile to superpowers removes the payload rather than orphaning it', async () => {
+  it('[CORE-CLI-INIT-PROFILE-9] switching profile to superpowers removes the payload rather than orphaning it', async () => {
     const root = tmp('sync-switch-away-root');
     const home = tmp('sync-switch-away-home');
     await init(root, { home, noLlm: true, yes: true, ...DARWIN }); // specflow default

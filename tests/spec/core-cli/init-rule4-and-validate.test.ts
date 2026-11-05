@@ -84,7 +84,7 @@ describe('Overwrite protection becomes live', () => {
 // AC: cortex validate command works
 // ---------------------------------------------------------------------------
 describe('cortex validate command works', () => {
-  it('exits 0 on a conformant repo', async () => {
+  it('[SCHEMA-VALIDATOR-1] exits 0 on a conformant repo', async () => {
     const dir = makeTmpDir('validate-ok');
     try {
       fs.cpSync(VALID_FIXTURE, dir, { recursive: true });
@@ -95,7 +95,7 @@ describe('cortex validate command works', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('exits 1 and names the violation with a planted broken implements:', async () => {
+  it('[SCHEMA-VALIDATOR-3] exits 1 and names the violation with a planted broken implements:', async () => {
     const dir = makeTmpDir('validate-broken');
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {

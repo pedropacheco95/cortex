@@ -33,7 +33,7 @@ const PKG_SKILLS = path.join(PKG_ROOT, 'skills');
 
 describe('core-cli.sync Rule 5 — the additions chain', () => {
   describe('invariants', () => {
-    it('names every shipped bundle exactly once', () => {
+    it('[CORE-CLI-SYNC-11] names every shipped bundle exactly once', () => {
       const shipped = listSkillBundles(PKG_SKILLS);
       expect(shipped.length).toBeGreaterThan(0);
 
@@ -46,7 +46,7 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
       }
     });
 
-    it('never names the same bundle twice within an entry', () => {
+    it('[CORE-CLI-SYNC-11] never names the same bundle twice within an entry', () => {
       for (const entry of SKILL_ADDITIONS) {
         expect(new Set(entry.added).size, `duplicates in the ${entry.version} entry`).toBe(
           entry.added.length,
@@ -54,7 +54,7 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
       }
     });
 
-    it('dates no entry ahead of the package version', () => {
+    it('[CORE-CLI-SYNC-11] dates no entry ahead of the package version', () => {
       for (const entry of SKILL_ADDITIONS) {
         expect(
           compareVersions(entry.version, SCHEMA_VERSION),
@@ -63,7 +63,7 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
       }
     });
 
-    it('seeds at 3.3 — the version the chain landed in, moving no version constant', () => {
+    it('[CORE-CLI-SYNC-11] seeds at 3.3 — the version the chain landed in, moving no version constant', () => {
       const seed = SKILL_ADDITIONS.find((e) => e.version === '3.3');
       expect(seed).toBeDefined();
       // The seed is the 3.3 record: it keeps the bundles Round 2 removed.
@@ -72,16 +72,16 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
   });
 
   describe('shouldInstallAbsent', () => {
-    it('installs into a project below the bundle addition version', () => {
+    it('[CORE-CLI-SYNC-7] installs into a project below the bundle addition version', () => {
       expect(shouldInstallAbsent('cortex-archive-ingest', '3.2')).toBe(true);
       expect(shouldInstallAbsent('cortex-archive-ingest', '3.0')).toBe(true);
     });
 
-    it('withholds from a project already at the addition version', () => {
+    it('[CORE-CLI-SYNC-6] withholds from a project already at the addition version', () => {
       expect(shouldInstallAbsent('cortex-archive-ingest', '3.3')).toBe(false);
     });
 
-    it('withholds from a project past the addition version', () => {
+    it('[CORE-CLI-SYNC-6] withholds from a project past the addition version', () => {
       expect(shouldInstallAbsent('cortex-archive-ingest', '3.4')).toBe(false);
     });
 
@@ -92,7 +92,7 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
       expect(shouldInstallAbsent('some-bundle-nobody-entered', '3.3')).toBe(true);
     });
 
-    it('reaches a current project with a bundle added after its version', () => {
+    it('[CORE-CLI-SYNC-8] reaches a current project with a bundle added after its version', () => {
       // The criterion invariant (c) forbids testing against the real chain: a
       // hypothetical 3.4 entry against a project at 3.3 must install, while a
       // 3.3-seeded bundle at the same project must not.
@@ -102,7 +102,7 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
   });
 
   describe('bundleAddedAt', () => {
-    it('returns the entry version for a seeded bundle', () => {
+    it('[CORE-CLI-SYNC-11] returns the entry version for a seeded bundle', () => {
       expect(bundleAddedAt('specflow-entry')).toBe('3.3');
     });
 

@@ -34,12 +34,12 @@ function task(name: string) {
 // ---------------------------------------------------------------------------
 
 describe('the profile vocabulary', () => {
-  it('is exactly specflow and superpowers, defaulting to specflow', () => {
+  it('[CORE-CLI-INIT-PROFILE-10] is exactly specflow and superpowers, defaulting to specflow', () => {
     expect([...PROCESS_PROFILES]).toEqual(['specflow', 'superpowers']);
     expect(DEFAULT_PROFILE).toBe('specflow');
   });
 
-  it('rejects anything outside the enum', () => {
+  it('[CORE-CLI-INIT-PROFILE-4] rejects anything outside the enum', () => {
     expect(isProcessProfile('specflow')).toBe(true);
     expect(isProcessProfile('superpowers')).toBe(true);
     expect(isProcessProfile('waterfall')).toBe(false);
@@ -49,7 +49,7 @@ describe('the profile vocabulary', () => {
 });
 
 describe('AC: no flag means specflow', () => {
-  it('readProfile defaults when the key is absent', () => {
+  it('[CORE-CLI-INIT-PROFILE-2] readProfile defaults when the key is absent', () => {
     const root = tmp('absent-key');
     makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     expect(readProfile(root)).toBe('specflow');
@@ -70,7 +70,7 @@ describe('AC: no flag means specflow', () => {
 });
 
 describe('AC: an explicit profile is recorded and read back', () => {
-  it('readProfile returns a recorded superpowers profile', () => {
+  it('[CORE-CLI-INIT-PROFILE-1] readProfile returns a recorded superpowers profile', () => {
     const root = tmp('recorded');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'superpowers' } });
     expect(readProfile(root)).toBe('superpowers');
@@ -88,14 +88,14 @@ describe('AC: the validator accepts the enum and rejects anything else', () => {
   }
 
   for (const profile of PROCESS_PROFILES) {
-    it(`accepts "${profile}"`, async () => {
+    it(`[CORE-CLI-INIT-PROFILE-10] accepts "${profile}"`, async () => {
       const root = tmp(`valid-${profile}`);
       makeCortexProject(root, { config: { schemaVersion: '3.0', profile } });
       expect(await configViolations(root)).toEqual([]);
     });
   }
 
-  it('errors on a value outside the enum', async () => {
+  it('[CORE-CLI-INIT-PROFILE-10] errors on a value outside the enum', async () => {
     const root = tmp('invalid-enum');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'waterfall' } });
     const v = await configViolations(root);
@@ -105,7 +105,7 @@ describe('AC: the validator accepts the enum and rejects anything else', () => {
     expect(v[0]?.clause).toBe('§10.1');
   });
 
-  it('errors on a non-string value', async () => {
+  it('[CORE-CLI-INIT-PROFILE-10] errors on a non-string value', async () => {
     const root = tmp('non-string');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 3 } });
     const v = await configViolations(root);
@@ -115,7 +115,7 @@ describe('AC: the validator accepts the enum and rejects anything else', () => {
 });
 
 describe('AC: an existing project keeps validating', () => {
-  it('a config predating the field raises no violation, and profile is not an unknown key', async () => {
+  it('[CORE-CLI-INIT-PROFILE-11] a config predating the field raises no violation, and profile is not an unknown key', async () => {
     const root = tmp('pre-field');
     makeCortexProject(root, { config: { schemaVersion: '3.0' } });
     const report = await validate(root, { root });
@@ -137,7 +137,7 @@ describe('AC: an existing project keeps validating', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: specflow scheduling is unchanged', () => {
-  it('every bundle passes through untouched under the default profile', () => {
+  it('[CORE-CLI-INIT-PROFILE-7] every bundle passes through untouched under the default profile', () => {
     for (const t of SCHEDULED_TASKS) {
       expect(scopeTaskToProfile(t, 'specflow')).toBe(t);
     }
@@ -149,11 +149,11 @@ describe('AC: specflow scheduling is unchanged', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: the spec loops are not scheduled under superpowers', () => {
-  it('the test-runner bundle — Bucket-3 entire — is dropped', () => {
+  it('[CORE-CLI-INIT-PROFILE-5] the test-runner bundle — Bucket-3 entire — is dropped', () => {
     expect(scopeTaskToProfile(task('test-runner'), 'superpowers')).toBeNull();
   });
 
-  it('the daily bundle drops its bug-triage and spec-drift skills', () => {
+  it('[CORE-CLI-INIT-PROFILE-5] the daily bundle drops its bug-triage and spec-drift skills', () => {
     const scoped = scopeTaskToProfile(task('daily'), 'superpowers');
     expect(scoped).not.toBeNull();
     expect(scoped?.requiredSkills).not.toContain('cortex-loop-bug-triage');
@@ -161,7 +161,7 @@ describe('AC: the spec loops are not scheduled under superpowers', () => {
     expect(scoped?.requiredSkills).not.toContain('specflow-bugs');
   });
 
-  it('the daily bundle instructs skipping those members explicitly', () => {
+  it('[CORE-CLI-INIT-PROFILE-5] the daily bundle instructs skipping those members explicitly', () => {
     const scoped = scopeTaskToProfile(task('daily'), 'superpowers');
     expect(scoped?.body).toContain('Profile scoping');
     expect(scoped?.body).toContain('**bug-triage**');
@@ -169,7 +169,7 @@ describe('AC: the spec loops are not scheduled under superpowers', () => {
     expect(scoped?.body).toMatch(/Skipping them is not a failure/);
   });
 
-  it('the weekly-quality bundle drops lint and verify but keeps insight-refresh-full', () => {
+  it('[CORE-CLI-INIT-PROFILE-5] the weekly-quality bundle drops lint and verify but keeps insight-refresh-full', () => {
     const scoped = scopeTaskToProfile(task('weekly-quality'), 'superpowers');
     expect(scoped?.requiredSkills).not.toContain('specflow-lint');
     expect(scoped?.requiredSkills).not.toContain('specflow-tests');
@@ -183,7 +183,7 @@ describe('AC: the spec loops are not scheduled under superpowers', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: the knowledge loops are scheduled under every profile', () => {
-  it('four of the five bundles survive, and only test-runner disappears', () => {
+  it('[CORE-CLI-INIT-PROFILE-6] four of the five bundles survive, and only test-runner disappears', () => {
     const surviving = SCHEDULED_TASKS.map((t) => scopeTaskToProfile(t, 'superpowers')).filter(
       (t): t is NonNullable<typeof t> => t !== null,
     );
@@ -203,7 +203,7 @@ describe('AC: the knowledge loops are scheduled under every profile', () => {
     'cortex-extract-insight',
   ];
 
-  it('every Bucket-1 skill is still required by some surviving bundle', () => {
+  it('[CORE-CLI-INIT-PROFILE-6] every Bucket-1 skill is still required by some surviving bundle', () => {
     const required = new Set(
       SCHEDULED_TASKS.map((t) => scopeTaskToProfile(t, 'superpowers'))
         .filter((t): t is NonNullable<typeof t> => t !== null)
@@ -214,13 +214,13 @@ describe('AC: the knowledge loops are scheduled under every profile', () => {
     }
   });
 
-  it('bundles with no Bucket-3 members are returned untouched', () => {
+  it('[CORE-CLI-INIT-PROFILE-6] bundles with no Bucket-3 members are returned untouched', () => {
     for (const name of ['weekly-curation', 'monthly-review']) {
       expect(scopeTaskToProfile(task(name), 'superpowers')).toBe(task(name));
     }
   });
 
-  it('scoping preserves each surviving member’s discipline — the original body is retained whole', () => {
+  it('[CORE-CLI-INIT-PROFILE-6] scoping preserves each surviving member’s discipline — the original body is retained whole', () => {
     const original = task('daily');
     const scoped = scopeTaskToProfile(original, 'superpowers');
     expect(scoped?.body.endsWith(original.body)).toBe(true);

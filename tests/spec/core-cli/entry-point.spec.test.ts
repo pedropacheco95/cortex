@@ -37,19 +37,19 @@ afterAll(() => {
 });
 
 describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
-  it('a symlinked bin runs a verb', () => {
+  it('[CORE-CLI-INIT-25] a symlinked bin runs a verb', () => {
     const r = exec(path.join(tmp, 'cortex'), ['validate', FIXTURE]);
     expect(r.stdout).toContain('Cortex Schema Validator');
     expect(r.code).toBe(0);
   });
 
-  it('a symlinked bare bin gets usage and exit 2', () => {
+  it('[CORE-CLI-INIT-26] a symlinked bare bin gets usage and exit 2', () => {
     const r = exec(path.join(tmp, 'cortex'), []);
     expect(r.stdout).toContain('Run `cortex init` to set up a project');
     expect(r.code).toBe(2);
   });
 
-  it('a chain of symlinks reaches the dispatcher', () => {
+  it('[CORE-CLI-INIT-27] a chain of symlinks reaches the dispatcher', () => {
     fs.symlinkSync(path.join(tmp, 'cortex'), path.join(tmp, 'b'));
     fs.symlinkSync(path.join(tmp, 'b'), path.join(tmp, 'a'));
     const r = exec(path.join(tmp, 'a'), ['validate', FIXTURE]);
@@ -57,13 +57,13 @@ describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
     expect(r.code).toBe(0);
   });
 
-  it('a path with a space reaches the dispatcher', () => {
+  it('[CORE-CLI-INIT-25] a path with a space reaches the dispatcher', () => {
     fs.mkdirSync(path.join(tmp, 'with space'));
     fs.symlinkSync(path.join(out, 'cli/cli.js'), path.join(tmp, 'with space', 'cortex'));
     expect(exec(path.join(tmp, 'with space', 'cortex'), ['validate', FIXTURE]).code).toBe(0);
   });
 
-  it('symlinked schema and hook entry points do their work', () => {
+  it('[CORE-CLI-INIT-28] symlinked schema and hook entry points do their work', () => {
     fs.symlinkSync(path.join(out, 'schema/cli.js'), path.join(tmp, 'schema-cli'));
     fs.symlinkSync(path.join(out, 'hooks/cli.js'), path.join(tmp, 'hooks-cli'));
     // These two have no shebang: they are run as `node <file>`.
@@ -74,7 +74,7 @@ describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
     expect(hook.stdout.length).toBeGreaterThan(0);
   });
 
-  it('a refusal survives a symlinked bin', () => {
+  it('[CORE-CLI-INIT-30] a refusal survives a symlinked bin', () => {
     const repo = path.join(tmp, 'repo');
     fs.mkdirSync(path.join(repo, 'specflow'), { recursive: true });
     fs.mkdirSync(path.join(repo, 'src'));
@@ -100,7 +100,7 @@ describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
     expect(JSON.parse(r.stdout).counts.criteria).toBe(3000);
   });
 
-  it('importing the module does not run it', () => {
+  it('[CORE-CLI-INIT-29] importing the module does not run it', () => {
     const script = path.join(tmp, 'import.mjs');
     fs.writeFileSync(script, `await import(${JSON.stringify(path.join(out, 'cli/cli.js'))});\nconsole.log('imported');\n`);
     const r = spawnSync(process.execPath, [script], { encoding: 'utf-8', cwd: tmp });

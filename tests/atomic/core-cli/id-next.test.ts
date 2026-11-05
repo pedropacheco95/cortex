@@ -57,7 +57,7 @@ function initialisedProject(): string {
 }
 
 describe('AC: `cortex id next` prints the id and reserves it', () => {
-  it('rule then bug --slug flaky-tier: stdout R-004 then B-020, exit 0 each, lines `R-004 reserved` and `B-020 flaky-tier`', async () => {
+  it('[SCHEMA-ID-REGISTRY-4] rule then bug --slug flaky-tier: stdout R-004 then B-020, exit 0 each, lines `R-004 reserved` and `B-020 flaky-tier`', async () => {
     initialisedProject();
     expect(await run(['id', 'next', 'rule'])).toBe(0);
     expect(logs).toEqual(['R-004']);
@@ -70,7 +70,7 @@ describe('AC: `cortex id next` prints the id and reserves it', () => {
     expect(text.endsWith('B-019 bug-19\nB-020 flaky-tier\n')).toBe(true);
   });
 
-  it('the id is the only thing on stdout, so a shell can capture it', async () => {
+  it('[SCHEMA-ID-REGISTRY-4] the id is the only thing on stdout, so a shell can capture it', async () => {
     initialisedProject();
     await run(['id', 'next', 'bug']);
     expect(logs.join('\n')).toBe('B-020');
@@ -78,7 +78,7 @@ describe('AC: `cortex id next` prints the id and reserves it', () => {
 });
 
 describe('AC: bad grammar is exit 2 and writes nothing', () => {
-  it('`cortex id next`, `cortex id next thread` and `cortex id next rule --force` each exit 2 with a usage line on stderr; the registry is byte-identical', async () => {
+  it('[SCHEMA-ID-REGISTRY-5] `cortex id next`, `cortex id next thread` and `cortex id next rule --force` each exit 2 with a usage line on stderr; the registry is byte-identical', async () => {
     const before = initialisedProject();
     const snapshot = snapshotTree(cwd);
     for (const argv of [['id', 'next'], ['id', 'next', 'thread'], ['id', 'next', 'rule', '--force'], ['id'], ['id', 'prev', 'rule']]) {
@@ -92,7 +92,7 @@ describe('AC: bad grammar is exit 2 and writes nothing', () => {
     expect(snapshotTree(cwd)).toEqual(snapshot);
   });
 
-  it('`--slug` without a value is exit 2, nothing written', async () => {
+  it('[SCHEMA-ID-REGISTRY-5] `--slug` without a value is exit 2, nothing written', async () => {
     const before = initialisedProject();
     expect(await run(['id', 'next', 'bug', '--slug'])).toBe(2);
     expect(fs.readFileSync(path.join(cwd, REGISTRY_FILE), 'utf-8')).toBe(before);

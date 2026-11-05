@@ -81,7 +81,7 @@ describe('AC1: missing CLAUDE.md block is repaired, rest of the file untouched',
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('gains exactly one well-formed managed block matching the current template and schemaVersion', () => {
+  it('[CORE-CLI-SYNC-1] gains exactly one well-formed managed block matching the current template and schemaVersion', () => {
     expect(result.exitCode).toBe(0);
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(content.split('<!-- cortex:start').length - 1).toBe(1);
@@ -89,7 +89,7 @@ describe('AC1: missing CLAUDE.md block is repaired, rest of the file untouched',
     expect(content).toContain(`<!-- cortex:start v${SCHEMA_VERSION} -->`);
   });
 
-  it('# My Project and ## Commands are byte-identical to before', () => {
+  it('[CORE-CLI-SYNC-1] # My Project and ## Commands are byte-identical to before', () => {
     const content = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(content.startsWith(preamble)).toBe(true);
   });
@@ -97,7 +97,7 @@ describe('AC1: missing CLAUDE.md block is repaired, rest of the file untouched',
   // 3.4 fifth revision (Rule 3): the block is rendered from the config as it
   // stands — a public repo's placement paragraph ends with the rule-20 tail,
   // and a later config edit + sync refreshes it.
-  it('with visibility.repo: "public" the repaired block carries the rule-20 placement tail; flipping to private refreshes it', async () => {
+  it('[CORE-CLI-SYNC-1] with visibility.repo: "public" the repaired block carries the rule-20 placement tail; flipping to private refreshes it', async () => {
     writeConfig(root, { ...readConfig(root), visibility: { repo: 'public', allow: [] } });
     fs.writeFileSync(path.join(root, 'CLAUDE.md'), preamble);
     const repaired = await sync(root, { home, ...DARWIN_SYNC });
@@ -133,7 +133,7 @@ describe('AC2: no --force needed on an existing project', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('completes without requiring any force-style flag', () => {
+  it('[CORE-CLI-SYNC-2] completes without requiring any force-style flag', () => {
     expect(result.exitCode).toBe(0);
   });
 });
@@ -148,7 +148,7 @@ describe('AC2: a project with no .cortex/ at all refuses cleanly (exit 2, nothin
   });
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('exits 2 and nothing is created or modified in the project or ~/.claude/', async () => {
+  it('[CORE-CLI-SYNC-2] exits 2 and nothing is created or modified in the project or ~/.claude/', async () => {
     const projectBefore = snapshotTree(root);
     const homeBefore = snapshotTree(home);
     const result = await sync(root, { home, ...DARWIN_SYNC });
@@ -170,7 +170,7 @@ describe('AC3: non-macOS platform refused', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('exits 2 with a message naming macOS, and nothing is written', async () => {
+  it('[CORE-CLI-SYNC-3] exits 2 with a message naming macOS, and nothing is written', async () => {
     const before = snapshotTree(root);
     const result = await sync(root, { home, platform: 'linux' });
     expect(result.exitCode).toBe(2);
@@ -203,7 +203,7 @@ describe('AC4: unmodified skill bundle is upgraded silently', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('the bundle on disk matches the newly shipped content, marker rewritten, summary names it upgraded', () => {
+  it('[CORE-CLI-SYNC-4] the bundle on disk matches the newly shipped content, marker rewritten, summary names it upgraded', () => {
     expect(result.exitCode).toBe(0);
     const installedSkill = path.join(root, '.claude', 'skills', bundle, 'SKILL.md');
     const shippedSkill = path.join(PKG_ROOT, 'skills', bundle, 'SKILL.md');
@@ -237,7 +237,7 @@ describe('AC5: user-modified skill bundle is preserved and reported', () => {
     fs.writeFileSync(path.join(bundleDir, 'SKILL.md'), userEdited);
   }
 
-  it('without --yes: bundle unchanged, summary names it skipped as user-modified', async () => {
+  it('[CORE-CLI-SYNC-5] without --yes: bundle unchanged, summary names it skipped as user-modified', async () => {
     const { root: r, home: h } = await bootstrap('ac5a');
     root = r; home = h;
     const bundleDir = path.join(root, '.claude', 'skills', bundle);
@@ -250,7 +250,7 @@ describe('AC5: user-modified skill bundle is preserved and reported', () => {
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('with --yes: bundle overwritten with the shipped version, summary names it upgraded', async () => {
+  it('[CORE-CLI-SYNC-5] with --yes: bundle overwritten with the shipped version, summary names it upgraded', async () => {
     const { root: r, home: h } = await bootstrap('ac5b');
     root = r; home = h;
     const bundleDir = path.join(root, '.claude', 'skills', bundle);
@@ -286,7 +286,7 @@ describe('AC6: task payloads refresh and the instruction block appears when unre
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('the affected payload SKILL.md is refreshed to the current roster', () => {
+  it('[CORE-CLI-SYNC-12] the affected payload SKILL.md is refreshed to the current roster', () => {
     expect(result.exitCode).toBe(0);
     const scoped = scopedTaskName(root, canonical);
     const skillPath = path.join(home, '.claude', 'scheduled-tasks', scoped, 'SKILL.md');
@@ -295,12 +295,12 @@ describe('AC6: task payloads refresh and the instruction block appears when unre
     expect(result.summary).toMatch(/refreshed/i);
   });
 
-  it('prints the open-Desktop-and-run instruction block (no registry → all five unregistered)', () => {
+  it('[CORE-CLI-SYNC-12] prints the open-Desktop-and-run instruction block (no registry → all five unregistered)', () => {
     expect(result.summary).toContain('/cortex-register-tasks');
     expect(result.summary).toMatch(/not yet registered/);
   });
 
-  it('with a fixture registry where all five are registered and enabled, prints the all-registered one-liner instead', async () => {
+  it('[CORE-CLI-SYNC-12] with a fixture registry where all five are registered and enabled, prints the all-registered one-liner instead', async () => {
     const { root: r2, home: h2 } = await bootstrap('ac6b');
     const appSupportDir = makeTmpDir('ac6b-appsupport');
     const registryFile = path.join(appSupportDir, 'claude-code-sessions', 'uuid-a', 'uuid-b', 'scheduled-tasks.json');
@@ -341,14 +341,14 @@ describe('AC7: localised _index.md is preserved and reported, not refreshed', ()
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('compass/_index.md is byte-identical after the run and named as localised', () => {
+  it('[CORE-CLI-SYNC-13] compass/_index.md is byte-identical after the run and named as localised', () => {
     expect(result.exitCode).toBe(0);
     expect(fs.readFileSync(path.join(root, '.cortex', 'compass', '_index.md'), 'utf-8')).toBe(localisedContent);
     expect(result.summary).toContain('compass');
     expect(result.summary).toMatch(/localised/i);
   });
 
-  it('a sibling _index.md that still matches its template is refreshed (current)', () => {
+  it('[CORE-CLI-SYNC-13] a sibling _index.md that still matches its template is refreshed (current)', () => {
     // atlas/_index.md was untouched since init wrote the current template —
     // it is categorised as current, not localised.
     const atlasLines = result.summary.split('\n').filter((l) => l.includes('atlas'));
@@ -378,7 +378,7 @@ describe('AC8: knowledge content is byte-identical after sync', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('every file under compass/atlas/archive/insight/pulse is byte-identical, none created or deleted', async () => {
+  it('[CORE-CLI-SYNC-14] every file under compass/atlas/archive/insight/pulse is byte-identical, none created or deleted', async () => {
     const before = knowledgeSnapshot(root);
     const result = await sync(root, { home, ...DARWIN_SYNC });
     expect(result.exitCode).toBe(0);
@@ -391,7 +391,7 @@ describe('AC8: knowledge content is byte-identical after sync', () => {
 // AC9: MAJOR schema lag defers to migrate, nothing written
 // ---------------------------------------------------------------------------
 describe('AC9: MAJOR schema lag defers to migrate, nothing written', () => {
-  it('MAJOR below supported → exit 3, names cortex migrate, nothing written', async () => {
+  it('[CORE-CLI-SYNC-16] MAJOR below supported → exit 3, names cortex migrate, nothing written', async () => {
     const { root, home } = await bootstrap('ac9a');
     const config = readConfig(root);
     writeConfig(root, { ...config, schemaVersion: '2.0' });
@@ -403,7 +403,7 @@ describe('AC9: MAJOR schema lag defers to migrate, nothing written', () => {
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('MAJOR above supported → exit 3, names a cortex package upgrade, nothing written', async () => {
+  it('[CORE-CLI-SYNC-16] MAJOR above supported → exit 3, names a cortex package upgrade, nothing written', async () => {
     const { root, home } = await bootstrap('ac9b');
     const config = readConfig(root);
     writeConfig(root, { ...config, schemaVersion: '4.0' });
@@ -438,11 +438,11 @@ describe('AC10: schemaVersion is rewritten to the installed package version, no 
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it(`cortex.config.json's schemaVersion reads ${SCHEMA_VERSION}`, () => {
+  it(`[CORE-CLI-SYNC-17] cortex.config.json's schemaVersion reads ${SCHEMA_VERSION}`, () => {
     expect(readConfig(root)['schemaVersion']).toBe(SCHEMA_VERSION);
   });
 
-  it('no other key in the config file is modified', () => {
+  it('[CORE-CLI-SYNC-17] no other key in the config file is modified', () => {
     const after = readConfig(root);
     for (const key of Object.keys(originalConfig)) {
       if (key === 'schemaVersion') continue;
@@ -453,7 +453,7 @@ describe('AC10: schemaVersion is rewritten to the installed package version, no 
 
   // 3.4 fifth revision (schema.visibility Rule 1): a config that predates the
   // key does not gain it on sync — absent means unknown.
-  it('a config that lacked `visibility` before the upgrade still lacks it after', () => {
+  it('[SCHEMA-VISIBILITY-9] a config that lacked `visibility` before the upgrade still lacks it after', () => {
     expect('visibility' in originalConfig).toBe(false);
     expect('visibility' in readConfig(root)).toBe(false);
   });
@@ -473,7 +473,7 @@ describe('AC11: idempotent double-run', () => {
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('no file bytes change, no new skill/task upgrades occur, summary reports everything already current', async () => {
+  it('[CORE-CLI-SYNC-18] no file bytes change, no new skill/task upgrades occur, summary reports everything already current', async () => {
     const before = snapshotTree(root);
     const second = await sync(root, { home, ...DARWIN_SYNC });
     expect(second.exitCode).toBe(0);
@@ -539,15 +539,15 @@ describe('AC10: a missing id registry is created once from the files on disk', (
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
-  it('after the first run the registry carries the header, three R- lines then nineteen B- lines ascending, slugs from the filenames', () => {
+  it('[CORE-CLI-SYNC-15] after the first run the registry carries the header, three R- lines then nineteen B- lines ascending, slugs from the filenames', () => {
     expect(afterFirst).toBe(expected());
   });
 
-  it('the first summary reads `registry created (3 rules, 19 bugs)`', () => {
+  it('[CORE-CLI-SYNC-15] the first summary reads `registry created (3 rules, 19 bugs)`', () => {
     expect(first.summary).toContain('registry created (3 rules, 19 bugs)');
   });
 
-  it('after the second run the file is byte-identical and the summary reads `registry present`', () => {
+  it('[CORE-CLI-SYNC-15] after the second run the file is byte-identical and the summary reads `registry present`', () => {
     expect(fs.readFileSync(path.join(root, REGISTRY_FILE), 'utf-8')).toBe(afterFirst);
     expect(second.summary).toContain('registry present');
   });

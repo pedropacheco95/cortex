@@ -67,7 +67,7 @@ async function makeProject(label: string, atVersion: string, deleted: string[] =
 
 describe('AC: a bundle the developer deleted is not reinstalled', () => {
   it(
-    'leaves it absent and names it in the summary',
+    '[CORE-CLI-SYNC-6] leaves it absent and names it in the summary',
     async () => {
       const { root, home } = await makeProject('deleted', '3.3', ['verification-before-completion']);
 
@@ -81,7 +81,7 @@ describe('AC: a bundle the developer deleted is not reinstalled', () => {
   );
 
   it(
-    'stays absent across a second sync — the skip is idempotent',
+    '[CORE-CLI-SYNC-6] stays absent across a second sync — the skip is idempotent',
     async () => {
       const { root, home } = await makeProject('deleted-twice', '3.3', ['verification-before-completion']);
 
@@ -113,7 +113,7 @@ describe('AC: a bundle the developer deleted is not reinstalled', () => {
 
 describe('AC: a project predating the chain gets the full roster once', () => {
   it(
-    'installs every absent bundle when the project is below the seed version',
+    '[CORE-CLI-SYNC-7] installs every absent bundle when the project is below the seed version',
     async () => {
       const gone = ['verification-before-completion', 'cortex-register-tasks'];
       const { root, home } = await makeProject('predates', '3.2', gone);
@@ -132,7 +132,7 @@ describe('AC: a project predating the chain gets the full roster once', () => {
 
 describe('AC: the additions comparison reads the version from before Rule 2\'s rewrite', () => {
   it(
-    'installs using the pre-run version even though sync rewrites schemaVersion first',
+    '[CORE-CLI-SYNC-9] installs using the pre-run version even though sync rewrites schemaVersion first',
     async () => {
       const gone = ['verification-before-completion', 'cortex-register-tasks'];
       const { root, home } = await makeProject('ordering', '3.2', gone);
@@ -156,7 +156,7 @@ describe('AC: the additions comparison reads the version from before Rule 2\'s r
 
 describe('AC: a missing skills directory is repaired in full', () => {
   it(
-    'installs every shipped bundle regardless of the chain',
+    '[CORE-CLI-SYNC-10] installs every shipped bundle regardless of the chain',
     async () => {
       const { root, home } = await makeProject('wiped', '3.3');
       fs.rmSync(path.join(root, '.claude', 'skills'), { recursive: true, force: true });

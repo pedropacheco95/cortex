@@ -150,7 +150,7 @@ describe('TASK_CADENCE_3X: five bundle entries, collision-free', () => {
 // discoverRegistryFiles
 // ---------------------------------------------------------------------------
 describe('discoverRegistryFiles: glob under claude-code-sessions/', () => {
-  it('finds nested registry files and sorts newest-modified first', () => {
+  it('[CORE-CLI-TASKS-REGISTER-7] finds nested registry files and sorts newest-modified first', () => {
     const fx = makeFixture('disc', defaultRegistry());
     try {
       const older = path.join(fx.appSupport, 'claude-code-sessions', 'uuid-old', 'uuid-old2', 'scheduled-tasks.json');
@@ -164,7 +164,7 @@ describe('discoverRegistryFiles: glob under claude-code-sessions/', () => {
     }
   });
 
-  it('returns [] when nothing exists (missing dir included)', () => {
+  it('[CORE-CLI-TASKS-REGISTER-5] returns [] when nothing exists (missing dir included)', () => {
     const fx = makeFixture('disc-none');
     try {
       expect(discoverRegistryFiles(fx.appSupport)).toEqual([]);
@@ -178,7 +178,7 @@ describe('discoverRegistryFiles: glob under claude-code-sessions/', () => {
 // registerTasks — upsert mechanics
 // ---------------------------------------------------------------------------
 describe('registerTasks: upsert into the app registry', () => {
-  it('adds the three owned entries with every owned field set — model included', () => {
+  it('[CORE-CLI-TASKS-REGISTER-1] adds the three owned entries with every owned field set — model included', () => {
     const fx = makeFixture('add', defaultRegistry());
     try {
       const r = registerTasks(opts(fx));
@@ -205,7 +205,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it('preserves both foreign entries (unknown fields included), recordedSkips, and unknown top-level keys structurally byte-identically', () => {
+  it('[CORE-CLI-TASKS-REGISTER-1] preserves both foreign entries (unknown fields included), recordedSkips, and unknown top-level keys structurally byte-identically', () => {
     const fx = makeFixture('foreign', defaultRegistry());
     try {
       registerTasks(opts(fx));
@@ -223,7 +223,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it('creates a backup holding the pre-write bytes, and writes the payload roster first', () => {
+  it('[CORE-CLI-TASKS-REGISTER-1] creates a backup holding the pre-write bytes, and writes the payload roster first', () => {
     const fx = makeFixture('backup', defaultRegistry());
     try {
       const before = fs.readFileSync(fx.registryFile, 'utf-8');
@@ -240,7 +240,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it('is idempotent: a second run changes nothing, adds no backup, and says so', () => {
+  it('[CORE-CLI-TASKS-REGISTER-2] is idempotent: a second run changes nothing, adds no backup, and says so', () => {
     const fx = makeFixture('idem', defaultRegistry());
     try {
       registerTasks(opts(fx));
@@ -255,7 +255,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it('updates an existing own entry in place: owned fields corrected, createdAt and unknown fields preserved, no duplicate', () => {
+  it('[CORE-CLI-TASKS-REGISTER-3] updates an existing own entry in place: owned fields corrected, createdAt and unknown fields preserved, no duplicate', () => {
     const fx = makeFixture('update');
     const id = scopedTaskName(fx.root, 'learn');
     const registry = defaultRegistry();
@@ -286,7 +286,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it("removes this project's retired scoped entries (pre-v3 AND the fourteen pre-consolidation loops) but never another project's", () => {
+  it("[CORE-CLI-TASKS-REGISTER-4] removes this project's retired scoped entries (pre-v3 AND the fourteen pre-consolidation loops) but never another project's", () => {
     const fx = makeFixture('retired');
     const ownRetired = scopedTaskName(fx.root, 'cortex-loop-anatomy-refresh-deep');
     const ownRetiredLoop = scopedTaskName(fx.root, 'cortex-pulse-hygiene'); // one of the 14 superseded standalones
@@ -311,7 +311,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it('zero registry files → exit 1 naming the app as the registry creator; nothing created', () => {
+  it('[CORE-CLI-TASKS-REGISTER-5] zero registry files → exit 1 naming the app as the registry creator; nothing created', () => {
     const fx = makeFixture('zero');
     try {
       const r = registerTasks(opts(fx));
@@ -324,7 +324,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it('multiple registries → most-recently-modified wins, warning names the ignored one', () => {
+  it('[CORE-CLI-TASKS-REGISTER-7] multiple registries → most-recently-modified wins, warning names the ignored one', () => {
     const fx = makeFixture('multi', defaultRegistry());
     try {
       const older = path.join(fx.appSupport, 'claude-code-sessions', 'uuid-old', 'uuid-old2', 'scheduled-tasks.json');
@@ -344,7 +344,7 @@ describe('registerTasks: upsert into the app registry', () => {
     }
   });
 
-  it('malformed registry JSON → exit 1, file untouched, no backup', () => {
+  it('[CORE-CLI-TASKS-REGISTER-6] malformed registry JSON → exit 1, file untouched, no backup', () => {
     const fx = makeFixture('bad', 'not json at all\n');
     try {
       const r = registerTasks(opts(fx));
@@ -362,7 +362,7 @@ describe('registerTasks: upsert into the app registry', () => {
 // verifyTasks — per-task report + exit codes
 // ---------------------------------------------------------------------------
 describe('verifyTasks: report and exit codes', () => {
-  it('after register: all three ok, exit 0', () => {
+  it('[CORE-CLI-TASKS-REGISTER-8] after register: all three ok, exit 0', () => {
     const fx = makeFixture('vok', defaultRegistry());
     try {
       registerTasks(opts(fx));
@@ -375,7 +375,7 @@ describe('verifyTasks: report and exit codes', () => {
     }
   });
 
-  it('missing, disabled, and dangling entries each fail with a named reason, exit 1', () => {
+  it('[CORE-CLI-TASKS-REGISTER-8] missing, disabled, and dangling entries each fail with a named reason, exit 1', () => {
     const fx = makeFixture('vfail', defaultRegistry());
     try {
       registerTasks(opts(fx));
@@ -401,7 +401,7 @@ describe('verifyTasks: report and exit codes', () => {
     }
   });
 
-  it('cron drift is reported but does not fail', () => {
+  it('[CORE-CLI-TASKS-REGISTER-9] cron drift is reported but does not fail', () => {
     const fx = makeFixture('vdrift', defaultRegistry());
     try {
       registerTasks(opts(fx));
@@ -418,7 +418,7 @@ describe('verifyTasks: report and exit codes', () => {
     }
   });
 
-  it('zero registries → exit 1 with the app-creates-it message', () => {
+  it('[CORE-CLI-TASKS-REGISTER-5] zero registries → exit 1 with the app-creates-it message', () => {
     const fx = makeFixture('vzero');
     try {
       const v = verifyTasks(opts(fx));
@@ -434,7 +434,7 @@ describe('verifyTasks: report and exit codes', () => {
 // tasksPlan — the authoritative, read-only registration plan (Rule 10)
 // ---------------------------------------------------------------------------
 describe('tasksPlan: three entries, stable JSON shape, writes nothing', () => {
-  it('planTasks emits all three with every plan field populated — the right model per task', () => {
+  it('[CORE-CLI-TASKS-REGISTER-11] planTasks emits all three with every plan field populated — the right model per task', () => {
     const fx = makeFixture('plan');
     try {
       const plan = planTasks({ projectRoot: fx.root, home: fx.home });
@@ -463,7 +463,7 @@ describe('tasksPlan: three entries, stable JSON shape, writes nothing', () => {
     }
   });
 
-  it('--json output round-trips to the same stable machine shape', () => {
+  it('[CORE-CLI-TASKS-REGISTER-11] --json output round-trips to the same stable machine shape', () => {
     const fx = makeFixture('plan-json');
     try {
       const r = tasksPlan({ projectRoot: fx.root, home: fx.home }, true);
@@ -479,7 +479,7 @@ describe('tasksPlan: three entries, stable JSON shape, writes nothing', () => {
     }
   });
 
-  it('human output names every scoped id and points at the Desktop-session skill flow; nothing is written', () => {
+  it('[CORE-CLI-TASKS-REGISTER-11] human output names every scoped id and points at the Desktop-session skill flow; nothing is written', () => {
     const fx = makeFixture('plan-human');
     try {
       const r = tasksPlan({ projectRoot: fx.root, home: fx.home }, false);
@@ -503,7 +503,7 @@ describe('tasksPlan: three entries, stable JSON shape, writes nothing', () => {
 // register guard — refuses while the Desktop app runs (Rule 11)
 // ---------------------------------------------------------------------------
 describe('registerTasks guard: injected Desktop-app process check', () => {
-  it('checker=true → exit 1 before any write: registry untouched, no backup, no payloads', () => {
+  it('[CORE-CLI-TASKS-REGISTER-12] checker=true → exit 1 before any write: registry untouched, no backup, no payloads', () => {
     const fx = makeFixture('guard-on', defaultRegistry());
     try {
       const before = fs.readFileSync(fx.registryFile, 'utf-8');
@@ -518,7 +518,7 @@ describe('registerTasks guard: injected Desktop-app process check', () => {
     }
   });
 
-  it('checker=false → proceeds and registers normally', () => {
+  it('[CORE-CLI-TASKS-REGISTER-12] checker=false → proceeds and registers normally', () => {
     const fx = makeFixture('guard-off', defaultRegistry());
     try {
       const r = registerTasks({ ...opts(fx), isDesktopAppRunning: () => false });
@@ -534,7 +534,7 @@ describe('registerTasks guard: injected Desktop-app process check', () => {
 // registrationStatus — init's read-only summary check (Rule 12)
 // ---------------------------------------------------------------------------
 describe('registrationStatus: read-only registered-and-enabled check', () => {
-  it('no registry (app never ran) → registryFound false, all three unregistered', () => {
+  it('[CORE-CLI-TASKS-REGISTER-27] no registry (app never ran) → registryFound false, all three unregistered', () => {
     const fx = makeFixture('rs-none');
     try {
       const s = registrationStatus(opts(fx));
@@ -546,7 +546,7 @@ describe('registrationStatus: read-only registered-and-enabled check', () => {
     }
   });
 
-  it('after register → none unregistered; a disabled entry counts as unregistered', () => {
+  it('[CORE-CLI-TASKS-REGISTER-27] after register → none unregistered; a disabled entry counts as unregistered', () => {
     const fx = makeFixture('rs-full', defaultRegistry());
     try {
       registerTasks(opts(fx));
@@ -570,13 +570,13 @@ describe('cortex-register-tasks skill bundle', () => {
   const pkgSkill = path.join(REPO_ROOT, 'skills', 'cortex-register-tasks', 'SKILL.md');
   const localSkill = path.join(REPO_ROOT, '.claude', 'skills', 'cortex-register-tasks', 'SKILL.md');
 
-  it('exists in both trees, byte-identical', () => {
+  it('[CORE-CLI-TASKS-REGISTER-13] exists in both trees, byte-identical', () => {
     expect(fs.existsSync(pkgSkill)).toBe(true);
     expect(fs.existsSync(localSkill)).toBe(true);
     expect(fs.readFileSync(pkgSkill).equals(fs.readFileSync(localSkill))).toBe(true);
   });
 
-  it('preflights the Desktop-only MCP tools, consumes the plan, and ends with verify', () => {
+  it('[CORE-CLI-TASKS-REGISTER-13] preflights the Desktop-only MCP tools, consumes the plan, and ends with verify', () => {
     const raw = fs.readFileSync(pkgSkill, 'utf-8');
     expect(raw).toContain('name: cortex-register-tasks');
     expect(raw).toContain('mcp__scheduled-tasks__create_scheduled_task');
@@ -591,7 +591,7 @@ describe('cortex-register-tasks skill bundle', () => {
     expect(raw).toMatch(/never write the app's\s+`scheduled-tasks\.json`/i);
   });
 
-  it('The registration skill ships and runs only when typed', () => {
+  it('[CORE-CLI-TASKS-REGISTER-13] The registration skill ships and runs only when typed', () => {
     const raw = fs.readFileSync(pkgSkill, 'utf-8');
     const frontmatter = /^---\n([\s\S]*?)\n---/.exec(raw)![1]!;
     expect(frontmatter).toMatch(/^disable-model-invocation: true$/m);

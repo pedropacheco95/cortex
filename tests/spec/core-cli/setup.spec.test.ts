@@ -64,7 +64,7 @@ const installed = (root: string): boolean => FINAL_BUNDLES.every((n) => fs.exist
 const ACCEPTED = { schemaVersion: '4.0', visibility: { repo: 'private', allow: [] }, migration: { from: '3.4', accepted: '2026-11-01' } };
 
 describe('core-cli.init Rule 20', () => {
-  it('init sets up a new project in one command', async () => {
+  it('[CORE-CLI-INIT-31] init sets up a new project in one command', async () => {
     const root = tmpRepo('new');
     gitInit(root);
     const r = await run(root);
@@ -77,7 +77,7 @@ describe('core-cli.init Rule 20', () => {
     expect(r.text.split('\n')[0]).toMatch(/^created: /);
   });
 
-  it('init reads a named target', async () => {
+  it('[CORE-CLI-INIT-32] init reads a named target', async () => {
     const cwd = process.cwd();
     const here = tmpRepo('here');
     const p = tmpRepo('p');
@@ -92,7 +92,7 @@ describe('core-cli.init Rule 20', () => {
     expect(fs.readdirSync(here)).toEqual([]);
   });
 
-  it('init run twice changes nothing the second time', async () => {
+  it('[CORE-CLI-INIT-33] init run twice changes nothing the second time', async () => {
     const root = tmpRepo('twice');
     gitInit(root);
     const packageDir = pkg();
@@ -105,7 +105,7 @@ describe('core-cli.init Rule 20', () => {
     expect(r.text).not.toMatch(/removed|installed|updated/);
   });
 
-  it('init on a project with a store runs only the update route', async () => {
+  it('[CORE-CLI-INIT-34] init on a project with a store runs only the update route', async () => {
     const root = tmpRepo('store');
     store(root, ACCEPTED);
     const packageDir = pkg();
@@ -119,7 +119,7 @@ describe('core-cli.init Rule 20', () => {
     expect(pick()).toEqual(before);
   });
 
-  it('init on a store with no migration field runs only the update route', async () => {
+  it('[CORE-CLI-INIT-35] init on a store with no migration field runs only the update route', async () => {
     const root = tmpRepo('nofield');
     storeInit(root);
     const cfg = fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf8');
@@ -129,7 +129,7 @@ describe('core-cli.init Rule 20', () => {
     expect(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf8')).toBe(cfg);
   });
 
-  it('init on an unaccepted migration refuses', async () => {
+  it('[CORE-CLI-INIT-36] init on an unaccepted migration refuses', async () => {
     const root = tmpRepo('unaccepted');
     store(root, { schemaVersion: '4.0', migration: { from: '3.4', accepted: null } });
     legacy(root);
@@ -140,7 +140,7 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(root)).toEqual(before);
   });
 
-  it('init on a migration field with no date refuses', async () => {
+  it('[CORE-CLI-INIT-37] init on a migration field with no date refuses', async () => {
     const root = tmpRepo('nodate');
     store(root, { schemaVersion: '4.0', migration: { from: '3.4' } });
     const before = tree(root);
@@ -150,7 +150,7 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(root)).toEqual(before);
   });
 
-  it('init on an unreadable store file refuses', async () => {
+  it('[CORE-CLI-INIT-38] init on an unreadable store file refuses', async () => {
     for (const cfg of ['{nope', '{"visibility":{}}']) {
       const root = tmpRepo('unreadable');
       store(root, cfg);
@@ -162,7 +162,7 @@ describe('core-cli.init Rule 20', () => {
     }
   });
 
-  it('init on a store of another major version refuses', async () => {
+  it('[CORE-CLI-INIT-39] init on a store of another major version refuses', async () => {
     const root = tmpRepo('major');
     store(root, { schemaVersion: '5.0' });
     const before = tree(root);
@@ -172,7 +172,7 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(root)).toEqual(before);
   });
 
-  it('init on a 3.x project refuses and creates no store', async () => {
+  it('[CORE-CLI-INIT-40] init on a 3.x project refuses and creates no store', async () => {
     const root = tmpRepo('3x');
     legacy(root);
     retired(root);
@@ -184,7 +184,7 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(root)).toEqual(before);
   });
 
-  it('init on a 3.x project where store init already ran refuses', async () => {
+  it('[CORE-CLI-INIT-41] init on a 3.x project where store init already ran refuses', async () => {
     const root = tmpRepo('3xbare');
     legacy(root);
     retired(root);
@@ -196,7 +196,7 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(root)).toEqual(before);
   });
 
-  it('init on a .cortex folder with no config refuses and creates no store', async () => {
+  it('[CORE-CLI-INIT-42] init on a .cortex folder with no config refuses and creates no store', async () => {
     const root = tmpRepo('3xnoconfig');
     fs.mkdirSync(path.join(root, '.cortex/compass'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex/compass/r.md'), 'rule\n');
@@ -209,7 +209,7 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(root)).toEqual(before);
   });
 
-  it('init on an accepted project that keeps its old folder runs the update route', async () => {
+  it('[CORE-CLI-INIT-43] init on an accepted project that keeps its old folder runs the update route', async () => {
     const root = tmpRepo('keeps');
     store(root, ACCEPTED);
     legacy(root);
@@ -219,7 +219,7 @@ describe('core-cli.init Rule 20', () => {
     expect(tree(path.join(root, '.cortex'))).toEqual(before);
   });
 
-  it('init on another platform writes nothing', async () => {
+  it('[CORE-CLI-INIT-44] init on another platform writes nothing', async () => {
     const root = tmpRepo('linux');
     const r = await run(root, { platform: 'linux' });
     expect(r.code).toBe(2);
@@ -227,7 +227,7 @@ describe('core-cli.init Rule 20', () => {
     expect(fs.existsSync(path.join(root, 'cortex'))).toBe(false);
   });
 
-  it('init inside a store refuses and names the project', async () => {
+  it('[CORE-CLI-INIT-45] init inside a store refuses and names the project', async () => {
     const p = tmpRepo('p');
     store(p, ACCEPTED);
     fs.mkdirSync(path.join(p, 'cortex/world'), { recursive: true });
@@ -243,7 +243,7 @@ describe('core-cli.init Rule 20', () => {
     }
   });
 
-  it('A project folder named cortex is not a store', async () => {
+  it('[CORE-CLI-INIT-46] A project folder named cortex is not a store', async () => {
     const root = path.join(tmpRepo('parent'), 'cortex');
     fs.mkdirSync(root);
     gitInit(root);
@@ -252,7 +252,7 @@ describe('core-cli.init Rule 20', () => {
     expect(fs.existsSync(path.join(root, 'cortex/cortex.json'))).toBe(true);
   });
 
-  it('init leaves the commit check off', async () => {
+  it('[CORE-CLI-INIT-47] init leaves the commit check off', async () => {
     const root = tmpRepo('off');
     gitInit(root);
     fs.mkdirSync(path.join(root, 'specflow'));
@@ -263,7 +263,7 @@ describe('core-cli.init Rule 20', () => {
     expect(r.text).toContain('hooks: not installed; run cortex hooks install');
   });
 
-  it('A failed update route keeps the store and a second run finishes', async () => {
+  it('[CORE-CLI-INIT-48] A failed update route keeps the store and a second run finishes', async () => {
     const root = tmpRepo('failroute');
     gitInit(root);
     const packageDir = pkg();
@@ -275,7 +275,7 @@ describe('core-cli.init Rule 20', () => {
     expect(installed(root)).toBe(true);
   });
 
-  it('A failed store init stops before the update route', async () => {
+  it('[CORE-CLI-INIT-49] A failed store init stops before the update route', async () => {
     const root = tmpRepo('failstore');
     let started = false;
     const r = await run(root, {
@@ -286,7 +286,7 @@ describe('core-cli.init Rule 20', () => {
     expect(started).toBe(false);
   });
 
-  it('A package lacking part of the final set writes nothing', async () => {
+  it('[CORE-CLI-INIT-50] A package lacking part of the final set writes nothing', async () => {
     const root = tmpRepo('lacks');
     const r = await run(root, { packageDir: pkg(FINAL_BUNDLES.filter((n) => n !== 'cortex-quality')) });
     expect(r.code).toBe(1);
@@ -294,14 +294,14 @@ describe('core-cli.init Rule 20', () => {
     expect(fs.readdirSync(root)).toEqual([]);
   });
 
-  it('Old flags are ignored and named', () => {
+  it('[CORE-CLI-INIT-51] Old flags are ignored and named', () => {
     const a = parseInitArgs(['--no-llm', '--yes', '--timeout-ms', '5', '--profile', 'specflow']);
     expect(a).toEqual({ target: '.', ignored: ['--no-llm', '--yes', '--timeout-ms', '--profile'] });
     expect(parseInitArgs(['--force', 'proj', '-y', '--partial'])).toEqual({ target: 'proj', ignored: ['--force', '-y', '--partial'] });
   });
 
 
-  it('An unknown flag writes nothing', async () => {
+  it('[CORE-CLI-INIT-52] An unknown flag writes nothing', async () => {
     const root = tmpRepo('flags');
     const errors: string[] = [];
     const spy = vi.spyOn(console, 'error').mockImplementation((m: string) => void errors.push(m));
@@ -315,7 +315,7 @@ describe('core-cli.init Rule 20', () => {
     }
   });
 
-  it('The usage text still points at init', async () => {
+  it('[CORE-CLI-INIT-53] The usage text still points at init', async () => {
     const lines: string[] = [];
     const spy = vi.spyOn(console, 'log').mockImplementation((m: string) => void lines.push(m));
     try {

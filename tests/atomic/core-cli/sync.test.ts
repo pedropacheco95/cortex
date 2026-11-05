@@ -61,7 +61,7 @@ async function withHomeEnv<T>(home: string, fn: () => Promise<T>): Promise<T> {
 // Rule 1 — preflight refusal wording
 // ---------------------------------------------------------------------------
 describe('Rule 1: preflight refusal wording', () => {
-  it('non-macOS names macOS explicitly', async () => {
+  it('[CORE-CLI-SYNC-3] non-macOS names macOS explicitly', async () => {
     const root = makeTmpDir('r1-linux-proj');
     const home = makeTmpDir('r1-linux-home');
     const result = await sync(root, { home, platform: 'linux' });
@@ -70,7 +70,7 @@ describe('Rule 1: preflight refusal wording', () => {
     cleanTmp(root); cleanTmp(home);
   });
 
-  it('missing .cortex/ names cortex init as the next step', async () => {
+  it('[CORE-CLI-SYNC-2] missing .cortex/ names cortex init as the next step', async () => {
     const root = makeTmpDir('r1-nocortex-proj');
     const home = makeTmpDir('r1-nocortex-home');
     const result = await sync(root, { home, ...DARWIN_SYNC });
@@ -84,7 +84,7 @@ describe('Rule 1: preflight refusal wording', () => {
 // Rule 2 — version gate: exact refusal wording both directions
 // ---------------------------------------------------------------------------
 describe('Rule 2: version gate refusal wording', () => {
-  it('MAJOR below supported names cortex migrate and the declared version', async () => {
+  it('[CORE-CLI-SYNC-16] MAJOR below supported names cortex migrate and the declared version', async () => {
     const { root, home } = await bootstrap('r2-below');
     const configPath = path.join(root, '.cortex', 'cortex.config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -96,7 +96,7 @@ describe('Rule 2: version gate refusal wording', () => {
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('MAJOR above supported names a package upgrade and the declared version', async () => {
+  it('[CORE-CLI-SYNC-16] MAJOR above supported names a package upgrade and the declared version', async () => {
     const { root, home } = await bootstrap('r2-above');
     const configPath = path.join(root, '.cortex', 'cortex.config.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -108,7 +108,7 @@ describe('Rule 2: version gate refusal wording', () => {
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('missing schemaVersion field is treated as major 0 (behind) rather than crashing', async () => {
+  it('[CORE-CLI-SYNC-16] missing schemaVersion field is treated as major 0 (behind) rather than crashing', async () => {
     const { root, home } = await bootstrap('r2-missing');
     const configPath = path.join(root, '.cortex', 'cortex.config.json');
     fs.writeFileSync(configPath, JSON.stringify({ hooks: { preRead: true } }, null, 2));
@@ -124,7 +124,7 @@ describe('Rule 2: version gate refusal wording', () => {
 // every write a merge/append/judgment-gated upgrade)
 // ---------------------------------------------------------------------------
 describe('Rule 12: sync has no --force flag', () => {
-  it('CLI dispatch accepts --yes but a stray --force is simply ignored as a non-flag-consuming no-op (no crash, still runs)', async () => {
+  it('[CORE-CLI-SYNC-65] CLI dispatch accepts --yes but a stray --force is simply ignored as a non-flag-consuming no-op (no crash, still runs)', async () => {
     const { root, home } = await bootstrap('r12-noforce');
     const logs: string[] = [];
     const origLog = console.log;
@@ -147,7 +147,7 @@ describe('Rule 12: sync has no --force flag', () => {
 // `cortex sync` CLI dispatch
 // ---------------------------------------------------------------------------
 describe('CLI dispatch: cortex sync', () => {
-  it('routes to sync() and prints the summary on success', async () => {
+  it('[CORE-CLI-SYNC-22] routes to sync() and prints the summary on success', async () => {
     const root = makeTmpDir('cli-sync-proj');
     const home = makeTmpDir('cli-sync-home');
     gitInit(root);
@@ -244,14 +244,14 @@ describe('scaffold.ts: hashDirectoryContent + marker mechanics', () => {
 // registrationSummaryLines — shared verbatim between init and sync
 // ---------------------------------------------------------------------------
 describe('scaffold.ts: registrationSummaryLines', () => {
-  it('renders the all-registered one-liner when nothing is unregistered', () => {
+  it('[CORE-CLI-SYNC-12] renders the all-registered one-liner when nothing is unregistered', () => {
     const lines = registrationSummaryLines({ unregistered: [], total: 5 });
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('all 5 registered');
     expect(lines[0]).toContain('cortex tasks verify');
   });
 
-  it('renders the instruction block when something is unregistered', () => {
+  it('[CORE-CLI-SYNC-12] renders the instruction block when something is unregistered', () => {
     const lines = registrationSummaryLines({ unregistered: ['daily', 'test-runner'], total: 5 });
     expect(lines.join('\n')).toContain('2 of 5 not yet registered');
     expect(lines.join('\n')).toContain('/cortex-register-tasks');
@@ -263,7 +263,7 @@ describe('scaffold.ts: registrationSummaryLines', () => {
 // Rule 4 — _index.md refresh: unknown-directory handling
 // ---------------------------------------------------------------------------
 describe('Rule 4: an _index.md in a directory sync has no known template for is left alone', () => {
-  it('a custom user-created subdirectory under .cortex/ is reported as localised, not refreshed', async () => {
+  it('[CORE-CLI-SYNC-13] a custom user-created subdirectory under .cortex/ is reported as localised, not refreshed', async () => {
     const { root, home } = await bootstrap('r4-unknown-dir');
     const customDir = path.join(root, '.cortex', 'my-custom-thing');
     fs.mkdirSync(customDir, { recursive: true });
@@ -276,7 +276,7 @@ describe('Rule 4: an _index.md in a directory sync has no known template for is 
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('a template-plus-recall-block atlas index is current, not localised, and keeps its block (recall.index-blocks Rule 7)', async () => {
+  it('[RECALL-INDEX-BLOCKS-7] a template-plus-recall-block atlas index is current, not localised, and keeps its block (recall.index-blocks Rule 7)', async () => {
     const { root, home } = await bootstrap('r4-recall-block');
     const { CORTEX_INDEXES, SCHEMA_VERSION } = await import('../../../src/cli/templates.js');
     const { RECALL_BLOCK_START, RECALL_BLOCK_END } = await import('../../../src/recall/index-blocks.js');
@@ -299,7 +299,7 @@ describe('Rule 4: an _index.md in a directory sync has no known template for is 
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('pulse/reports/ (a carved-out subdirectory) is never inspected even if it somehow carries an _index.md', async () => {
+  it('[CORE-CLI-SYNC-14] pulse/reports/ (a carved-out subdirectory) is never inspected even if it somehow carries an _index.md', async () => {
     const { root, home } = await bootstrap('r4-pulse-subdir');
     const strayIndex = path.join(root, '.cortex', 'pulse', 'reports', '_index.md');
     fs.mkdirSync(path.dirname(strayIndex), { recursive: true });
@@ -325,7 +325,7 @@ describe('Rules 6 & 7: sync repairs missing hooks/git-hook exactly like init wou
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('a project initialised before the SessionEnd/Stop rows gains both on sync, once, with timeout on SessionEnd only; a second sync is idempotent', async () => {
+  it('[HOOKS-SESSION-END-1] a project initialised before the SessionEnd/Stop rows gains both on sync, once, with timeout on SessionEnd only; a second sync is idempotent', async () => {
     const { root, home } = await bootstrap('r67-sessionend');
     const settingsPath = path.join(root, '.claude', 'settings.json');
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
@@ -353,7 +353,7 @@ describe('Rules 6 & 7: sync repairs missing hooks/git-hook exactly like init wou
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('a project initialised before the Grep|Bash row gains `cortex hook search-annotate` on sync, once, with the other PreToolUse entries untouched; a second sync is idempotent', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-16] a project initialised before the Grep|Bash row gains `cortex hook search-annotate` on sync, once, with the other PreToolUse entries untouched; a second sync is idempotent', async () => {
     const { root, home } = await bootstrap('r67-search-annotate');
     const settingsPath = path.join(root, '.claude', 'settings.json');
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
@@ -378,7 +378,7 @@ describe('Rules 6 & 7: sync repairs missing hooks/git-hook exactly like init wou
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('a project initialised before the UserPromptSubmit row gains `cortex hook prompt-route` on sync, once, with no matcher and the other events untouched; a second sync is idempotent', async () => {
+  it('[HOOKS-PROMPT-ROUTE-1] a project initialised before the UserPromptSubmit row gains `cortex hook prompt-route` on sync, once, with no matcher and the other events untouched; a second sync is idempotent', async () => {
     const { root, home } = await bootstrap('r68-prompt-route');
     const settingsPath = path.join(root, '.claude', 'settings.json');
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
@@ -418,7 +418,7 @@ describe('Rules 6 & 7: sync repairs missing hooks/git-hook exactly like init wou
 // Rule 9 — never touches knowledge content, at a finer per-file grain
 // ---------------------------------------------------------------------------
 describe('Rule 9: sync never writes compass/atlas/archive/insight content or pulse state', () => {
-  it('a hand-authored rule file is byte-identical and no sibling file is created', async () => {
+  it('[CORE-CLI-SYNC-14] a hand-authored rule file is byte-identical and no sibling file is created', async () => {
     const { root, home } = await bootstrap('r9-rule');
     const rulePath = path.join(root, '.cortex', 'compass', 'rules', 'R-001-demo.md');
     const ruleContent = '---\nid: R-001\ntitle: "Demo"\ngoverns: []\n---\n\nbody\n';
@@ -436,7 +436,7 @@ describe('Rule 9: sync never writes compass/atlas/archive/insight content or pul
 // order, and summary byte-identity regardless of whether it's supplied.
 // ---------------------------------------------------------------------------
 describe('Rule 13: optional progress sink', () => {
-  it('with no onProgress supplied, sync behaves exactly as before this rule existed', async () => {
+  it('[CORE-CLI-SYNC-19] with no onProgress supplied, sync behaves exactly as before this rule existed', async () => {
     const { root, home } = await bootstrap('r13-none');
     const result = await sync(root, { home, ...DARWIN_SYNC });
     expect(result.exitCode).toBe(0);
@@ -444,7 +444,7 @@ describe('Rule 13: optional progress sink', () => {
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('with an onProgress collector, messages arrive in rule order (3, 4, 5, 6, 7, 8, 10)', async () => {
+  it('[CORE-CLI-SYNC-19] with an onProgress collector, messages arrive in rule order (3, 4, 5, 6, 7, 8, 10)', async () => {
     const { root, home } = await bootstrap('r13-order');
     const messages: string[] = [];
     const result = await sync(root, { home, ...DARWIN_SYNC, onProgress: (m) => messages.push(m) });
@@ -461,7 +461,7 @@ describe('Rule 13: optional progress sink', () => {
     cleanTmp(root); cleanTmp(home);
   }, TEST_TIMEOUT);
 
-  it('the returned summary is byte-identical whether or not onProgress is supplied', async () => {
+  it('[CORE-CLI-SYNC-19] the returned summary is byte-identical whether or not onProgress is supplied', async () => {
     const { root, home } = await bootstrap('r13-summary-parity');
     const withoutCallback = await sync(root, { home, ...DARWIN_SYNC });
     // Immediate re-run against the same, now-current project (the idempotent
@@ -482,7 +482,7 @@ describe('Rule 13: optional progress sink', () => {
 import { REGISTRY_FILE, REGISTRY_HEADER } from '../../../src/compass/registry.js';
 
 describe('Rule 15: id registry migration', () => {
-  it('absent registry → created from the R-*/B-* files with the summary line `registry created (n rules, m bugs)`; Rule 14\'s progress list is unchanged', async () => {
+  it('[CORE-CLI-SYNC-15] absent registry → created from the R-*/B-* files with the summary line `registry created (n rules, m bugs)`; Rule 14\'s progress list is unchanged', async () => {
     const { root, home } = await bootstrap('r15-create');
     try {
       fs.rmSync(path.join(root, REGISTRY_FILE));
@@ -499,7 +499,7 @@ describe('Rule 15: id registry migration', () => {
     }
   }, TEST_TIMEOUT);
 
-  it('present registry → no write (a hand-edited, even unsorted, file is byte-identical) and the summary reads `registry present`', async () => {
+  it('[CORE-CLI-SYNC-15] present registry → no write (a hand-edited, even unsorted, file is byte-identical) and the summary reads `registry present`', async () => {
     const { root, home } = await bootstrap('r15-present');
     try {
       const edited = `${REGISTRY_HEADER}\nR-002 b\nR-001 a\n# note\n`;
