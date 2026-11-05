@@ -1,4 +1,4 @@
-/** Atomic tests for loops.learn-task Rule 5: `cortex store amendments`. */
+/** Atomic tests for loops.learn-task Rule 5 and its seven criteria: `cortex store amendments`. */
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -31,7 +31,7 @@ const run = async (root: string, ...args: string[]): Promise<{ code: number; out
 
 afterEach(cleanRepos);
 
-describe('parseAmendsValue', () => {
+describe('Trailers are parsed per schema S10', () => {
   it('splits at the last # and takes any of the three separators', () => {
     expect(parseAmendsValue('core-cli.init#rule-7 — wording')).toEqual({ spec: 'core-cli.init', item: 'rule-7', reason: 'wording' });
     expect(parseAmendsValue('a#b#c -- x y')).toEqual({ spec: 'a#b', item: 'c', reason: 'x y' });
@@ -147,7 +147,7 @@ describe('Without --apply nothing changes', () => {
   });
 });
 
-describe('Outside a git repository', () => {
+describe('Outside a git repository nothing happens', () => {
   it('prints the line and exits 0', async () => {
     const root = tmpRepo('nogit');
     const { out, code } = await run(root);
