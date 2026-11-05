@@ -20,7 +20,7 @@ describe('store.migrate-skill', () => {
     expect(text).not.toBe('');
     expect(fs.readFileSync(MIRROR, 'utf8')).toBe(text);
     const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'measure-skill-descriptions.mjs')], { cwd: ROOT, encoding: 'utf8' });
-    expect(out).toMatch(/^cortex-migrate\s+B\b/m);
+    expect(out).toMatch(/^cortex-migrate\s+E\b/m);
     expect(out).toContain('OK    all');
   });
 

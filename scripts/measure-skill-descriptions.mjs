@@ -42,6 +42,8 @@ const CHARS_PER_TOKEN = 4;
  *       the description is not what makes it reachable.
  *   B — cold-phrasing entry point. Nothing names it; the description is the only
  *       routing signal, so it keeps real trigger surface.
+ *   E — typed-only. Carries `disable-model-invocation: true`, so it is not in the
+ *       listing and costs nothing; only a typed `/<name>` runs it.
  *   C — specflow-entry. The mandatory gate on arbitrary phrasing; every Tier A
  *       assignment depends on it firing, so it is not shrunk to fund them.
  *   D — callable-only. Never routed into by a description matching a sentence.
@@ -51,15 +53,15 @@ const CHARS_PER_TOKEN = 4;
  *       removing the trigger surface is the point, and the tokens are a
  *       consequence.
  */
-export const TIER_CEILING = { A: 120, B: 250, C: null, D: 60 };
+export const TIER_CEILING = { A: 120, B: 250, C: null, D: 60, E: null };
 
 /** Every shipped bundle's tier. An unlisted bundle is a failure, not a default (Rule 7). */
 export const TIERS = {
   'cortex-archive-ingest': 'A',
   'cortex-extract-insight': 'A',
   'cortex-loop': 'D',
-  'cortex-register-tasks': 'A',
-  'cortex-migrate': 'B',
+  'cortex-register-tasks': 'E',
+  'cortex-migrate': 'E',
   'cortex-remember': 'B',
   'specflow-brainstorm': 'A',
   'specflow-bugs': 'A',
@@ -94,7 +96,6 @@ export const REQUIRED_TRIGGERS = {
   // routing signal.
   'cortex-archive-ingest': ['transcript', 'rfp', 'brief', 'contract', 'add this to project memory'],
   'cortex-extract-insight': ['extract insight', 'refresh', 'map this codebase'],
-  'cortex-register-tasks': ['register', 'activate', 'cortex scheduled tasks', 'claude desktop'],
 
   // Tier A — reachable because specflow-entry's routing table or a sibling body
   // names them, so two or three phrases is the whole surface they need.
@@ -112,7 +113,6 @@ export const REQUIRED_TRIGGERS = {
   'verification-before-completion': ['evidence gate', 'claiming work done'],
 
   // Tier B — nothing names them, so the description is the only way in.
-  'cortex-migrate': ['migrate', 'cortex migrate'],
   'cortex-remember': ['remember this', 'from now on'],
   'specflow-new-project': ['new project', 'start a new', 'I want to build'],
   'specflow-request-review': ['review this', 'review the diff', 'code review'],
@@ -124,10 +124,12 @@ export const REQUIRED_TRIGGERS = {
   // a future edit cannot quietly cost it its routing.
   'specflow-entry': ['add a feature', 'fix this bug', 'change this behavior', 'what does X do'],
 
-  // Tier D declares none, and is asserted to have none — see the Tier D check below.
+  // Tiers D and E declare none, and are asserted to have none — see the check below.
   'cortex-loop': [],
   'specflow-deep-onboard': [],
   'specflow-viewer': [],
+  'cortex-register-tasks': [],
+  'cortex-migrate': [],
 };
 
 /**
@@ -135,6 +137,12 @@ export const REQUIRED_TRIGGERS = {
  * shapes a SKILL.md uses: a `>-` / `|` block scalar (folded to one line, the way
  * Claude Code presents it) and a plain or quoted single-line scalar.
  */
+/** True when the frontmatter carries `disable-model-invocation: true`: the bundle is not in the listing (Rule 1). */
+export function isTypedOnly(raw) {
+  const m = /^---\n([\s\S]*?\n)---\n/.exec(raw);
+  return m !== null && /^disable-model-invocation:[ \t]*true[ \t]*$/m.test(m[1]);
+}
+
 export function parseNameAndDescription(raw) {
   const m = /^---\n([\s\S]*?\n)---\n/.exec(raw);
   if (!m) return undefined;
@@ -192,8 +200,8 @@ function readFromRef(ref, bundle) {
 /**
  * The contract check, pure over the rows it is handed.
  *
- * @param rows  `{ bundle, after, description, tier }` per bundle — `after` is
- *              name + description length.
+ * @param rows  `{ bundle, after, description, tier, typedOnly }` per bundle —
+ *              `after` is name + description length, zero when `typedOnly`.
  * @param triggers  bundle → pinned phrases; defaults to the shipped table.
  * @returns human-readable failure strings; empty means the listing conforms.
  */
@@ -203,8 +211,15 @@ export function evaluate(rows, triggers = REQUIRED_TRIGGERS) {
     // An unclassified bundle is a failure, not a default — it is how a new
     // description sprawls unnoticed (Rule 7).
     if (!r.tier) {
-      failures.push(`${r.bundle}: no tier in TIERS — classify it (A name-dispatched / B cold-phrasing / C gate / D callable-only)`);
+      failures.push(`${r.bundle}: no tier in TIERS — classify it (A name-dispatched / B cold-phrasing / C gate / D callable-only / E typed-only)`);
       continue;
+    }
+    // Tier E is exactly the bundles carrying the header (Rule 7).
+    if (r.tier === 'E' && !r.typedOnly) {
+      failures.push(`${r.bundle}: tier E needs disable-model-invocation: true in its frontmatter`);
+    }
+    if (r.tier !== 'E' && r.typedOnly) {
+      failures.push(`${r.bundle}: carries disable-model-invocation: true, so it belongs in tier E`);
     }
     const ceiling = TIER_CEILING[r.tier];
     if (ceiling !== null && r.after > ceiling) {
@@ -219,9 +234,9 @@ export function evaluate(rows, triggers = REQUIRED_TRIGGERS) {
 
     // Tier D buys its behaviour by NOT being matchable. A pinned phrase would
     // re-create the automatic routing the tier exists to remove (Rule 6).
-    if (r.tier === 'D') {
+    if (r.tier === 'D' || r.tier === 'E') {
       if (pinned.length > 0) {
-        failures.push(`${r.bundle}: tier D declares no trigger phrases, found ${pinned.length}`);
+        failures.push(`${r.bundle}: tier ${r.tier} declares no trigger phrases, found ${pinned.length}`);
       }
       continue;
     }
@@ -242,13 +257,16 @@ export function measureWorkingTree(dir = SKILLS_DIR) {
     .map((e) => e.name)
     .sort()
     .map((bundle) => {
-      const parsed = parseNameAndDescription(fs.readFileSync(path.join(dir, bundle, 'SKILL.md'), 'utf-8'));
+      const raw = fs.readFileSync(path.join(dir, bundle, 'SKILL.md'), 'utf-8');
+      const parsed = parseNameAndDescription(raw);
       if (!parsed) return { bundle, after: 0, description: '', tier: TIERS[bundle], unparseable: true };
+      const typedOnly = isTypedOnly(raw);
       return {
         bundle,
-        after: parsed.name.length + parsed.description.length,
+        after: typedOnly ? 0 : parsed.name.length + parsed.description.length,
         description: parsed.description,
         tier: TIERS[bundle],
+        typedOnly,
       };
     });
 }
@@ -271,7 +289,8 @@ let beforeTotal = 0;
 let afterTotal = 0;
 
 for (const bundle of bundles) {
-  const now = parseNameAndDescription(readWorkingTree(bundle));
+  const raw = readWorkingTree(bundle);
+  const now = parseNameAndDescription(raw);
   if (!now) {
     console.error(`! ${bundle}: unparseable frontmatter`);
     process.exitCode = 1;
@@ -280,11 +299,12 @@ for (const bundle of bundles) {
   const baseRaw = readFromRef(baseRef, bundle);
   const base = baseRaw ? parseNameAndDescription(baseRaw) : undefined;
 
-  const after = now.name.length + now.description.length;
-  const before = base ? base.name.length + base.description.length : 0;
+  const typedOnly = isTypedOnly(raw);
+  const after = typedOnly ? 0 : now.name.length + now.description.length;
+  const before = base && !isTypedOnly(baseRaw) ? base.name.length + base.description.length : 0;
   beforeTotal += before;
   afterTotal += after;
-  rows.push({ bundle, before, after, description: now.description, tier: TIERS[bundle] });
+  rows.push({ bundle, before, after, description: now.description, tier: TIERS[bundle], typedOnly });
 }
 
 const pad = (s, n) => String(s).padEnd(n);

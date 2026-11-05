@@ -110,6 +110,43 @@ describe('AC: a Tier D bundle that declares trigger phrases fails the guard', ()
   });
 });
 
+describe('AC: a typed-only bundle costs nothing and needs its header', () => {
+  const eRow = { bundle: 'fixture-e', after: 0, description: 'A long description that no listing holds.', tier: 'E', typedOnly: true };
+
+  it('applies no ceiling to Tier E', () => {
+    expect(evaluate([{ ...eRow, after: 5000 }], { 'fixture-e': [] })).toEqual([]);
+  });
+
+  it('fails a Tier E bundle without the header and names it', () => {
+    const failures = evaluate([{ ...eRow, typedOnly: false }], { 'fixture-e': [] });
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('fixture-e');
+    expect(failures[0]).toContain('disable-model-invocation');
+  });
+
+  it('fails a bundle with the header in any other tier and names it', () => {
+    const failures = evaluate([{ ...okRow, typedOnly: true }], okTriggers);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('fixture-a');
+    expect(failures[0]).toContain('tier E');
+  });
+
+  it('fails a Tier E bundle that declares a phrase', () => {
+    const failures = evaluate([eRow], { 'fixture-e': ['run it'] });
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('declares no trigger phrases');
+  });
+
+  it('counts the two shipped typed-only bundles as zero, each with the header', () => {
+    const rows = guard.measureWorkingTree();
+    for (const bundle of ['cortex-register-tasks', 'cortex-migrate']) {
+      const row = rows.find((r: { bundle: string }) => r.bundle === bundle);
+      expect(row, bundle).toMatchObject({ tier: 'E', after: 0, typedOnly: true });
+    }
+    expect(evaluate(rows.filter((r: { tier: string }) => r.tier === 'E'))).toEqual([]);
+  });
+});
+
 describe('the tier table is internally consistent', () => {
   it('assigns every tier a known ceiling key', () => {
     for (const [bundle, tier] of Object.entries(TIERS)) {
@@ -117,15 +154,15 @@ describe('the tier table is internally consistent', () => {
     }
   });
 
-  it('declares an empty phrase list for every Tier D bundle', () => {
+  it('declares an empty phrase list for every Tier D and Tier E bundle', () => {
     for (const [bundle, tier] of Object.entries(TIERS)) {
-      if (tier === 'D') expect(REQUIRED_TRIGGERS[bundle]).toEqual([]);
+      if (tier === 'D' || tier === 'E') expect(REQUIRED_TRIGGERS[bundle]).toEqual([]);
     }
   });
 
   it('declares at least one phrase for every routed bundle', () => {
     for (const [bundle, tier] of Object.entries(TIERS)) {
-      if (tier !== 'D') expect(REQUIRED_TRIGGERS[bundle]?.length, bundle).toBeGreaterThan(0);
+      if (tier !== 'D' && tier !== 'E') expect(REQUIRED_TRIGGERS[bundle]?.length, bundle).toBeGreaterThan(0);
     }
   });
 });
