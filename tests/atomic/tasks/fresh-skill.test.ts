@@ -10,7 +10,7 @@ const text = fs.readFileSync(path.join(ROOT, 'skills', 'cortex-fresh', 'SKILL.md
 const guard = await import(path.join(ROOT, 'scripts', 'measure-skill-descriptions.mjs'));
 
 describe('The bundle is mirrored and Tier D', () => {
-  it('is byte-identical, tier D and 4.0-only', () => {
+  it('[LOOPS-FRESH-TASK-8] is byte-identical, tier D and 4.0-only', () => {
     expect(fs.readFileSync(path.join(ROOT, '.claude', 'skills', 'cortex-fresh', 'SKILL.md'), 'utf-8')).toBe(text);
     expect(guard.TIERS['cortex-fresh']).toBe('D');
     expect(guard.REQUIRED_TRIGGERS['cortex-fresh']).toEqual([]);
@@ -19,7 +19,7 @@ describe('The bundle is mirrored and Tier D', () => {
 });
 
 describe('The skill carries its steps in order', () => {
-  it('names them in order', () => {
+  it('[LOOPS-FRESH-TASK-9] names them in order', () => {
     const steps = text.slice(text.indexOf('## Steps, in order'), text.indexOf('## Changing a store file'));
     const at = ['write gate', 'cortex store expire --apply', 'cortex tasks collect fresh --json', 'history/changes/<today>-fresh.md', 'cortex store validate', 'cortex tasks heartbeat fresh'].map((s) => steps.indexOf(s));
     expect(at.every((i) => i >= 0), JSON.stringify(at)).toBe(true);
@@ -28,7 +28,7 @@ describe('The skill carries its steps in order', () => {
 });
 
 describe('The skill fixes the store by the filing rules', () => {
-  it('states the evidence, origin, retire, merge and history rules', () => {
+  it('[LOOPS-FRESH-TASK-10] states the evidence, origin, retire, merge and history rules', () => {
     expect(text).toContain('only after reading the evidence');
     expect(text).toContain('`session:<id>` to the file\'s `origin`');
     expect(text).toMatch(/\*\*Retiring\*\* a file removes it and repoints or removes links/);
@@ -38,13 +38,13 @@ describe('The skill fixes the store by the filing rules', () => {
 });
 
 describe('The skill leaves what it cannot confirm', () => {
-  it('leaves it alone, counts it unconfirmed and proposes', () => {
+  it('[LOOPS-FRESH-TASK-11] leaves it alone, counts it unconfirmed and proposes', () => {
     expect(text).toMatch(/nothing you can read confirms it, leave the file alone, count it as `unconfirmed`, and write one proposal/);
   });
 });
 
 describe('The skill closes a pitfall only on evidence', () => {
-  it('needs evidence the fix landed, and sends the rest to a proposal', () => {
+  it('[LOOPS-FRESH-TASK-12] needs evidence the fix landed, and sends the rest to a proposal', () => {
     expect(text).toContain('only on observed evidence that the fix landed');
     expect(text).toContain('A missing file or symbol is not evidence');
     expect(text).toContain('Without that evidence, write one proposal asking a person');
@@ -53,7 +53,7 @@ describe('The skill closes a pitfall only on evidence', () => {
 });
 
 describe('Specs stay proposals', () => {
-  it('forbids a spec, names the id, appends only, skips what is proposed', () => {
+  it('[LOOPS-FRESH-TASK-13] forbids a spec, names the id, appends only, skips what is proposed', () => {
     expect(text).toContain('Never write a spec');
     expect(text).toContain('P-<today>-fresh-<slug');
     expect(text).toContain('`now/proposals.md` is only ever appended to');
@@ -62,7 +62,7 @@ describe('Specs stay proposals', () => {
 });
 
 describe('The skill specifies the record', () => {
-  it('names the twelve lines and the quiet line', () => {
+  it('[LOOPS-FRESH-TASK-14] names the twelve lines and the quiet line', () => {
     const record = text.slice(text.indexOf('## The record'));
     for (const l of ['expired', 're-verified', 'corrected', 'retired', 'merged', 'not a duplicate', 'unconfirmed', 'scaffolding', 'open pitfalls', 'open pitfalls aged', 'proposed', 'already proposed']) {
       expect(record, l).toContain(`\`${l}\``);
@@ -79,7 +79,7 @@ describe('Bounded commands', () => {
 });
 
 describe('Tasks neither stage nor commit', () => {
-  it('says so', () => {
+  it('[LOOPS-FRESH-TASK-13] says so', () => {
     expect(text).toContain('do not stage or commit: no `git rm`, no `git add`');
   });
 });
