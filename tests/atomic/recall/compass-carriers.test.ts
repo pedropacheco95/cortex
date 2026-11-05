@@ -73,7 +73,7 @@ describe('Rule 1: the seven entry kinds and the six subject lists', () => {
 // Rule 15 — rules are carriers with derived subjects
 // ---------------------------------------------------------------------------
 describe('AC: a rule bears on its governs prefixes, its matched files and its related specs', () => {
-  it('R-014 governing src/db/**/*.ts with related_specs [core-cli.scan] reaches src/db, both files and the spec', async () => {
+  it('[RECALL-RECALL-INDEX-13] R-014 governing src/db/**/*.ts with related_specs [core-cli.scan] reaches src/db, both files and the spec', async () => {
     const root = tmp('rule-derived');
     seed(root);
     rule(root, 'R-014', 'x', ['governs:', '  - "src/db/**/*.ts"', 'related_specs: [core-cli.scan]']);
@@ -124,7 +124,7 @@ describe('AC: a rule bears on its governs prefixes, its matched files and its re
 });
 
 describe('AC: a governs glob matching 30 files caps at 20 subjects, and a retired rule contributes nothing', () => {
-  it('exactly the first 20 sorted files carry the rule, plus the directory prefix; the retired rule has neither entry nor subject', async () => {
+  it('[RECALL-RECALL-INDEX-14] exactly the first 20 sorted files carry the rule, plus the directory prefix; the retired rule has neither entry nor subject', async () => {
     const root = tmp('rule-cap');
     seed(root);
     for (let i = 1; i <= 30; i++) write(root, `src/many/f${String(i).padStart(2, '0')}.ts`, 'export {};\n');
@@ -161,7 +161,7 @@ describe('AC: a compass document is a keyword-only entry built from headings and
     '',
   ].join('\n');
 
-  it('entries["compass.environment"] carries the heading and bold tokens and never a body token; no subject names it', async () => {
+  it('[RECALL-RECALL-INDEX-15] entries["compass.environment"] carries the heading and bold tokens and never a body token; no subject names it', async () => {
     const root = tmp('doc-env');
     seed(root);
     write(root, '.cortex/compass/environment.md', ENVIRONMENT);
@@ -209,7 +209,7 @@ describe('AC: a compass document is a keyword-only entry built from headings and
 // Rule 17 — entailment 4: open and triaged bugs only
 // ---------------------------------------------------------------------------
 describe('AC: only open and triaged bugs reach a subject', () => {
-  it('B-019 (open) and B-020 (triaged) contribute; B-003 (resolved) keeps its entry only', async () => {
+  it('[RECALL-RECALL-INDEX-16] B-019 (open) and B-020 (triaged) contribute; B-003 (resolved) keeps its entry only', async () => {
     const root = tmp('bugs-currency');
     seed(root);
     rule(root, 'R-001', 'core', ['governs:', '  - "src/schema/**/*.ts"']);

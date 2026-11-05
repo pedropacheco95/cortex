@@ -118,7 +118,7 @@ function stripGenerated(raw: string): string {
 }
 
 describe('AC: the emitted file passes its own check', () => {
-  it('writeRecallIndex over the AC project, then validate → the file exists and carries zero check.recall-index errors', async () => {
+  it('[RECALL-RECALL-INDEX-1] writeRecallIndex over the AC project, then validate → the file exists and carries zero check.recall-index errors', async () => {
     const root = project('self-check');
     seedCarriers(root);
     const index = await writeRecallIndex(root);
@@ -143,7 +143,7 @@ describe('AC: the emitted file passes its own check', () => {
 });
 
 describe('AC: deterministic modulo timestamp, and empty inputs compile', () => {
-  it('two writes of one project are byte-identical after removing the generated line', async () => {
+  it('[RECALL-RECALL-INDEX-11] two writes of one project are byte-identical after removing the generated line', async () => {
     const root = project('determinism');
     seedCarriers(root);
     await writeRecallIndex(root);
@@ -155,7 +155,7 @@ describe('AC: deterministic modulo timestamp, and empty inputs compile', () => {
     expect(first.endsWith('\n')).toBe(true);
   });
 
-  it('a project with none of the four input directories yields empty subjects and entries with zero counters', async () => {
+  it('[RECALL-RECALL-INDEX-11] a project with none of the four input directories yields empty subjects and entries with zero counters', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-recall-spec-empty-'));
     dirs.push(root);
     const index: RecallIndex = await compileRecallIndex(root);
@@ -166,7 +166,7 @@ describe('AC: deterministic modulo timestamp, and empty inputs compile', () => {
 });
 
 describe('AC: scan, init and the post-commit tier all build it; validate does not (the scan and validate thirds)', () => {
-  it('cortex scan writes both compiled files and reports the subject and entry counts; a second scan refreshes generated', async () => {
+  it('[RECALL-RECALL-INDEX-12] cortex scan writes both compiled files and reports the subject and entry counts; a second scan refreshes generated', async () => {
     const root = project('scan');
     seedCarriers(root);
     process.chdir(root);
@@ -185,7 +185,7 @@ describe('AC: scan, init and the post-commit tier all build it; validate does no
     expect(second.generated).not.toBe(first.generated);
   });
 
-  it('cortex validate never writes the file', async () => {
+  it('[RECALL-RECALL-INDEX-12] cortex validate never writes the file', async () => {
     const root = project('validate-readonly');
     seedCarriers(root);
     await writeRecallIndex(root);
@@ -196,7 +196,7 @@ describe('AC: scan, init and the post-commit tier all build it; validate does no
 });
 
 describe('AC: a malformed index is an error, an absent one is nothing', () => {
-  it('a decided id absent from entries is one check.recall-index error naming it; after deletion, no check.recall-index violation', async () => {
+  it('[RECALL-RECALL-INDEX-17] a decided id absent from entries is one check.recall-index error naming it; after deletion, no check.recall-index violation', async () => {
     const root = project('malformed');
     seedCarriers(root);
     const index = await writeRecallIndex(root);
@@ -221,7 +221,7 @@ describe('AC: a malformed index is an error, an absent one is nothing', () => {
 // governing src/db, an open bug affecting src/db/schema.ts, environment.md.
 // ---------------------------------------------------------------------------
 describe('AC: the compass carriers land in the written index and it still passes its own check (fifth revision)', () => {
-  it('R-001 governs src/db/**/*.ts, B-019 affects src/db/schema.ts, environment.md has a heading → the six lists and the compass-doc entry, zero check.recall-index errors', async () => {
+  it('[RECALL-RECALL-INDEX-13] R-001 governs src/db/**/*.ts, B-019 affects src/db/schema.ts, environment.md has a heading → the six lists and the compass-doc entry, zero check.recall-index errors', async () => {
     const root = project('compass-carriers');
     write(root, 'src/db/schema.ts', 'export {};\n');
     write(root, 'src/db/migrate.ts', 'export {};\n');

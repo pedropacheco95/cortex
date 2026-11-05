@@ -113,7 +113,7 @@ afterEach(() => {
 // AC: why lists all four sections in order
 // ---------------------------------------------------------------------------
 describe('recall.why — why lists all four sections in order', () => {
-  it('prints the counts line, then Decided / Evidence / Open / Observations, exit 0', async () => {
+  it('[RECALL-WHY-1] prints the counts line, then Decided / Evidence / Open / Observations, exit 0', async () => {
     const root = whyProject('sections');
     const { code, out, err } = await cortex(root, ['why', 'R-001']);
     expect(code).toBe(0);
@@ -184,7 +184,7 @@ describe('recall.why — why lists all four sections in order', () => {
 // AC: A path ref resolves through its spec id
 // ---------------------------------------------------------------------------
 describe('recall.why — a path ref resolves through its spec id', () => {
-  it('names pulse.usage as the matched key on the first line and lists that subject', async () => {
+  it('[RECALL-WHY-2] names pulse.usage as the matched key on the first line and lists that subject', async () => {
     const root = tmp('spec-path');
     writeRecallIndexFixture(root, sampleRecallIndex());
     const { code, out } = await cortex(root, ['why', '.specflow/specs/pulse/usage.spec.md']);
@@ -207,7 +207,7 @@ describe('recall.why — a path ref resolves through its spec id', () => {
 // AC: The schema document aggregates its clauses
 // ---------------------------------------------------------------------------
 describe('recall.why — the schema document aggregates its clauses', () => {
-  it('heads the listing `cortex-schema.md (all clauses)` and lists each entry once', async () => {
+  it('[RECALL-WHY-3] heads the listing `cortex-schema.md (all clauses)` and lists each entry once', async () => {
     const root = tmp('schema');
     const base = sampleRecallIndex();
     writeRecallIndexFixture(
@@ -235,7 +235,7 @@ describe('recall.why — the schema document aggregates its clauses', () => {
 // AC: Nothing bears on an unknown subject
 // ---------------------------------------------------------------------------
 describe('recall.why — nothing bears on an unknown subject', () => {
-  it('prints `Nothing bears on R-999.` and exits 0', async () => {
+  it('[RECALL-WHY-6] prints `Nothing bears on R-999.` and exits 0', async () => {
     const root = tmp('nothing');
     writeRecallIndexFixture(root, sampleRecallIndex());
     const { code, out, err } = await cortex(root, ['why', 'R-999']);
@@ -257,7 +257,7 @@ describe('recall.why — nothing bears on an unknown subject', () => {
 // AC: --json is the subject block plus its entries
 // ---------------------------------------------------------------------------
 describe('recall.why — --json is the subject block plus its entries', () => {
-  it('emits key, subject, the four entries and three findings, sorted keys, trailing newline', async () => {
+  it('[RECALL-WHY-7] emits key, subject, the four entries and three findings, sorted keys, trailing newline', async () => {
     const root = whyProject('json');
     const { code, out } = await cortex(root, ['why', 'R-001', '--json']);
     expect(code).toBe(0);
@@ -312,7 +312,7 @@ describe('recall.why — --json is the subject block plus its entries', () => {
 // AC: recall ranks by hits then date and caps at five
 // ---------------------------------------------------------------------------
 describe('recall.why — recall ranks by hits then date and caps at five', () => {
-  it('prints exactly five lines newest first and omits the single-hit entry', async () => {
+  it('[RECALL-WHY-8] prints exactly five lines newest first and omits the single-hit entry', async () => {
     const root = tmp('rank');
     const entries: Record<string, ReturnType<typeof recallEntry>> = {};
     const dates = ['2026-09-01', '2026-09-03', '2026-09-02', '2026-09-07', '2026-09-05', '2026-09-06', '2026-09-04'];
@@ -335,7 +335,7 @@ describe('recall.why — recall ranks by hits then date and caps at five', () =>
 // AC: recall filters by kind and honours a ref-shaped token
 // ---------------------------------------------------------------------------
 describe('recall.why — recall filters by kind and honours a ref-shaped token', () => {
-  it('`recall schema:§5 --kind evidence` prints the one evidence line', async () => {
+  it('[RECALL-WHY-9] `recall schema:§5 --kind evidence` prints the one evidence line', async () => {
     const root = tmp('kind');
     writeRecallIndexFixture(root, sampleRecallIndex());
     const { code, out } = await cortex(root, ['recall', 'schema:§5', '--kind', 'evidence']);
@@ -357,7 +357,7 @@ describe('recall.why — recall filters by kind and honours a ref-shaped token',
 // AC: No matches is exit 0
 // ---------------------------------------------------------------------------
 describe('recall.why — no matches is exit 0', () => {
-  it('prints `No matches.`', async () => {
+  it('[RECALL-WHY-10] prints `No matches.`', async () => {
     const root = tmp('none');
     writeRecallIndexFixture(root, sampleRecallIndex());
     const { code, out, err } = await cortex(root, ['recall', 'zxqv', 'plork']);
@@ -371,7 +371,7 @@ describe('recall.why — no matches is exit 0', () => {
 // AC: A missing index is exit 1 with the scan hint (Rule 2, both halves)
 // ---------------------------------------------------------------------------
 describe('recall.why — a missing index is exit 1 with the scan hint', () => {
-  it('no .cortex/ at all: both verbs exit 1 naming the file and cortex scan', async () => {
+  it('[RECALL-WHY-11] no .cortex/ at all: both verbs exit 1 naming the file and cortex scan', async () => {
     const root = tmp('no-cortex');
     for (const argv of [['why', 'R-001'], ['recall', 'usage']]) {
       const { code, out, err } = await cortex(root, argv);
@@ -407,7 +407,7 @@ describe('recall.why — bad grammar is exit 2', () => {
     });
   }
 
-  it('grammar is checked before the index — no index still exits 2', async () => {
+  it('[RECALL-WHY-12] grammar is checked before the index — no index still exits 2', async () => {
     const root = tmp('grammar-no-index');
     const { code } = await cortex(root, ['why']);
     expect(code).toBe(2);
@@ -447,7 +447,7 @@ function bugProject(label: string, fields: string[] | null = ['status: triaged',
 }
 
 describe('recall.why — why lists the rule and the open bug on a source file, with the bug\'s currency fields', () => {
-  it('AC: the heading gains · 1 bugs · 1 rules; Bugs: then its sub-line; Rules: with R-001; --json bugs.found_at_commit is null', async () => {
+  it('[RECALL-WHY-4] AC: the heading gains · 1 bugs · 1 rules; Bugs: then its sub-line; Rules: with R-001; --json bugs.found_at_commit is null', async () => {
     const root = bugProject('bugs-ac');
     const { code, out } = await cortex(root, ['why', XREF]);
     expect(code).toBe(0);
@@ -510,7 +510,7 @@ describe('recall.why — why lists the rule and the open bug on a source file, w
 });
 
 describe('recall.why — recall filters by a compass kind', () => {
-  it('AC: `recall scheduled tasks --kind compass-doc` prints the one compass-doc line with no date', async () => {
+  it('[RECALL-WHY-5] AC: `recall scheduled tasks --kind compass-doc` prints the one compass-doc line with no date', async () => {
     const root = tmp('kind-compass');
     writeRecallIndexFixture(root, recallIndexFixture(
       {},
@@ -530,7 +530,7 @@ describe('recall.why — recall filters by a compass kind', () => {
     expect(bug.out).toBe('No matches.');
   });
 
-  it('the --kind enum is the seven kinds; the usage line names them', async () => {
+  it('[RECALL-WHY-12] the --kind enum is the seven kinds; the usage line names them', async () => {
     const root = tmp('kind-enum');
     writeRecallIndexFixture(root, sampleRecallIndex());
     const { code, err } = await cortex(root, ['recall', 'x', '--kind', 'rumour']);

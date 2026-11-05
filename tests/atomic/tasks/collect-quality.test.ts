@@ -64,7 +64,7 @@ afterEach(() => {
 });
 
 describe('Collect on an unported repository states it', () => {
-  it('is not ported, with usage and store filled, exit 0', () => {
+  it('[LOOPS-QUALITY-TASK-1] is not ported, with usage and store filled, exit 0', () => {
     const fx = repo();
     const out: string[] = [];
     expect(tasksCollect(['quality', '--json', '--today', TODAY], fx.root, { home: fx.home, stdout: (l) => out.push(l) })).toBe(0);
@@ -76,20 +76,20 @@ describe('Collect on an unported repository states it', () => {
 });
 
 describe('Lint that did not run does not read as a pass', () => {
-  it('gives null counts and says so when the output is not lint JSON', () => {
+  it('[LOOPS-QUALITY-TASK-2] gives null counts and says so when the output is not lint JSON', () => {
     for (const stdout of ['', 'cortex specs: unknown command lint', '{"counts":{}}', '{}']) {
       expect(parseLint(2, stdout), stdout).toEqual({ exit: 2, errors: null, warnings: null, notRun: 'cortex specs lint gave no result' });
     }
   });
 
-  it('keeps real counts, a failing lint included', () => {
+  it('[LOOPS-QUALITY-TASK-2] keeps real counts, a failing lint included', () => {
     expect(parseLint(1, '{"findings":[],"counts":{"error":2,"warning":3}}')).toEqual({ exit: 1, errors: 2, warnings: 3 });
     expect(parseLint(0, '{"findings":[],"counts":{"error":0,"warning":0}}')).toEqual({ exit: 0, errors: 0, warnings: 0 });
   });
 });
 
 describe('Coverage comes from the index', () => {
-  it('counts 4 criteria, 3 tagged, and names the fourth', () => {
+  it('[LOOPS-QUALITY-TASK-3] counts 4 criteria, 3 tagged, and names the fourth', () => {
     const fx = repo();
     ported(fx.root);
     spec(fx.root, 'bill', 'pay', { criteria: [['BILL-PAY-1', 'a'], ['BILL-PAY-2', 'b'], ['BILL-PAY-3', 'c'], ['BILL-PAY-4', 'd']] });
@@ -101,7 +101,7 @@ describe('Coverage comes from the index', () => {
 });
 
 describe('The rotation prefers the never-reviewed, then the oldest', () => {
-  it('gives f, g, then a and the next two oldest', () => {
+  it('[LOOPS-QUALITY-TASK-4] gives f, g, then a and the next two oldest', () => {
     const fx = repo();
     ported(fx.root);
     for (const n of ['a', 'b', 'c', 'd', 'e', 'f', 'g']) spec(fx.root, 'x', n);
@@ -121,7 +121,7 @@ describe('The rotation prefers the never-reviewed, then the oldest', () => {
 });
 
 describe('A drifted spec wins a tie', () => {
-  it('puts c before b', () => {
+  it('[LOOPS-QUALITY-TASK-5] puts c before b', () => {
     const fx = repo();
     gitInit(fx.root);
     ported(fx.root);
@@ -137,7 +137,7 @@ describe('A drifted spec wins a tie', () => {
 });
 
 describe('Retired specs are not reviewed', () => {
-  it('leaves it out', () => {
+  it('[LOOPS-QUALITY-TASK-6] leaves it out', () => {
     const fx = repo();
     ported(fx.root);
     spec(fx.root, 'x', 'live');
@@ -147,7 +147,7 @@ describe('Retired specs are not reviewed', () => {
 });
 
 describe('Usage counts come from the week\'s sessions', () => {
-  it('counts one session, two reads, one readback', () => {
+  it('[LOOPS-QUALITY-TASK-7] counts one session, two reads, one readback', () => {
     const fx = repo();
     const lines = [
       toolTurn(read(path.join(fx.root, 'cortex/world/terms/a.md')), read(path.join(fx.root, 'cortex/MAP.md'))),
@@ -161,7 +161,7 @@ describe('Usage counts come from the week\'s sessions', () => {
 });
 
 describe('Digests are counted', () => {
-  it('counts list items in the window only', () => {
+  it('[LOOPS-QUALITY-TASK-8] counts list items in the window only', () => {
     const fx = repo();
     const digest = '## Filed\n- a → b\n- c → d\n\n## Already there\n- e → f\n- g → h\n- i → j\n\n## Skipped\n- k: l\n';
     writeStoreFile(fx.root, 'history/sources/2026-11-02-session-a.md', baseFm({ permanence: 'stable' }), digest);
@@ -171,7 +171,7 @@ describe('Digests are counted', () => {
 });
 
 describe('Readback sessions are counted once each', () => {
-  it('counts three readbacks in one session', () => {
+  it('[LOOPS-QUALITY-TASK-9] counts three readbacks in one session', () => {
     const fx = repo();
     session(fx, 'many', '2026-11-02T10:00:00Z', [textTurn('assistant', 'Filing: a\nUpdated: b\nProposed: c')]);
     session(fx, 'none', '2026-11-02T10:00:00Z', [textTurn('assistant', 'nothing filed')]);
@@ -180,7 +180,7 @@ describe('Readback sessions are counted once each', () => {
 });
 
 describe('A worktree read counts as a store read', () => {
-  it('counts the worktree read and clears the file from filesNeverRead', () => {
+  it('[LOOPS-QUALITY-TASK-10] counts the worktree read and clears the file from filesNeverRead', () => {
     const fx = repo();
     gitInit(fx.root);
     writeStoreFile(fx.root, 'world/terms/a.md', baseFm());
@@ -196,7 +196,7 @@ describe('A worktree read counts as a store read', () => {
 });
 
 describe('Store shape is counted per folder', () => {
-  it('keys by folder, absent when empty', () => {
+  it('[LOOPS-QUALITY-TASK-11] keys by folder, absent when empty', () => {
     const fx = repo();
     writeStoreFile(fx.root, 'world/people/a.md', baseFm());
     writeStoreFile(fx.root, 'world/people/b.md', baseFm());
@@ -210,7 +210,7 @@ describe('Store shape is counted per folder', () => {
 });
 
 describe('Area and test command are reported', () => {
-  it('gives the area and the command, and null without the key', () => {
+  it('[LOOPS-QUALITY-TASK-12] gives the area and the command, and null without the key', () => {
     const fx = repo();
     ported(fx.root);
     spec(fx.root, 'billing', 'refunds');
@@ -223,7 +223,7 @@ describe('Area and test command are reported', () => {
 });
 
 describe('Collect writes nothing', () => {
-  it('leaves the project byte-identical', () => {
+  it('[LOOPS-QUALITY-TASK-13] leaves the project byte-identical', () => {
     const fx = repo();
     ported(fx.root);
     spec(fx.root, 'x', 'a');
@@ -247,7 +247,7 @@ function flagsRepo(): { root: string; dir: string; sha: string } {
 }
 
 describe('A file no criterion names is flagged', () => {
-  it('flags the unnamed one and names the other with its criterion', () => {
+  it('[LOOPS-QUALITY-TASK-14] flags the unnamed one and names the other with its criterion', () => {
     const { root, dir, sha } = flagsRepo();
     for (const f of ['src/auth/session_store.py', 'src/api/users.py', 'tests/test_a.py', 'README.md']) write(dir, f, 'x = 2\n');
     const r = nameFlags({ projectRoot: root, dir, base: sha });
@@ -265,7 +265,7 @@ describe('A file no criterion names is flagged', () => {
 });
 
 describe('A tagged test naming the file clears the flag', () => {
-  it('is not flagged', () => {
+  it('[LOOPS-QUALITY-TASK-15] is not flagged', () => {
     const { root, dir, sha } = flagsRepo();
     write(root, 'tests/test_b.py', '@pytest.mark.criterion("API-USERS-1")\ndef test_x():\n    assert session_store\n');
     write(dir, 'src/auth/session_store.py', 'x = 2\n');
@@ -274,7 +274,7 @@ describe('A tagged test naming the file clears the flag', () => {
 });
 
 describe('A short stem is not a token', () => {
-  it('flags src/db.py when the block has only the word db', () => {
+  it('[LOOPS-QUALITY-TASK-16] flags src/db.py when the block has only the word db', () => {
     const { root, dir, sha } = flagsRepo();
     spec(root, 'api', 'store', { criteria: [['API-STORE-1', 'the db answers']] });
     write(dir, 'src/db.py', 'x = 2\n');
@@ -283,7 +283,7 @@ describe('A short stem is not a token', () => {
 });
 
 describe('Untracked files count as changed', () => {
-  it('is in governed', () => {
+  it('[LOOPS-QUALITY-TASK-17] is in governed', () => {
     const { root, dir, sha } = flagsRepo();
     write(dir, 'src/new_thing.ts', 'export {};\n');
     expect(nameFlags({ projectRoot: root, dir, base: sha }).governed).toContain('src/new_thing.ts');

@@ -117,7 +117,7 @@ describe('recall.index-blocks — the writer inside an initialised project', () 
     expect(read(root, EVIDENCE_REL)).toBe(CORTEX_INDEXES['atlas/evidence']);
   });
 
-  it('the scan code path (compile + writeRecallIndex + writeRecallIndexBlocks) writes a block naming every entry in both files', async () => {
+  it('[RECALL-INDEX-BLOCKS-6] the scan code path (compile + writeRecallIndex + writeRecallIndexBlocks) writes a block naming every entry in both files', async () => {
     decision(root, '2026-09-01-a', 'First decision', 'R-001');
     decision(root, '2026-09-10-b', 'Second decision', 'R-001, ".cortex/atlas/evidence/2026-09-15-usage.md"');
     evidence(root, '2026-09-15-usage', 'Usage over 41 sessions', 'R-001');
@@ -140,7 +140,7 @@ describe('recall.index-blocks — the writer inside an initialised project', () 
     expect(eLines[3]).toBe(RECALL_BLOCK_END);
   }, TEST_TIMEOUT);
 
-  it('the post-commit fast tier rebuilds recall-index.json for a new decision but leaves both blocks unchanged (Rule 6)', async () => {
+  it('[RECALL-INDEX-BLOCKS-6] the post-commit fast tier rebuilds recall-index.json for a new decision but leaves both blocks unchanged (Rule 6)', async () => {
     decision(root, '2026-09-14-c', 'Third decision', 'R-001');
     expect(await runInsightRefreshFast(root)).toBe(0);
     const raw = read(root, '.cortex/recall-index.json');
@@ -150,7 +150,7 @@ describe('recall.index-blocks — the writer inside an initialised project', () 
     expect(read(root, DECISIONS_REL)).not.toContain('decision.2026-09-14-c');
   }, TEST_TIMEOUT);
 
-  it('cortex sync counts a template-plus-block index as current and leaves the block intact (Rule 7)', async () => {
+  it('[RECALL-INDEX-BLOCKS-7] cortex sync counts a template-plus-block index as current and leaves the block intact (Rule 7)', async () => {
     const result = await sync(root, { home, platform: 'darwin' });
     expect(result.exitCode).toBe(0);
     const currentLine = result.summary.split('\n').find((l) => l.trim().startsWith('Current:')) ?? '';

@@ -90,7 +90,7 @@ function stripGenerated(index: RecallIndex): string {
 // Rule 10 / AC: empty inputs compile
 // ---------------------------------------------------------------------------
 describe('AC: empty inputs compile (Rule 10)', () => {
-  it('a project with none of the four directories scans no carriers and compiles to an empty index, never an error', async () => {
+  it('[RECALL-RECALL-INDEX-11] a project with none of the four directories scans no carriers and compiles to an empty index, never an error', async () => {
     const root = tmp('empty');
     expect(scanCarriers(root)).toEqual([]);
     const index = await compileRecallIndex(root);
@@ -139,7 +139,7 @@ describe('AC: keywords are names, never bodies (Rule 8)', () => {
   // Rule 8 is the contract: every lowercase token of three or more characters.
   // The AC's example list omits `only` (from `pull-only`), which Rule 8 keeps;
   // the rule wins and the discrepancy is reported as a gap.
-  it('the AC title yields Rule 8\'s tokens plus the ref verbatim, sorted and deduplicated', () => {
+  it('[RECALL-RECALL-INDEX-9] the AC title yields Rule 8\'s tokens plus the ref verbatim, sorted and deduplicated', () => {
     expect(keywordsOf("Insight's pull-only stance is widened to permit concept names at SessionStart", ['schema:§5'])).toEqual([
       'concept', 'insight', 'names', 'only', 'permit', 'pull', 'schema:§5', 'sessionstart', 'stance', 'widened',
     ]);
@@ -149,7 +149,7 @@ describe('AC: keywords are names, never bodies (Rule 8)', () => {
     expect(keywordsOf('Pulse pulse PULSE', ['R-999', 'R-999', './src/x.ts'])).toEqual(['./src/x.ts', 'R-999', 'pulse']);
   });
 
-  it('no token from a 400-word body appears in the compiled keywords', async () => {
+  it('[RECALL-RECALL-INDEX-9] no token from a 400-word body appears in the compiled keywords', async () => {
     const root = tmp('keywords-body');
     seed(root);
     const bodyWords = Array.from({ length: 400 }, (_, i) => `bodyword${i}`);
@@ -213,7 +213,7 @@ describe('Rule 8: one entries row per scanned artefact', () => {
 // AC: a superseded decision keeps its entry and loses its subjects (Rule 3)
 // ---------------------------------------------------------------------------
 describe('AC: a superseded decision keeps its entry and loses its subjects', () => {
-  it('subjects["R-001"].decided is exactly the superseder; entries holds both', async () => {
+  it('[RECALL-RECALL-INDEX-2] subjects["R-001"].decided is exactly the superseder; entries holds both', async () => {
     const root = tmp('superseded-decision');
     seed(root);
     decision(root, '2026-07-01-a', ['bears_on: [R-001]']);
@@ -238,7 +238,7 @@ describe('AC: a superseded decision keeps its entry and loses its subjects', () 
 // AC: only open threads reach a subject (Rule 4)
 // ---------------------------------------------------------------------------
 describe('AC: only open threads reach a subject', () => {
-  it('subjects[spec path].threads is exactly ["T-001"]; entries holds all three ids', async () => {
+  it('[RECALL-RECALL-INDEX-3] subjects[spec path].threads is exactly ["T-001"]; entries holds all three ids', async () => {
     const root = tmp('open-threads');
     seed(root);
     const ref = '.specflow/specs/pulse/hygiene.spec.md';
@@ -255,7 +255,7 @@ describe('AC: only open threads reach a subject', () => {
 // AC: evidence flows through the citing decision and directly (Rule 5)
 // ---------------------------------------------------------------------------
 describe('AC: evidence flows through the citing decision and directly', () => {
-  it('schema:§5, R-003 (via the decision) and pulse.usage (directly) each list the evidence id', async () => {
+  it('[RECALL-RECALL-INDEX-4] schema:§5, R-003 (via the decision) and pulse.usage (directly) each list the evidence id', async () => {
     const root = tmp('evidence-flow');
     seed(root);
     evidence(root, '2026-09-15-usage', ['bears_on: [pulse.usage]']);
@@ -283,7 +283,7 @@ describe('AC: evidence flows through the citing decision and directly', () => {
 // AC: a superseded evidence file is dropped from every evidence list (Rule 5)
 // ---------------------------------------------------------------------------
 describe('AC: a superseded evidence file is dropped from every evidence list', () => {
-  it('only the superseder remains, even where a decision cites the older one; entries keeps the older row', async () => {
+  it('[RECALL-RECALL-INDEX-5] only the superseder remains, even where a decision cites the older one; entries keeps the older row', async () => {
     const root = tmp('superseded-evidence');
     seed(root);
     evidence(root, '2026-09-01-usage', ['bears_on: [pulse.usage]']);
@@ -303,7 +303,7 @@ describe('AC: a superseded evidence file is dropped from every evidence list', (
 // AC: an observation contributes its theme (Rule 6)
 // ---------------------------------------------------------------------------
 describe('AC: an observation contributes its theme', () => {
-  it('R-001 and concept:hook-safety both list "working-style"; the entry kind is observation', async () => {
+  it('[RECALL-RECALL-INDEX-6] R-001 and concept:hook-safety both list "working-style"; the entry kind is observation', async () => {
     const root = tmp('observation');
     seed(root);
     observation(root, 'working-style', 'bears_on: [R-001, "concept:hook-safety"]');
@@ -327,7 +327,7 @@ describe('AC: an observation contributes its theme', () => {
 // AC: unresolved refs are dropped and counted, never fatal (Rule 2)
 // ---------------------------------------------------------------------------
 describe('AC: unresolved refs are dropped and counted, never fatal', () => {
-  it('only the resolving path becomes a subject; droppedRefs is 2; the compile succeeds', async () => {
+  it('[RECALL-RECALL-INDEX-7] only the resolving path becomes a subject; droppedRefs is 2; the compile succeeds', async () => {
     const root = tmp('dropped');
     seed(root);
     thread(root, 'T-001', 'open', ['src/gone.ts', 'R-999', '.cortex/compass/rules/R-001-core-no-llm-calls.md']);
@@ -345,7 +345,7 @@ describe('AC: unresolved refs are dropped and counted, never fatal', () => {
 // AC: path spellings collapse to one subject (Rule 2)
 // ---------------------------------------------------------------------------
 describe('AC: path spellings collapse to one subject', () => {
-  it('./src/pulse/usage.ts and src/pulse/usage.ts are one key carrying both carriers', async () => {
+  it('[RECALL-RECALL-INDEX-8] ./src/pulse/usage.ts and src/pulse/usage.ts are one key carrying both carriers', async () => {
     const root = tmp('path-collapse');
     seed(root);
     decision(root, '2026-09-01-d', ['bears_on: [./src/pulse/usage.ts]']);
@@ -368,7 +368,7 @@ describe('AC: path spellings collapse to one subject', () => {
 // AC: dependencies are not closed over (Rule 7)
 // ---------------------------------------------------------------------------
 describe('AC: dependencies are not closed over', () => {
-  it('a decision bearing on pulse.hygiene leaves subjects["pulse.threads"] undefined', async () => {
+  it('[RECALL-RECALL-INDEX-10] a decision bearing on pulse.hygiene leaves subjects["pulse.threads"] undefined', async () => {
     const root = tmp('no-closure');
     seed(root);
     decision(root, '2026-09-01-d', ['bears_on: [pulse.hygiene]']);
@@ -382,7 +382,7 @@ describe('AC: dependencies are not closed over', () => {
 // AC / Rule 9: deterministic modulo timestamp; sorted keys and lists
 // ---------------------------------------------------------------------------
 describe('AC: deterministic modulo timestamp (Rule 9)', () => {
-  it('two compilations of one project are byte-identical after removing generated; keys and lists are sorted', async () => {
+  it('[RECALL-RECALL-INDEX-11] two compilations of one project are byte-identical after removing generated; keys and lists are sorted', async () => {
     const root = tmp('determinism');
     seed(root);
     decision(root, '2026-09-02-b', ['bears_on: ["schema:§5", R-001, pulse.usage]']);

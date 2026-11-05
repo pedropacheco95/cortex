@@ -38,7 +38,7 @@ function writeTranscript(home: string, slug: string, id: string, lines: string[]
 }
 
 describe('loops.session-reading — integrated list → read → extract slice', () => {
-  it('enumerates this project only, tolerates noise, and distils the conversation', () => {
+  it('[LOOPS-SESSION-READING-2, LOOPS-SESSION-READING-5, LOOPS-SESSION-READING-10, LOOPS-SESSION-READING-12] enumerates this project only, tolerates noise, and distils the conversation', () => {
     const home = tmp('home');
     const root = '/Users/dev/myproject';
     const slug = projectSlug(root);

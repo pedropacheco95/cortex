@@ -23,7 +23,7 @@ const fm = (verified: string, extra: Record<string, unknown> = {}): Record<strin
 afterEach(cleanRepos);
 
 describe('Collect reports every section, even when empty', () => {
-  it('holds all eight keys, empty, with exit 0 and no file changed', () => {
+  it('[LOOPS-FRESH-TASK-1] holds all eight keys, empty, with exit 0 and no file changed', () => {
     const root = store();
     const before = snapshot(root);
     const out: string[] = [];
@@ -38,7 +38,7 @@ describe('Collect reports every section, even when empty', () => {
 });
 
 describe('An old person file is aged, a recent one is not', () => {
-  it('holds rui and not ana', () => {
+  it('[LOOPS-FRESH-TASK-2] holds rui and not ana', () => {
     const root = store();
     writeStoreFile(root, 'world/people/rui.md', fm('2026-07-01 (told)'));
     writeStoreFile(root, 'world/people/ana.md', fm('2026-10-20 (told)'));
@@ -57,7 +57,7 @@ describe('An old person file is aged, a recent one is not', () => {
 });
 
 describe('Decisions use the longer window and name who cites them', () => {
-  it('holds a.md with citedBy, and not c.md', () => {
+  it('[LOOPS-FRESH-TASK-3] holds a.md with citedBy, and not c.md', () => {
     const root = store();
     writeStoreFile(root, 'world/decisions/a.md', fm('2026-04-18 (told)'));
     writeStoreFile(root, 'world/decisions/c.md', fm('2026-07-27 (told)'));
@@ -72,7 +72,7 @@ describe('A rule whose paths match nothing is dead', () => {
   const rule = (extra: Record<string, unknown>): Record<string, unknown> =>
     fm('2026-11-01 (told)', { applies_when: 'The agent edits code', scope: ['action'], source: 'user@2026-11-01', ...extra });
 
-  it('holds the first with its glob, and not the rule with no match.paths or a live one', () => {
+  it('[LOOPS-FRESH-TASK-4] holds the first with its glob, and not the rule with no match.paths or a live one', () => {
     const root = store();
     fs.mkdirSync(path.join(root, 'src', 'live'), { recursive: true });
     fs.writeFileSync(path.join(root, 'src', 'live', 'x.ts'), '');
@@ -84,7 +84,7 @@ describe('A rule whose paths match nothing is dead', () => {
 });
 
 describe('A lagging managed block is reported', () => {
-  it('names the mismatch', () => {
+  it('[LOOPS-FRESH-TASK-5] names the mismatch', () => {
     const root = store();
     const file = path.join(root, 'CLAUDE.md');
     fs.writeFileSync(file, fs.readFileSync(file, 'utf-8').replace('cortex:start v4.0', 'cortex:start v3.4'));
@@ -102,7 +102,7 @@ describe('A lagging managed block is reported', () => {
 });
 
 describe('Open pitfalls are counted and aged', () => {
-  it('counts two and ages one', () => {
+  it('[LOOPS-FRESH-TASK-6] counts two and ages one', () => {
     const root = store();
     writeStoreFile(root, 'code/hooks/a.md', fm('2026-09-01 (observed)', { status: 'open' }));
     writeStoreFile(root, 'code/hooks/b.md', fm('2026-10-20 (observed)', { status: 'open' }));
@@ -112,7 +112,7 @@ describe('Open pitfalls are counted and aged', () => {
 });
 
 describe('Collect does not expire anything', () => {
-  it('lists the item and leaves the file byte-identical', () => {
+  it('[LOOPS-FRESH-TASK-7] lists the item and leaves the file byte-identical', () => {
     const root = store();
     const file = writeStoreFile(root, 'now/sprint.md', fm('2026-10-01 (told)', { permanence: 'volatile' }), '## Sprint nine\nuntil: 2026-10-30\n');
     const before = fs.readFileSync(file, 'utf-8');

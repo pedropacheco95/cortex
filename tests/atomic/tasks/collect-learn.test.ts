@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe('Collect lists only unmined, finished, recent sessions', () => {
-  it('holds exactly a; with --all, a and d', () => {
+  it('[LOOPS-LEARN-TASK-1] holds exactly a; with --all, a and d', () => {
     const fx = fixture();
     session(fx.home, fx.root, 'a', hoursAgo(72));
     session(fx.home, fx.root, 'b', hoursAgo(72));
@@ -64,7 +64,7 @@ describe('Collect lists only unmined, finished, recent sessions', () => {
 });
 
 describe('Scheduled sessions are not mined', () => {
-  it('lists neither the skill preamble nor the task tag', () => {
+  it('[LOOPS-LEARN-TASK-2] lists neither the skill preamble nor the task tag', () => {
     const fx = fixture();
     session(fx.home, fx.root, 'skill', hoursAgo(72), [skillBaseDirUserTurn()]);
     session(fx.home, fx.root, 'task', hoursAgo(72), [scheduledTaskUserTurn()]);
@@ -74,7 +74,7 @@ describe('Scheduled sessions are not mined', () => {
 });
 
 describe('Worktree sessions are included, other projects are not', () => {
-  it('lists the root and the worktree, not a slug sharing the prefix', () => {
+  it('[LOOPS-LEARN-TASK-3] lists the root and the worktree, not a slug sharing the prefix', () => {
     const fx = fixture();
     const git = (...args: string[]): void => {
       execFileSync('git', ['-C', fx.root, ...args], { stdio: 'ignore' });
@@ -93,7 +93,7 @@ describe('Worktree sessions are included, other projects are not', () => {
 });
 
 describe('The per-run limit is honest', () => {
-  it('lists the 10 oldest and says 3 remain', () => {
+  it('[LOOPS-LEARN-TASK-4] lists the 10 oldest and says 3 remain', () => {
     const fx = fixture();
     for (let i = 0; i < 13; i++) session(fx.home, fx.root, `s${String(i).padStart(2, '0')}`, hoursAgo(100 - i));
     const r = collect(fx);
@@ -104,7 +104,7 @@ describe('The per-run limit is honest', () => {
 });
 
 describe('An out directory inside the project is refused', () => {
-  it('exits 1 and writes nothing', () => {
+  it('[LOOPS-LEARN-TASK-5] exits 1 and writes nothing', () => {
     const fx = fixture();
     session(fx.home, fx.root, 'a', hoursAgo(72));
     const before = snapshot(fx.root);
@@ -119,7 +119,7 @@ describe('An out directory inside the project is refused', () => {
 });
 
 describe('Collect leaves the repository untouched', () => {
-  it('changes nothing under the project or the transcripts, and writes under the default out dir', () => {
+  it('[LOOPS-LEARN-TASK-6] changes nothing under the project or the transcripts, and writes under the default out dir', () => {
     const fx = fixture();
     session(fx.home, fx.root, 'a', hoursAgo(72));
     const root = snapshot(fx.root);
@@ -178,7 +178,7 @@ function entries(lines: Record<string, unknown>[]) {
 }
 
 describe('Condensing labels who spoke', () => {
-  it('gives one block each, in transcript order, and drops tool results', () => {
+  it('[LOOPS-LEARN-TASK-7] gives one block each, in transcript order, and drops tool results', () => {
     const text = condenseSession(entries([
       textTurn('user', 'please fix it'),
       textTurn('user', 'relay\n<cross-session-message from="x">peer says</cross-session-message>'),
@@ -208,7 +208,7 @@ describe('Condensing labels who spoke', () => {
 });
 
 describe('Long sessions split at an entry boundary', () => {
-  it('makes three parts, none over the limit, no entry cut', () => {
+  it('[LOOPS-LEARN-TASK-8] makes three parts, none over the limit, no entry cut', () => {
     const body = 'x'.repeat(49_990);
     const turns = Array.from({ length: 9 }, (_, i) => textTurn('user', `${i}:${body}`));
     const { parts } = condenseSession(entries(turns));
@@ -229,7 +229,7 @@ describe('Long sessions split at an entry boundary', () => {
 });
 
 describe('Secrets are redacted before writing', () => {
-  it('holds the labels, neither original, and counts 2', () => {
+  it('[LOOPS-LEARN-TASK-9] holds the labels, neither original, and counts 2', () => {
     const fx = fixture();
     const token = `ghp_${'a'.repeat(36)}`;
     session(fx.home, fx.root, 'sec', hoursAgo(72), [textTurn('user', `use ${token} and password: hunter2 here`)]);

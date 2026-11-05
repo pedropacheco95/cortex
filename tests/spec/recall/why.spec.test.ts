@@ -89,7 +89,7 @@ afterAll(() => {
 });
 
 describe('recall.why — the listing over a compiled index (Rules 2–4, end-to-end)', () => {
-  it('cortex why R-001 lists the decision the real compiler inverted', async () => {
+  it('[RECALL-WHY-1] cortex why R-001 lists the decision the real compiler inverted', async () => {
     const { code, out, err } = await viaModule(['why', 'R-001']);
     expect(code).toBe(0);
     expect(err).toBe('');
@@ -112,7 +112,7 @@ describe('recall.why — the listing over a compiled index (Rules 2–4, end-to-
     );
   });
 
-  it('--json through the dispatcher is one console.log call — the terminal sees a trailing newline (Rule 5)', async () => {
+  it('[RECALL-WHY-7] --json through the dispatcher is one console.log call — the terminal sees a trailing newline (Rule 5)', async () => {
     const { code, raw } = await viaCli(['why', 'R-001', '--json']);
     expect(code).toBe(0);
     expect(raw).toHaveLength(1);
@@ -130,7 +130,7 @@ describe('recall.why — the listing over a compiled index (Rules 2–4, end-to-
 });
 
 describe('recall.why — a missing index is exit 1 with the scan hint (Rule 2)', () => {
-  it('after deleting recall-index.json both verbs exit 1 naming the file and cortex scan; nothing is written back', async () => {
+  it('[RECALL-WHY-11] after deleting recall-index.json both verbs exit 1 naming the file and cortex scan; nothing is written back', async () => {
     const indexFile = recallIndexPath(root);
     const bytes = fs.readFileSync(indexFile);
     fs.rmSync(indexFile);
@@ -150,7 +150,7 @@ describe('recall.why — a missing index is exit 1 with the scan hint (Rule 2)',
 });
 
 describe('recall.why — the verbs are counted the day they ship (pulse.usage Rule 9)', () => {
-  it('a transcript with `cortex why R-001` and `cortex recall usage` reports why 1 and recall 1', () => {
+  it('[RECALL-WHY-13] a transcript with `cortex why R-001` and `cortex recall usage` reports why 1 and recall 1', () => {
     const usageHome = makeTmpDir('why-spec-usage-home');
     try {
       writeSessionTranscript(usageHome, root, 's1', [
@@ -173,7 +173,7 @@ describe('recall.why — the verbs are counted the day they ship (pulse.usage Ru
 // dispatcher: R-001 governs src/**/*.ts, a triaged bug affects src/x.ts.
 // ---------------------------------------------------------------------------
 describe('recall.why — the rule and the open bug on a source file, compiled (Rules 1, 4, 5, fifth revision)', () => {
-  it('cortex why src/x.ts lists Bugs: with the currency sub-line and Rules: with R-001; resolved → the bug drops out; --kind rule filters', async () => {
+  it('[RECALL-WHY-4] cortex why src/x.ts lists Bugs: with the currency sub-line and Rules: with R-001; resolved → the bug drops out; --kind rule filters', async () => {
     write('src/x.ts', 'export {};\n');
     write(
       '.cortex/compass/bugs/B-019-x.md',
