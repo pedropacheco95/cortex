@@ -153,11 +153,34 @@ describe('AC: no tracked file still points at the old name', () => {
     path.join('.specflow', 'specs', 'specflow', 'entry-gate.spec.md'),
   ];
 
-  function livePointerLines(content: string): string[] {
+  // Specs that must name the retired bundle on these lines, and only these: the
+  // update route removes it, and the skill-adjust table says what replaces it.
+  // Any other mention in the same file still routes a reader to the old name.
+  const RETIREMENT_RECORD_LINES: Record<string, readonly string[]> = {
+    [path.join('.specflow', 'specs', 'core-cli', 'sync.spec.md')]: [
+      '- **Given** an unedited `.claude/skills/specflow-change-router` with no marker',
+      '- **Then** it is gone, and the output has `skills: removed specflow-change-router`',
+    ],
+    [path.join('.specflow', 'specs', 'store', 'migrate-skill.spec.md')]: [
+      '    | `specflow-entry`, `specflow-change-router`, `specflow-develop`, `specflow-bugs` | none: `open`,',
+    ],
+  };
+
+  function livePointerLines(content: string, target = ''): string[] {
+    const records = RETIREMENT_RECORD_LINES[target] ?? [];
     return content
       .split('\n')
-      .filter((l) => l.includes('specflow-change-router') && !/renamed|retired|no longer ships/i.test(l));
+      .filter((l) => l.includes('specflow-change-router') && !/renamed|retired|no longer ships/i.test(l))
+      .filter((l) => !records.some((r) => l.startsWith(r)));
   }
+
+  it('a retirement record excuses its own lines, not the rest of its file', () => {
+    const target = path.join('.specflow', 'specs', 'core-cli', 'sync.spec.md');
+    const record = RETIREMENT_RECORD_LINES[target]![0]!;
+    const live = 'Run `specflow-change-router` first.';
+    expect(livePointerLines(`${record}\n${live}`, target)).toEqual([live]);
+    expect(livePointerLines(record)).toEqual([record]);
+  });
 
   it('the live surfaces — skills, specs, tests, indexes — name specflow-entry', () => {
     const roots = ['skills', '.claude/skills', '.specflow', 'tests', 'src', 'CLAUDE.md', 'onboarding.md'];
@@ -173,7 +196,7 @@ describe('AC: no tracked file still points at the old name', () => {
       }
       if (!/\.(md|ts|json)$/.test(target)) return;
       if (HISTORICAL_FILES.includes(target)) return;
-      if (livePointerLines(fs.readFileSync(abs, 'utf-8')).length > 0) offenders.push(target);
+      if (livePointerLines(fs.readFileSync(abs, 'utf-8'), target).length > 0) offenders.push(target);
     };
 
     for (const r of roots) scan(r);
