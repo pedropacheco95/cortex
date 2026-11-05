@@ -1,6 +1,6 @@
 ---
 id: specflow.git-hooks
-status: draft
+status: implementing
 depends_on:
   - specflow.check
   - specflow.index

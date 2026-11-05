@@ -5,6 +5,7 @@
  * refusal message now names), the `cortex hook <name>` dispatch (specs hooks.*, Rule 1),
  * `cortex specs index [--staged] [--json]` (spec specflow.index), `cortex specs port` (spec specflow.port),
  * `cortex check --commit-msg <file> | --range <base>..<head>` (spec specflow.check),
+ * `cortex hooks install` (spec specflow.git-hooks),
  * `cortex constellation [--port N]` (spec constellation.renderer, Rule 1),
  * `cortex insight file|concept|element [--json]` — the read-only insight
  * query surface (spec insight.cli, Rule 1; §4.10.8),
@@ -50,12 +51,13 @@
  * line after this paragraph is its mirror, asserted equal by
  * tests/atomic/core-cli/dispatch.test.ts so the two cannot drift.
  *
- * Verbs: init, sync, store, specs, check, migrate, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
+ * Verbs: init, sync, store, specs, check, hooks, migrate, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
  */
 import { init } from './init.js';
 import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
 import { isEntryPoint } from '../entry.js';
 import { check } from '../specflow/check/index.js';
+import { installHooks } from '../specflow/hooks-install.js';
 import { specsIndex } from '../specflow/index.js';
 import { specsPort } from '../specflow/port.js';
 
@@ -72,6 +74,7 @@ const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
   ['store', 'store init|validate|map|expire|stale|amendments … (the 4.0 store, cortex/)'],
   ['specs', 'specs index [--staged] [--json] | port [--dry-run] [--ticket-pattern <regex>] [--verify]'],
   ['check', 'check --commit-msg <file> | --range <base>..<head>'],
+  ['hooks', 'hooks install'],
   ['migrate', 'migrate [--plan <file>] [--report <file>] [--json] [--apply|--accept]'],
   ['validate', 'validate [path] [--json]'],
   ['scan', 'scan'],
@@ -585,6 +588,12 @@ export async function run(argv: string[]): Promise<number> {
   // `cortex/` (schema Part II; specs store.*). `cortex migrate` moves a 3.x
   // `.cortex/` store to it (store.migrate).
   if (argv[0] === 'check') return check(argv.slice(1));
+
+  if (argv[0] === 'hooks') {
+    if (argv[1] === 'install' && argv.length === 2) return installHooks();
+    process.stderr.write('usage: cortex hooks install\n');
+    return 2;
+  }
 
   if (argv[0] === 'specs') {
     if (argv[1] === 'index') return specsIndex(argv.slice(2));
