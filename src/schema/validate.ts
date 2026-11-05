@@ -209,6 +209,20 @@ export async function validate(target: string, opts?: ValidateOptions): Promise<
   };
 }
 
+/** Drops `governed_by` findings whose 3.x id lives on as a store alias. */
+export function withoutStoreAliases(violations: Violation[], store: ReturnType<typeof loadStore>): Violation[] {
+  const aliases = new Set<string>();
+  for (const f of store.files) {
+    const a = f.frontmatter?.['aliases'];
+    if (Array.isArray(a)) for (const x of a) if (typeof x === 'string') aliases.add(x.trim());
+  }
+  return violations.filter((v) => {
+    if (v.check !== 'check.dev-spec' || v.location.key !== 'governed_by') return true;
+    const id = /governed_by ID "([^"]+)" does not resolve/.exec(v.message)?.[1];
+    return id === undefined || !aliases.has(id);
+  });
+}
+
 /** Part I's spec-tree checks that still apply once `.cortex/` is gone (validator Rule 15). */
 async function validateFourOh(root: string, target: string): Promise<ValidationReport> {
   const store = loadStore(root);
@@ -219,11 +233,6 @@ async function validateFourOh(root: string, target: string): Promise<ValidationR
     location: { path: path.join(root, 'cortex', f.path) },
     message: f.message,
   }));
-  const aliases = new Set<string>();
-  for (const f of store.files) {
-    const a = f.frontmatter?.['aliases'];
-    if (Array.isArray(a)) for (const x of a) if (typeof x === 'string') aliases.add(x.trim());
-  }
   const index = await buildIndex(root);
   const specViolations = [
     ...checkOverviewPresent(root),
@@ -231,12 +240,8 @@ async function validateFourOh(root: string, target: string): Promise<ValidationR
     ...await checkDevSpecs(root, index),
     ...await checkBizSpecs(root, index),
     ...await checkXrefSymmetry(root, index),
-  ].filter((v) => {
-    if (v.check !== 'check.dev-spec' || v.location.key !== 'governed_by') return true;
-    const id = /governed_by ID "([^"]+)" does not resolve/.exec(v.message)?.[1];
-    return id === undefined || !aliases.has(id);
-  });
-  violations.push(...specViolations);
+  ];
+  violations.push(...withoutStoreAliases(specViolations, store));
   const counts = countViolations(violations);
   return { schemaVersion: SUPPORTED_VERSION, target, conformant: counts.error === 0, violations, counts };
 }

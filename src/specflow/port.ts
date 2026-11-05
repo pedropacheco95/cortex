@@ -53,7 +53,7 @@ export function reversible(before: string, after: string, edits: LineEdit[]): bo
 }
 
 /** Rule 4: `<ID>: ` before each criterion title with none, numbered past the file's highest. */
-function stampIds(lines: string[], specId: string, edits: LineEdit[]): void {
+export function stampIds(lines: string[], specId: string, edits: LineEdit[]): void {
   const section = criteriaSection(lines);
   if (!section) return;
   const prefix = criterionPrefix(specId);

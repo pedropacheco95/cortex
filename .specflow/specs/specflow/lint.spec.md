@@ -1,6 +1,6 @@
 ---
 id: specflow.lint
-status: draft
+status: implemented
 depends_on:
   - specflow.index
   - schema.validator
