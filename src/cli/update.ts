@@ -79,7 +79,7 @@ function removeRetired(skillsDir: string, pkg: string, dry: boolean, say: (l: st
     } else if (e.isDirectory() && isEmptyBundle(dir)) {
       continue;
     } else if (e.isDirectory() && (markerMatches(dir) || isShippedCopy(e.name, dir))) {
-      assertTempFree(skillsDir, e.name);
+      assertTempFree(skillsDir, e.name, true);
       if (!dry) {
         const gone = path.join(skillsDir, `${TMP_BUNDLE_PREFIX}${e.name}`);
         fs.renameSync(dir, gone);
@@ -116,7 +116,7 @@ function installFinal(skillsDir: string, pkg: string, dry: boolean, install: Non
     }
     const want = bundleHash(src);
     if (bundleHash(dst) === want) {
-      if (!dry && !backfillMarker(dst, want)) say(`skills: ${name}: marker not written; left alone`);
+      if (!backfillMarker(dst, want, dry)) say(`skills: ${name}: marker not written; left alone`);
     } else if (markerMatches(dst) || isShippedCopy(name, dst)) {
       assertTempFree(skillsDir, name);
       if (!dry) install(skillsDir, name, src);

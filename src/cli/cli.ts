@@ -703,6 +703,10 @@ export async function run(argv: string[]): Promise<number> {
       return 2;
     }
     const positional = argv.slice(1).filter((a) => !a.startsWith('-'));
+    if (positional.length > 1) {
+      console.error(`cortex sync: unexpected argument ${positional[1]}. Nothing was written.`);
+      return 2;
+    }
     const target = positional[0] ?? '.';
     try {
       const { updateRoute } = await import('./update.js');

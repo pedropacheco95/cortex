@@ -166,8 +166,8 @@ export function removeTree(dir: string): void {
 }
 
 /** A non-folder at a temp name is a person's: it stops the step, named, and stays. */
-export function assertTempFree(skillsDir: string, name: string): void {
-  for (const tmp of [`${TMP_BUNDLE_PREFIX}${name}`, `${OLD_BUNDLE_PREFIX}${name}`]) {
+export function assertTempFree(skillsDir: string, name: string, removing = false): void {
+  for (const tmp of removing ? [`${TMP_BUNDLE_PREFIX}${name}`] : [`${TMP_BUNDLE_PREFIX}${name}`, `${OLD_BUNDLE_PREFIX}${name}`]) {
     const stat = fs.lstatSync(path.join(skillsDir, tmp), { throwIfNoEntry: false });
     if (stat && !stat.isDirectory()) throw new Error(`.claude/skills/${tmp} is in the way; move it and run this again`);
   }
@@ -213,10 +213,10 @@ export function skillsFolderIsLink(root: string): boolean {
 }
 
 /** Write the marker of a copy identical to the package's. False when something else holds that path. */
-export function backfillMarker(dir: string, hash: string): boolean {
+export function backfillMarker(dir: string, hash: string, dryRun = false): boolean {
   const markerPath = path.join(dir, INSTALLED_MARKER_FILENAME);
   if (fs.lstatSync(markerPath, { throwIfNoEntry: false })?.isDirectory()) return false;
-  if (readInstalledMarker(markerPath)?.sha256 !== hash) writeInstalledMarker(markerPath, hash);
+  if (!dryRun && readInstalledMarker(markerPath)?.sha256 !== hash) writeInstalledMarker(markerPath, hash);
   return true;
 }
 
@@ -239,7 +239,10 @@ function installBundles(root: string, pkg: string, lines: string[]): void {
         lines.push(differs);
         continue;
       }
-      if (!backfillMarker(dst, bundleHash(src))) lines.push(`skills: ${name}: marker not written; left alone`);
+      if (!backfillMarker(dst, bundleHash(src))) {
+        lines.push(`skills: ${name}: marker not written; left alone`);
+        continue;
+      }
     } else {
       fs.mkdirSync(skillsDir, { recursive: true });
       installWhole(skillsDir, name, src);
@@ -291,7 +294,7 @@ function termsIn(text: string): string[] {
 
 /** Is this bundle left out of the scan? (Rule 18 step 5) */
 function leftOutOfScan(name: string, dir: string, pkg: string): boolean {
-  if (isRetiredName(name) || name === 'cortex-migrate' || name.startsWith(TMP_BUNDLE_PREFIX)) return true;
+  if (isRetiredName(name) || name === 'cortex-migrate' || isLeftover(name)) return true;
   if (!FINAL_BUNDLES.includes(name) || holdsSymlink(dir)) return false;
   const shipped = path.join(pkg, 'skills', name);
   if (!fs.existsSync(shipped)) return isShippedCopy(name, dir);

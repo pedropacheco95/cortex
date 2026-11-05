@@ -19,7 +19,7 @@ import { packageRoot } from '../../cli/scaffold.js';
 import { applyRedactions, readRedactFile, replacer, type RedactFile, type RedactStat } from './redact.js';
 import { hydrate, LEGACY_DIR, readLegacyStore, type LegacyStore } from './entries.js';
 import { buildTree, planMigration, proposalItems, provenanceRefs, rawLayout, readPlanFile, sharedStemAliases, CONFIG_TARGET, type Planned, type PlanFile, type ProvenanceRef } from './plan.js';
-import { retireLegacySystem } from './system.js';
+import { retireLegacySystem, type SystemReport } from './system.js';
 
 const RETIRED_CONFIG_KEYS = ['hooks', 'pulse', 'harness', 'loop', 'profile'];
 
@@ -469,9 +469,16 @@ function accept(root: string, today: string, home: string, pkg: string): Migrate
   }
   const mig = cfg?.['migration'] as Record<string, unknown> | undefined;
   if (!cfg || !mig || typeof mig !== 'object') return { exitCode: 1, out: ['refusing --accept: no applied migration (run cortex migrate --apply first)'] };
+  // The date goes in only once the retirement has finished, so a stopped accept
+  // does not read as accepted, and a re-run picks it up (Rule 9).
+  let system: SystemReport;
+  try {
+    system = retireLegacySystem(root, home, pkg);
+  } catch (err) {
+    return { exitCode: 1, out: [`cortex migrate: --accept stopped: ${(err as Error).message}`] };
+  }
   cfg['migration'] = { from: mig['from'], accepted: isAcceptedDate(mig['accepted']) ? mig['accepted'] : today };
   fs.writeFileSync(p, JSON.stringify(cfg, null, 2) + '\n');
-  const system = retireLegacySystem(root, home, pkg);
   // Last, so that the blocks see the bundles just installed (Rule 9).
   const r = writeMapAndBlocks(root, { force: true });
   return { exitCode: 0, out: [...r.lines, `migration accepted on ${(cfg['migration'] as Record<string, unknown>)['accepted']}; .cortex/ is left in place (remove it yourself: ${removal([LEGACY_DIR])})`, ...system.lines] };

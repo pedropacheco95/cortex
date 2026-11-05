@@ -386,6 +386,17 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     expect(fs.existsSync(path.join(root, '.claude/skills/specflow-plan/SKILL.md'))).toBe(true);
   });
 
+  it("a person's file at an unused temp name blocks nothing", async () => {
+    const root = accepted('oldretired');
+    const dir = bundle(root, 'cortex-loop', 'l\n', true);
+    const note = path.join(root, `.claude/skills/${TMP_BUNDLE_PREFIX}old-cortex-loop`);
+    fs.writeFileSync(note, 'a note\n');
+    const r = await run(root);
+    expect(r.code, r.text).toBe(0);
+    expect(fs.existsSync(dir)).toBe(false);
+    expect(fs.readFileSync(note, 'utf8')).toBe('a note\n');
+  });
+
   it("A person's temp-looking folder stays, and a generated leftover is named", async () => {
     const root = accepted('leftovers');
     const skills = path.join(root, '.claude/skills');
@@ -396,6 +407,8 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     const r = await run(root);
     expect(r.code, r.text).toBe(0);
     expect(fs.readFileSync(path.join(skills, `${TMP_BUNDLE_PREFIX}notes/mine.md`), 'utf8')).toBe('mine\n');
+    fs.writeFileSync(path.join(skills, `${TMP_BUNDLE_PREFIX}notes/SKILL.md`), 'run specflow-entry\n');
+    expect((await run(root)).text).toContain(`- ${TMP_BUNDLE_PREFIX}notes/SKILL.md: specflow-entry`);
     expect(r.text).toContain(`skills: cleared leftover ${TMP_BUNDLE_PREFIX}old-cortex-remember`);
     expect(r.text).toContain(`skills: cleared leftover ${TMP_BUNDLE_PREFIX}specflow-plan`);
     expect(fs.existsSync(path.join(skills, `${TMP_BUNDLE_PREFIX}specflow-plan`))).toBe(false);
@@ -431,6 +444,8 @@ describe('core-cli.sync Rules 17–19: skills', () => {
     const r = await run(root, { pkgDir: p });
     expect(r.code, r.text).toBe(0);
     expect(r.text).toContain('skills: specflow-spec: marker not written; left alone');
+    const dry = await run(root, { pkgDir: p, dryRun: true });
+    expect(dry.text).toContain('would: skills: specflow-spec: marker not written; left alone');
   });
 
   it('A missing or stale marker on an identical copy is written', async () => {
@@ -832,6 +847,10 @@ describe('core-cli.sync Rules 23–26', () => {
       for (const flag of ['--help', '-h', '--dryrun', '--dry-rnu', '-n', '--dry-run=true', '--force']) {
         expect(await cortex(['sync', root, flag]), flag).toBe(2);
         expect(errors.at(-1)).toBe(`cortex sync: unknown flag ${flag}. Nothing was written.`);
+      }
+      for (const stray of ['dry-run', '–dry-run']) {
+        expect(await cortex(['sync', root, stray]), stray).toBe(2);
+        expect(errors.at(-1)).toBe(`cortex sync: unexpected argument ${stray}. Nothing was written.`);
       }
     } finally {
       spy.mockRestore();

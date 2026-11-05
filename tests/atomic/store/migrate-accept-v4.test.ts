@@ -210,12 +210,29 @@ describe('store.migrate Rule 18: bundles', () => {
     fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
     fs.writeFileSync(path.join(root, '.claude/skills/cortex-remember'), 'a note\n');
     const p = pkg();
-    const dir = bundle(root, 'specflow-spec', fs.readFileSync(path.join(p, 'skills/specflow-spec/SKILL.md'), 'utf8'));
+    const dir = bundle(root, 'specflow-spec', { 'SKILL.md': fs.readFileSync(path.join(p, 'skills/specflow-spec/SKILL.md'), 'utf8') });
     fs.mkdirSync(path.join(dir, INSTALLED_MARKER_FILENAME));
     const { code, text } = await accept(root, p);
     expect(code, text).toBe(0);
     expect(text).toContain('skills: .claude/skills/cortex-remember exists with different content; left alone');
     expect(fs.readFileSync(path.join(root, '.claude/skills/cortex-remember'), 'utf8')).toBe('a note\n');
+    expect(text).toContain('skills: specflow-spec: marker not written; left alone');
+    expect(text).not.toContain('skills: installed specflow-spec');
+  });
+
+  it('an accept that cannot finish reports it and records no date', async () => {
+    const root = project('blocked');
+    fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.claude/skills/.cortex-tmp-cortex-learn'), 'a note\n');
+    const p = pkg();
+    const { code, text } = await accept(root, p);
+    expect(code).toBe(1);
+    expect(text).toContain('is in the way');
+    const read = () => JSON.parse(fs.readFileSync(path.join(root, 'cortex/cortex.json'), 'utf8')).migration.accepted;
+    expect(read()).toBeNull();
+    fs.rmSync(path.join(root, '.claude/skills/.cortex-tmp-cortex-learn'));
+    expect((await accept(root, p)).code).toBe(0);
+    expect(read()).toBe(TODAY);
   });
 
   it('A bundle the package lacks is skipped', async () => {
