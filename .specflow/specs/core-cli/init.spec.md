@@ -56,9 +56,9 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 20. **At 4.0 the verb sets up the 4.0 store.** `cortex init [target]` is the one setup command: it runs `cortex store init`, then the update route of `core-cli.sync` (Rules 17–26). It never builds the 3.x `.cortex/` layer. The project is the first non-flag argument, else the current directory. Every check runs before the first write. In this order:
     1. The platform is not `darwin`: exit 2, with Rule 1's message. This comes first because `cortex store init` has no platform gate, and sync would refuse only after the store existed.
     2. The target is, or sits beneath, a directory named `.cortex` holding `cortex.config.json`, or a directory named `cortex` holding `cortex.json`: exit 2, `cortex init: refused — this is inside the Cortex store of <root>; run cortex init there. Nothing was written.` `<root>` is that directory's parent. No flag bypasses it.
-    3. `cortex/cortex.json` exists and its `schemaVersion` MAJOR differs from the package's: exit 3, `cortex init: refused — this store is schema <version> and this package supports <major>.x. Nothing was written.`
-    4. `cortex/cortex.json` exists and `migration.accepted` is set, or it has no `migration` field and there is no `.cortex/cortex.config.json`: the project already has a store. Init skips `cortex store init`, runs the update route, and so behaves exactly as `cortex sync` does.
-    5. `cortex/cortex.json` exists and `migration.accepted` is `null`: exit 3, `cortex init: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`
+    3. `cortex/cortex.json` exists and cannot be parsed, or has no `schemaVersion`: exit 3, `cortex init: refused — cortex/cortex.json is not valid: <reason>. Nothing was written.` Its `schemaVersion` MAJOR differs from the package's: exit 3, `cortex init: refused — this store is schema <version> and this package supports <major>.x. Nothing was written.`
+    4. `cortex/cortex.json` exists and `migration.accepted` is a date, or it has no `migration` field and there is no `.cortex/cortex.config.json`: the project already has a store. Init skips `cortex store init`, runs the update route, and so behaves exactly as `cortex sync` does.
+    5. `cortex/cortex.json` has a `migration` field whose `accepted` is `null`, absent or not a date: exit 3, `cortex init: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`
     6. `.cortex/cortex.config.json` exists: exit 3, `cortex init: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.` This check must stay ahead of any write. `cortex store init` would create a `cortex.json` with no `migration` field, and sync takes that as a store on the update route (`core-cli.sync` Rule 16), so it would treat a 3.x project as 4.0 and remove its skills.
     7. Otherwise it is a new project: `cortex store init`, then the update route.
 
@@ -320,6 +320,18 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Given** a project with `cortex/cortex.json` whose `migration.accepted` is `null`, and a `.cortex/` folder
 - **When** `cortex init` runs
 - **Then** it exits 3 with the `finish it with cortex migrate --accept` line, and no file changed
+
+### init on a migration field with no date refuses
+
+- **Given** a project whose `cortex/cortex.json` has a `migration` field with `from` and no `accepted`, and no `.cortex/` folder
+- **When** `cortex init` runs
+- **Then** it exits 3 with the `finish it with cortex migrate --accept` line, and no file changed
+
+### init on an unreadable store file refuses
+
+- **Given** a project whose `cortex/cortex.json` does not parse, and separately one with no `schemaVersion`
+- **When** `cortex init` runs in each
+- **Then** each exits 3 with the `cortex/cortex.json is not valid` line, and no file changed
 
 ### init on a store of another major version refuses
 
