@@ -96,9 +96,9 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
 20. **Blocks.** It runs `cortex store map`, which writes `MAP.md` and both blocks, and prints its lines. Text outside the blocks stays untouched (`store.managed-block`).
 21. **Git hooks.** The first case that holds:
     - outside a git repository: `hooks: not a git repository; skipped`;
-    - `git config core.hooksPath` is `.githooks`: it does what `cortex hooks install` does and prints `hooks: refreshed .githooks`. When install refuses over a hand-written hook (`specflow.git-hooks` Rule 12), nothing changes, and sync prints each refusal line prefixed `hooks: `. Sync's exit code does not change;
+    - `git config core.hooksPath` is `.githooks` and `.githooks/commit-msg` carries the `# cortex-managed` line, which is what "already installed" means: it does what `cortex hooks install` does and prints `hooks: refreshed .githooks`. When install refuses over a hand-written hook (`specflow.git-hooks` Rule 12), nothing changes, and sync prints each refusal line prefixed `hooks: `. Sync's exit code does not change;
     - `specflow/` does not exist: `hooks: no specflow/ folder; skipped`;
-    - `core.hooksPath` is unset: it installs nothing and prints `hooks: not installed; run cortex hooks install`;
+    - `core.hooksPath` is unset, or is `.githooks` with no such line: it installs nothing and prints `hooks: not installed; run cortex hooks install`;
     - it is set to anything else: it installs nothing and prints `hooks: core.hooksPath is <value>; add the hooks there by hand`.
 
     Turning a refusing check on in a repository stays a separate act.
@@ -388,7 +388,7 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 
 ### Installed hooks are refreshed
 
-- **Given** a git repository with `core.hooksPath` set to `.githooks` and an out-of-date `.githooks/commit-msg`
+- **Given** a git repository with `core.hooksPath` set to `.githooks` and an out-of-date `.githooks/commit-msg` carrying the `# cortex-managed` line
 - **When** `cortex sync` runs
 - **Then** the file holds what `cortex hooks install` writes, and the output has `hooks: refreshed .githooks`
 
@@ -544,9 +544,15 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 
 ### A hand-written hook does not fail sync
 
-- **Given** `core.hooksPath` set to `.githooks`, and `.githooks/pre-commit` with no `# cortex-managed` line
+- **Given** `core.hooksPath` set to `.githooks`, a `.githooks/commit-msg` carrying the `# cortex-managed` line, and `.githooks/pre-commit` without it
 - **When** `cortex sync` runs
 - **Then** `.githooks/` is byte-identical, the output has the `specflow.git-hooks` Rule 12 line prefixed `hooks: `, and it exits 0
+
+### A hand-set hooks path gets nothing written
+
+- **Given** a git repository with `specflow/`, `core.hooksPath` set to `.githooks` by hand, and no hook files in `.githooks/`
+- **When** `cortex sync` runs
+- **Then** `.githooks/` is unchanged, `specflow.since` is not written, the output has `hooks: not installed; run cortex hooks install`, and it exits 0
 
 ### A hooks path elsewhere gets no install advice
 
