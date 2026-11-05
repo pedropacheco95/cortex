@@ -156,7 +156,7 @@ The PreRead hook (design §5, now core opt-out) injects the anatomy summary befo
 
 - **Given** `hooks.readDefer: true`, `src/tiny.ts` with an entry whose `size_lines` is `39`, `src/nolines.ts` with an entry lacking `size_lines`, and `src/none.ts` with no entry
 - **When** the hook receives a first Read of each
-- **Then** the first two emit the Rule 2 `allow` payload and the third emits empty stdout; the deferral ledger is not created
+- **Then** the first emits the Rule 2 `allow` payload; the second is unreadable, because `size_lines` is a required field, so it emits empty stdout and logs to `hook-errors.md` (Rule 5); the third emits empty stdout; none of the three touches the deferral ledger
 
 ### HOOKS-PRE-READ-WRITEBACK-17: The circuit breaker holds at 25
 

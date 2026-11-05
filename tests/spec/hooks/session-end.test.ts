@@ -592,7 +592,7 @@ describe('AC — missing transcript degrades to nothing', () => {
   it.each([
     ['no transcript_path', { session_id: 'abc' }],
     ['transcript with zero entries', { session_id: 'abc', transcript_path: 'EMPTY' }],
-  ])('%s → no record and one error entry', async (_label, stdin) => {
+  ])('[HOOKS-SESSION-END-21] %s → no record and one error entry', async (_label, stdin) => {
     const root = project('degrade');
     const payload: Record<string, unknown> = { ...stdin, cwd: root };
     if (payload['transcript_path'] === 'EMPTY') {
