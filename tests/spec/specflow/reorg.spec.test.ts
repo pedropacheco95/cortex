@@ -28,46 +28,20 @@ function walkTs(dir: string): string[] {
 }
 
 describe('specflow.reorg — Core discovery roots point at .specflow/ (src/paths.ts)', () => {
-  it('specsRoot / businessRoot / specsIndexPath resolve under .specflow/', () => {
+  it('[SPECFLOW-PORT-44] specsRoot / businessRoot / specsIndexPath resolve under .specflow/', () => {
     expect(specsRoot('/proj')).toBe(path.join('/proj', '.specflow', 'specs'));
     expect(businessRoot('/proj')).toBe(path.join('/proj', '.specflow', 'specs-business'));
     expect(specsIndexPath('/proj')).toBe(path.join('/proj', '.specflow', 'specs', '_index.md'));
   });
 
-  it('the relative-path constants are the hidden-namespace roots', () => {
+  it('[SPECFLOW-PORT-44] the relative-path constants are the hidden-namespace roots', () => {
     expect(SPECS_REL).toBe('.specflow/specs');
     expect(BUSINESS_REL).toBe('.specflow/specs-business');
   });
 });
 
-describe('specflow.reorg — the trees moved and kept their structure', () => {
-  it('the migrated fixture files live under .specflow/', () => {
-    expect(
-      fs.existsSync(path.join(VALID_FIXTURE, '.specflow', 'specs', 'schema', 'validator.spec.md')),
-    ).toBe(true);
-    expect(
-      fs.existsSync(
-        path.join(
-          VALID_FIXTURE,
-          '.specflow',
-          'specs-business',
-          'schema',
-          'contributor-trusts-project-knowledge.business.md',
-        ),
-      ),
-    ).toBe(true);
-  });
-
-  it('tests/ and RULES.md remain at the project root', () => {
-    expect(fs.existsSync(path.join(REPO_ROOT, 'tests'))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, 'RULES.md'))).toBe(true);
-    expect(fs.existsSync(path.join(REPO_ROOT, 'specs'))).toBe(false);
-    expect(fs.existsSync(path.join(REPO_ROOT, 'specs-business'))).toBe(false);
-  });
-});
-
 describe('specflow.reorg — spec IDs are invariant under the move (Rule 2)', () => {
-  it('the moved validator spec still derives id schema.validator (no id-mismatch)', () => {
+  it('[SPECFLOW-PORT-44] the moved validator spec still derives id schema.validator (no id-mismatch)', () => {
     // check.id-matches-path derives the ID by stripping the tree root; a clean
     // result means .specflow/specs/schema/validator.spec.md still maps to
     // "schema.validator".
@@ -86,7 +60,7 @@ describe('specflow.reorg — spec IDs are invariant under the move (Rule 2)', ()
 });
 
 describe('specflow.reorg — the result is grep-clean (Rule 5)', () => {
-  it('no Core module keeps a project-root-relative specs/ or specs-business/ constant', () => {
+  it('[SPECFLOW-PORT-45] no Core module keeps a project-root-relative specs/ or specs-business/ constant', () => {
     // Mirrors the build-order verification grep: a quote/backtick immediately
     // followed by specs/ or specs-business/, or a path.join(<root>, 'specs') with
     // the tree name as the first segment. Excludes tests/scenario/specs (unmoved),

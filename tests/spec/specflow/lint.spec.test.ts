@@ -90,7 +90,7 @@ describe('specflow.lint: the command', () => {
     expect(r.err).toBe('specflow: no specflow/ folder here');
   });
 
-  it('a bad flag is a usage error', async () => {
+  it('[SPECFLOW-LINT-45] a bad flag is a usage error', async () => {
     expect((await lint(clean(), ['--nope'])).code).toBe(2);
   });
 
@@ -122,7 +122,7 @@ describe('specflow.lint: carried checks', () => {
     expect(violations.some((v) => v.check === 'check.specs-index')).toBe(false);
   });
 
-  it('a governed_by id kept as a store alias resolves', async () => {
+  it('[SPECFLOW-LINT-46] a governed_by id kept as a store alias resolves', async () => {
     const root = clean();
     write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { front: `implements: ${LINK}\ngoverned_by:\n  - R-001\n  - R-999\n` }));
     write(root, 'cortex/world/rules/a.md', '---\nabout: x\naliases:\n  - R-001\n---\n\nx\n');
@@ -181,7 +181,7 @@ describe('specflow.lint: tree checks', () => {
     expect(found).toContain('refunds.spec.md: empty Intent section');
   });
 
-  it('a Rules section with no numbered item is found', async () => {
+  it('[SPECFLOW-LINT-47] a Rules section with no numbered item is found', async () => {
     const root = clean();
     write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { rules: '## Rules\n\nProse.\n' }));
     expect(hits(await lint(root), 'lint.body').join()).toContain('no numbered item');
@@ -228,7 +228,7 @@ describe('specflow.lint: tree checks', () => {
     expect(r.code).toBe(0);
   });
 
-  it('an id with another prefix beside the rule prefix is an error', async () => {
+  it('[SPECFLOW-LINT-48] an id with another prefix beside the rule prefix is an error', async () => {
     const root = clean();
     write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { criteria: '### BILLING-REFUNDS-1: A\n\n- **Then** ok\n\n### PAY-2: B\n\n- **Then** ok\n' }));
     expect(hits(await lint(root), 'lint.criterion-id').join()).toContain('PAY-2');
@@ -258,7 +258,7 @@ describe('specflow.lint: tree checks', () => {
     expect(hits(r, 'lint.tests-config').length).toBeGreaterThan(0);
   });
 
-  it('an unknown runner is an error and an empty include warns', async () => {
+  it('[SPECFLOW-LINT-49] an unknown runner is an error and an empty include warns', async () => {
     const root = clean();
     write(root, 'cortex/cortex.json', JSON.stringify({ specflow: { tests: [{ runner: 'mocha', include: ['nothing/**'] }] } }));
     const found = hits(await lint(root), 'lint.tests-config').join('\n');
@@ -315,7 +315,7 @@ describe('specflow.lint: constants', () => {
     return root;
   }
 
-  it('a const: in a code span is a mention, not a use', async () => {
+  it('[SPECFLOW-LINT-50] a const: in a code span is a mention, not a use', async () => {
     const root = clean();
     write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { then: ['**Then** `const:NOPE` is shown'] }));
     expect(hits(await lint(root), 'lint.constant-unresolved')).toEqual([]);
@@ -351,7 +351,7 @@ describe('specflow.lint: constants', () => {
     expect(hits(await lint(root), 'lint.constant-placement').join()).toContain('specflow/impl/billing/');
   });
 
-  it('fix moves a constant placed too high down', async () => {
+  it('[SPECFLOW-LINT-51] fix moves a constant placed too high down', async () => {
     const root = clean();
     constants(root, 'specflow', '  REFUND_DAYS: 30\n');
     write(root, 'specflow/impl/billing/refunds.spec.md', spec('billing.refunds', { then: ['**Then** const:REFUND_DAYS'] }));

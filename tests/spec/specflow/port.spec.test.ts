@@ -136,7 +136,7 @@ describe('specflow.port: the move', () => {
     expect(undone).toBe(source);
   });
 
-  it('a change beyond ids and links does not reverse (Rule 6)', () => {
+  it('[SPECFLOW-PORT-38] a change beyond ids and links does not reverse (Rule 6)', () => {
     const edits = [{ line: 0, from: 'a', to: 'b' }];
     expect(reversible('a\nc', 'b\nc', edits)).toBe(true);
     expect(reversible('a\nc', 'b\nd', edits)).toBe(false);
@@ -298,7 +298,7 @@ describe('specflow.port: test config', () => {
     expect(JSON.parse(read(root, 'cortex/cortex.json')).specflow.tests.map((t: any) => t.runner)).toEqual(['vitest']);
   });
 
-  it('the store accepts the specflow key', () => {
+  it('[SPECFLOW-PORT-39] the store accepts the specflow key', () => {
     const root = twoTree({ 'tests/a.test.ts': "it('x', f);\n" });
     port(root);
     const r = validateStore(root, '2026-11-05');
@@ -344,7 +344,7 @@ describe('specflow.port: classes', () => {
     }
   });
 
-  it('repeated titles are needs-edit even with ids already in the headings', () => {
+  it('[SPECFLOW-PORT-40] repeated titles are needs-edit even with ids already in the headings', () => {
     const root = twoTree({
       '.specflow/specs/billing/twice.spec.md': devSpec('billing.twice', ['BILLING-TWICE-1: A', 'BILLING-TWICE-2: A']),
       'tests/a.test.ts': '// billing.twice\n',
@@ -379,7 +379,7 @@ describe('specflow.port: classes', () => {
     expect(classOf(root, 'billing.u').class).toBe('needs-edit');
   });
 
-  it('with no ticket pattern there are no tickets', () => {
+  it('[SPECFLOW-PORT-41] with no ticket pattern there are no tickets', () => {
     const root = twoTree({
       '.specflow/specs/billing/t.spec.md': devSpec('billing.t', ['A'], { extra: 'See TKT-7.\n\n' }),
       'tests/a.test.ts': "// TKT-7\nit('x', f);\n",
@@ -388,7 +388,7 @@ describe('specflow.port: classes', () => {
     expect(classOf(root, 'billing.t').class).toBe('not-mappable');
   });
 
-  it('a bad ticket pattern is a usage error', () => {
+  it('[SPECFLOW-PORT-42] a bad ticket pattern is a usage error', () => {
     const root = twoTree();
     expect(port(root, ['--ticket-pattern', '(']).code).toBe(2);
     nothingMoved(root);
@@ -478,7 +478,7 @@ describe('specflow.port: --verify', () => {
     expect(git(root, 'status', '--porcelain')).toBe(before);
   });
 
-  it('a malformed line is named', () => {
+  it('[SPECFLOW-PORT-43] a malformed line is named', () => {
     const root = ported();
     write(root, '.cortex-port/tagging/billing.jsonl', `not json\n${line({ file: 'x' })}`);
     const r = port(root, ['--verify']);

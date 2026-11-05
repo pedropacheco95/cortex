@@ -208,7 +208,7 @@ describe('specflow.git-hooks: install', () => {
     expect(fs.readFileSync(path.join(root, '.githooks/pre-rebase'), 'utf-8')).toContain('mine');
   });
 
-  it('the read-only check names hand-written hooks and writes nothing', () => {
+  it('[SPECFLOW-GIT-HOOKS-36] the read-only check names hand-written hooks and writes nothing', () => {
     const root = repo();
     write(root, '.githooks/pre-commit', '#!/bin/sh\necho mine\n', 0o755);
     write(root, '.git/hooks/post-commit', '#!/bin/sh\n', 0o755);
@@ -238,7 +238,7 @@ describe('specflow.git-hooks: since', () => {
     expect(since(root)).toBeUndefined();
   });
 
-  it('a repository with no commit gets no since', () => {
+  it('[SPECFLOW-GIT-HOOKS-37] a repository with no commit gets no since', () => {
     const root = tmpRepo('empty');
     git(root, ['init', '-q', '-b', 'main']);
     write(root, 'cortex/cortex.json', '{"schemaVersion":"4.0"}');
@@ -425,7 +425,7 @@ describe('specflow.git-hooks: real commits', () => {
     expect(head(root)).toBe(before);
   });
 
-  it('an amend of a valid commit passes, and only a real amend sets the marker', () => {
+  it('[SPECFLOW-GIT-HOOKS-38] an amend of a valid commit passes, and only a real amend sets the marker', () => {
     const root = installed();
     write(root, 'src/a.ts', 'x');
     write(root, 'tests/a.test.ts', 'y');
@@ -523,7 +523,7 @@ describe('specflow.git-hooks: push', () => {
     expect(r.stderr).toContain('specflow: no base to compare for refs/heads/new; nothing was checked');
   });
 
-  it('an existing pre-push gets the same stdin', () => {
+  it('[SPECFLOW-GIT-HOOKS-39] an existing pre-push gets the same stdin', () => {
     const root = repo();
     write(root, '.git/hooks/pre-push', '#!/bin/sh\ncat > seen\n', 0o755);
     install(root);

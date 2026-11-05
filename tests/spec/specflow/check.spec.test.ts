@@ -114,7 +114,7 @@ describe('specflow.check: rule (a)', () => {
     expect(r.err).toContain('src/moved.ts');
   });
 
-  it('a fixture, a snapshot and a generic test path count as a test change', () => {
+  it('[SPECFLOW-CHECK-79] a fixture, a snapshot and a generic test path count as a test change', () => {
     for (const test of ['tests/fixtures/data.json', 'src/__snapshots__/a.snap', 'src/a.spec.ts', 'backend/test_a.py', 'vitest.config.ts']) {
       const root = repo();
       stage(root, { 'src/a.ts': 'x', [test]: 'y' });
@@ -122,7 +122,7 @@ describe('specflow.check: rule (a)', () => {
     }
   });
 
-  it('more than 8 paths are cut off with an ellipsis', () => {
+  it('[SPECFLOW-CHECK-80] more than 8 paths are cut off with an ellipsis', () => {
     const root = repo();
     const files: Record<string, string> = {};
     for (let i = 0; i < 9; i += 1) files[`src/f${i}.ts`] = 'x';
@@ -132,7 +132,7 @@ describe('specflow.check: rule (a)', () => {
     expect(r.err).not.toContain('src/f8.ts');
   });
 
-  it('INDEX.md is ignored by every rule', () => {
+  it('[SPECFLOW-CHECK-81] INDEX.md is ignored by every rule', () => {
     const root = repo();
     stage(root, { 'specflow/INDEX.md': 'generated' });
     expect(run(root).code).toBe(0);
@@ -176,7 +176,7 @@ describe('specflow.check: rule (d)', () => {
     expect(run(root).code).toBe(0);
   });
 
-  it('an added criterion with code is refused too', () => {
+  it('[SPECFLOW-CHECK-82] an added criterion with code is refused too', () => {
     const root = repo();
     stage(root, {
       [SPEC]: text(['Rule one.', 'Rule two.', 'Rule three.'], ['BILLING-REFUNDS-3: Window', 'BILLING-REFUNDS-4: Other', 'BILLING-REFUNDS-9: New']),
@@ -210,7 +210,7 @@ describe('specflow.check: rule (e)', () => {
     expect(lines[0]).toMatchObject({ spec: 'billing.refunds', file: SPEC, item: 'BILLING-REFUNDS-3', change: 'changed', trailer: TRAILER, subject: 'm' });
   });
 
-  it('every separator of schema S10 is accepted', () => {
+  it('[SPECFLOW-CHECK-83] every separator of schema S10 is accepted', () => {
     for (const sep of ['—', '-', '--']) {
       const root = repo();
       stage(root, { [SPEC]: edited });
@@ -292,7 +292,7 @@ describe('specflow.check: rule (e)', () => {
     expect(run(root, 'm\n\nSpecflow-Amends: billing.refunds#rule-3 — why\n').code).toBe(0);
   });
 
-  it('a criterion in a later section is judged', () => {
+  it('[SPECFLOW-CHECK-84] a criterion in a later section is judged', () => {
     const root = repo();
     const later = (t: string): string => `${BASE}\n## Acceptance Criteria: amendment\n\n### BILLING-REFUNDS-7: ${t}\n\n- **Then** ok\n`;
     commit(root, { [SPEC]: later('Old') });
@@ -319,7 +319,7 @@ describe('specflow.check: rule (e)', () => {
     }
   });
 
-  it('A whitespace edit does not fire rule (d) or (e)', () => {
+  it('[SPECFLOW-CHECK-85] A whitespace edit does not fire rule (d) or (e)', () => {
     const root = repo();
     stage(root, { [SPEC]: BASE.replace('- **Then** ok', '- **Then**\n  ok').replace('Rule one.', '**Rule**   one.'), 'src/a.ts': 'x', 'tests/a.test.ts': 'y' });
     expect(run(root).code).toBe(0);
@@ -436,13 +436,19 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(run(root, 'Merge').code).toBe(0);
   });
 
-  it('a merge commit in a range is judged from its parents', () => {
+  it('[SPECFLOW-CHECK-86] A merge commit in a range is judged from its parents', () => {
     const root = diverged();
     git(root, 'merge', '-q', '--no-ff', '--no-edit', 'side');
-    const merge = git(root, 'rev-parse', '--short', 'HEAD').trim();
-    const r = range(root, 'HEAD^..HEAD');
-    // The side commit in the range is code-only and refused; the merge itself adds nothing.
-    expect(r.err).toContain(`specflow: allowed (${merge})`);
+    const clean = git(root, 'rev-parse', '--short', 'HEAD').trim();
+    // The side commit in the range is code-only and refused; the merge adds nothing over its parents.
+    expect(range(root, 'HEAD^..HEAD').err).toContain(`specflow: allowed (${clean})`);
+
+    const edited = diverged();
+    startMerge(edited, 'side');
+    stage(edited, { 'src/side.ts': 'edited by hand\n' });
+    git(edited, 'commit', '-q', '--no-verify', '-m', 'Merge with a hand edit');
+    const merge = git(edited, 'rev-parse', '--short', 'HEAD').trim();
+    expect(range(edited, 'HEAD^..HEAD').err).toContain(`specflow: REFUSED (${merge})`);
   });
 
   it('[SPECFLOW-CHECK-44] An amend compares against the parent', () => {
@@ -453,7 +459,7 @@ describe('specflow.check: merges, amends, edges', () => {
     expect(fs.existsSync(path.join(root, '.git/specflow-amend'))).toBe(false);
   });
 
-  it('a stale amend marker is ignored and deleted', () => {
+  it('[SPECFLOW-CHECK-87] a stale amend marker is ignored and deleted', () => {
     const root = repo();
     commit(root, { 'tests/a.test.ts': 'y' });
     fs.writeFileSync(path.join(root, '.git/specflow-amend'), 'deadbeef');
@@ -591,7 +597,7 @@ describe('specflow.check: rule (b)', () => {
     expect(run(root).code).toBe(0);
   });
 
-  it('a changed case body counts, whitespace does not', () => {
+  it('[SPECFLOW-CHECK-88] a changed case body counts, whitespace does not', () => {
     const root = repo();
     commit(root, { 'tests/a.test.ts': "it('old', () => { a(); });\n" });
     commit(root, { 'cortex/cortex.json': JSON.stringify({ schemaVersion: '4.0', specflow: { rules: { b: 'refuse' }, tests: [{ runner: 'vitest', include: ['tests/**/*.test.ts'] }] } }) });
@@ -667,7 +673,7 @@ describe('specflow.check: rule (c)', () => {
     expect(range(root).code).toBe(0);
   });
 
-  it('rule (c) off says nothing at commit or in a range', () => {
+  it('[SPECFLOW-CHECK-89] rule (c) off says nothing at commit or in a range', () => {
     const root = repo();
     git(root, 'checkout', '-q', '-b', 'work');
     commit(root, { [SPEC]: edited }, msg);
@@ -701,7 +707,7 @@ describe('specflow.check: rules (f) and (g)', () => {
     expect(run(root).err).toContain('BILLING-REFUNDS-3');
   });
 
-  it('more than 20 touched criteria are cut off', () => {
+  it('[SPECFLOW-CHECK-90] more than 20 touched criteria are cut off', () => {
     const root = repo();
     const ids = Array.from({ length: 22 }, (_, i) => `BILLING-REFUNDS-${i + 10}: T${i}`);
     const cases = ids.map((c) => `it('[${c.split(':')[0]}] x', f);`).join('\n');

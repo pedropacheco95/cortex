@@ -173,7 +173,7 @@ describe('specflow.index: tags', () => {
     expect(crit(m, 'BILLING-REFUNDS-1')?.tests).toEqual([]);
   });
 
-  it('every listed modifier is a case; a regex.test call and a variable name are not', () => {
+  it('[SPECFLOW-INDEX-38] every listed modifier is a case; a regex.test call and a variable name are not', () => {
     const m = cases(base(), [
       "it.only('a', f);", "test.concurrent('b', f);", "it.sequential('c', f);", "test.fails('d', f);",
       "const r = /x(/.test('e');", "it(name, f);", '',
@@ -205,7 +205,7 @@ describe('specflow.index: tags', () => {
     expect(model(root).untagged.map((t) => t.name)).toEqual(['test_x']);
   });
 
-  it('a function nested in a test is no case, and a def in a docstring is no case', () => {
+  it('[SPECFLOW-INDEX-39] a function nested in a test is no case, and a def in a docstring is no case', () => {
     const root = repo([PYTEST]);
     write(root, 'test_a.py', 'def test_x():\n    def test_inner():\n        pass\n\n"""\ndef test_doc():\n"""\n');
     expect(model(root).untagged.map((t) => t.name)).toEqual(['test_x']);
@@ -300,7 +300,7 @@ describe('specflow.index: constants and promises', () => {
     expect(run(root).index).toMatch(/### specflow\/promises\/billing\/x\.business\.md\n\n- spec \*\*billing\.refunds\*\*/);
   });
 
-  it('a spec with neither link is under Specs without a promise', () => {
+  it('[SPECFLOW-INDEX-40] a spec with neither link is under Specs without a promise', () => {
     const root = repo();
     write(root, REFUNDS, spec('billing.refunds', []));
     expect(run(root).index).toMatch(/## Specs without a promise\n\n- spec \*\*billing\.refunds\*\*/);
@@ -398,7 +398,7 @@ describe('specflow.index: output', () => {
     expect(r.err).toEqual(['specflow: warning: specflow.tests is not set; no tests were read']);
   });
 
-  it('--json writes nothing and prints the model', () => {
+  it('[SPECFLOW-INDEX-41] --json writes nothing and prints the model', () => {
     const root = repo();
     write(root, REFUNDS, TWO);
     const r = run(root, ['--json']);

@@ -40,14 +40,14 @@ describe('AC: the Iron Law and its letter-and-spirit clause are present', () => 
     expect(after).toMatch(/Violating the letter of this law is violating the spirit/);
   });
 
-  it('states the law before the workflow, not buried in an appendix', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-8] states the law before the workflow, not buried in an appendix', () => {
     const lawIdx = SKILL.indexOf('NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE');
     expect(lawIdx).toBeGreaterThan(-1);
     // Everything before the law is frontmatter + title: under 1500 chars.
     expect(lawIdx).toBeLessThan(1500);
   });
 
-  it('points at no repo-side file, because it is installed at 4.0', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-6] points at no repo-side file, because it is installed at 4.0', () => {
     expect(SKILL).not.toContain('skills/_conventions/hardening.md');
   });
 });
@@ -57,12 +57,12 @@ describe('AC: the Iron Law and its letter-and-spirit clause are present', () => 
 // ---------------------------------------------------------------------------
 
 describe('AC: the gate requires fresh evidence before a claim', () => {
-  it('defines freshness as this turn, after the last change', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-9] defines freshness as this turn, after the last change', () => {
     expect(SKILL).toMatch(/\*\*after\*\* your most recent change/);
     expect(SKILL).toMatch(/produced in the current turn/);
   });
 
-  it('spells out the gate as a numbered procedure ending in obtain-or-narrow', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-10] spells out the gate as a numbered procedure ending in obtain-or-narrow', () => {
     expect(SKILL).toMatch(/##\s+The gate/);
     expect(SKILL).toMatch(/\*\*Name the claim\.\*\*/);
     expect(SKILL).toMatch(/\*\*Check freshness\.\*\*/);
@@ -101,7 +101,7 @@ describe('AC: the claim→evidence table covers the spec Rule-4 claim kinds', ()
     expect(SKILL).toMatch(/`cortex validate` run this turn/);
   });
 
-  it('gives the generalisation rule for unlisted claims', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-11] gives the generalisation rule for unlisted claims', () => {
     expect(SKILL).toMatch(/what observation would be different if this claim were/i);
   });
 });
@@ -160,7 +160,7 @@ describe('AC: the skill is process-agnostic', () => {
     expect(SKILL).toMatch(/requires no spec tree/i);
   });
 
-  it('treats any Cortex-layer read as enrichment, never a precondition', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-12] treats any Cortex-layer read as enrichment, never a precondition', () => {
     expect(SKILL).toMatch(/enrichment, never a precondition/);
   });
 
@@ -178,7 +178,7 @@ describe('AC: the skill is process-agnostic', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: the body carries a worked example', () => {
-  it('shows the mechanism firing on a realistic case', () => {
+  it('[DISCIPLINE-VERIFICATION-SKILL-13] shows the mechanism firing on a realistic case', () => {
     expect(SKILL).toMatch(/##\s+Worked example/);
     const section = SKILL.slice(SKILL.indexOf('## Worked example'));
     expect(section).toMatch(/Go get it|Re-run it/);
@@ -207,7 +207,7 @@ describe('AC: the rationalization-table headers are pinned', () => {
     expect(CONVENTION).toMatch(/\|\s*Thought\/Excuse\s*\|\s*Reality\s*\|/);
   });
 
-  it('states the authoring test that keeps strawmen out', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-7] states the authoring test that keeps strawmen out', () => {
     expect(CONVENTION).toMatch(/never seen an agent/i);
   });
 });
@@ -227,11 +227,11 @@ describe('AC: the convention is not registered as a skill', () => {
     expect(fs.existsSync(path.join(PKG_ROOT, 'skills', '_conventions', 'SKILL.md'))).toBe(false);
   });
 
-  it('forbids the hedged Iron Law', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-8] forbids the hedged Iron Law', () => {
     expect(CONVENTION).toMatch(/A hedged Iron Law is not an Iron Law/);
   });
 
-  it('warns against reflowing grafted lines across line breaks', () => {
+  it('[DISCIPLINE-HARDENING-CONVENTION-9] warns against reflowing grafted lines across line breaks', () => {
     expect(CONVENTION).toMatch(/Do not reflow the grafted lines/);
   });
 });
