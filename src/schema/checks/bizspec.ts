@@ -4,7 +4,7 @@ import fg from 'fast-glob';
 import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
 import { resolveRelativePath } from '../index-build.js';
-import { businessRoot } from '../../paths.js';
+import { businessRoot, isPorted } from '../../paths.js';
 
 export async function checkBizSpecs(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
@@ -34,6 +34,9 @@ export async function checkBizSpecs(root: string, index: ProjectIndex): Promise<
     if (!data['status']) {
       violations.push({ severity: 'error', check: 'check.business-spec', clause: '§4.7', location: { path: filePath, key: 'status' }, message: 'Business spec missing required field "status"' });
     }
+
+    const record = data['status'] === 'retired' && isPorted(root);
+    if (record && Array.isArray(data['implemented_by'])) continue;
 
     if (!data['implemented_by'] || !Array.isArray(data['implemented_by'])) {
       violations.push({ severity: 'error', check: 'check.business-spec', clause: '§4.7', location: { path: filePath, key: 'implemented_by' }, message: 'Business spec missing required field "implemented_by" (list)' });

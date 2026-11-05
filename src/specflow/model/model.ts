@@ -96,7 +96,8 @@ export function readConfig(tree: Tree): SpecflowConfig {
   return parsed.specflow ?? {};
 }
 
-function testFiles(files: string[], entries: TestEntry[]): Map<string, string> {
+/** The files `specflow.tests` selects, each with its runner. */
+export function selectTestFiles(files: string[], entries: TestEntry[]): Map<string, string> {
   const runnerOf = new Map<string, string>();
   for (const entry of entries) {
     const included = picomatch(entry.include, { dot: true });
@@ -118,7 +119,7 @@ function firstOf(value: unknown): string {
 }
 
 export function testCases(tree: Tree, config: SpecflowConfig): TestCase[] {
-  const runners = testFiles(tree.list(), config.tests ?? []);
+  const runners = selectTestFiles(tree.list(), config.tests ?? []);
   const files = [...runners.keys()].sort();
   tree.prefetch?.(files);
   const cases: TestCase[] = [];

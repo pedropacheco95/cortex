@@ -2,10 +2,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import type { Violation } from '../types.js';
-import { specsRoot, businessRoot, specsIndexPath as specsIndexPathOf, SPECS_REL } from '../../paths.js';
+import { isPorted, specsRoot, businessRoot, specsIndexPath as specsIndexPathOf, SPECS_REL } from '../../paths.js';
 
 export function checkSpecsIndex(root: string): Violation[] {
   const violations: Violation[] = [];
+  if (isPorted(root)) return violations; // specflow/INDEX.md replaces _index.md (specflow.lint Rule 2)
   const specsIndexPath = specsIndexPathOf(root);
 
   if (!fs.existsSync(specsIndexPath)) {

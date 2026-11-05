@@ -194,3 +194,69 @@ describe('schema.validator Rule 16: retired', () => {
     expect(violations.some((v) => v.check === 'check.dev-spec' && v.message.includes('does not resolve'))).toBe(true);
   });
 });
+
+describe('schema.validator Rule 16: retired specs under specflow/', () => {
+  const PORTED_DEV = path.join('specflow', 'impl', 'schema', 'validator.spec.md');
+
+  /** The valid fixture, with its trees moved to specflow/ and its links rewritten. */
+  function portedCopy(label: string): string {
+    const root = makeFixtureCopy(label);
+    fs.mkdirSync(path.join(root, 'specflow'));
+    fs.renameSync(path.join(root, '.specflow', 'specs'), path.join(root, 'specflow', 'impl'));
+    fs.renameSync(path.join(root, '.specflow', 'specs-business'), path.join(root, 'specflow', 'promises'));
+    for (const rel of [PORTED_DEV, path.join('specflow', 'promises', 'schema', 'contributor-trusts-project-knowledge.business.md')]) {
+      const p = path.join(root, rel);
+      fs.writeFileSync(p, fs.readFileSync(p, 'utf-8').replace('../../specs-business/', '../../promises/').replace('../../specs/', '../../impl/'));
+    }
+    return root;
+  }
+  const breakLink = (root: string): void => {
+    const p = path.join(root, PORTED_DEV);
+    fs.writeFileSync(p, fs.readFileSync(p, 'utf-8').replace(/^implements: .*$/m, 'implements: ../../promises/schema/gone.business.md'));
+  };
+  const on = (violations: { check: string; location: { path: string } }[], root: string) =>
+    violations.filter((v) => v.location.path === path.join(root, PORTED_DEV) && /check\.(dev-spec|xref)/.test(v.check));
+
+  it('the validator reads the trees under specflow/', async () => {
+    const root = portedCopy('reads');
+    const { violations } = await validate(root);
+    expect(violations.filter((v) => v.severity === 'error' && /dev-spec|business-spec|xref|specs-index/.test(v.check))).toEqual([]);
+    breakLink(root);
+    const after = await validate(root);
+    expect(on(after.violations, root).length).toBeGreaterThan(0);
+  });
+
+  it("a retired spec's dead link is not an error under specflow/", async () => {
+    const root = portedCopy('dead');
+    setStatus(root, PORTED_DEV, 'draft', 'retired');
+    breakLink(root);
+    expect(on((await validate(root)).violations, root)).toEqual([]);
+  });
+
+  it('a live link to a retired spec must resolve', async () => {
+    const root = portedCopy('live');
+    breakLink(root);
+    const found = on((await validate(root)).violations, root);
+    expect(found.some((v) => (v as unknown as { message: string }).message.includes('does not resolve'))).toBe(true);
+  });
+
+  it('a retired spec without required fields is still an error', async () => {
+    const root = portedCopy('fields');
+    setStatus(root, PORTED_DEV, 'draft', 'retired');
+    const p = path.join(root, PORTED_DEV);
+    fs.writeFileSync(p, fs.readFileSync(p, 'utf-8').replace(/^id: .*\n/m, ''));
+    const { violations } = await validate(root);
+    expect(violations.some((v) => v.check === 'check.dev-spec' && v.location.key === 'id')).toBe(true);
+  });
+
+  it('serves replaces implements and must name a promise', async () => {
+    const root = portedCopy('serves');
+    const p = path.join(root, PORTED_DEV);
+    fs.writeFileSync(p, fs.readFileSync(p, 'utf-8').replace(/^implements: .*$/m, 'serves: [P-SCHEMA-1]'));
+    fs.writeFileSync(path.join(root, 'specflow/promises/schema/p.md'), '---\nid: P-SCHEMA-1\ntitle: T\nstatus: draft\n---\n');
+    expect(on((await validate(root)).violations, root).filter((v) => /serves|implements/.test((v as unknown as { message: string }).message))).toEqual([]);
+    fs.rmSync(path.join(root, 'specflow/promises/schema/p.md'));
+    const found = on((await validate(root)).violations, root);
+    expect(found.some((v) => (v as unknown as { message: string }).message.includes('names no promise'))).toBe(true);
+  });
+});

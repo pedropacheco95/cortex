@@ -31,7 +31,7 @@ import { parseLedger } from '../insight/storage.js';
 import { hasExcludedSegment, buildIgnoreFilter } from '../insight/exclude.js';
 import { gitExec, isGitRepo, gitLastCommitEpoch } from '../loops/git-info.js';
 import { writePulseReport } from '../loops/report.js';
-import { specsRoot, SPECS_GLOB } from '../paths.js';
+import { specsRoot, specsGlob } from '../paths.js';
 import { parseThreadFile, THREADS_DIR, THREAD_TTL_DAYS } from './threads.js';
 
 // Engineering-call constants (Rule 2) — stated in the report footer.
@@ -255,7 +255,7 @@ export async function checkSpecOrphans(root: string): Promise<HygieneSection> {
   if (!fs.existsSync(specsDir)) return { title, findings: [] };
 
   const findings: string[] = [];
-  const specFiles = (await fg(SPECS_GLOB, { cwd: root, absolute: false })).sort();
+  const specFiles = (await fg(specsGlob(root), { cwd: root, absolute: false })).sort();
   for (const rel of specFiles) {
     let data: Record<string, unknown> = {};
     try {

@@ -41,26 +41,39 @@ export function headings(lines: string[]): Heading[] {
   return found;
 }
 
-/** The criteria of a spec: the headings one level below its Acceptance Criteria heading. */
-export function parseCriteria(text: string): Criterion[] {
-  const lines = text.split('\n');
+export interface CriteriaSection {
+  /** Line of the Acceptance Criteria heading. */
+  line: number;
+  end: number;
+  headings: Heading[];
+}
+
+/** The Acceptance Criteria section and its criterion headings, one level below it. */
+export function criteriaSection(lines: string[]): CriteriaSection | null {
   const all = headings(lines);
   const at = all.findIndex((h) => h.title === 'Acceptance Criteria' && (h.level === 2 || h.level === 3));
-  if (at < 0) return [];
+  if (at < 0) return null;
   const section = all[at] as Heading;
   const after = all.slice(at + 1);
   const close = after.find((h) => h.level <= section.level);
   const end = close ? close.line : lines.length;
-  const own = after.filter((h) => h.line < end && h.level === section.level + 1);
-  return own.map((h, i) => {
-    const next = own[i + 1];
-    const stop = next ? next.line : end;
-    const m = ID_HEADING.exec(h.title);
-    return {
-      id: m ? (m[1] as string) : null,
-      title: m ? (m[2] as string) : h.title,
-      text: lines.slice(h.line, stop).join('\n').trimEnd(),
-    };
+  return { line: section.line, end, headings: after.filter((h) => h.line < end && h.level === section.level + 1) };
+}
+
+/** The id a criterion heading carries, and its title. */
+export function splitHeading(title: string): { id: string | null; title: string } {
+  const m = ID_HEADING.exec(title);
+  return m ? { id: m[1] as string, title: m[2] as string } : { id: null, title };
+}
+
+/** The criteria of a spec. */
+export function parseCriteria(text: string): Criterion[] {
+  const lines = text.split('\n');
+  const section = criteriaSection(lines);
+  if (!section) return [];
+  return section.headings.map((h, i) => {
+    const stop = section.headings[i + 1]?.line ?? section.end;
+    return { ...splitHeading(h.title), text: lines.slice(h.line, stop).join('\n').trimEnd() };
   });
 }
 

@@ -5,7 +5,7 @@ import fg from 'fast-glob';
 import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
 import { resolveId, resolveRelativePath } from '../index-build.js';
-import { specsRoot, SPECS_GLOB, BUSINESS_GLOB } from '../../paths.js';
+import { isPorted, specsRoot, specsGlob, businessGlob } from '../../paths.js';
 
 export async function checkXrefSymmetry(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
@@ -25,6 +25,7 @@ export async function checkXrefSymmetry(root: string, index: ProjectIndex): Prom
     }
 
     if (!devData['implements']) continue;
+    if (devData['status'] === 'retired' && isPorted(root)) continue;
 
     const implRef = Array.isArray(devData['implements']) ? devData['implements'][0] : devData['implements'];
     if (typeof implRef !== 'string') continue;
@@ -150,8 +151,8 @@ export async function checkXrefAcyclic(root: string, index: ProjectIndex): Promi
     }
   }
 
-  await checkTree(SPECS_GLOB);
-  await checkTree(BUSINESS_GLOB);
+  await checkTree(specsGlob(root));
+  await checkTree(businessGlob(root));
 
   return violations;
 }

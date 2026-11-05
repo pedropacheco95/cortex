@@ -9,8 +9,14 @@
  * NOT covered here: `tests/scenario/specs/` — that is a distinct test path that
  * deliberately stays at the project root (§2.3), and relative `../../specs*`
  * cross-references inside spec frontmatter (they move with the trees, so their
- * geometry is unchanged — Rule 2). Pure path math; no I/O.
+ * geometry is unchanged — Rule 2).
+ *
+ * At 4.0 a ported project keeps both trees in the visible `specflow/` folder
+ * (schema S12.1, `specflow.port`): `specflow/impl` and `specflow/promises`. The
+ * root-taking helpers below answer for either layout; the constants name the
+ * 3.x layout only.
  */
+import * as fs from 'fs';
 import * as path from 'path';
 
 /** The hidden SpecFlow namespace holding both spec trees (schema §2.3). */
@@ -29,17 +35,51 @@ export const SPECS_GLOB = '.specflow/specs/**/*.spec.md';
 /** fast-glob pattern (cwd = project root) for business-spec leaf files. */
 export const BUSINESS_GLOB = '.specflow/specs-business/**/*.business.md';
 
-/** Absolute path to the dev-spec tree root (`.specflow/specs`). */
+/** True when the project has the visible `specflow/` folder (schema S12.1). */
+export function isPorted(root: string): boolean {
+  return fs.existsSync(path.join(root, 'specflow'));
+}
+
+/** Absolute path to the dev-spec tree root. */
 export function specsRoot(root: string): string {
-  return path.join(root, SPECFLOW_DIR, 'specs');
+  return isPorted(root) ? path.join(root, 'specflow', 'impl') : path.join(root, SPECFLOW_DIR, 'specs');
 }
 
-/** Absolute path to the business-spec tree root (`.specflow/specs-business`). */
+/** Absolute path to the business-spec tree root. */
 export function businessRoot(root: string): string {
-  return path.join(root, SPECFLOW_DIR, 'specs-business');
+  return isPorted(root) ? path.join(root, 'specflow', 'promises') : path.join(root, SPECFLOW_DIR, 'specs-business');
 }
 
-/** Absolute path to the dev-spec index `.specflow/specs/_index.md` (schema §7.2). */
+/** fast-glob pattern (cwd = project root) for this project's dev-spec leaf files. */
+export function specsGlob(root: string): string {
+  return isPorted(root) ? 'specflow/impl/**/*.spec.md' : SPECS_GLOB;
+}
+
+/** fast-glob pattern (cwd = project root) for this project's business-spec leaf files. */
+export function businessGlob(root: string): string {
+  return isPorted(root) ? 'specflow/promises/**/*.business.md' : BUSINESS_GLOB;
+}
+
+/** Absolute path to the dev-spec index `_index.md` (schema §7.2). */
 export function specsIndexPath(root: string): string {
   return path.join(specsRoot(root), '_index.md');
 }
+
+export interface PortLayout {
+  name: 'A' | 'B';
+  dev: string;
+  business: string;
+  /** What empties and goes after the move. */
+  top: string;
+  /** A generated index the move deletes. */
+  staleIndex?: string;
+}
+
+/** The bench's visible spec folder, a port source only. */
+const BENCH_ROOT = 'specs';
+
+/** The source layouts `cortex specs port` accepts (specflow.port Rule 2). */
+export const PORT_LAYOUTS: readonly PortLayout[] = [
+  { name: 'A', dev: SPECS_REL, business: BUSINESS_REL, top: SPECFLOW_DIR },
+  { name: 'B', dev: `${BENCH_ROOT}/impl`, business: `${BENCH_ROOT}/promises`, top: BENCH_ROOT, staleIndex: `${BENCH_ROOT}/INDEX.md` },
+];

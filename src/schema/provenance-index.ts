@@ -19,7 +19,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import matter from 'gray-matter';
 import fg from 'fast-glob';
-import { SPECS_GLOB, BUSINESS_GLOB } from '../paths.js';
+import { specsGlob, businessGlob } from '../paths.js';
 
 /** The four artefact kinds that may carry `provenance:` (schema §6, A6.1). */
 export type ProvenanceKind = 'compass-rule' | 'dev-spec' | 'business-spec' | 'atlas-decision';
@@ -85,8 +85,8 @@ export async function scanProvenanceCarriers(root: string): Promise<ProvenanceCa
   kinds.push({ kind: 'atlas-decision', files: decisionFiles });
 
   // Both spec trees (schema §4.6/§4.7)
-  kinds.push({ kind: 'dev-spec', files: await fg(SPECS_GLOB, { cwd: root, absolute: true, dot: true }) });
-  kinds.push({ kind: 'business-spec', files: await fg(BUSINESS_GLOB, { cwd: root, absolute: true, dot: true }) });
+  kinds.push({ kind: 'dev-spec', files: await fg(specsGlob(root), { cwd: root, absolute: true, dot: true }) });
+  kinds.push({ kind: 'business-spec', files: await fg(businessGlob(root), { cwd: root, absolute: true, dot: true }) });
 
   for (const { kind, files } of kinds) {
     for (const filePath of files.sort()) {

@@ -8,7 +8,7 @@ import * as path from 'path';
 import { HISTORY_FOLDERS, MODULES, RAW_DIR, WORLD_FOLDERS, fileStem, stringList, type Store, type StoreFile } from '../layout.js';
 import { finding, type Finding } from '../types.js';
 
-const CONFIG_KEYS = new Set(['schemaVersion', 'visibility', 'migration']);
+const CONFIG_KEYS = new Set(['schemaVersion', 'visibility', 'migration', 'specflow']);
 
 export function checkStoreConfig(store: Store): Finding[] {
   const out: Finding[] = [];

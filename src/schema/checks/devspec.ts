@@ -5,9 +5,22 @@ import type { Violation } from '../types.js';
 import type { ProjectIndex } from '../index-build.js';
 import { resolveId, resolveRelativePath } from '../index-build.js';
 import { globMatchesNothing } from './compass.js';
-import { specsRoot } from '../../paths.js';
+import { isPorted, specsRoot } from '../../paths.js';
 
 const STATUS_ENUM = ['draft', 'implementing', 'implemented', 'retired'] as const;
+
+function promiseIds(root: string): Set<string> {
+  const ids = new Set<string>();
+  for (const file of fg.sync('specflow/promises/**/*.md', { cwd: root, absolute: true })) {
+    try {
+      const id = matter(fs.readFileSync(file, 'utf-8')).data['id'];
+      if (typeof id === 'string') ids.add(id);
+    } catch {
+      continue;
+    }
+  }
+  return ids;
+}
 
 export async function checkDevSpecs(root: string, index: ProjectIndex): Promise<Violation[]> {
   const violations: Violation[] = [];
@@ -16,6 +29,8 @@ export async function checkDevSpecs(root: string, index: ProjectIndex): Promise<
   if (!fs.existsSync(specsDir)) return violations;
 
   const files = await fg('**/*.spec.md', { cwd: specsDir, absolute: true });
+  const ported = isPorted(root);
+  const promises = ported ? promiseIds(root) : new Set<string>();
 
   for (const filePath of files) {
     let data: Record<string, unknown> = {};
@@ -36,8 +51,27 @@ export async function checkDevSpecs(root: string, index: ProjectIndex): Promise<
       violations.push({ severity: 'error', check: 'check.dev-spec', clause: '§4.6', location: { path: filePath, key: 'status' }, message: `Dev spec status "${data['status']}" not in enum [${STATUS_ENUM.join(', ')}]` });
     }
 
-    // implements: required, exactly one value
-    if (data['implements'] === undefined || data['implements'] === null) {
+    // A retired spec under specflow/ is a record: its links may have outlived
+    // their targets (schema.validator Rule 16, specflow.lint Rule 8).
+    const record = ported && data['status'] === 'retired';
+    const serves = ported ? data['serves'] : undefined;
+
+    if (record) {
+      if (data['implements'] === undefined || data['implements'] === null) {
+        if (serves === undefined) {
+          violations.push({ severity: 'error', check: 'check.dev-spec', clause: '§4.6', location: { path: filePath, key: 'implements' }, message: 'Dev spec missing required field "implements" (exactly one value)' });
+        }
+      }
+      continue;
+    }
+
+    // serves: replaces implements after promise conversion (schema S12.1)
+    if (serves !== undefined) {
+      const id = Array.isArray(serves) ? serves[0] : serves;
+      if (typeof id !== 'string' || !promises.has(id)) {
+        violations.push({ severity: 'error', check: 'check.dev-spec', clause: 'S12.1', location: { path: filePath, key: 'serves' }, message: `serves "${String(id)}" names no promise` });
+      }
+    } else if (data['implements'] === undefined || data['implements'] === null) {
       violations.push({ severity: 'error', check: 'check.dev-spec', clause: '§4.6', location: { path: filePath, key: 'implements' }, message: 'Dev spec missing required field "implements" (exactly one path to a business spec)' });
     } else {
       const impl = data['implements'];

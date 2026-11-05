@@ -2,7 +2,7 @@ import matter from 'gray-matter';
 import fg from 'fast-glob';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SPECS_GLOB, BUSINESS_GLOB } from '../paths.js';
+import { specsGlob, businessGlob } from '../paths.js';
 
 export interface ProjectIndex {
   // id -> absolute file path (only ids carried by exactly one file; a
@@ -25,8 +25,8 @@ export async function buildIndex(root: string): Promise<ProjectIndex> {
   const pathToContent = new Map<string, string>();
 
   const patterns = [
-    SPECS_GLOB,
-    BUSINESS_GLOB,
+    specsGlob(root),
+    businessGlob(root),
     '.cortex/compass/rules/R-*.md',
     '.cortex/compass/bugs/B-*.md',
     '.cortex/atlas/**/*.md',
