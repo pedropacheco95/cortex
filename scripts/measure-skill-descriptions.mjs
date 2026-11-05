@@ -70,10 +70,13 @@ export const TIERS = {
   'specflow-intent-reconcile': 'A',
   'specflow-lint': 'A',
   'specflow-new-project': 'B',
+  'specflow-onboard': 'B',
   'specflow-onboard-codebase': 'A',
   'specflow-plan': 'A',
   'specflow-receive-review': 'A',
   'specflow-request-review': 'B',
+  'specflow-review': 'B',
+  'specflow-spec': 'B',
   'specflow-spec-editor': 'A',
   'specflow-tests': 'A',
   'specflow-viewer': 'D',
@@ -113,6 +116,9 @@ export const REQUIRED_TRIGGERS = {
   'cortex-remember': ['remember this', 'from now on'],
   'specflow-new-project': ['new project', 'start a new', 'I want to build'],
   'specflow-request-review': ['review this', 'review the diff', 'code review'],
+  'specflow-spec': ['spec this', 'brainstorm', 'plan this'],
+  'specflow-review': ['review the spec', 'review this diff', 'here is the feedback'],
+  'specflow-onboard': ['onboard this codebase', 'port mode'],
 
   // Tier C — the gate on arbitrary phrasing. Not shrunk; phrases pinned anyway so
   // a future edit cannot quietly cost it its routing.

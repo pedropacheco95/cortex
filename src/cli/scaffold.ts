@@ -117,7 +117,7 @@ export async function promptYesNo(promptText: string, rl?: readline.Interface): 
  * `cortex/cortex.json`). They ship in the package and are mirrored in this
  * repository's `.claude/skills/`.
  */
-export const STORE_V4_BUNDLES: readonly string[] = ['cortex-remember', 'cortex-migrate'];
+export const STORE_V4_BUNDLES: readonly string[] = ['cortex-remember', 'cortex-migrate', 'specflow-spec', 'specflow-review', 'specflow-onboard'];
 
 export function listSkillBundles(srcDir: string): string[] {
   if (!fs.existsSync(srcDir)) return [];

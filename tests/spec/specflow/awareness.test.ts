@@ -16,7 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { init } from '../../../src/cli/init.js';
-import { INSTALLED_MARKER_FILENAME, listSkillBundles } from '../../../src/cli/scaffold.js';
+import { INSTALLED_MARKER_FILENAME, listSkillBundles, STORE_V4_BUNDLES } from '../../../src/cli/scaffold.js';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
 
 const TEST_TIMEOUT = 60_000;
@@ -98,7 +98,8 @@ describe('AC: every specflow bundle ships and installs on fresh init', () => {
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
 
   it('the package ships every specflow bundle', () => {
-    const shipped = fs.readdirSync(PKG_SKILLS).filter((d) => d.startsWith('specflow-')).sort();
+    // The 4.0-only bundles ship too, but no 3.x init installs them.
+    const shipped = fs.readdirSync(PKG_SKILLS).filter((d) => d.startsWith('specflow-') && !STORE_V4_BUNDLES.includes(d)).sort();
     expect(shipped).toEqual(SPECFLOW_BUNDLES);
   });
 
