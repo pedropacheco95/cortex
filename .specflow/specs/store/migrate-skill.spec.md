@@ -1,6 +1,6 @@
 ---
 id: store.migrate-skill
-status: implemented
+status: draft
 depends_on:
   - store.migrate
 implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.business.md
@@ -18,8 +18,9 @@ governs:
 
 ## Entities
 
-- **READS:** the `cortex migrate --json` report, the `.cortex/` files it names, and `cortex/MAP.md` when it exists (for the kind → folder table).
+- **READS:** the `cortex migrate --json` report, the output of `cortex sync --dry-run` in the skill-adjust step, the `.cortex/` files it names, and `cortex/MAP.md` when it exists (for the kind → folder table).
 - **WRITES:** under `.cortex-migrate/` only: `report.json`, `plan.json`, `decisions.md`, and `digests/*.md`. It adds `.cortex-migrate/` to the repository's exclude file (`git rev-parse --git-path info/exclude`), never to `.gitignore`.
+- **WRITES, in the skill-adjust step only:** the files `store.migrate` Rule 18 step 5 lists under `.claude/skills/`, and `.cortex-migrate/skill-edits.md`.
 - **NEVER WRITES:** `.cortex/`, `cortex/`, `.gitignore`, `CLAUDE.md`, or any commit.
 
 ## Rules
@@ -50,6 +51,40 @@ governs:
    - commit.
 
    A person runs `--apply` after reading the decisions.
+8. **The skill-adjust step** (2026-11-04; owner decision). Every other skill in a project that names a retired skill or the old store is checked and adjusted if needed. This step runs after a person has run `cortex migrate --accept`, and it comes after the plan steps in the SKILL.md. If `migration.accepted` is not set, the skill stops and says so.
+9. **Steps, in order:**
+   1. run `cortex sync --dry-run`, which writes nothing, and read its `project skills to adjust` section and its `is retired but has local edits` lines;
+   2. read each listed file in full, and every mention in it;
+   3. decide each mention by Rule 10, using Rule 11's table;
+   4. make the edits, changing only the words the decision needs;
+   5. write `.cortex-migrate/skill-edits.md`: one row per mention, with file, line, term, decision, the text before and after, and a one-line reason;
+   6. show the person the counts and the file. A person commits, and `cortex sync --dry-run` should then list only the mentions decided `left` or `open`.
+10. **Deciding a mention.** Each gets exactly one decision:
+    - **edited**: the skill told an agent to use the retired name or path, and Rule 11 gives a replacement that exists;
+    - **left**: the mention needs no change, such as history or a changelog, with the reason;
+    - **open**: Rule 11 gives no usable replacement, or the step's meaning would change. The file stays as it is and the row says what the person must decide.
+
+    A mention is never silently skipped. A skill is never deleted, and no step of a project's own process is removed by the skill: dropping one is an `open`.
+11. **Replacements.**
+
+    | Named | Becomes |
+    |---|---|
+    | `specflow-brainstorm`, `specflow-plan`, `specflow-spec-editor`, `specflow-tests`, `specflow-new-project`, `specflow-ingest`, `specflow-intent-reconcile` | `specflow-spec` |
+    | `specflow-request-review`, `specflow-receive-review` | `specflow-review` |
+    | `specflow-onboard-codebase`, `specflow-deep-onboard` | `specflow-onboard` |
+    | `specflow-lint` | `cortex specs lint` |
+    | `specflow-viewer` | `cortex specs view` |
+    | `specflow-entry`, `specflow-change-router`, `specflow-develop`, `specflow-bugs` | none: `open`, noting that the `## Specs` block's rules now do this work |
+    | `cortex-archive-ingest`, `cortex-ingest` | `cortex-remember` (its source digest) |
+    | `_conventions`, `cortex-extract-insight`, `cortex-loop`, `cortex-loop-*`, `cortex-pulse-*` | none: `open` |
+    | `.cortex/<path>` | the target `.cortex-migrate/report.json` gives that path, else the S9.3 mapping; no target: `open` |
+    | `.specflow/specs/` | `specflow/impl/` |
+    | `.specflow/specs-business/` | `specflow/promises/` |
+
+    A skill replacement applies only when `.claude/skills/<replacement>/SKILL.md` exists, a `cortex specs` or `cortex tasks` one only when the installed `cortex` prints that command in its usage, and a `specflow/` one only when `specflow/` exists at the root, which is after `cortex specs port`. Otherwise the mention is `open` with the reason `replacement not there yet`, and a later run of this step, after `cortex sync`, picks it up.
+12. **This step changes no project file outside the listed ones.** A bundle's `.cortex-installed.json` marker is never edited, so an edited bundle no longer matches its marker or the package's copy, and `cortex sync` leaves it alone.
+13. **A retired skill with local edits** (2026-11-04). `cortex sync` removes a retired skill only when it is unedited, and leaves an edited one to this step. The skill reads the bundle, writes one row in `.cortex-migrate/skill-edits.md` with decision `open` saying what project-specific content it holds, and asks the person to choose: remove it, or keep that content under a new name. It deletes nothing itself. A kept bundle under a new name is then scanned like any other.
+14. **Typed only** (owner decision, sitting item 4). The SKILL.md header carries `disable-model-invocation: true`, in the package and in the mirror, so the skill costs no listing context and no agent starts it by itself. Where it is installed, it runs when typed as `/cortex-migrate`. It is not installed in a migrated project (`store.migrate` Rule 18 step 2): there a session reads it at the packaged path the report prints (`store.migrate` Rule 3), and the header does not affect that. `cortex-register-tasks` carries the same line (`core-cli.tasks-register`), and `core-cli.sync` Rule 22 names it as `/cortex-register-tasks`.
 
 ## Acceptance Criteria
 
@@ -82,3 +117,59 @@ governs:
 - **Given** the skills source directory
 - **When** `listSkillBundles` runs
 - **Then** neither `cortex-migrate` nor `cortex-remember` is listed
+
+## Acceptance Criteria: the skill-adjust step (amendment 2026-11-04)
+
+### The step comes after acceptance and after the plan steps
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** a skill-adjust section follows the plan steps, and it says it runs after `cortex migrate --accept` and stops when `migration.accepted` is not set
+
+### The step's order is stated
+
+- **Given** the SKILL.md text
+- **When** that section is read
+- **Then** it names, in this order: `cortex sync --dry-run`, reading each file, deciding each mention, editing, `.cortex-migrate/skill-edits.md`, and showing the person
+
+### The three decisions are stated
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it names `edited`, `left` and `open`, says no mention is skipped, and says no skill is deleted and a dropped step is an `open`
+
+### The replacement table is complete
+
+- **Given** the SKILL.md text and `RETIRED_SKILL_NAMES`
+- **When** each entry is looked up as literal text, the patterns as `cortex-loop-*` and `cortex-pulse-*`
+- **Then** the table has a row holding it, plus rows for `.cortex/`, `.specflow/specs/` and `.specflow/specs-business/`
+
+### A replacement must exist first
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it says a replacement that is not there yet makes the mention `open` with the reason `replacement not there yet`, and that `specflow/` paths apply only after `cortex specs port`
+
+### Every edit is reported
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it lists the columns of `.cortex-migrate/skill-edits.md`: file, line, term, decision, before and after, and reason
+
+### A retired skill with edits goes to the person
+
+- **Given** the SKILL.md text
+- **When** that section is read
+- **Then** it names the line `is retired but has local edits`, gives such a bundle an `open` row, offers removing it or keeping its content under a new name, and says the skill deletes nothing
+
+### The Never list still holds
+
+- **Given** the SKILL.md text
+- **When** its Never section is read
+- **Then** it still names `--apply`, `--accept`, `.cortex/`, `cortex/` and committing, and the skill-adjust section says a person commits
+
+### The skill is typed only
+
+- **Given** `skills/cortex-migrate/SKILL.md` and `skills/cortex-register-tasks/SKILL.md`
+- **When** each file's frontmatter is parsed
+- **Then** `disable-model-invocation` is `true` in both, and `name` and `description` are still present

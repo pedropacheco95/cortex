@@ -1,6 +1,6 @@
 ---
 id: store.remember-skill
-status: implemented
+status: draft
 depends_on:
   - store.map
 implements: ../../specs-business/store/agent-has-knowledge-when-it-needs-it.business.md
@@ -14,7 +14,7 @@ governs:
 
 ## Intent
 
-Writing must be as cheap as reading (vision §2). When the user says "remember this", or explains something the store doesn't hold, the agent files it in exactly one place by MAP's placement procedure and shows where in one visible line, so the user can correct it. This is the one 4.0 skill. It is agentic; Core only validates the result.
+Writing must be as cheap as reading (vision §2). When the user says "remember this", or explains something the store doesn't hold, the agent files it in exactly one place by MAP's placement procedure and shows where in one visible line, so the user can correct it. This is the 4.0 skill for filing facts. It is agentic; Core only validates the result.
 
 ## Rules
 
@@ -34,7 +34,17 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 7. **Source digest** (2026-10-19, schema S7). When the user hands over a document or transcript to keep, the skill writes `history/sources/<YYYY-MM-DD>-<slug>.md`: a redacted digest (summary, claims, asks) with `captured: <today>`, `origin: external:<who or where, ≤ 120 chars, no URL>`, and, when the original is given as a file, `raw: history/sources/raw/<YYYY-MM-DD>-<slug>.<ext>` with the original copied there byte for byte (that folder is gitignored). Facts taken from the digest are then filed by the steps of Rule 2 with `origin: source:history/sources/<file>.md`. This section comes after the Rule 2 steps in the SKILL.md.
 8. **Propose mode** (2026-10-19, schema S6). When the fact is a proposal rather than a settled fact (a rule an agent inferred, a suggested change, a gap found while working, or anything a person must approve), the skill appends one item to `now/proposals.md`: `## P-<YYYY-MM-DD>-<slug>: <title>`, then `until: <today + 30 days>` and `status: pending decision`, then the full text and where it came from. It creates the file with the S3 frontmatter (`permanence: volatile`) when absent, and adds its `origin` to the file's list. It ends with the readback `Proposed: <proposal> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: <origin>)`. Approval is a person, or an agent holding that authority, moving the text to its home and removing the item; the skill never approves its own proposal. This section comes after the Rule 2 steps.
 9. The order and wording of the Rule 2 steps and the description are unchanged by Rules 7 and 8.
-10. **The write gate** (2026-10-19), the same as the skills' (`specflow.store-v4-awareness` Rule 6). Every write of this skill, in all modes, applies only once `migration.accepted` is set in `cortex/cortex.json` or when the project has no `.cortex/`. Before that, the skill prints `This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.` and writes nothing, so a re-run of `cortex migrate --apply` cannot overwrite a captured fact.
+10. **The write gate** (2026-10-19). Every write of this skill, in all modes, applies only once `migration.accepted` is set in `cortex/cortex.json` or when the project has no `.cortex/`. Before that, the skill prints `This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.` and writes nothing, so a re-run of `cortex migrate --apply` cannot overwrite a captured fact.
+11. **Asks become spec requests** (2026-11-04). The two ingest skills are gone, and this is the one door for a document. Every ask listed in a source digest (Rule 7) is filed as one spec request, so no ask rests in a digest unread. For each ask the skill appends one propose-mode item (Rule 8) to `now/proposals.md`:
+    - the heading is `## P-<YYYY-MM-DD>-<slug>: Spec request: <ask in ≤ 12 words>`;
+    - then `until: <today + 30 days>` and `status: pending decision`;
+    - then the line `Run specflow-spec on this ask.`, the ask quoted verbatim from the document, and `source: <digest path>`.
+
+    The skill does not judge the ask, reconcile it against the specs, or run specflow-spec: that session does (`specflow.spec-skill` Rules 9 and 14). Its `origin` is `source:<digest path>`. It ends each with the readback `Spec request: <ask> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: source:<digest path>)`. A digest with no asks files no item. This paragraph comes in the source digest section of the SKILL.md, after its numbered steps. Rule 9 still holds for this rule: the Rule 2 steps and the description do not change.
+12. **Bugs** (2026-11-04, owner decision: bugs go to this skill, which files and closes them; schema S3, "Bugs in 4.0"). The description gains `"file this bug"` after `"from now on"`, and it is the only change to the description. This section comes after the Rule 2 steps.
+    - **Filing.** A bug goes in `code/<area>/<slug>.md` with the S3 frontmatter and `status: open`, and no `B-NNN` id. `<area>` is the first folder of the affected path, else `repo`. Its diagnosis (type, severity, owner, fix in flight, the commit it was found at) goes in body lines, as far as they are known. The steps of Rule 2 otherwise apply, and the readback is the `Filing:` line.
+    - **Closing.** When the bug is fixed, the skill writes `history/incidents/<today>-<slug>.md` holding the bug's text, `aliases` and `origin` list with this session's origin added, drops `status`, and adds the body line `Fixed: <today>, <commit or change>`. It then removes the `code/` file and re-points any link to it found by `rg '<old path>' cortex/`. It runs `cortex store validate`, and ends with `Closed: <bug in ≤ 12 words> → <path> (origin: <origin>)`.
+    - Only a person's word or observed evidence that the fix landed closes a bug; a fix in flight does not.
 
 ## Acceptance Criteria
 
@@ -91,3 +101,73 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** its precondition names `migration.accepted`, the no-`.cortex/` case, and the line `This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.`, before the steps
+
+## Acceptance Criteria: spec requests (amendment 2026-11-04)
+
+### Asks in a digest become spec requests
+
+- **Given** the SKILL.md text
+- **When** its source digest section is read
+- **Then** it says every ask in the digest is filed in `now/proposals.md`, with the heading `## P-<YYYY-MM-DD>-<slug>: Spec request: <ask>`, `until:`, `status: pending decision`, the line `Run specflow-spec on this ask.`, the ask quoted verbatim, and `source:`
+
+### The spec-request readback is exact
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it contains the line format `Spec request: <ask> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: source:<digest path>)`
+
+### The skill does not judge an ask
+
+- **Given** the SKILL.md text
+- **When** its source digest section is read
+- **Then** it says the skill does not reconcile the ask and does not run specflow-spec itself
+
+### A digest with no asks files no item
+
+- **Given** the SKILL.md text
+- **When** its source digest section is read
+- **Then** it says a digest with no asks files no spec request
+
+### The Rule 2 steps and description are unchanged
+
+- **Given** the SKILL.md text before and after this amendment
+- **When** the numbered steps are compared, and the description apart from the phrase of Rule 12
+- **Then** they are identical
+
+### The write gate stands alone
+
+- **Given** the SKILL.md text
+- **When** its write gate is read
+- **Then** it states the gate in full and cites no other spec
+
+## Acceptance Criteria: bugs (amendment 2026-11-04)
+
+### The description routes a bug here
+
+- **Given** the skill's frontmatter `description`
+- **When** `pnpm check:skill-budget` runs
+- **Then** it contains `"file this bug"` and the check passes
+
+### A bug is filed as an open pitfall
+
+- **Given** the SKILL.md text
+- **When** its bug section is read
+- **Then** it names `code/<area>/<slug>.md`, `status: open`, no `B-NNN` id, the `repo` fallback, the diagnosis as body lines, and the `Filing:` readback
+
+### A fixed bug moves to history
+
+- **Given** the SKILL.md text
+- **When** its bug section is read
+- **Then** it names `history/incidents/<today>-<slug>.md`, carrying the text, `aliases` and `origin`, dropping `status`, the `Fixed:` line, removing the `code/` file, re-pointing links with `rg`, and `cortex store validate`
+
+### The closing readback is exact
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it contains `Closed: <bug> → <path> (origin: <origin>)`
+
+### A fix in flight closes nothing
+
+- **Given** the SKILL.md text
+- **When** its bug section is read
+- **Then** it says a bug closes only on a person's word or observed evidence that the fix landed

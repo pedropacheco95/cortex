@@ -24,6 +24,9 @@ The spec-and-test lineage absorbed into Cortex: the conventions of the two spec 
 - `specflow.port` — `cortex specs port`: moves an existing tree into `specflow/` and reports what it cannot govern; defines the outputs of promise conversion and the tagging pass.
 - `specflow.lint` — `cortex specs lint`: tree checks and the constants rules, replacing the specflow-lint skill.
 - `specflow.viewer` — `cortex specs view`: the static spec page, replacing the specflow-viewer skill.
+- `specflow.spec-skill` — `specflow-spec`: the code-free session that writes the spec, with the two owner lines, on the big path.
+- `specflow.review-skill` — `specflow-review`: fresh agents read a spec, or on request a diff, by concern and lens.
+- `specflow.onboard-skill` — `specflow-onboard`: port mode (promise conversion, tagging pass) and onboard mode.
 
 _Planned (not yet written):_
 

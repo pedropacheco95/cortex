@@ -11,6 +11,7 @@ implemented_by:
   - ../../specs/specflow/port.spec.md
   - ../../specs/specflow/lint.spec.md
   - ../../specs/specflow/viewer.spec.md
+  - ../../specs/specflow/onboard-skill.spec.md
 ---
 
 # The developer knows the specs and their tests stay sound — without checking
