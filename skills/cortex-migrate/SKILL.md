@@ -1,7 +1,7 @@
 ---
 name: cortex-migrate
-description: >
-  Decide what a 3.x .cortex/ store keeps before cortex migrate --apply: read the working files Core cannot judge and write the plan file (rescue, digest or retire, with a reason). Use when asked to migrate a project to the 4.0 store.
+description: 'Decide what a 3.x .cortex/ store keeps before cortex migrate --apply: read the working files Core cannot judge and write the plan file (rescue, digest or retire, with a reason). Use when asked to migrate a project to the 4.0 store.'
+disable-model-invocation: true
 ---
 
 # Cortex: migrate (the agentic half)
@@ -41,8 +41,49 @@ How to choose:
 - When two kept files disagree, the digest records both statements with their refs, and never picks one.
 - A concept definition that encodes domain meaning goes to `world/terms/<term>.md`. One that only describes what code does stays dropped.
 
+## The skill-adjust step
+
+Every other skill in a project that names a retired skill or the old store is checked and adjusted if needed. This step runs after a person has run `cortex migrate --accept`. If `migration.accepted` is not set, stop and say so.
+
+1. Run `cortex sync --dry-run`, which writes nothing, and read its `project skills to adjust` section and its `is retired but has local edits` lines.
+2. Read each listed file in full, and every mention in it.
+3. Decide each mention (below).
+4. Make the edits, changing only the words the decision needs.
+5. Write `.cortex-migrate/skill-edits.md`: one row per mention, with file, line, term, decision, the text before and after, and a one-line reason.
+6. Show the person the counts and the file. A person commits, and `cortex sync --dry-run` should then list only the mentions decided `left` or `open`.
+
+Each mention gets exactly one decision:
+
+- **edited**: the skill told an agent to use the retired name or path, and the table gives a replacement that exists;
+- **left**: the mention needs no change, such as history or a changelog, with the reason;
+- **open**: the table gives no usable replacement, or the step's meaning would change. The file stays as it is and the row says what the person must decide.
+
+A mention is never silently skipped. A skill is never deleted, and no step of a project's own process is removed by you: dropping one is an `open`.
+
+| Named | Becomes |
+|---|---|
+| `specflow-brainstorm`, `specflow-plan`, `specflow-spec-editor`, `specflow-tests`, `specflow-new-project`, `specflow-ingest`, `specflow-intent-reconcile` | `specflow-spec` |
+| `specflow-request-review`, `specflow-receive-review` | `specflow-review` |
+| `specflow-onboard-codebase`, `specflow-deep-onboard` | `specflow-onboard` |
+| `specflow-lint` | `cortex specs lint` |
+| `specflow-viewer` | `cortex specs view` |
+| `specflow-entry`, `specflow-change-router`, `specflow-develop`, `specflow-bugs` | none: `open`, noting that the `## Specs` block's rules now do this work |
+| `cortex-archive-ingest`, `cortex-ingest` | `cortex-remember` (its source digest) |
+| `_conventions`, `cortex-extract-insight`, `cortex-loop`, `cortex-loop-*`, `cortex-pulse-*` | none: `open` |
+| `.cortex/<path>` | the target `.cortex-migrate/report.json` gives that path, else the S9.3 mapping; no target: `open` |
+| `.specflow/specs/` | `specflow/impl/` |
+| `.specflow/specs-business/` | `specflow/promises/` |
+
+A skill replacement applies only when `.claude/skills/<replacement>/SKILL.md` exists, a `cortex specs` or `cortex tasks` one only when the installed `cortex` prints that command in its usage, and a `specflow/` one only when `specflow/` exists at the root, which is after `cortex specs port`. Otherwise the mention is `open` with the reason `replacement not there yet`, and a later run of this step, after `cortex sync`, picks it up.
+
+This step changes no project file outside the listed ones. A bundle's `.cortex-installed.json` marker is never edited, so an edited bundle no longer matches its marker or the package's copy, and `cortex sync` leaves it alone.
+
+### A retired skill with local edits
+
+`cortex sync` removes a retired skill only when it is unedited, and leaves an edited one here, with the line `is retired but has local edits`. Read the bundle, write one row in `.cortex-migrate/skill-edits.md` with decision `open` saying what project-specific content it holds, and ask the person to choose: remove it, or keep that content under a new name. Delete nothing yourself. A kept bundle under a new name is then scanned like any other.
+
 ## Never
 
 - Never run `cortex migrate --apply` or `cortex migrate --accept`.
-- Never write under `.cortex/` or `cortex/`. Only `.cortex-migrate/` is yours.
+- Never write under `.cortex/` or `cortex/`. Only `.cortex-migrate/` is yours, plus the listed files under `.claude/skills/` in the skill-adjust step.
 - Never commit.

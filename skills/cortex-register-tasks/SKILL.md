@@ -1,6 +1,7 @@
 ---
 name: cortex-register-tasks
 description: 'Register or activate this project''s cortex scheduled tasks in the Claude Desktop app.'
+disable-model-invocation: true
 ---
 
 # cortex-register-tasks

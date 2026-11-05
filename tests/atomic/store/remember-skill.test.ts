@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
+import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -71,5 +72,59 @@ describe('store.remember-skill', () => {
     expect(pre).toContain('`migration.accepted`');
     expect(pre).toContain('no `.cortex/`');
     expect(pre).toContain("This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.");
+  });
+
+  const digest = text.slice(text.indexOf('## A document to keep'), text.indexOf('## Propose mode'));
+  const bug = text.slice(text.indexOf('## A bug'), text.indexOf('## Never'));
+
+  it('Asks in a digest become spec requests', () => {
+    expect(digest).toContain('Every ask listed in the digest is filed as one spec request');
+    for (const n of ['`now/proposals.md`', '`## P-<YYYY-MM-DD>-<slug>: Spec request: <ask in ≤ 12 words>`', '`until: <today + 30 days>`', '`status: pending decision`', '`Run specflow-spec on this ask.`', 'quoted verbatim', '`source: <digest path>`']) expect(digest, n).toContain(n);
+  });
+
+  it('The spec-request readback is exact', () => {
+    expect(text).toContain('Spec request: <ask> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: source:<digest path>)');
+  });
+
+  it('The skill does not judge an ask', () => {
+    expect(digest).toContain('Do not judge the ask, reconcile it against the specs, or run specflow-spec');
+  });
+
+  it('A digest with no asks files no item', () => {
+    expect(digest).toContain('A digest with no asks files no spec request.');
+  });
+
+  it('The Rule 2 steps and description are unchanged', () => {
+    const steps = text.slice(text.indexOf('## Steps, in order'), text.indexOf('## Rules from the user'));
+    expect(createHash('sha256').update(steps).digest('hex')).toBe('0010439c3960541834abb7a8c2e58b00ed82567b3194044fc4e62804363c923a');
+    expect(text).toContain(`File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", "file this bug", or explains something the store doesn't hold.`);
+  });
+
+  it('The write gate stands alone', () => {
+    const pre = text.slice(0, text.indexOf('## Steps, in order'));
+    expect(pre).toContain("This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.");
+    expect(pre).not.toMatch(/store\.[a-z-]+|core-cli\.|specflow\.[a-z-]+/);
+  });
+
+  it('The description routes a bug here', () => {
+    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'measure-skill-descriptions.mjs')], { cwd: ROOT, encoding: 'utf8' });
+    expect(text.split('---')[1]).toContain('"file this bug"');
+    expect(out).toContain('OK    all');
+  });
+
+  it('A bug is filed as an open pitfall', () => {
+    for (const n of ['`code/<area>/<slug>.md`', '`status: open`', 'no `B-NNN` id', '`repo`', 'body lines', '`Filing:`']) expect(bug, n).toContain(n);
+  });
+
+  it('A fixed bug moves to history', () => {
+    for (const n of ['`history/incidents/<today>-<slug>.md`', '`aliases`', '`origin`', 'drop `status`', '`Fixed: <today>, <commit or change>`', 'remove the `code/` file', "`rg '<old path>' cortex/`", '`cortex store validate`']) expect(bug, n).toContain(n);
+  });
+
+  it('The closing readback is exact', () => {
+    expect(text).toContain('Closed: <bug in ≤ 12 words> → <path> (origin: <origin>)');
+  });
+
+  it('A fix in flight closes nothing', () => {
+    expect(bug).toContain("Only a person's word or observed evidence that the fix landed closes a bug; a fix in flight does not.");
   });
 });
