@@ -1,6 +1,6 @@
 ---
 id: insight.gaps-loop
-status: implemented
+status: retired
 depends_on:
   - insight.module-contract
   - schema.validator-insight-checks

@@ -1,6 +1,6 @@
 ---
 id: constellation.insight-preset
-status: implemented
+status: retired
 depends_on:
   - insight.refresh-loop
   - constellation.renderer
