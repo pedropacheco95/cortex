@@ -1,11 +1,13 @@
 ---
 id: compass.developer-gets-bugs-triaged-without-asking
-status: implemented
+status: retired
 implemented_by:
   - ../../impl/loops/bug-triage.spec.md
 ---
 
 # Filed problems classify themselves and point at their fix
+
+> **RETIRED (Pedro, sitting item 31, 2026-11-05).** Daily triage and its classification are dropped (D3). What survives is that a filed bug does not go quiet, folded into `developer-gets-upkeep-proposals-without-asking` (Business Rule 5). See `../../impl/loops/_retirements.md`.
 
 ## Outcome
 

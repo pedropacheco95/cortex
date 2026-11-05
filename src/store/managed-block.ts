@@ -34,7 +34,7 @@ export const SPECS_SECTION_STAGE1 = [
   '',
   'A finished change updates or adds the criterion for every behaviour it changes or adds, and a test that cites it.',
   '',
-  'A git hook (`.githooks/commit-msg`) checks every commit. It runs no tests. It refuses:',
+  'If `core.hooksPath` is `.githooks`, a git hook checks every commit. It runs no tests. It refuses:',
   '',
   '- a commit that changes code or config (anything outside `specflow/`, `cortex/`, tests, `.githooks/` and `.md` files) without changing a test;',
   '- a commit that changes a spec\'s rules or criteria together with code or config. Commit the spec change on its own,',

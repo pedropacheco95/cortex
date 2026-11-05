@@ -33,6 +33,8 @@ Developers maintaining a Cortex-managed project over months — the timescale wh
 2. Every proposal carries its evidence — the dead reference, the age, the divergence — so it can be challenged.
 3. Every run leaves a fresh, dated report, including explicit "nothing found" runs.
 4. Each reviewer reads only what it reviews and writes only its own report.
+5. On a 4.0 store every open bug is counted each week, and those not confirmed for a month are named. A bug closes only on a person's word or observed evidence that the fix landed. Nothing classifies a bug on a schedule. (Folded in from `developer-gets-bugs-triaged-without-asking`, sitting item 31.)
+6. On a 4.0 store no scheduled task changes the code, a test or a spec, and none stages or commits. An experiment on code happens in a throwaway copy, deleted in the same run. (Folded in from `developer-trusts-changes-the-system-writes`, sitting item 31.)
 
 ## Success Metrics
 

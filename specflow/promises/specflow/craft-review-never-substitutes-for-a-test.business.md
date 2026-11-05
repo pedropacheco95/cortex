@@ -1,11 +1,13 @@
 ---
 id: specflow.craft-review-never-substitutes-for-a-test
-status: implemented
+status: retired
 implemented_by:
   - ../../impl/specflow/review-pair.spec.md
 ---
 
 # Code the next person can work with, without review becoming a second gate
+
+> **RETIRED (Pedro, sitting item 31, 2026-11-05).** Its only implementer is retired and `specflow.review-skill` serves another promise. What survives is folded into `nothing-is-built-before-it-is-agreed` (Business Rules 8 to 10): tests decide correctness, a finding names a place and a change, and a review received is checked before it is applied. Craft review itself, advice on naming and structure, has no 4.0 home. See `../../impl/loops/_retirements.md`.
 
 ## Outcome
 

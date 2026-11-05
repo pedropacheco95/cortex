@@ -48,7 +48,7 @@ Amendment 2026-11-04 (Specflow): the quick path has no skills. What it knows abo
 
     A finished change updates or adds the criterion for every behaviour it changes or adds, and a test that cites it.
 
-    A git hook (`.githooks/commit-msg`) checks every commit. It runs no tests. It refuses:
+    If `core.hooksPath` is `.githooks`, a git hook checks every commit. It runs no tests. It refuses:
 
     - a commit that changes code or config (anything outside `specflow/`, `cortex/`, tests, `.githooks/` and `.md` files) without changing a test;
     - a commit that changes a spec's rules or criteria together with code or config. Commit the spec change on its own,
@@ -162,3 +162,9 @@ Each of these builds a fixture project with an accepted 4.0 store.
 - **Given** a `specflow/` folder, a `<!-- cortex:start v3.4 -->` block and a migration that is not accepted
 - **When** `cortex store map` runs
 - **Then** `CLAUDE.md` is byte-identical
+
+### STORE-MANAGED-BLOCK-15: The hook sentence is true where no hook is installed
+
+- **Given** `SPECS_SECTION_STAGE1`
+- **When** its lines are read
+- **Then** one line is `` If `core.hooksPath` is `.githooks`, a git hook checks every commit. It runs no tests. It refuses: ``, because `core.hooksPath` is not cloned, and no line claims the check runs unconditionally

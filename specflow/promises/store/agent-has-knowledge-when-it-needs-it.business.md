@@ -42,6 +42,7 @@ The developer who owns the project, and every agent session working in it: inter
 6. History is never rewritten, only appended to.
 7. Moving to the new layout never loses a fact, and never leaves a project's own skills pointing at something gone: they are listed, adjusted where a replacement exists, and every edit is reported. Every old item is accounted for, and the old store stays until the user accepts the move. The old inferred code summaries (insight anatomy, concepts and graph) are not facts anyone gave the project: they are dropped by a recorded decision (2026-10-14), counted in the report, and left on disk for the user to remove.
 8. Nothing here needs a model call to work. Judgement belongs to the agent and the user; the tool validates, generates, expires and reports.
+9. A document handed over is kept as a digest and, when it came as a file, as the original byte for byte, off the shared record. Every fact taken from it names the digest as its source. (Folded in from `developer-turns-raw-sources-into-project-memory`, sitting item 31.)
 
 ## Success Metrics
 

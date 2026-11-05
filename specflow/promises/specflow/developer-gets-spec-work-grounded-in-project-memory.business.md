@@ -1,6 +1,6 @@
 ---
 id: specflow.developer-gets-spec-work-grounded-in-project-memory
-status: implemented
+status: retired
 implemented_by:
   - ../../impl/specflow/cortex-awareness.spec.md
   - ../../impl/specflow/insight-awareness.spec.md
@@ -8,6 +8,8 @@ implemented_by:
 ---
 
 # Spec work draws on everything the project already knows
+
+> **RETIRED (Pedro, sitting item 31, 2026-11-05).** The eleven workflows it grounded are gone. What survives is folded into `nothing-is-built-before-it-is-agreed` (Business Rule 7): a spec session starts from the rules, promises, decisions and code. Filing into the shared layer is `store.agent-has-knowledge-when-it-needs-it`, journey step 4. See `../../impl/loops/_retirements.md`.
 
 ## Outcome
 

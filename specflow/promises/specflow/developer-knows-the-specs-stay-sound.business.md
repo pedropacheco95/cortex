@@ -41,6 +41,7 @@ Developers running spec-first projects under Cortex, where the spec tree is the 
 3. Every run leaves a fresh, dated report, clean or not.
 4. A behaviour with no test is shown as unproven, never as covered.
 5. A check that could not run says so; it never reads as a pass.
+6. On a 4.0 store a failing test is reported by name, with the date it was first seen, until it passes. No scheduled task fixes it. (Folded in from `developer-gets-test-failures-fixed-or-explained`, sitting item 31.)
 
 ## Success Metrics
 
