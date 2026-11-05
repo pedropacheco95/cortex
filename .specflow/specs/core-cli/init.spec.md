@@ -57,7 +57,7 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
     1. The platform is not `darwin`: exit 2, with Rule 1's message. This comes first because `cortex store init` has no platform gate, and sync would refuse only after the store existed.
     2. The target is, or sits beneath, a directory named `.cortex` holding `cortex.config.json`, or a directory named `cortex` holding `cortex.json`: exit 2, `cortex init: refused — this is inside the Cortex store of <root>; run cortex init there. Nothing was written.` `<root>` is that directory's parent. No flag bypasses it.
     3. `cortex/cortex.json` exists and its `schemaVersion` MAJOR differs from the package's: exit 3, `cortex init: refused — this store is schema <version> and this package supports <major>.x. Nothing was written.`
-    4. `cortex/cortex.json` exists and `migration.accepted` is set, or it has no `migration` field: the project already has a store. Init skips `cortex store init`, runs the update route, and so behaves exactly as `cortex sync` does.
+    4. `cortex/cortex.json` exists and `migration.accepted` is set, or it has no `migration` field and there is no `.cortex/cortex.config.json`: the project already has a store. Init skips `cortex store init`, runs the update route, and so behaves exactly as `cortex sync` does.
     5. `cortex/cortex.json` exists and `migration.accepted` is `null`: exit 3, `cortex init: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`
     6. `.cortex/cortex.config.json` exists: exit 3, `cortex init: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.` This check must stay ahead of any write. `cortex store init` would create a `cortex.json` with no `migration` field, and sync takes that as a store on the update route (`core-cli.sync` Rule 16), so it would treat a 3.x project as 4.0 and remove its skills.
     7. Otherwise it is a new project: `cortex store init`, then the update route.
@@ -332,6 +332,18 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Given** a project with `.cortex/cortex.config.json` only, and retired skills in `.claude/skills/`
 - **When** `cortex init --force` runs
 - **Then** it exits 3 with the `migrate it first with cortex migrate` line, `cortex/` does not exist, and no file changed
+
+### init on a 3.x project where store init already ran refuses
+
+- **Given** a project with `.cortex/cortex.config.json`, a `cortex/cortex.json` with no `migration` field, and retired skills in `.claude/skills/`
+- **When** `cortex init` runs
+- **Then** it exits 3 with the `migrate it first with cortex migrate` line, and no file changed
+
+### init on an accepted project that keeps its old folder runs the update route
+
+- **Given** a project with `cortex/cortex.json` whose `migration.accepted` is a date, and `.cortex/cortex.config.json` still present
+- **When** `cortex init` runs
+- **Then** it exits 0 through the update route, and nothing under `.cortex/` changed
 
 ### init on another platform writes nothing
 
