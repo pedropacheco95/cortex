@@ -43,6 +43,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    - **A criterion** is matched by id: **added** when its id is new, **changed** when the same id has different text, **removed** when its id is gone.
    - **A rule** is matched by text, so renumbering alone changes nothing. A base rule whose text no longer appears anywhere in the staged list is **changed** if its base number still exists, and **removed** if not. It is always named by its base number. A staged rule whose text is not in the base is **added**. New: the bench keyed rules by number, which made every rule after an insertion an amendment.
    - An **amendment** is a changed or removed item. A commit that edits a rule and inserts another still needs the trailer for the edited rule's base number.
+   - **A retired spec has no items.** A spec with `status: retired` in both the base and the staged tree is never judged, so correcting a record needs no trailer. A commit that sets `status: retired` removes every item the spec had, and a commit that clears it adds them. So retiring a spec cannot share a commit with code (Rule 9).
 6. **Rule (a) code-needs-test.** A commit with a `code` path and no `test` path is refused. Measured. Always on.
 7. **Rule (b) test-needs-tag.** Each test case added or changed in the commit must carry a tag naming a criterion that resolves in the staged tree. A case changed means its title or body differs from the base after collapsing whitespace. A helper or import change changes no case. New. Controlled by `specflow.rules.b`.
 8. **Rule (c) criterion-needs-test.** Each changed criterion needs a test tagged with it, added or changed. Added and removed criteria are not judged. Text is compared as in Rule 5, so whitespace and emphasis edits never fire it. New, reasoned and not run. Controlled by `specflow.rules.c`.
@@ -51,7 +52,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
    - **Limit:** the refusal comes at push, not at commit. In a repository that rarely pushes it arrives late, after many commits; until then (c) is a warning only.
    - **OPEN:** that commit mode never refuses (c) is a recommendation awaiting the owner, who also decides the `pre-push` hook. The plan's wording was "refuses".
 9. **Rule (d) spec-commit-alone.** A commit with any added, changed or removed rule or criterion and any `code` path is refused. Edits to other sections of a spec (Intent, Notes) may share a commit with code. Measured. Always on.
-10. **Rule (e) amend-needs-trailer.** Each amendment needs a `Specflow-Amends:` trailer in the commit message that names it exactly: `<spec-id>#rule-<n>` or `<spec-id>#<criterion-id>`, with a non-empty reason (schema S10). An added item needs none (A14). Measured as a record; the refusal is new. Always on.
+10. **Rule (e) amend-needs-trailer.** Each amendment needs a `Specflow-Amends:` trailer in the commit message that names it exactly: `<spec-id>#rule-<n>` or `<spec-id>#<criterion-id>`, with a non-empty reason (schema S10). An added item needs none (A14). One trailer `<spec-id>#retired` covers every item a commit removes by retiring that spec. Measured as a record; the refusal is new. Always on.
 11. **Rule (f) touched-criteria.** For each `code` path, the check lists the criteria whose tagged test files statically reach it, by following relative imports transitively from each tagged test file (JS and TS `import`, `export … from`, `require`; Python `import` and `from … import`, resolved against the test file's folder and the repository root). Unresolved imports are skipped. It lists at most 20 criteria and then `… and <n> more`. New. Warns only. Needs tags, so it lists nothing where no test is tagged.
 12. **Rule (g) stale-literal.** For each constant whose value changed in a `constants.md`, the check lists tracked files outside `specflow/` that still hold the old value as a whole word (`git grep -w -F`), at most 20. An old value shorter than 3 characters is not searched, and the warning says so. New. Warns only.
 13. **Rule levels.** Rules (a), (d), (e) always refuse and (f), (g) always warn. `specflow.rules.b` and `.c` take `off`, `warn` or `refuse`, and an absent key means `off` (A11). The config cannot turn off a measured rule. The lint rule `lint.rules-early` guards turning (b) or (c) on early.
@@ -187,6 +188,24 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** a new criterion `BILLING-REFUNDS-9` staged alone, no trailer
 - **When** the check runs
 - **Then** it exits 0
+
+### Retiring a spec with code is refused
+
+- **Given** a staged change setting a spec to `status: retired`, and a `code` path
+- **When** the check runs
+- **Then** it refuses under rule (d)
+
+### Retiring a spec needs one trailer
+
+- **Given** a staged change setting a spec with 2 rules and 3 criteria to `status: retired`, and no `code` path
+- **When** the check runs with `Specflow-Amends: billing.old#retired — replaced by billing.new`, and again with no trailer
+- **Then** the first is allowed, and the second is refused under rule (e)
+
+### Editing a retired spec is not judged
+
+- **Given** a spec retired in the base, with one criterion's text changed and no trailer, and a `code` path in the same commit
+- **When** the check runs
+- **Then** it passes rules (c), (d) and (e)
 
 ### Inserting a rule mid-list amends nothing
 

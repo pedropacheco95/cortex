@@ -37,6 +37,7 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 11. **Promises.** A spec belongs to the promise its `serves:` names, or, before promise conversion, to the business spec its `implements:` names. A spec with neither is under `Specs without a promise`.
 12. **INDEX text.** The format is in schema S12.3. Output is deterministic: sorted by id with numbers in numeric order, no dates, so the same tree gives the same bytes. The first lines say it is generated.
 13. **Test selection.** Files come from `specflow.tests` only. With no `specflow.tests`, the index still writes, counts no tests and prints `specflow: warning: specflow.tests is not set; no tests were read`.
+14. **Retired.** A spec, business spec or promise with `status: retired` is a record, listed only under `## Retired` (schema S12.3) and in the JSON `retired` list. It counts in no total, its criteria are not in the model, and none is `unverified`. So a tag naming one of its criteria is an orphan tag (Rule 9), and a live spec serving a retired promise is under `Specs without a promise`. Its ids stay taken: Rule 3's uniqueness still reads retired files.
 
 ## Acceptance Criteria
 
@@ -183,6 +184,24 @@ Specs, tests and constants are parsed once, by text, into one model. The check, 
 - **Given** a spec with `implements:` resolving to `specflow/promises/billing/x.business.md` and no `serves:`
 - **When** `cortex specs index` runs
 - **Then** the spec is listed under that file
+
+### A retired spec is listed and counts nowhere else
+
+- **Given** a live spec with one criterion, a retired spec with two ids and no tests, and a retired spec with no ids
+- **When** `cortex specs index` runs
+- **Then** the header has `specs: 1 · criteria: 1`, both retired specs are under `## Retired` and in the JSON `retired` list, and neither is under `Specs without criterion ids` or `Specs without a promise`
+
+### A retired promise is listed and its spec loses its home
+
+- **Given** a promise `P-BILLING-1` with `status: retired` and a live spec with `serves: [P-BILLING-1]`
+- **When** `cortex specs index` runs
+- **Then** the header has `Promises: 0`, `P-BILLING-1` is under `## Retired`, and the spec is under `Specs without a promise`
+
+### A tag on a retired criterion is an orphan
+
+- **Given** a retired spec holding `BILLING-OLD-1` and `it('[BILLING-OLD-1] x', …)`
+- **When** `cortex specs index` runs
+- **Then** the INDEX lists it under `Tags naming no criterion`
 
 ### The same tree gives the same bytes
 

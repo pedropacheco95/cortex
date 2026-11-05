@@ -38,6 +38,7 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
    - `lint.rules-early` (error): `specflow.rules.b` or `.c` is not `off` while `Untagged tests` is above 0.
    - `lint.orphan-tag` (error): a tag naming no criterion.
    - `lint.hooks-installed` (warning): `core.hooksPath` is not `.githooks`.
+   - `lint.retired-link` (warning): a live spec whose `implements:`, `serves:` or `depends_on` names a retired spec or promise.
 4. **Constants.**
    - `lint.constant-unresolved` (error): `const:NAME` resolves to nothing visible from that spec. If it exists in a folder the spec cannot see, the message names that file and says to move it up.
    - `lint.constant-shadow` (error): a name declared in a folder and in an ancestor.
@@ -47,6 +48,7 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
 5. **`--fix`** applies only these, then reports what remains: writes a stub `_overview.md` with TODO markers where one is missing; turns a one-item `implements:` list into a scalar; adds a missing reverse link when the forward link resolves; adds the next free id to a criterion heading without one (highest number in that file plus one); moves a constant up to the lowest folder covering every user, or down under `lint.constant-placement`. It never removes a link, renumbers a rule, or edits rule or criterion text.
 6. **`lint.literal`.** A literal is a double-quoted string of 8 or more characters, or a number with a unit (`ms`, `s`, `min`, `h`, `day`, `days`, `tokens`, `lines`, `KB`, `MB`, `%`), in a criterion's `Then` clause. A literal in the `Then` clauses of two or more specs that is not already `const:` is a finding, naming the value and each spec. Code spans are not literals: on this repository 477 of them repeat across specs, and they are nearly all paths and commands, while this definition finds 3. `specflow.literals.ignore` lists exact values to skip.
 7. **Dropped from the skill.** Persona-prefix filenames, the jargon word list, and the overview-quality and "answers the three questions" checks are not ported: each needed judgement or applied only to business specs, which become promises. The Given/When/Then "concrete values" judgement goes too. Removing a broken link and renumbering rules were auto-fixes and are not ported: both change meaning.
+8. **Retired records.** A file with `status: retired` is a record (`specflow.index` Rule 14), so its own text is not judged. Only `check.id-matches-path`, `check.dev-spec` or `check.business-spec`, `lint.layout` and the duplicate-id part of `lint.criterion-id` run on it. Its links are not checked, because the file it names may since have become a promise. A constant only retired specs name is unused. A live spec's link to a retired file must still resolve.
 
 ## Acceptance Criteria
 
@@ -265,6 +267,30 @@ The specflow-lint skill mostly ran checks a machine can run. They move to Core, 
 - **Given** `implements:` as a one-item list
 - **When** `cortex specs lint --fix` runs
 - **Then** it is a scalar
+
+### A retired spec is not judged
+
+- **Given** a spec with `status: retired`, a criterion with no id and no Then, `const:GONE` naming nothing, and an `implements:` naming a file that no longer exists
+- **When** `cortex specs lint` runs
+- **Then** it reports no finding on that file
+
+### A retired spec's id stays taken
+
+- **Given** a retired spec holding `BILLING-OLD-1` and a live spec with a heading `BILLING-OLD-1: A`
+- **When** `cortex specs lint` runs
+- **Then** `lint.criterion-id` reports the duplicate and exits 1
+
+### A live link to a retired spec warns
+
+- **Given** a live spec whose `depends_on` names a retired spec, and another whose `serves:` names a retired promise
+- **When** `cortex specs lint` runs
+- **Then** it reports `lint.retired-link` as a warning on each and exits 0
+
+### Retired specs do not satisfy a promise
+
+- **Given** a promise served only by retired specs that name it in `serves:`
+- **When** `cortex specs lint` runs
+- **Then** `lint.orphan` warns that nothing serves it
 
 ### Fix never touches meaning
 

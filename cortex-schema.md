@@ -1759,7 +1759,7 @@ End every substantive answer with an explicit confidence and what would change y
 |---|---|---|
 | `Spec:` | spec id | The spec the commit implements or changes. |
 | `Source:` | `history/sources/…` path or `history/changes/…` path | Where the ask came from. |
-| `Specflow-Amends:` | `<spec-id>#<item> — <reason>` | The commit changes or removes existing spec text. `<item>` is `rule-<n>` or a criterion id, with no spaces. The separator is an em dash, `-` or `--`, and the reason is required. One trailer per item. |
+| `Specflow-Amends:` | `<spec-id>#<item> — <reason>` | The commit changes or removes existing spec text. `<item>` is `rule-<n>`, a criterion id, or `retired` for every item of a spec the commit retires, with no spaces. The separator is an em dash, `-` or `--`, and the reason is required. One trailer per item. |
 
 All are optional and repeatable, except that `specflow.check` rule (e) requires `Specflow-Amends:` for each amendment. A trailer that names a spec id or path that does not exist produces a `warning` (`check.trailers`, over the last 50 commits).
 
@@ -1805,6 +1805,7 @@ specflow/
 
 - **Implementation specs** keep §4.6's frontmatter and body. They gain `serves: [<promise id>]`, exactly one entry, which replaces `implements:` after promise conversion. Before it, `implements:` stays and may point at a `.business.md` file under `promises/`.
 - **Promises** are short, owner-level statements, outside the test check. They count as recorded owner decisions for the stop rule. Frontmatter: `id` (`P-<AREA>-<n>`, where `<AREA>` is the uppercased first folder), `title`, `status`. Body: at most 40 lines, with a `## Outcome` section stating what the product promises and what it does not.
+- **Retired files** (`status: retired`) are records. They stay in the tree as they were: a retired business spec becomes no promise, and a retired implementation spec gains no `serves:`. Their criteria are outside the index and the check, and their ids stay taken.
 - Every folder keeps its `_overview.md` (§7.3).
 
 ### S12.2 Criterion ids
@@ -1845,12 +1846,14 @@ Untagged tests: <n>
 ## Constants
 ## Untagged tests
 ## Tags naming no criterion
+## Retired
 ```
 
 - ` · unverified` appears when no non-skipped case carries the id. ` (skipped)` appears on a skipped case.
 - Before promise conversion, a `### <path>` entry stands for each business spec.
 - `## Constants` lines read `` - `NAME` = `value` · `<file>` ``.
 - `## Untagged tests` holds one line per file: `` - `<file>`: <n> ``.
+- `## Retired` lines read `` - **<id>** (`<path>`) ``. Retired files count in no header total.
 - The file has no date. The same tree gives the same bytes.
 
 ### S12.4 `constants.md`
@@ -1881,7 +1884,8 @@ constants:
   ] }],
   "constants": [{ "name": "", "value": "", "file": "" }],
   "untagged": [{ "file": "", "name": "", "line": 0 }],
-  "orphanTags": [{ "id": "", "file": "", "name": "", "line": 0 }]
+  "orphanTags": [{ "id": "", "file": "", "name": "", "line": 0 }],
+  "retired": [{ "id": "", "file": "" }]
 }
 ```
 

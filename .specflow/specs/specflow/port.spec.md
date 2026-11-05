@@ -27,23 +27,31 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 1. `cortex specs port [--dry-run] [--ticket-pattern <regex>]`. `--dry-run` writes nothing and prints the report. The command stages its moves and commits nothing. Exit 0 on success, 1 on a refusal, and it never fails half-way: all checks run before the first move.
 2. **Source layouts.** Layout A is `.specflow/specs/` with `.specflow/specs-business/`. Layout B is `specs/impl/` with `specs/promises/`. Refuse (exit 1, nothing written) when neither exists, when both exist, when `specflow/impl/` or `specflow/promises/` already exists, when `cortex/cortex.json` does not exist, or when `git status --porcelain` shows a change under the source tree.
 3. **The move.** Each file moves by `git mv` with its path below the root unchanged: `.specflow/specs/<p>` and `specs/impl/<p>` to `specflow/impl/<p>`; `.specflow/specs-business/<p>` and `specs/promises/<p>` to `specflow/promises/<p>`. `_overview.md` and `_index.md` files move too. Layout A's emptied `.specflow/` folder goes; Layout B's `specs/INDEX.md` is deleted, since it is regenerated.
-4. **Criterion ids.** In each file under `specflow/impl/`, each criterion heading (`specflow.index` Rule 2) with no id gains `<ID>: ` before its title, numbered from 1 in file order. Numbering continues past the highest id already in the file. Heading level and title text do not change. **OPEN (owner, G2):** this is a text change. The bench's tree carried ids in headings, and positional ids are not stable.
+4. **Criterion ids.** In each file under `specflow/impl/` that is not retired (Rule 15), each criterion heading (`specflow.index` Rule 2) with no id gains `<ID>: ` before its title, numbered from 1 in file order. Numbering continues past the highest id already in the file. Heading level and title text do not change. **OPEN (owner, G2):** this is a text change. The bench's tree carried ids in headings, and positional ids are not stable.
 5. **Frontmatter links.** Relative `implements:` and `implemented_by:` values are rewritten to the new relative paths. **OPEN (owner, G2):** a second narrow text change; without it every link breaks.
 6. **Nothing else changes.** After removing the Rule 4 prefixes and reversing the Rule 5 rewrites, each file is byte-identical to its source. Body text that cites an old path stays as written; the managed block says such paths mean the same file under `specflow/`. The command verifies this for every file before staging and refuses if it fails.
 7. **Test config.** If `specflow.tests` is absent, the command writes default entries, one for each runner with at least one matching file, and prints them for review: `{ "runner": "vitest", "include": ["**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs}"], "exclude": ["**/e2e/**"] }` and `{ "runner": "pytest", "include": ["**/test_*.py", "**/*_test.py"], "exclude": [] }`. `node_modules`, `.venv` and `dist` are always excluded. It writes `"rules": { "b": "off", "c": "off" }`. A present key is left alone.
 8. **Spec classes.** Each spec gets one class, in this order of precedence:
+   - `retired`: `status: retired`.
    - `no-ACs`: no criterion heading.
    - `not-mappable`: the spec id, its path, and any ticket it cites appear in no test file.
-   - `needs-edit`: a criterion has no `Then` clause (case-insensitive), or the Acceptance Criteria section has text outside any criterion, or two headings repeat, or the link to tests runs only through a ticket other specs also cite.
+   - `needs-edit`: a criterion has no `Then` clause (case-insensitive), or the Acceptance Criteria section has text outside any criterion, or two headings repeat, or the link to tests runs only through a ticket other specs also cite, or it implements a retired business spec.
    - `clean`: the rest.
 
    Tickets are matches of `--ticket-pattern`; with none given, there are no tickets. A ticket cited by exactly this spec counts as a link to it.
 9. **Report.** `.cortex-port/report.md` has: source layout, HEAD, counts of specs, criteria, test files and test cases, specs per class, each non-clean spec with its class and reason, and untagged cases per test file. `.cortex-port/report.json` holds the same and the full untagged list (`file`, `name`, `line`). `.cortex-port/` is added to `.git/info/exclude`. A spec that is not `clean` still moves; the class says what the check cannot yet rely on.
 10. **Next steps.** On success the command writes `specflow/INDEX.md` and prints, in order: review and commit the move; `cortex store map`; `cortex hooks install`; then the two agentic steps in `specflow-onboard`. It runs none of them.
-11. **Promise conversion (agentic; output contract).** Each business spec becomes one promise of schema S12.1, with `serves: [<promise id>]` added to the frontmatter of every spec that implements it, and `implements:` removed from those specs. This is the one text rewrite, and the owner approves it per repository. Drafts sit in `.cortex-port/promises/` at the path they will take. Reasoning a promise drops goes to `cortex/world/decisions/`, not nowhere.
-12. **Tagging pass (agentic; output contract).** The files `.cortex-port/tagging/<area>.jsonl` together have one line for every untagged case: `file`, `name`, `line`, `action` (`tag`, `new-criterion` or `delete`), `reason`, plus `criterion` for `tag` and `spec` and `title` for `new-criterion`. A case matching no criterion proposes `new-criterion` first; `delete` is only for behaviour nobody wants (P5). The owner approves the proposals, and the skill applies them.
+11. **Promise conversion (agentic; output contract).** Each business spec that is not retired becomes one promise of schema S12.1, with `serves: [<promise id>]` added to the frontmatter of every live spec that implements it, and `implements:` removed from those specs. This is the one text rewrite, and the owner approves it per repository. Drafts sit in `.cortex-port/promises/` at the path they will take. Reasoning a promise drops goes to `cortex/world/decisions/`, not nowhere.
+12. **Tagging pass (agentic; output contract).** The files `.cortex-port/tagging/<area>.jsonl` together have one line for every untagged case: `file`, `name`, `line`, `action` (`tag`, `new-criterion` or `delete`), `reason`, plus `criterion` for `tag` and `spec` and `title` for `new-criterion`. A case matching no criterion proposes `new-criterion` first; `delete` is only for behaviour nobody wants (P5), and a case that proves only a retired spec's behaviour proposes it, naming that spec in `reason`. The owner approves the proposals, and the skill applies them.
 13. **`cortex specs port --verify`** reads `.cortex-port/tagging/*.jsonl` and the current tests, and prints each untagged case with no proposal, each `tag` proposal naming no criterion, and each malformed line. Exit 1 if any, 0 otherwise. It writes nothing.
 14. **Going live.** Rules (b) and (c) are switched on by editing `specflow.rules`, and only once `Untagged tests: 0` holds. `lint.rules-early` enforces it (A11).
+15. **Retired specs are records.** A dev or business spec with `status: retired` moves like any other (Rule 3), and its links are rewritten (Rule 5). Nothing else happens to it, now or in the agentic steps:
+    - it gains no criterion ids, and an id it already has stays;
+    - a retired business spec becomes no promise and keeps its file name;
+    - a retired dev spec gains no `serves:` and keeps its `implements:`, even after the file it names is converted;
+    - no tagging proposal may name it, since its criteria are not in the model (`specflow.index` Rule 14).
+
+    A live dev spec that implements a retired business spec is not converted either. It keeps its `implements:`, is reported as `needs-edit`, and the owner decides where it belongs.
 
 ## Acceptance Criteria
 
@@ -82,6 +90,36 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 - **Given** a spec whose body cites `.specflow/specs/billing/other.spec.md`
 - **When** `cortex specs port` runs
 - **Then** that text is unchanged, and a diff against the source shows only heading prefixes and link values
+
+### A retired dev spec moves and stays as it was
+
+- **Given** `.specflow/specs/billing/old.spec.md` with `status: retired`, `### Refund is issued` under its Acceptance Criteria, and an `implements:` link
+- **When** `cortex specs port` runs
+- **Then** it sits at `specflow/impl/billing/old.spec.md`, its heading has no id, only the link value differs from the source, and `report.json` gives its class as `retired`
+
+### A retired business spec moves and keeps its name
+
+- **Given** `.specflow/specs-business/billing/old.business.md` with `status: retired`
+- **When** `cortex specs port` runs
+- **Then** it sits at `specflow/promises/billing/old.business.md`, unchanged but for its link values
+
+### A retired spec outranks every other class
+
+- **Given** a spec with `status: retired`, no criteria, and no test citing it
+- **When** `cortex specs port` runs
+- **Then** its class is `retired`
+
+### A live spec on a retired business spec is flagged
+
+- **Given** a live spec cited by a test, whose `implements:` names a business spec with `status: retired`
+- **When** `cortex specs port` runs
+- **Then** its class is `needs-edit`, and the reason names that business spec
+
+### A tag proposal naming a retired spec's criterion fails verify
+
+- **Given** a retired spec holding `BILLING-OLD-1`, one untagged case, and a line with `action` `tag` and `criterion` `BILLING-OLD-1`
+- **When** `cortex specs port --verify` runs
+- **Then** it exits 1 and names that line
 
 ### Both layouts present is refused
 
@@ -199,5 +237,5 @@ Existing projects keep their specs. The port moves a tree into the visible `spec
 
 ## Notes
 
-- Promise conversion and the tagging pass are tested in `specflow.onboard-skill`; only their output contracts are here.
+- Promise conversion and the tagging pass are tested in `specflow.onboard-skill`; only their output contracts are here. That includes Rule 15 inside those two steps.
 - This repository's own paths in Core (`src/paths.ts`, the validator) must read `specflow/` once ported; `specflow.lint` Rule 2 covers it.
