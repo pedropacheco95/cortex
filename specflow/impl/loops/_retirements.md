@@ -86,14 +86,18 @@ D3 and D6 left `diagnoses-and-tests-mean-what-they-say` with nothing behind it; 
 
 ## Part 4. What else moves
 
-**Business specs left with no live implementer.** `specflow/diagnoses-and-tests-mean-what-they-say` is retired (P13), and `specflow/a-specific-ask-is-not-generalised-away` is retired and folded into `nothing-is-built-before-it-is-agreed` (P16). The others are promises to the owner, so they are not changed here. The sitting said to re-point the first three (item 12), but each new home already serves another promise and `implements:` is single-valued, so they wait on that decision. Retiring the 10 loop specs leaves the last three with no live implementer too:
+**Business specs left with no live implementer.** `specflow/diagnoses-and-tests-mean-what-they-say` is retired (P13), and `specflow/a-specific-ask-is-not-generalised-away` is retired and folded into `nothing-is-built-before-it-is-agreed` (P16). A spec serves one promise, so the sitting's re-point (item 12) could not happen as written. Pedro settled the rest at item 31 (2026-11-05): fold all seven. Six are retired, and each keeps its `implemented_by:` list as a record:
 
-- `specflow/craft-review-never-substitutes-for-a-test`: re-point to `specflow.review-skill`, or retire.
-- `specflow/developer-gets-spec-work-grounded-in-project-memory`: `store.managed-block` and `specflow.spec-skill` step 1 serve it; `implements:` is single-valued, so this needs a re-home or retirement.
-- `atlas/developer-turns-raw-sources-into-project-memory`: `store.remember-skill` source digest serves it; same choice.
-- `compass/developer-gets-bugs-triaged-without-asking`: only `loops.bug-triage` implemented it. Daily triage is dropped (D3).
-- `loops/developer-gets-test-failures-fixed-or-explained`: only `loops.test-runner` implemented it. `loops.quality-task` reports failures and fixes none (D9).
-- `loops/developer-trusts-changes-the-system-writes`: only `loops.writer-verifier` implemented it (D9).
+| Promise | Folded into | What is kept | What is not |
+|---|---|---|---|
+| `specflow/craft-review-never-substitutes-for-a-test` | `nothing-is-built-before-it-is-agreed`, Rules 8 to 10 | Tests decide correctness; a finding's shape; checking a review received | Craft advice on naming and structure |
+| `specflow/developer-gets-spec-work-grounded-in-project-memory` | `nothing-is-built-before-it-is-agreed`, Rule 7 | A spec session starts from what the project holds | Generated tests that carry conventions (D6) |
+| `atlas/developer-turns-raw-sources-into-project-memory` | `store.agent-has-knowledge-when-it-needs-it`, Rule 9 | Digest, untouched original, facts naming their source | Refresh on a second hand-over (L8) |
+| `loops/developer-gets-test-failures-fixed-or-explained` | `developer-knows-the-specs-stay-sound`, Rule 6 | Failures are reported, dated, until they pass | The fix, the case file, the classification (D9) |
+| `compass/developer-gets-bugs-triaged-without-asking` | `developer-gets-upkeep-proposals-without-asking`, Rule 5 | A filed bug is counted, aged and closed only on evidence | Daily classification and its second opinion (D3) |
+| `loops/developer-trusts-changes-the-system-writes` | `developer-gets-upkeep-proposals-without-asking`, Rule 6 | Nothing scheduled changes code, tests or specs | The worker, the blind judge, verified proposals (D9) |
+
+Not folded: `anatomy/contributor-gets-a-legible-codebase`. Its outcome is a map built from the code with no hand-written documentation. Its banner names the insight layer as the home, and 4.0 has none (D8). The store holds what the code can't say, which is the opposite outcome, so no live promise can carry it. It stays as it is until Pedro rules.
 
 **Live specs with `depends_on` a retired spec.** Ids still resolve, so nothing breaks: `schema.version-2` → `reorg`; `archive.intent-register`, `provenance.frontmatter-check` → `archive.ingest-skill`; `insight.refresh-loops`, `insight.session-observe` → `insight.extract-skill`.
 

@@ -39,6 +39,10 @@ Developers running spec-first projects with agentic implementation, where the ex
 4. In a run told the user can't answer, an open question does not stop the work: it is decided, and the decision and its reason are written down.
 5. Stopping with an honest open question is a success, not a failure of the run.
 6. Every ask quoted in a request maps to a criterion or is listed as an open question.
+7. A spec session starts from what the project already holds: its rules, its promises, its recorded decisions and the code that produces the behaviour today.
+8. Tests decide correctness. A review never overrides a passing test or stands in for a missing one.
+9. A finding names its criterion or section, a place and a proposed change, or it is not a finding.
+10. A review received from someone else is checked against the spec, a rule or the code before it is applied, and a disagreement is settled by one of those, never by who said it.
 
 ## Success Metrics
 
@@ -56,3 +60,4 @@ Developers running spec-first projects with agentic implementation, where the ex
 ## Notes
 
 - The earlier spine was `brainstorm → plan → develop` (2026-08). The owner's 2026-11-03 decisions replaced it with two paths, a quick default and this big path; the spec is now the design document and waves replace the plan file.
+- Business Rules 7 to 10 are folded in from `developer-gets-spec-work-grounded-in-project-memory` and `craft-review-never-substitutes-for-a-test` (sitting item 31, 2026-11-05).

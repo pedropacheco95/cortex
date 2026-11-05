@@ -1,11 +1,13 @@
 ---
 id: atlas.developer-turns-raw-sources-into-project-memory
-status: implemented
+status: retired
 implemented_by:
   - ../../impl/atlas/ingest-skill.spec.md
 ---
 
 # A developer turns raw sources into durable project memory
+
+> **RETIRED (Pedro, sitting item 31, 2026-11-05).** What survives is folded into `store.agent-has-knowledge-when-it-needs-it` (Business Rule 9): a source is kept as a digest beside its untouched original, and facts from it name it. Refreshing on a second hand-over and the self-check on extraction are not kept (L8). See `../../impl/loops/_retirements.md`.
 
 ## Outcome
 

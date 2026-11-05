@@ -1,11 +1,13 @@
 ---
 id: loops.developer-gets-test-failures-fixed-or-explained
-status: implemented
+status: retired
 implemented_by:
   - ../../impl/loops/test-runner.spec.md
 ---
 
 # The developer wakes to fixed tests or precise explanations — never to silence
+
+> **RETIRED (Pedro, sitting item 31, 2026-11-05).** Nothing fixes a test on a schedule any more (D9). What survives is that failures are reported, folded into `developer-knows-the-specs-stay-sound` (Business Rule 6). See `../../impl/loops/_retirements.md`.
 
 ## Outcome
 

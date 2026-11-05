@@ -1,11 +1,13 @@
 ---
 id: loops.developer-trusts-changes-the-system-writes
-status: implemented
+status: retired
 implemented_by:
   - ../../impl/loops/writer-verifier.spec.md
 ---
 
 # A developer can trust a change the system wrote without reading every line
+
+> **RETIRED (Pedro, sitting item 31, 2026-11-05).** The worker and blind judge are dropped with the code-writing test-runner (D9), so no scheduled change to code exists to trust. What survives is its second rule, nothing lands in the code by itself, folded into `developer-gets-upkeep-proposals-without-asking` (Business Rule 6). See `../../impl/loops/_retirements.md`.
 
 ## Outcome
 
