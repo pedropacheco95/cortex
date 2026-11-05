@@ -44,7 +44,7 @@ export interface CollectLearnResult {
 }
 
 /** The project root and every path `git worktree list` prints for it (Rule 2). */
-function projectPaths(root: string): string[] {
+export function projectPaths(root: string): string[] {
   const paths = [root];
   try {
     const out = execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain'], {
@@ -71,7 +71,7 @@ function minedIds(root: string): Set<string> {
   return ids;
 }
 
-function isScheduled(session: SessionInfo): boolean {
+export function isScheduled(session: SessionInfo): boolean {
   const first = extractMessages(readSessionFile(session.path).entries).find((m) => m.role === 'user');
   return first !== undefined && isScheduledPromptText(first.text);
 }
