@@ -37,11 +37,16 @@ export interface UpdateOptions {
 
 export interface UpdateResult { exitCode: number; out: string[] }
 
-const refused = (exitCode: number, why: string): UpdateResult => ({ exitCode, out: [`cortex sync: refused — ${why} Nothing was written.`] });
+export type Verb = 'sync' | 'init';
 
-/** Rule 16. Null means the project takes the update route. */
-function gate(root: string, platform: string): UpdateResult | null {
-  if (platform !== 'darwin') return refused(2, `Cortex v1 requires macOS (darwin); this platform reports "${platform}".`);
+const refused = (verb: Verb, exitCode: number, why: string): UpdateResult => ({ exitCode, out: [`cortex ${verb}: refused — ${why} Nothing was written.`] });
+
+/**
+ * Rule 16 and `core-cli.init` Rule 20, steps 3–6: what this project's stores
+ * allow. `'route'` is a store on the update route, `'new'` a project with
+ * neither store, and anything else a refusal.
+ */
+export function storeGate(root: string, verb: Verb): 'route' | 'new' | UpdateResult {
   const legacy = fs.existsSync(path.join(root, '.cortex', 'cortex.config.json'));
   const cfgPath = path.join(storeDir(root), STORE_CONFIG);
   if (fs.existsSync(cfgPath)) {
@@ -49,20 +54,29 @@ function gate(root: string, platform: string): UpdateResult | null {
     try {
       cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) as Record<string, unknown>;
     } catch (err) {
-      return refused(3, `cortex/cortex.json is not valid: ${(err as Error).message}.`);
+      return refused(verb, 3, `cortex/cortex.json is not valid: ${(err as Error).message}.`);
     }
     const version = cfg?.['schemaVersion'];
-    if (typeof version !== 'string') return refused(3, 'cortex/cortex.json is not valid: it has no schemaVersion.');
-    if (parseInt(version, 10) !== SUPPORTED_MAJOR) return refused(3, `this store is schema ${version} and this package supports ${SUPPORTED_MAJOR}.x.`);
+    if (typeof version !== 'string') return refused(verb, 3, 'cortex/cortex.json is not valid: it has no schemaVersion.');
+    if (parseInt(version, 10) !== SUPPORTED_MAJOR) return refused(verb, 3, `this store is schema ${version} and this package supports ${SUPPORTED_MAJOR}.x.`);
     if ('migration' in cfg) {
       const accepted = (cfg['migration'] as Record<string, unknown> | null)?.['accepted'];
-      if (isAcceptedDate(accepted)) return null;
-      return refused(3, "this project's migration is not accepted; finish it with cortex migrate --accept.");
+      if (isAcceptedDate(accepted)) return 'route';
+      return refused(verb, 3, "this project's migration is not accepted; finish it with cortex migrate --accept.");
     }
-    if (!legacy) return null;
+    if (!legacy) return 'route';
   }
-  if (legacy) return refused(3, 'this project is on the 3.x store; migrate it first with cortex migrate.');
-  return refused(2, `no Cortex store found at ${root}; set one up with cortex init.`);
+  if (legacy) return refused(verb, 3, 'this project is on the 3.x store; migrate it first with cortex migrate.');
+  return 'new';
+}
+
+export const platformRefusal = (verb: Verb, platform: string): UpdateResult | null =>
+  platform === 'darwin' ? null : refused(verb, 2, `Cortex v1 requires macOS (darwin); this platform reports "${platform}".`);
+
+/** The final-set names the package does not hold (Rule 17). */
+export function packageRefusal(verb: Verb, pkg: string): UpdateResult | null {
+  const lacking = FINAL_BUNDLES.filter((n) => !fs.existsSync(path.join(pkg, 'skills', n, 'SKILL.md')));
+  return lacking.length ? refused(verb, 1, `this package lacks ${lacking.join(', ')}.`) : null;
 }
 
 const lstat = (p: string): fs.Stats | undefined => fs.lstatSync(p, { throwIfNoEntry: false });
@@ -179,12 +193,15 @@ function tasks(root: string, home: string, appSupportDir: string, dry: boolean, 
 
 export async function updateRoute(target: string, opts: UpdateOptions = {}): Promise<UpdateResult> {
   const root = path.resolve(target);
-  const blocked = gate(root, opts.platform ?? process.platform);
-  if (blocked) return blocked;
+  const offPlatform = platformRefusal('sync', opts.platform ?? process.platform);
+  if (offPlatform) return offPlatform;
+  const gate = storeGate(root, 'sync');
+  if (gate === 'new') return refused('sync', 2, `no Cortex store found at ${root}; set one up with cortex init.`);
+  if (gate !== 'route') return gate;
 
   const pkg = opts.packageDir ?? packageRoot();
-  const lacking = FINAL_BUNDLES.filter((n) => !fs.existsSync(path.join(pkg, 'skills', n, 'SKILL.md')));
-  if (lacking.length) return refused(1, `this package lacks ${lacking.join(', ')}.`);
+  const lacks = packageRefusal('sync', pkg);
+  if (lacks) return lacks;
 
   const dry = opts.dryRun === true;
   const home = opts.home ?? os.homedir();

@@ -53,8 +53,7 @@
  *
  * Verbs: init, sync, store, specs, check, hooks, migrate, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
  */
-import { init } from './init.js';
-import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
+import { parseInitArgs, setupProject } from './setup.js';
 import { isEntryPoint } from '../entry.js';
 import { check } from '../specflow/check/index.js';
 import { installHooks } from '../specflow/hooks-install.js';
@@ -70,7 +69,7 @@ import { specsPort } from '../specflow/port.js';
  * usage. Order: the everyday verbs first, then loops.
  */
 const USAGE_TABLE: readonly (readonly [verb: string, synopsis: string])[] = [
-  ['init', 'init [target] [--force] [--yes] [--no-llm] [--partial] [--profile <name>] [--timeout-ms <n>]'],
+  ['init', 'init [target]'],
   ['sync', 'sync [target] [--dry-run]'],
   ['store', 'store init|validate|map|expire|stale|amendments … (the 4.0 store, cortex/)'],
   ['specs', 'specs index [--staged] [--json] | port [--dry-run] [--ticket-pattern <regex>] [--verify] | lint [--json] [--fix]'],
@@ -719,57 +718,17 @@ export async function run(argv: string[]): Promise<number> {
     }
   }
 
+  // `cortex init` — the one setup command at 4.0 (spec core-cli.init Rule 20).
   if (argv[0] === 'init') {
-    const rest = argv.slice(1);
-    const force = rest.includes('--force');
-    const yes = rest.includes('--yes') || rest.includes('-y');
-    const noLlm = rest.includes('--no-llm');
-    const partial = rest.includes('--partial');
-
-    // `--profile <name>` (spec core-cli.init-profile Rule 2). Omitted → the
-    // default; an unrecognised value is a usage error, never a silent fallback,
-    // because a typo would quietly schedule the wrong loop set.
-    let profile: ProcessProfile | undefined;
-    const profileIdx = rest.indexOf('--profile');
-    if (profileIdx >= 0) {
-      const value = rest[profileIdx + 1];
-      if (!isProcessProfile(value)) {
-        process.stderr.write(
-          `cortex init: unknown --profile ${value === undefined ? '(missing value)' : `"${value}"`}. ` +
-            `Valid profiles: ${PROCESS_PROFILES.join(', ')}. Nothing was written.\n`,
-        );
-        return 2;
-      }
-      profile = value;
+    const args = parseInitArgs(argv.slice(1));
+    if ('unknown' in args) {
+      console.error(`cortex init: unknown flag ${args.unknown}. Nothing was written.`);
+      return 2;
     }
-
-    let timeoutMs: number | undefined;
-    const timeoutIdx = rest.indexOf('--timeout-ms');
-    if (timeoutIdx >= 0) {
-      const parsed = Number(rest[timeoutIdx + 1]);
-      if (Number.isFinite(parsed) && parsed > 0) timeoutMs = parsed;
-    }
-
-    const positional = rest.filter(
-      (a, i) =>
-        !a.startsWith('-') && (timeoutIdx < 0 || i !== timeoutIdx + 1) && (profileIdx < 0 || i !== profileIdx + 1),
-    );
-    const target = positional[0] ?? '.';
-
+    if (args.ignored.length) console.error(`cortex init: ignoring ${args.ignored.join(', ')}; setup no longer uses them`);
     try {
-      const { exitCode, summary } = await init(target, {
-        force,
-        yes,
-        noLlm,
-        partial,
-        ...(profile !== undefined ? { profile } : {}),
-        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-      });
-      if (exitCode === 1 || exitCode === 2) {
-        console.error(summary);
-      } else {
-        console.log(summary);
-      }
+      const { exitCode, out } = await setupProject(args.target);
+      for (const line of out) (exitCode === 0 ? console.log : console.error)(line);
       return exitCode;
     } catch (err) {
       console.error(`cortex init: ${(err as Error).message}`);

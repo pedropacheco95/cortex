@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
+import { init } from '../../../src/cli/init.js';
 import { sync } from '../../../src/cli/sync.js';
 import * as path from 'path';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
@@ -55,6 +56,11 @@ async function sync3x(root: string): Promise<number> {
   const { exitCode, summary } = await sync(root, { home, yes: true });
   console.log(summary);
   return exitCode;
+}
+
+/** A 3.x fixture: the verb sets up the 4.0 store now, and `init()` stays for this. */
+async function init3x(root: string): Promise<number> {
+  return (await init(root, { home, noLlm: true, yes: true, platform: 'darwin' })).exitCode;
 }
 
 async function cortex(root: string, argv: string[]): Promise<number> {
@@ -156,7 +162,7 @@ describe('schema.id-registry slice: init scaffolds, id next allocates, sync migr
     'cortex init writes the header-only registry; cortex id next rule then bug --slug flaky-tier print R-004 and B-020 and reserve them',
     async () => {
       const root = tmp('proj');
-      expect(await cortex(root, ['init', '--no-llm', '--yes'])).toBe(0);
+      expect(await init3x(root)).toBe(0);
       expect(fs.readFileSync(registryAbs(root), 'utf-8')).toBe(`${REGISTRY_HEADER}\n`);
 
       // "An initialised project" with the ids this repo carries today.
@@ -186,7 +192,7 @@ describe('schema.id-registry slice: init scaffolds, id next allocates, sync migr
     'cortex sync on a project with three rules, nineteen bugs and no registry creates it once (summary names it); a second sync leaves it byte-identical and reports it present',
     async () => {
       const root = tmp('sync');
-      expect(await cortex(root, ['init', '--no-llm', '--yes'])).toBe(0);
+      expect(await init3x(root)).toBe(0);
       plantThreeRulesNineteenBugs(root);
       fs.rmSync(registryAbs(root));
 
@@ -256,7 +262,7 @@ describe('schema.id-registry slice: cortex validate surfaces the registry findin
     expect(out[0]!.message).toContain('cortex sync');
 
     const fresh = tmp('fresh');
-    expect(await cortex(fresh, ['init', '--no-llm', '--yes'])).toBe(0);
+    expect(await init3x(fresh)).toBe(0);
     fs.rmSync(registryAbs(fresh));
     expect(await validateJson(fresh)).toEqual([]);
   }, INIT_TIMEOUT);

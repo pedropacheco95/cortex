@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
+import { init } from '../../../src/cli/init.js';
 import * as path from 'path';
 import matter from 'gray-matter';
 import { makeTmpDir, cleanTmp } from '../../fixtures/init-harness.js';
@@ -47,7 +48,11 @@ async function withHomeEnv<T>(homeDir: string, fn: () => Promise<T>): Promise<T>
   }
 }
 
-/** `cortex <argv…>` from inside `root` with the temp home. */
+/** A 3.x fixture: the verb sets up the 4.0 store now, and `init()` stays for this. */
+async function init3x(root: string): Promise<number> {
+  return (await init(root, { home, noLlm: true, yes: true, platform: 'darwin' })).exitCode;
+}
+
 async function cortex(root: string, argv: string[]): Promise<number> {
   process.chdir(root);
   try {
@@ -113,7 +118,7 @@ describe('compass.bug-currency slice: promote stamps, validate checks shape, why
     'a git checkout: the promoted draft carries found_at_commit, the registry issued its id; owner/fix_in_flight validate by shape; a malformed stamp is the only check.bug error; why lists the bug with its three fields',
     async () => {
       const root = tmp('git');
-      expect(await cortex(root, ['init', '--no-llm', '--yes'])).toBe(0);
+      expect(await init3x(root)).toBe(0);
       fakeGit(root, SHA_MAIN);
       expect(readHeadCommit(root)).toBe('2b217df');
       fs.mkdirSync(path.join(root, 'src'), { recursive: true });
@@ -169,7 +174,7 @@ describe('compass.bug-currency slice: promote stamps, validate checks shape, why
     'a non-git directory: the promoted draft has no found_at_commit key and validates clean',
     async () => {
       const root = tmp('no-git');
-      expect(await cortex(root, ['init', '--no-llm', '--yes'])).toBe(0);
+      expect(await init3x(root)).toBe(0);
       expect(fs.existsSync(path.join(root, '.git'))).toBe(false);
       expect(readHeadCommit(root)).toBeNull();
       fs.mkdirSync(path.join(root, 'src'), { recursive: true });

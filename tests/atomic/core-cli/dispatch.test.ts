@@ -137,7 +137,8 @@ describe('core-cli.init Rule 18: the explicit verb still initialises, with the v
     async () => {
       const exitCode = await cortex(['init', '--no-llm']);
       expect(exitCode).toBe(0);
-      expect(fs.existsSync(path.join(cwd, '.cortex', 'cortex.config.json'))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, 'cortex', 'cortex.json'))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, '.cortex'))).toBe(false);
       expect(fs.existsSync(path.join(cwd, 'init'))).toBe(false);
     },
     INIT_TIMEOUT,
@@ -148,7 +149,8 @@ describe('core-cli.init Rule 18: the explicit verb still initialises, with the v
     async () => {
       const exitCode = await cortex(['init', '--timeout-ms', '5', '--profile', 'specflow', '--no-llm']);
       expect(exitCode).toBe(0);
-      expect(fs.existsSync(path.join(cwd, '.cortex', 'cortex.config.json'))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, 'cortex', 'cortex.json'))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, '.cortex'))).toBe(false);
       expect(fs.existsSync(path.join(cwd, 'init'))).toBe(false);
     },
     INIT_TIMEOUT,
