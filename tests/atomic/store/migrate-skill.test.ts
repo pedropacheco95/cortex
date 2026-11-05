@@ -88,6 +88,7 @@ describe('store.migrate-skill', () => {
   });
 
   it('Every edit is reported', () => {
+    expect(adjust).toContain('add `.cortex-migrate/` to the exclude file first');
     expect(adjust).toContain('file, line, term, decision, the text before and after, and a one-line reason');
   });
 

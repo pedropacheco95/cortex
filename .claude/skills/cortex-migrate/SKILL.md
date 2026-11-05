@@ -43,7 +43,7 @@ How to choose:
 
 ## The skill-adjust step
 
-Every other skill in a project that names a retired skill or the old store is checked and adjusted if needed. This step runs after a person has run `cortex migrate --accept`. If `migration.accepted` is not set, stop and say so.
+Every other skill in a project that names a retired skill or the old store is checked and adjusted if needed. This step runs after a person has run `cortex migrate --accept`. If `migration.accepted` is not set, stop and say so. This step may run in a later session, so add `.cortex-migrate/` to the exclude file first if it is not there.
 
 1. Run `cortex sync --dry-run`, which writes nothing, and read its `project skills to adjust` section and its `is retired but has local edits` lines.
 2. Read each listed file in full, and every mention in it.
