@@ -8,25 +8,23 @@ disable-model-invocation: true
 
 ## When to use
 
-Use when the user says "register the cortex scheduled tasks", "run
-cortex-register-tasks", "set up the cortex loops in the app", "activate the
-cortex tasks", or after `cortex init` / `cortex tasks verify` reports tasks not
-yet registered.
+Typed as `/cortex-register-tasks` in a Claude Desktop session, after `cortex sync`
+or `cortex tasks verify` says tasks are not registered. Plain words do not start
+this skill.
 
-Registers a Cortex project's five scheduled-task bundles with the Claude Desktop
-app, **from inside a Claude Desktop session**, using the app's own
-scheduled-tasks tools: reads the authoritative plan from `cortex tasks plan
---json`, diffs it against `mcp__scheduled-tasks__list_scheduled_tasks`,
-creates/updates only this project's tasks (replacing its own superseded legacy
-tasks), and confirms with `cortex tasks verify`.
+Registers a Cortex project's three scheduled tasks (`learn`, `fresh`, `quality`)
+with the Claude Desktop app, **from inside a Claude Desktop session**, using the
+app's own scheduled-tasks tools: reads the plan from `cortex tasks plan --json`,
+diffs it against `mcp__scheduled-tasks__list_scheduled_tasks`, creates and updates
+only this project's tasks, removes its superseded ones, and confirms with
+`cortex tasks verify`.
 
 ## What you do
 
-You register this project's five Cortex scheduled-task bundles with the Claude
-Desktop app the sanctioned way: through the app's own internal MCP tools, from
-inside a Desktop-spawned session. You never write the app's
-`scheduled-tasks.json` yourself, and you never touch tasks that belong to
-another project.
+You register this project's three Cortex scheduled tasks with the Claude Desktop
+app the sanctioned way: through the app's own internal MCP tools, from inside a
+Desktop-spawned session. You never write the app's `scheduled-tasks.json`
+yourself, and you never touch tasks that belong to another project.
 
 ## 0. Preflight — this MUST be a Claude Desktop session
 
@@ -38,7 +36,8 @@ sessions it spawns. Check that they are available to you.
 **If they are not available: stop.** Do not fall back to editing any file.
 Tell the user: "This skill needs the Desktop app's own scheduled-tasks tools,
 which exist only in Claude Desktop sessions. Open this repository in the
-Claude Desktop app (new session) and say `run cortex-register-tasks` there."
+Claude Desktop app (new session) and type `/cortex-register-tasks` there, or
+quit the app fully and run `cortex tasks register`."
 
 Why file-editing is forbidden here: the app loads `scheduled-tasks.json`
 into memory once per launch and rewrites the whole file from memory on every
@@ -49,9 +48,9 @@ tasks on its next flush.
 **Warn the user before you start creating.** The app demands a live approval
 for every `create_scheduled_task` call and does NOT offer "always allow" for
 task creation. Tell the user up front: "The app will ask you to approve each
-task registration — one prompt per bundle (5 total). Stay at the keyboard and
+task registration — one prompt per task (3 total). Stay at the keyboard and
 approve each." Then proceed; if a prompt is declined or times out, record that
-bundle as skipped and continue with the rest, listing skipped bundles in the
+task as skipped and continue with the rest, listing skipped tasks in the
 final report so the user can re-run for just those.
 
 ## 1. Get the authoritative plan from Core
@@ -63,19 +62,19 @@ cortex tasks plan --json
 ```
 
 This is the single source of truth — never hardcode ids, cron expressions,
-models, paths, or counts. The JSON shape (`planVersion: 2`):
+models, paths, or counts. The JSON shape (`planVersion: 3`):
 
 ```json
 {
-  "planVersion": 2,
+  "planVersion": 3,
   "projectRoot": "/abs/path",
-  "taskCount": 5,
+  "taskCount": 3,
   "tasks": [
     {
       "id": "<scoped id — also the payload dir name>",
-      "canonical": "<bundle name: daily | weekly-curation | weekly-quality | test-runner | monthly-review>",
+      "canonical": "<task name: learn | fresh | quality>",
       "cronExpression": "0 2 * * *",
-      "model": "claude-sonnet-5",
+      "model": "claude-opus-5-5",
       "cwd": "/abs/path",
       "enabled": true,
       "useWorktree": false,
@@ -87,11 +86,13 @@ models, paths, or counts. The JSON shape (`planVersion: 2`):
 }
 ```
 
-There are FIVE bundles, each a single scheduled task that runs its member
-loops in sequence. Sanity-check that each plan entry's `payloadPath` exists on
-disk (written by `cortex init`). If any payload is missing, do not register
-that entry — report the missing payloads and tell the user to re-run
-`cortex init` (non-force) to restore them, then re-invoke this skill.
+**When `taskCount` is not 3, stop.** The project is on the 3.x roster, which has
+nothing to register. Tell the user to migrate first: `cortex migrate`, then
+`cortex migrate --accept`.
+
+Check that each plan entry's `payloadPath` exists on disk. If a payload is
+missing, do not register that entry: report it and tell the user to
+run `cortex sync`, which writes the payloads, then type `/cortex-register-tasks` again.
 
 ## 2. Diff against what the app already has
 
@@ -101,22 +102,23 @@ Call `mcp__scheduled-tasks__list_scheduled_tasks` and classify every app task:
 - **Drifted** — an app task with a plan `id` but whose cron, model, or enabled
   flag differs from the plan → update it (step 4).
 - **In sync** — plan `id` present, enabled, cron and model match → leave it.
-- **This project's legacy/superseded task** — an app task that is NOT one of
-  the five plan ids but clearly belongs to THIS project: its `cwd` (working
-  directory / folder) equals the plan's `projectRoot`, and/or its id is one of
-  this project's fourteen old standalone loop registrations under this
-  project's slug — in either the plain `<slug>-<canonical>` grammar or the
-  older `<slug>-<hash6>-<canonical>` grammar (e.g. `<slug>-cortex-pulse-hygiene`,
-  `<slug>-cortex-loop-skill-suggest`, `<slug>-specflow-verify`, …). These are
-  superseded by the five bundles → **delete them** (delete/remove tool if
-  present; otherwise disable them) so they don't linger as duplicates. Then
-  create the five bundles. Never leave the old fourteen running alongside the
-  new five.
+- **This project's superseded task** — an app task that is NOT one of the plan
+  ids but clearly belongs to THIS project: its `cwd` (working directory / folder)
+  equals the plan's `projectRoot`, and/or its id is one of this project's old
+  registrations under this project's slug, in either the plain
+  `<slug>-<canonical>` grammar or the older `<slug>-<hash6>-<canonical>` grammar:
+  the 3.x bundles (`<slug>-daily`, `<slug>-weekly-curation`, `<slug>-weekly-quality`,
+  `<slug>-test-runner`, `<slug>-monthly-review`) and the old standalone loops
+  (`<slug>-cortex-pulse-hygiene`, `<slug>-cortex-loop-skill-suggest`,
+  `<slug>-specflow-verify`, …). **Delete it** (delete/remove tool if present;
+  otherwise disable it) so it doesn't linger as a duplicate. Once a task is
+  deleted, remove its payload directory `~/.claude/scheduled-tasks/<id>/`. Leave
+  the directory of a task you could only disable: the app still points at it.
 - **Not ours** — any app task whose `cwd` is a DIFFERENT project root (or that
   carries no Cortex ownership signal at all): NEVER create, update, disable, or
   delete it. Same-name tasks of other projects are protected by their `cwd`.
 
-## 3. Create each missing bundle
+## 3. Create each missing task
 
 For each missing plan entry, call
 `mcp__scheduled-tasks__create_scheduled_task`. You do not know the tool's
@@ -136,12 +138,12 @@ runtime** and map plan fields onto it sensibly:
 - worktree flag, if present → the plan `useWorktree` (false).
 - enabled flag, if present → true.
 
-**Do NOT invent instructions/prompt content.** The bundle's SKILL.md payload
+**Do NOT invent instructions/prompt content.** The task's SKILL.md payload
 already exists at the id-derived path (`~/.claude/scheduled-tasks/<id>/SKILL.md`
 — the plan's `payloadPath`). If the create tool requires a prompt/instructions
 text field, pass the body of that existing payload file verbatim.
 
-## 4. Update each drifted bundle
+## 4. Update each drifted task
 
 For each existing-but-drifted task (wrong cron, wrong model, disabled), call
 `mcp__scheduled-tasks__update_scheduled_task` with that task's id, setting only
@@ -161,10 +163,10 @@ cortex tasks verify
 
 Report to the user:
 
-- a table: bundle (canonical) | scoped id | cron | model | action taken
-  (created / updated / replaced-legacy / in sync) | verify result;
-- the `cortex tasks verify` bottom line (all five registered, or the named
+- a table: task (canonical) | scoped id | cron | model | action taken
+  (created / updated / replaced-superseded / in sync) | verify result;
+- the `cortex tasks verify` bottom line (all three registered, or the named
   failures);
 - the reminder: **Desktop app updates have wiped this registry before** — if
-  `cortex tasks verify` ever fails after an app update, re-run this skill in
-  a Desktop session to re-register.
+  `cortex tasks verify` ever fails after an app update, type
+  `/cortex-register-tasks` in a Desktop session to re-register.

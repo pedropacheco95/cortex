@@ -590,6 +590,29 @@ describe('cortex-register-tasks skill bundle', () => {
     expect(raw).toContain('Do NOT invent instructions/prompt content');
     expect(raw).toMatch(/never write the app's\s+`scheduled-tasks\.json`/i);
   });
+
+  it('The registration skill ships and runs only when typed', () => {
+    const raw = fs.readFileSync(pkgSkill, 'utf-8');
+    const frontmatter = /^---\n([\s\S]*?)\n---/.exec(raw)![1]!;
+    expect(frontmatter).toMatch(/^disable-model-invocation: true$/m);
+    // Stops without editing a file when the app's tools are absent.
+    expect(raw).toMatch(/If they are not available: stop\.\*\* Do not fall back to editing any file/);
+    expect(raw).toContain('`taskCount` is not 3');
+    expect(raw).toContain('cortex migrate');
+    expect(raw).toContain('run `cortex sync`');
+    expect(raw).toContain('/cortex-register-tasks');
+    for (const t of ['`learn`', '`fresh`', '`quality`']) expect(raw).toContain(t);
+    expect(raw).not.toContain('planVersion: 2');
+    expect(raw).not.toMatch(/five\s+bundles/i);
+    expect(raw).not.toContain('run cortex-register-tasks');
+    expect(raw.lastIndexOf('cortex tasks verify')).toBeGreaterThan(raw.lastIndexOf('cortex tasks plan --json'));
+  });
+
+  it('removes the payload dir of each superseded task it deleted, and only its own', () => {
+    const raw = fs.readFileSync(pkgSkill, 'utf-8');
+    expect(raw).toMatch(/remove its payload directory/);
+    expect(raw).toContain('NEVER create, update, disable, or');
+  });
 });
 
 // ---------------------------------------------------------------------------
