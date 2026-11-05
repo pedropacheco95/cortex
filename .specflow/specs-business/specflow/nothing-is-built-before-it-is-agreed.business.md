@@ -26,9 +26,10 @@ Developers running spec-first projects with agentic implementation, where the ex
 
 1. The developer asks for something no criterion covers, or that touches more than one spec. Instead of code, they get a spec session.
 2. That session finds what produces the behaviour today and what depends on it, writes the criteria and their tests, and asks about what the request leaves open.
-3. Fresh agents review the spec, one per concern and angle, and the developer gets one merged list of findings.
-4. The developer resolves the findings, and the main session develops the spec wave by wave, each wave an ordinary change.
-5. If the request conflicts with a recorded decision, the developer gets the conflict as an open question and no build.
+3. Every ask the request quotes ends up as a criterion or as an open question, so a specific ask is not generalised away in silence.
+4. Fresh agents review the spec, one per concern and angle, and the developer gets one merged list of findings.
+5. The developer resolves the findings, and the main session develops the spec wave by wave, each wave an ordinary change.
+6. If the request conflicts with a recorded decision, the developer gets the conflict as an open question and no build.
 
 ## Business Rules
 
@@ -37,6 +38,7 @@ Developers running spec-first projects with agentic implementation, where the ex
 3. A conflict with a recorded owner decision always stops the work, in every kind of run.
 4. In a run told the user can't answer, an open question does not stop the work: it is decided, and the decision and its reason are written down.
 5. Stopping with an honest open question is a success, not a failure of the run.
+6. Every ask quoted in a request maps to a criterion or is listed as an open question.
 
 ## Success Metrics
 
