@@ -186,8 +186,8 @@ describe('AC4: unmodified skill bundle is upgraded silently', () => {
   let root: string;
   let home: string;
   let result: { exitCode: number; summary: string };
-  const bundle = 'cortex-loop';
-  const stubContent = '---\nname: cortex-loop\ndescription: stub as-installed content\n---\n\nold body\n';
+  const bundle = 'verification-before-completion';
+  const stubContent = '---\nname: verification-before-completion\ndescription: stub as-installed content\n---\n\nold body\n';
 
   beforeAll(async () => {
     ({ root, home } = await bootstrap('ac4'));
@@ -223,9 +223,9 @@ describe('AC4: unmodified skill bundle is upgraded silently', () => {
 describe('AC5: user-modified skill bundle is preserved and reported', () => {
   let root: string;
   let home: string;
-  const bundle = 'cortex-loop';
-  const installedAt = '---\nname: cortex-loop\ndescription: as installed\n---\n\ninstalled body\n';
-  const userEdited = '---\nname: cortex-loop\ndescription: user edited this\n---\n\nEDITED BY DEVELOPER\n';
+  const bundle = 'verification-before-completion';
+  const installedAt = '---\nname: verification-before-completion\ndescription: as installed\n---\n\ninstalled body\n';
+  const userEdited = '---\nname: verification-before-completion\ndescription: user edited this\n---\n\nEDITED BY DEVELOPER\n';
 
   function seed(bundleDir: string): void {
     fs.rmSync(bundleDir, { recursive: true, force: true });

@@ -66,7 +66,8 @@ describe('core-cli.sync Rule 5 — the additions chain', () => {
     it('seeds at 3.3 — the version the chain landed in, moving no version constant', () => {
       const seed = SKILL_ADDITIONS.find((e) => e.version === '3.3');
       expect(seed).toBeDefined();
-      expect(seed?.added.length).toBe(listSkillBundles(PKG_SKILLS).length);
+      // The seed is the 3.3 record: it keeps the bundles Round 2 removed.
+      expect(seed?.added).toEqual(expect.arrayContaining(listSkillBundles(PKG_SKILLS)));
     });
   });
 

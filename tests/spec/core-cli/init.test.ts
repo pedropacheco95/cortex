@@ -557,21 +557,18 @@ describe('AC14: five scheduled task bundles written to the stubbed home', () => 
 });
 
 // ---------------------------------------------------------------------------
-// AC15: --partial with no extra loop skills → only the packaged loop tasks register
-// (Rule 4 installs the shipped loop bundles, so their tasks are always
-// registrable — pulse.hygiene Rule 1, loops.* Rule 1. Since
-// specflow.cortex-awareness Rule 3 the packaged set covers ALL five bundles,
-// so nothing is ever skipped for a missing packaged skill.)
+// AC15: --partial on a project holding the loop skills → all five tasks register
+// (The package stopped shipping these skills in Round 2, so the project seeds
+// them; `init()` is the 3.x record and the CLI no longer calls it.)
 // ---------------------------------------------------------------------------
-describe('AC15: --partial with no extra loop skills → only the packaged loop tasks register', () => {
+describe('AC15: --partial on a project holding the loop skills → all five tasks register', () => {
   let root: string;
   let home: string;
   let result: { exitCode: number; summary: string };
   beforeAll(async () => {
     root = makeTmpDir('ac15p-proj');
     home = makeTmpDir('ac15p-home');
-    // .claude/skills/ contains no task-invoked skill beyond what Rule 4 installs.
-    seedProjectSkills(root, ['some-unrelated-skill']);
+    seedProjectSkills(root, ['some-unrelated-skill', ...PACKAGED_LOOP_SKILLS]);
     result = await init(root, { partial: true, noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
@@ -609,10 +606,6 @@ describe('AC15: --partial with no extra loop skills → only the packaged loop t
 
 // ---------------------------------------------------------------------------
 // AC16: --partial with some skills pre-seeded → same full set, nothing skipped
-// (Since specflow.cortex-awareness Rule 3 the packaged bundles cover every
-// task-invoked skill, so pre-seeded user skills can no longer change which
-// tasks register — the skip path is exercised only if a packaged bundle is
-// removed after install, which init itself never does.)
 // ---------------------------------------------------------------------------
 describe('AC16: --partial with some skills pre-seeded → same full set, nothing skipped', () => {
   let root: string;
@@ -621,8 +614,7 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
   beforeAll(async () => {
     root = makeTmpDir('ac16-proj');
     home = makeTmpDir('ac16-home');
-    // specflow-lint and specflow-tests pre-seeded; Rule 4 installs the rest anyway.
-    seedProjectSkills(root, ['specflow-lint', 'specflow-tests']);
+    seedProjectSkills(root, ['specflow-lint', 'specflow-tests', ...PACKAGED_LOOP_SKILLS]);
     result = await init(root, { partial: true, noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });
@@ -650,9 +642,6 @@ describe('AC16: --partial with some skills pre-seeded → same full set, nothing
 
 // ---------------------------------------------------------------------------
 // AC17: Default mode → all five written, no lacking-skill warning
-// (The Rule 17 warning path survives in the code for the removed-bundle edge
-// case, but a fresh init can no longer produce it: specflow.cortex-awareness
-// Rule 3 packages every task-invoked skill.)
 // ---------------------------------------------------------------------------
 describe('AC17: default mode → all five written, no lacking-skill warning', () => {
   let root: string;
@@ -662,7 +651,7 @@ describe('AC17: default mode → all five written, no lacking-skill warning', ()
     root = makeTmpDir('ac17-proj');
     home = makeTmpDir('ac17-home');
     // Same project shape as AC16, but without --partial.
-    seedProjectSkills(root, ['specflow-lint', 'specflow-tests']);
+    seedProjectSkills(root, ['specflow-lint', 'specflow-tests', ...PACKAGED_LOOP_SKILLS]);
     result = await init(root, { noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(home); });

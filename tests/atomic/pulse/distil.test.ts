@@ -452,54 +452,6 @@ describe('Always-write: a quiet week still writes the report', () => {
 // The shipped SKILL.md bundle — prompt content pinned by string assertions
 // (spec Notes; same convention as atlas.ingest-skill).
 // ===========================================================================
-describe('Shipped skills/cortex-loop/references/distil.md is pinned', () => {
-  const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-  const SKILL_PATH = path.join(PKG_ROOT, 'skills', 'cortex-loop', 'references', 'distil.md');
-  const raw = fs.readFileSync(SKILL_PATH, 'utf-8');
-  const parsed = matter(raw);
-  const body = parsed.content;
-
-  it('ships as a cortex-loop reference the dispatch table names', () => {
-    expect(fs.existsSync(SKILL_PATH)).toBe(true);
-    // Merged into `cortex-loop` (spec loops.cortex-loop-bundle) — a reference
-    // file carries no frontmatter; the parent's dispatch table is what names it.
-    const parent = fs.readFileSync(path.join(PKG_ROOT, 'skills', 'cortex-loop', 'SKILL.md'), 'utf-8');
-    expect(parent).toContain('references/distil.md');
-  });
-
-  it('instructs: run --collect, judge IN-SESSION (never a nested claude, never bare), scratchpad JSON, run --propose', () => {
-    expect(body).toContain('cortex pulse-distil --collect');
-    expect(body).toContain('.cortex/pulse/state/session-corpus.json');
-    expect(body).toMatch(/in this session/i);
-    expect(body).toMatch(/never spawn a nested\s+`claude` subprocess/i);
-    expect(body).toMatch(/never run bare `cortex pulse-distil`/i);
-    expect(body).toContain('scratchpad');
-    expect(body).toContain('cortex pulse-distil --propose');
-  });
-
-  it('pins the workflow-mining lens (folded-in skill-suggest): workflow-shaped patterns become skill-proposal candidates', () => {
-    expect(body).toMatch(/workflow-mining lens/i);
-    expect(body).toMatch(/retired skill-suggest loop/i);
-    expect(body).toContain('"type": "skill-proposal"');
-    expect(body).toMatch(/\*\*Type:\*\*\s+skill-proposal/);
-  });
-
-  it('pins the candidate JSON contract and conservative extraction', () => {
-    for (const field of ['"pattern"', '"occurrences"', '"sessionIds"', '"proposedTarget"', '"proposedText"', '"confidence"']) {
-      expect(body).toContain(field);
-    }
-    expect(body).toMatch(/conservative/i);
-    expect(body).toMatch(/one-offs are filtered/i);
-    expect(body).toMatch(/cites? the session ids/i);
-  });
-
-  it('pins the propose-don\'t-mutate boundary', () => {
-    expect(body).toMatch(/never mutate anything outside `\.cortex\/pulse\/`/i);
-    expect(body).toMatch(/never write into\s*`\.cortex\/compass\/`/i);
-    expect(body).toContain('cortex pulse-list');
-    expect(body).toContain('cortex pulse-accept');
-  });
-});
 
 // ===========================================================================
 // Workflow-mining lens (folded-in skill-suggest, v3.0) — skill-proposal type
