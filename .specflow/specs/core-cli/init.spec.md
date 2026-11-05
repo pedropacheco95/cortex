@@ -4,6 +4,7 @@ status: implementing
 depends_on:
   - schema.validator
   - anatomy.scanner
+  - store.layout
 implements: ../../specs-business/core-cli/developer-sets-up-cortex-in-one-command.business.md
 governed_by: []
 governs:
@@ -15,6 +16,8 @@ governs:
 ## Intent
 
 `cortex init` is the single command that brings a project under Cortex management (design §13, as amended). It creates the `.cortex/` skeleton, runs the anatomy scanner, completes day-1 purposes via the agentic layer, drafts preferences, scaffolds or respects the spec trees, wires the scaffolding (CLAUDE.md, hooks, git hook, Desktop scheduled tasks), migrates legacy SpecFlow artefacts, validates its own output, and prints a complete summary — idempotently and without destroying anything that already exists. It is the implementation of the one-command-setup outcome.
+
+At 4.0 the command stays and its content changes: Rule 20 sets up the 4.0 store, and the rest of this section describes the 3.x `init()` function.
 
 ## Entities
 
@@ -50,12 +53,24 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 
 19. **Entry point (B-026).** The package bin reaches the dispatcher whenever it is executed, directly or through any chain of symlinks. The "run only when executed, not when imported" test compares the resolved real path of `process.argv[1]` with the module's own file path, and never compares a string suffix. The same applies to every module with its own executable guard (`src/hooks/cli.ts`, `src/schema/cli.ts`). This must land before `cortex check` ships: a check that silently does nothing reads as a pass.
 
-20. **The verb is retired at 4.0.** The `init` verb no longer sets up a project. Whatever flags follow it, it writes nothing, in the project or under `~/.claude/`, prints one line to stderr and exits 2 (Rule 18's code for "nothing ran"). The project is the first non-flag argument, else the current directory. Checked in this order:
-    - `cortex/cortex.json` exists: `cortex init: retired — this project already has a store; update it with cortex sync. Nothing was written.`
-    - `.cortex/cortex.config.json` exists: `cortex init: retired — this project is on the 3.x store; migrate it with cortex migrate. Nothing was written.`
-    - otherwise: `cortex init: retired — set up a new project with cortex store init, then cortex sync. Nothing was written.`
+20. **At 4.0 the verb sets up the 4.0 store.** `cortex init [target]` is the one setup command: it runs `cortex store init`, then the update route of `core-cli.sync` (Rules 17–26). It never builds the 3.x `.cortex/` layer. The project is the first non-flag argument, else the current directory. Every check runs before the first write. In this order:
+    1. The platform is not `darwin`: exit 2, with Rule 1's message. This comes first because `cortex store init` has no platform gate, and sync would refuse only after the store existed.
+    2. The target is, or sits beneath, a directory named `.cortex` holding `cortex.config.json`, or a directory named `cortex` holding `cortex.json`: exit 2, `cortex init: refused — this is inside the Cortex store of <root>; run cortex init there. Nothing was written.` `<root>` is that directory's parent. No flag bypasses it.
+    3. `cortex/cortex.json` exists and its `schemaVersion` MAJOR differs from the package's: exit 3, `cortex init: refused — this store is schema <version> and this package supports <major>.x. Nothing was written.`
+    4. `cortex/cortex.json` exists and `migration.accepted` is set, or it has no `migration` field: the project already has a store. Init skips `cortex store init`, runs the update route, and so behaves exactly as `cortex sync` does.
+    5. `cortex/cortex.json` exists and `migration.accepted` is `null`: exit 3, `cortex init: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`
+    6. `.cortex/cortex.config.json` exists: exit 3, `cortex init: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.` This check must stay ahead of any write. `cortex store init` would create a `cortex.json` with no `migration` field, and sync takes that as a store on the update route (`core-cli.sync` Rule 16), so it would treat a 3.x project as 4.0 and remove its skills.
+    7. Otherwise it is a new project: `cortex store init`, then the update route.
 
-    The usage text's closing line becomes ``Run `cortex store init` to set up a project; `cortex --help` prints this text.`` `init` stays in the verb list so the pointer can be found. Rules 1 to 17 now describe the exported `init()` function only. It stays in `src/cli/init.ts` because tests build 3.x fixtures with it, and no CLI path reaches it. This rule wins over them. A 3.x project created now would be one `cortex sync` refuses and whose skills no longer ship.
+    **Exit and output.** Output is `cortex store init`'s line, then the update route's lines, unchanged. The exit code is the update route's. If `cortex store init` fails, init exits 1 and does not start the update route. If the update route fails, the store stays, and running `cortex init` again finishes the work through step 4.
+
+    **The commit check stays off.** Init runs no `cortex hooks install`, sets no `core.hooksPath` and writes no `specflow.since`. Only sync's refresh of hooks already installed can touch `.githooks/` (`core-cli.sync` Rule 21).
+
+    **Flags.** `--force`, `--yes`, `-y`, `--no-llm`, `--partial`, `--profile <name>` and `--timeout-ms <n>` are accepted and ignored, so old scripts keep working; the values of the last two are never read as the target. When any is present, the first line on stderr is `cortex init: ignoring <flags>; setup no longer uses them`, naming them in the order given. Any other flag exits 2 with `cortex init: unknown flag <flag>. Nothing was written.`
+
+    **Usage.** The closing line of the usage text stays ``Run `cortex init` to set up a project; `cortex --help` prints this text.`` The synopsis becomes `init [target]`.
+
+    **The old setup.** Rules 1 to 17 now describe the exported `init()` function only. It stays in `src/cli/init.ts` because tests build 3.x fixtures with it, and no CLI path reaches it. This rule wins over them, and over `core-cli.init-profile` Rule 2 on the CLI path. A 3.x project created now would be one `cortex sync` refuses and whose skills no longer ship.
 
 ## Acceptance Criteria
 
@@ -270,41 +285,101 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **When** `<tmp>/bin/cortex check --commit-msg <file>` is executed
 - **Then** the exit code is 1 and stderr carries the rule (a) line
 
-### init on a new project points at the store and writes nothing
+### init sets up a new project in one command
 
-- **Given** an empty directory and `HOME` pointing at an empty temp home
-- **When** `cortex init --no-llm --yes` runs
-- **Then** it exits 2, stderr has `cortex init: retired — set up a new project with cortex store init, then cortex sync. Nothing was written.`, and nothing is created in the directory or under `$HOME/.claude/`
-
-### init on a 4.0 project points at sync
-
-- **Given** a project with `cortex/cortex.json`, also with a `.cortex/` folder
+- **Given** an empty git repository and `HOME` pointing at an empty temp home
 - **When** `cortex init` runs
-- **Then** it exits 2 with the `update it with cortex sync` line, and no file changed
-
-### init on a 3.x project points at migrate
-
-- **Given** a project with `.cortex/cortex.config.json` only
-- **When** `cortex init --force` runs
-- **Then** it exits 2 with the `migrate it with cortex migrate` line, and no file changed
+- **Then** it exits 0, `cortex/cortex.json` exists with no `migration` field, `cortex/MAP.md` and the `CLAUDE.md` block exist, the final skill set is in `.claude/skills/`, and no `.cortex/` was created
 
 ### init reads a named target
 
-- **Given** an empty current directory and `<tmp>/p` holding `cortex/cortex.json`
+- **Given** an empty current directory and an empty directory `<tmp>/p`
 - **When** `cortex init <tmp>/p` runs
-- **Then** it exits 2 with the `update it with cortex sync` line
+- **Then** it exits 0, `<tmp>/p/cortex/cortex.json` exists, and the current directory is still empty
 
-### The usage text points at store init
+### init run twice changes nothing the second time
+
+- **Given** a project `cortex init` has just set up
+- **When** `cortex init` runs again
+- **Then** it exits 0, no file changed, and stdout has no `removed`, `installed` or `updated` line
+
+### init on a project with a store runs only the update route
+
+- **Given** a project with `cortex/cortex.json` whose `migration.accepted` is a date, and one skill from the final set missing
+- **When** `cortex init` runs
+- **Then** it exits 0, the skill is installed, and nothing under `cortex/` other than `MAP.md` changed
+
+### init on an unaccepted migration refuses
+
+- **Given** a project with `cortex/cortex.json` whose `migration.accepted` is `null`, and a `.cortex/` folder
+- **When** `cortex init` runs
+- **Then** it exits 3 with the `finish it with cortex migrate --accept` line, and no file changed
+
+### init on a store of another major version refuses
+
+- **Given** a project whose `cortex/cortex.json` has `schemaVersion` `5.0`
+- **When** `cortex init` runs
+- **Then** it exits 3 with the `this store is schema 5.0` line, and no file changed
+
+### init on a 3.x project refuses and creates no store
+
+- **Given** a project with `.cortex/cortex.config.json` only, and retired skills in `.claude/skills/`
+- **When** `cortex init --force` runs
+- **Then** it exits 3 with the `migrate it first with cortex migrate` line, `cortex/` does not exist, and no file changed
+
+### init on another platform writes nothing
+
+- **Given** an empty directory on a platform that is not `darwin`
+- **When** `cortex init` runs
+- **Then** it exits 2 with Rule 1's message, and `cortex/` does not exist
+
+### init inside a store refuses and names the project
+
+- **Given** a project `<p>` with `cortex/cortex.json`, and separately a project `<q>` with `.cortex/cortex.config.json`
+- **When** `cortex init --force` runs in `<p>/cortex/world` and in `<q>/.cortex/pulse`
+- **Then** each exits 2 naming `<p>` or `<q>` as the place to run it, and no file changed
+
+### A project folder named cortex is not a store
+
+- **Given** an empty git repository at `<tmp>/cortex`
+- **When** `cortex init` runs there
+- **Then** it exits 0 and `<tmp>/cortex/cortex/cortex.json` exists
+
+### init leaves the commit check off
+
+- **Given** an empty git repository holding a `specflow/` folder
+- **When** `cortex init` runs
+- **Then** `core.hooksPath` is unset, `.githooks/` does not exist, `cortex/cortex.json` has no `specflow.since`, and stdout has `hooks: not installed; run cortex hooks install`
+
+### A failed update route keeps the store and a second run finishes
+
+- **Given** a new project and an update route stubbed to exit 1 once
+- **When** `cortex init` runs, then runs again
+- **Then** the first run exits 1 with `cortex/cortex.json` in place, and the second exits 0 through the existing-store path
+
+### A failed store init stops before the update route
+
+- **Given** a new project and `cortex store init` stubbed to fail
+- **When** `cortex init` runs
+- **Then** it exits 1 and the update route did not start
+
+### Old flags are ignored and named
+
+- **Given** an empty git repository
+- **When** `cortex init --no-llm --yes --timeout-ms 5 --profile specflow` runs
+- **Then** it exits 0, the store is in the current directory, no folder named `5` or `specflow` was created, and the first stderr line is `cortex init: ignoring --no-llm, --yes, --timeout-ms, --profile; setup no longer uses them`
+
+### An unknown flag writes nothing
+
+- **Given** an empty directory
+- **When** `cortex init --nope` runs
+- **Then** it exits 2 with `cortex init: unknown flag --nope. Nothing was written.`, and the directory is still empty
+
+### The usage text still points at init
 
 - **Given** any directory
 - **When** `cortex --help` runs
-- **Then** stdout carries ``Run `cortex store init` to set up a project`` and still lists `init`
-
-### The two commands set up a working project
-
-- **Given** an empty git repository
-- **When** `cortex store init` and then `cortex sync` run
-- **Then** both exit 0, `cortex/MAP.md` and the `CLAUDE.md` block exist, and the final skill set is in `.claude/skills/`
+- **Then** stdout carries ``Run `cortex init` to set up a project`` and lists `init [target]`
 
 ## Notes
 
@@ -314,4 +389,6 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Decision (`cortex sync` factoring, spec `core-cli.sync`).** Rules 4, 10, 11, 12, 13 (skills install, CLAUDE.md block, hooks merge, git post-commit hook, scheduled-task payloads) are implemented via the same internal scaffolding module that `cortex sync` exposes standalone for existing projects — sync is the repair/upgrade path Rule 1's refusal now names, so redoing setup is never required to fix or bring current a project init already ran on. This is a Notes-level implementation detail; init's own Rules and ACs are otherwise unchanged by the factoring.
 - OPEN: the exact `_index.md` template texts (schema §7.1 fixes the shape and budget; the per-module wording ships with the implementation and should be reviewed against the token budgets).
 - Also supports: every other domain — init is the entry point that wires scaffolding, hooks, pulse, loops, and specflow together. Primary parent remains `core-cli.developer-sets-up-cortex-in-one-command`.
+- **Decision (owner, 2026-11-05):** `cortex init` stays the one setup command at 4.0. A project with a store gets the update route instead of a refusal, so a setup that stopped half-way finishes by running the same command again, and a re-run stays safe (`core-cli.sync` Rule 26).
+- `core-cli.sync` lists this spec in `depends_on`, so Rule 20's call into sync is not listed here: it would make a cycle. That entry on sync is left from the 3.x factoring and should go when sync lands.
 - Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).
