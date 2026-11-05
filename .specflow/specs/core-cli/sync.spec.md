@@ -75,28 +75,39 @@ Amendment 2026-11-04 (owner decision: installing or syncing Cortex removes old s
     4. `cortex/cortex.json` exists and `migration.accepted` is `null`: exit 3, `cortex sync: refused — this project's migration is not accepted; finish it with cortex migrate --accept. Nothing was written.`;
     5. `.cortex/cortex.config.json` exists: exit 3, `cortex sync: refused — this project is on the 3.x store; migrate it first with cortex migrate. Nothing was written.`;
     6. otherwise: exit 2, `cortex sync: refused — no Cortex store found at <root>; set one up with cortex init. Nothing was written.`
-17. **The update route, in order:** remove retired skills (Rule 18); install and update the final set (Rule 19); refresh `MAP.md` and the managed blocks (Rule 20); refresh the git hooks (Rule 21); report the tasks (Rule 22); list project skills (Rule 23); validate (Rule 24). The blocks come after the skills, so that they see `specflow-spec` (`store.managed-block` Rule 9).
+17. **The update route, in order:** remove retired skills (Rule 18); install and update the final set (Rule 19); refresh `MAP.md` and the managed blocks (Rule 20); refresh the git hooks (Rule 21); write the task payloads and report the tasks (Rule 22); list project skills (Rule 23); validate (Rule 24). The blocks come after the skills, so that they see `specflow-spec` (`store.managed-block` Rule 9).
 18. **Retired skills.** A bundle under `.claude/skills/` whose name matches `RETIRED_SKILL_NAMES` (`store.migrate` Rule 18 step 5) is a candidate.
-    - Its `.cortex-installed.json` marker matches its content: it is removed, with the line `skills: removed <name>`.
-    - The marker is missing or does not match: it is left alone, with the line `skills: <name> is retired but has local edits; left for the cortex-migrate skill-adjust step`. There is no prompt and no `--yes`: the skill-adjust step decides it (`store.migrate-skill` Rule 13).
+    - Its `.cortex-installed.json` marker matches its content, or it is an unedited shipped copy (Rule 27): it is removed, with the line `skills: removed <name>`.
+    - Otherwise: it is left alone, with the line `skills: <name> is retired but has local edits; left for the cortex-migrate skill-adjust step`. There is no prompt and no `--yes`: the skill-adjust step decides it (`store.migrate-skill` Rule 13).
     - A bundle that name does not match is never a candidate, so a project's own skill is never removed.
 19. **The final set.** `FINAL_BUNDLES`, exported from `src/store/migrate/system.ts`, is the list of `store.migrate` Rule 18 step 2. For each name:
     - absent: copied from the package with a marker, `skills: installed <name>`;
     - identical to the package's copy: no change to the content, and a missing marker is written;
-    - differs, and its marker matches its content (no local edit): replaced by the package's copy, `skills: updated <name>`;
-    - differs, with a missing or mismatched marker (a local edit): left alone, `skills: .claude/skills/<name> exists with different content; left alone`;
+    - differs, and its marker matches its content or it is an unedited shipped copy (Rule 27) (no local edit): replaced by the package's copy, `skills: updated <name>`;
+    - differs otherwise (a local edit): left alone, `skills: .claude/skills/<name> exists with different content; left alone`;
     - not in the package: `skills: <name> is missing from the package; not installed`.
 20. **Blocks.** It runs `cortex store map`, which writes `MAP.md` and both blocks, and prints its lines. Text outside the blocks stays untouched (`store.managed-block`).
 21. **Git hooks.** When `git config core.hooksPath` is `.githooks`, it does what `cortex hooks install` does and prints `hooks: refreshed .githooks`. When it is anything else and `specflow/` exists, it installs nothing and prints `hooks: not installed; run cortex hooks install`. Turning a refusing check on in a repository stays a separate act. Outside a git repository it prints `hooks: not a git repository; skipped`.
-22. **Tasks** (owner decision, sitting item 4). Sync does not register tasks: only a Desktop session has the app's scheduling tools, and Core never calls `registerTasks` from this route. It calls the read-only `registrationStatus({ projectRoot, home, appSupportDir })` once (`core-cli.tasks-register`), all three injected through `SyncOptions`. No registry counts as every task unregistered. It prints one line:
+22. **Tasks** (owner decision, sitting item 4). Sync writes the task payloads and reports registration. It does not register: only a Desktop session has the app's scheduling tools, and this route never calls `registerTasks`.
+
+    **Payloads.** It calls `writeTaskPayloads({ projectRoot, home })` once (`core-cli.tasks-register` Rule 18) and prints a line per payload from what it returns. For each of the three `STORE_V4_TASKS`, at its `resolveScopedTaskName` directory under `<home>/.claude/scheduled-tasks/`, with a `.cortex-installed.json` marker holding the hash of its `SKILL.md`, as in Rule 9:
+    - absent: written with a marker, `tasks: installed payload <scoped name>`;
+    - identical to the current payload: no change to the content, and a missing marker is written;
+    - differs, and its marker matches its content (no local edit): replaced, `tasks: updated payload <scoped name>`;
+    - differs otherwise (a local edit): left alone, `tasks: <scoped name> has local edits; left alone`.
+
+    A payload is written even when a skill it requires is absent; `core-cli.tasks-register` Rule 14 refuses that at registration. This step removes no directory, so a 3.x payload the app may still point at stays. A directory another project owns is never touched (`core-cli.task-scoping`).
+
+    **Status.** It then calls the read-only `registrationStatus({ projectRoot, home, appSupportDir })` once (`core-cli.tasks-register`), all three injected through `SyncOptions`. No registry counts as every task unregistered. It prints one line:
     - every task registered: `tasks: all <n> registered`;
     - otherwise: `tasks: <m> of <n> not registered; in a Claude Desktop session for this project, type /cortex-register-tasks (plain words will not run it)`.
 
     The skill is typed, never triggered by words (`store.migrate-skill` Rule 14). Whatever the status, sync's exit code does not change.
 23. **Project skills.** It prints the `project skills to adjust` section of `store.migrate` Rule 18 step 5, from the same code.
 24. **Validation and exit.** It runs `cortex store validate`. Exit 0 when that reports no errors; otherwise it prints them and exits 1. Warnings do not fail sync.
-25. **`--dry-run`** writes nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:` and `hooks:` line prefixed `would: `, and the Rule 22 line and the Rule 23 section unprefixed, and it exits 0 without validating. On a project Rule 16 refuses, it refuses the same way.
-26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md` and `.githooks/`. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
+25. **`--dry-run`** writes nothing. It prints the lines of Rules 18–23 that a real run would print, each `skills:`, `hooks:` and payload `tasks:` line prefixed `would: `, and the Rule 22 status line and the Rule 23 section unprefixed, and it exits 0 without validating. On a project Rule 16 refuses, it refuses the same way.
+26. **What the update route leaves alone.** It writes only `.claude/skills/`, `MAP.md`, `CLAUDE.md`, `AGENTS.md`, `.githooks/` and the three payload directories of Rule 22. It reads or writes nothing else under `cortex/`, and nothing under `.cortex/`, `specflow/` or `.claude/settings*.json`. It takes no prompt. A second run prints no `removed`, `installed` or `updated` line and changes no file.
+27. **Unedited shipped copies** (2026-11-05). `cortex init` at 3.x wrote no marker, so a missing marker does not prove a local edit. `SHIPPED_3X_HASHES`, exported from `src/store/migrate/system.ts`, maps each name that `RETIRED_SKILL_NAMES` matches, plus `cortex-register-tasks` and `verification-before-completion`, to the `hashDirectoryContent` value of every distinct version of `skills/<name>` in the history of `main` up to commit `88895ca`. A bundle whose hash, marker excluded, is in its name's list is an unedited shipped copy, whatever its marker says. The list is frozen: every copy 4.0 writes has a marker. A copy no entry matches counts as a local edit.
 
 ## Acceptance Criteria
 
@@ -401,7 +412,25 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 
 - **Given** a test registry and a stub in place of `registerTasks`
 - **When** `cortex sync` runs
-- **Then** the stub was not called, and the registry and `~/.claude/scheduled-tasks/` under the injected home are byte-identical
+- **Then** the stub was not called, and the registry is byte-identical
+
+### The task payloads arrive
+
+- **Given** no payload for this project under the injected home
+- **When** `cortex sync` runs
+- **Then** the three `STORE_V4_TASKS` payloads exist at their scoped names with markers, each has its `tasks: installed payload` line, and a second run changes no file and prints none of those lines
+
+### An unedited payload is refreshed and an edited one is kept
+
+- **Given** one payload whose marker matches its older content, and another whose content was edited after its marker was written
+- **When** `cortex sync` runs
+- **Then** the first holds the current payload with its `tasks: updated payload` line, and the second is byte-identical with its `has local edits; left alone` line
+
+### Payloads of other projects and 3.x payloads stay
+
+- **Given** a directory at this project's plain scoped name owned by another project root, and this project's 3.x payload directory
+- **When** `cortex sync` runs
+- **Then** both are byte-identical, and this project's payload is at the hash-fallback name
 
 ### Project skills are listed
 
@@ -432,3 +461,27 @@ Unless a criterion says otherwise, the fixture is an accepted 4.0 store on darwi
 - **Given** a store with files in `world/`, `code/`, `history/` and `now/`, a `specflow/` tree, and a `.claude/settings.json`
 - **When** `cortex sync` runs
 - **Then** all of them are byte-identical
+
+### An unedited 3.x copy with no marker is updated
+
+- **Given** `.claude/skills/cortex-register-tasks/` holding that bundle as of an earlier commit of `main`, with no marker
+- **When** `cortex sync` runs
+- **Then** it holds the package's copy with a marker, and the output has `skills: updated cortex-register-tasks`
+
+### A marker-less copy with an edit is left alone
+
+- **Given** the same bundle with one byte changed, and no marker
+- **When** `cortex sync` runs
+- **Then** it is byte-identical, and the output has the Rule 19 `left alone` line
+
+### An unedited retired copy with no marker is removed
+
+- **Given** `.claude/skills/specflow-plan/` holding that bundle as of an earlier commit of `main`, with no marker
+- **When** `cortex sync` runs
+- **Then** it is gone, and the output has `skills: removed specflow-plan`
+
+### The shipped list covers the history
+
+- **Given** the history of `main` up to `88895ca`
+- **When** each distinct version of `skills/cortex-register-tasks` and `skills/verification-before-completion` is hashed
+- **Then** all 4 and all 3 are in `SHIPPED_3X_HASHES` under their names
