@@ -78,6 +78,7 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
     ```
 12. **After review.** The owner resolves the findings, and the main session then develops wave by wave under the `## Specs` rules. Each wave is ordinary quick-path work. The skill names no implementer agent and no required per-wave review.
 13. **Rationalizations.** The SKILL.md has a `## Rationalizations` table with these four thoughts, each answered: `The change is small, I can just write the code.`, `The value is obvious, I will write it in each criterion.`, `I know what the code does, no need to read it.`, `I will name the tests later.` The answer to the second says one constant, in `constants.md`, referenced by name.
+14. **Every quoted ask is accounted for.** The SKILL.md carries this sentence verbatim: `Every ask quoted in the request maps to a criterion or is listed under Open questions.` A quoted ask is one the request gives in the asker's own words, and that includes the ask of a Rule 9 spec request. The skill checks this at step 7, before the spec is committed.
 
 ## Acceptance Criteria
 
@@ -170,3 +171,9 @@ The skill starts from the owner-approved draft. Its changes from that draft are 
 - **Given** the SKILL.md text
 - **When** it is read
 - **Then** it has the four thoughts of Rule 13, and the answer on constants names `constants.md`
+
+### Every quoted ask is accounted for
+
+- **Given** the SKILL.md text
+- **When** it is read
+- **Then** it contains the Rule 14 sentence byte for byte on one line, says that covers the ask of a spec request, and places the check before the spec is committed
