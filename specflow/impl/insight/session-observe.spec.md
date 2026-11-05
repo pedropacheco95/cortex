@@ -10,7 +10,6 @@ governed_by:
   - R-001
 governs:
   - "src/insight/session-observe.ts"
-  - "skills/cortex-loop/references/session-observe.md"
 ---
 
 # Session-Observe Loop — the v3 successor to insight-gaps
