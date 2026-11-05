@@ -102,7 +102,7 @@ export function taskRoster(root: string): TaskRoster {
   } catch {
     return '3x';
   }
-  if (typeof cfg !== 'object' || cfg === null) return '3x';
+  if (typeof cfg !== 'object' || cfg === null || Array.isArray(cfg)) return '3x';
   const record = cfg as Record<string, unknown>;
   if (!('migration' in record)) {
     return fs.existsSync(path.join(root, '.cortex', 'cortex.config.json')) ? '3x' : 'store-v4';

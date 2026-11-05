@@ -175,7 +175,12 @@ function loadRegistry(appSupportDir: string): LoadedRegistry | TasksCommandResul
         `Ignored: ${files.slice(1).join(', ')}.`,
     );
   }
-  const raw = fs.readFileSync(file, 'utf-8');
+  let raw: string;
+  try {
+    raw = fs.readFileSync(file, 'utf-8');
+  } catch (err) {
+    return { exitCode: 1, output: `Registry ${file} cannot be read (${(err as Error).message}) — refusing to touch it.` };
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);

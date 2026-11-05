@@ -117,6 +117,14 @@ describe('An unaccepted store stays on the 3.x roster', () => {
     expect(taskRoster(fx.root)).toBe('3x');
   });
 
+  it.each([['[]'], ['null'], ['5'], ['{"migration":5}'], ['{"migration":null}'], ['{"migration":{"accepted":"soon"}}']])('a cortex.json of %s is on the 3.x roster', (text) => {
+    const fx = fixture((root) => {
+      fs.mkdirSync(path.join(root, 'cortex'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'cortex', 'cortex.json'), text, 'utf-8');
+    });
+    expect(taskRoster(fx.root)).toBe('3x');
+  });
+
   it('an accepted store is on the 4.0 roster', () => {
     expect(taskRoster(fixture().root)).toBe('store-v4');
   });
@@ -327,6 +335,45 @@ describe('Registration status follows the roster', () => {
     const s = registrationStatus(fx.opts);
     expect(s.total).toBe(5);
     expect([...s.unregistered].sort()).toEqual(BUNDLES);
+  });
+});
+
+describe('A corrupt registry never crashes the status', () => {
+  const unregistered = { registryFound: false, unregistered: ['learn', 'fresh', 'quality'], total: 3 };
+
+  it.each([['not json'], ['[1, 2]'], ['null'], ['']])('%j counts every task as unregistered', (text) => {
+    const fx = fixture();
+    fs.writeFileSync(fx.registry, text, 'utf-8');
+    expect(registrationStatus(fx.opts)).toEqual(unregistered);
+    expect(fs.readFileSync(fx.registry, 'utf-8')).toBe(text);
+  });
+
+  it('tolerates a valid object whose entries are not records, or no list at all', () => {
+    const fx = fixture();
+    fs.writeFileSync(fx.registry, '{"scheduledTasks":[1,null,"x",{"id":5}]}', 'utf-8');
+    expect(registrationStatus(fx.opts)).toEqual({ ...unregistered, registryFound: true });
+    fs.writeFileSync(fx.registry, '{"scheduledTasks":"nope"}', 'utf-8');
+    expect(registrationStatus(fx.opts)).toEqual({ ...unregistered, registryFound: true });
+  });
+
+  it('an unreadable registry counts as not found, and register and verify exit 1', () => {
+    const fx = fixture();
+    fs.chmodSync(fx.registry, 0o000);
+    try {
+      expect(registrationStatus(fx.opts)).toEqual(unregistered);
+      expect(verifyTasks(fx.opts).exitCode).toBe(1);
+      expect(registerTasks(fx.opts).exitCode).toBe(1);
+    } finally {
+      fs.chmodSync(fx.registry, 0o644);
+    }
+  });
+
+  it('a malformed registry stops register and verify, and leaves the file alone', () => {
+    const fx = fixture();
+    fs.writeFileSync(fx.registry, 'not json', 'utf-8');
+    expect(verifyTasks(fx.opts).exitCode).toBe(1);
+    expect(registerTasks(fx.opts).exitCode).toBe(1);
+    expect(fs.readFileSync(fx.registry, 'utf-8')).toBe('not json');
   });
 });
 
