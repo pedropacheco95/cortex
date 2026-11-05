@@ -167,7 +167,7 @@ The check only works if git calls it, and a hook that silently does not run read
 
 ### A sync refresh leaves since alone
 
-- **Given** `core.hooksPath` is `.githooks` and `specflow.since` is absent
+- **Given** `core.hooksPath` is `.githooks`, `.githooks/commit-msg` carries the `# cortex-managed` line, and `specflow.since` is absent
 - **When** `cortex sync` refreshes the hooks
 - **Then** `.githooks/` is up to date and `cortex/cortex.json` is unchanged
 

@@ -1691,7 +1691,7 @@ End every substantive answer with an explicit confidence and what would change y
 ```
 
 - **`schemaVersion` is required.**
-- **`migration`** (optional): `{ "from": "3.4", "accepted": "YYYY-MM-DD" | null }`, written by `cortex migrate --apply` (`accepted: null`) and `--accept`. A 4.0 store **without** this field (a fresh `cortex store init` in a project with no `.cortex/`) counts as accepted. Until it is accepted, the managed blocks stay at 3.x (S8.3).
+- **`migration`** (optional): `{ "from": "3.4", "accepted": "YYYY-MM-DD" | null }`, written by `cortex migrate --apply` (`accepted: null`) and `--accept`. A 4.0 store **without** this field counts as accepted only when no `.cortex/cortex.config.json` exists (a fresh `cortex store init` in a new project). With that file beside it, the project is still on 3.x. Until it is accepted, the managed blocks stay at 3.x (S8.3).
 - **`visibility`** keeps its Part I §10.1 meaning and its RULES.md rule 20 duty, applied to `cortex/world/` and `cortex/code/` instead of `compass/` and `atlas/`. `repo` is `public`, `private` or `unknown`. A migrated store carries `unknown` when the 3.x config never recorded it and `--visibility` was not given.
 - **`specflow`** (optional): the Specflow settings, S12.6.
 - **Unknown keys** produce a `warning`.
