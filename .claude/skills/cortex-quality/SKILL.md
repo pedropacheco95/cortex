@@ -13,7 +13,7 @@ Run by the weekly `quality` task, or typed as `/cortex-quality`. It checks the s
 
 Never spawn a nested `claude` process. Every `cortex` command here runs in the background and is polled with a 10-minute limit; the suite has its own limit below. macOS has no `timeout` command, so start it with `&`, poll, and kill it at the limit; a command past its limit is killed, named in your final message and skipped.
 
-**Every agent runs in the foreground, or is awaited before the next step.** A headless session can end while a background agent runs, and its work is lost.
+**Every agent runs in the foreground, or is awaited before the next step, and writes its output to a file under `<os tmpdir>/cortex-quality-<today>/`, which you read.** A headless session can end while a background agent runs, and its work is lost. A hand-back can fail after the agent has finished, so the file is the delivery, not its reply. Name the file in each agent's brief.
 
 ## Steps, in order
 

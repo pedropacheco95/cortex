@@ -74,6 +74,8 @@ describe('The silent-spec job runs its steps in order', () => {
 describe('The skill keeps every agent in the foreground', () => {
   it('says so', () => {
     expect(text).toContain('Every agent runs in the foreground, or is awaited before the next step');
+    expect(text).toContain('writes its output to a file under `<os tmpdir>/cortex-quality-<today>/`, which you read');
+    expect(text).toContain('the file is the delivery');
   });
 });
 
