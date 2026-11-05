@@ -68,4 +68,4 @@ One new `history/measurements/<today>-quality.md` per run (first free name: `-2`
 
 ## Limits
 
-Write nothing outside `cortex/` and the throwaway worktrees, never a spec, and do not commit.
+Write nothing outside `cortex/` and the throwaway worktrees, never a spec, and do not stage or commit: no `git rm`, no `git add`.

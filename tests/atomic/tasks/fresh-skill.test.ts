@@ -43,6 +43,15 @@ describe('The skill leaves what it cannot confirm', () => {
   });
 });
 
+describe('The skill closes a pitfall only on evidence', () => {
+  it('needs evidence the fix landed, and sends the rest to a proposal', () => {
+    expect(text).toContain('only on observed evidence that the fix landed');
+    expect(text).toContain('A missing file or symbol is not evidence');
+    expect(text).toContain('Without that evidence, write one proposal asking a person');
+    expect(text).not.toContain('a pitfall the code no longer has');
+  });
+});
+
 describe('Specs stay proposals', () => {
   it('forbids a spec, names the id, appends only, skips what is proposed', () => {
     expect(text).toContain('Never write a spec');
@@ -66,5 +75,11 @@ describe('Bounded commands', () => {
   it('names the limit and forbids a nested claude', () => {
     expect(text).toContain('runs in the background and is polled with a 10-minute limit');
     expect(text).toContain('Never spawn a nested `claude` process');
+  });
+});
+
+describe('Tasks neither stage nor commit', () => {
+  it('says so', () => {
+    expect(text).toContain('do not stage or commit: no `git rm`, no `git add`');
   });
 });

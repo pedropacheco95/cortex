@@ -76,3 +76,9 @@ describe('The skill bounds its commands', () => {
     expect(text).toContain('Never spawn a nested `claude` process');
   });
 });
+
+describe('Tasks neither stage nor commit', () => {
+  it('says so', () => {
+    expect(text).toContain('do not stage or commit: no `git rm`, no `git add`');
+  });
+});

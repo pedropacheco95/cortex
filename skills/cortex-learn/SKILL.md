@@ -9,7 +9,7 @@ description: 'Mine finished sessions into the store.'
 
 **This skill is callable-only** — it carries no trigger surface in the skill listing and is not routed into by a matching sentence.
 
-Run by the daily `learn` task, or typed as `/cortex-learn`. It reads every finished session of this project that has no digest yet and files what was told, corrected, discovered or decided. It may write anywhere in `cortex/`, and every write follows the MAP filing rules. Specs stay out of reach: anything that would change a spec is a proposal. It writes no code and does not commit.
+Run by the daily `learn` task, or typed as `/cortex-learn`. It reads every finished session of this project that has no digest yet and files what was told, corrected, discovered or decided. It may write anywhere in `cortex/`, and every write follows the MAP filing rules. Specs stay out of reach: anything that would change a spec is a proposal. It writes no code, and it neither stages nor commits.
 
 Never spawn a nested `claude` process. Every `cortex` command here runs in the background and is polled with a 10-minute limit. macOS has no `timeout` command, so start it with `&`, poll, and kill it at the limit; a command past its limit is killed, named in your final message and skipped.
 
@@ -65,4 +65,4 @@ It holds no transcript path and no secret. A session with a digest is never mine
 
 ## Limits
 
-Write nothing outside `cortex/` and the scratch directory, never a spec, and do not commit.
+Write nothing outside `cortex/` and the scratch directory, never a spec, and do not stage or commit: no `git rm`, no `git add`.

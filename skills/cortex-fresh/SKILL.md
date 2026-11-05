@@ -9,7 +9,7 @@ description: 'Keep the store from going stale.'
 
 **This skill is callable-only** — it carries no trigger surface in the skill listing and is not routed into by a matching sentence.
 
-Run by the weekly `fresh` task, or typed as `/cortex-fresh`. Core detects what may have rotted; you read it and say whether it still holds, and you fix what you find. You may edit, merge and retire any file in `cortex/`, following the MAP filing rules. Never write a spec: anything that would change one is a proposal. You write no code and do not commit.
+Run by the weekly `fresh` task, or typed as `/cortex-fresh`. Core detects what may have rotted; you read it and say whether it still holds, and you fix what you find. You may edit, merge and retire any file in `cortex/`, following the MAP filing rules. Never write a spec: anything that would change one is a proposal. You write no code, and you neither stage nor commit.
 
 Never spawn a nested `claude` process. Every `cortex` command here runs in the background and is polled with a 10-minute limit. macOS has no `timeout` command, so start it with `&`, poll, and kill it at the limit; a command past its limit is killed, named in your final message and skipped.
 
@@ -43,7 +43,7 @@ For each `stale` file, read the file and the code its `depends_on` names. If the
 - **`nearDuplicates`:** read the pair and merge only if the two files hold one subject. Otherwise count it as `not a duplicate`.
 - **`scaffolding`:** fix it with `cortex store map`.
 - **`validate`:** fix each error.
-- **`openPitfalls.aged`:** read each file against the code. Close a pitfall the code no longer has, by `cortex-remember`'s bug section. Name the rest in the record.
+- **`openPitfalls.aged`:** read each file against the code. Close a pitfall, by `cortex-remember`'s bug section, only on observed evidence that the fix landed: a commit or a change that shows it. A missing file or symbol is not evidence, because the code may have moved. Without that evidence, write one proposal asking a person, and name the file in the record.
 
 ## Proposals
 
@@ -59,4 +59,4 @@ A quiet run says `Nothing went stale this cycle.` as the last line.
 
 ## Limits
 
-Write nothing outside `cortex/`, never a spec, and do not commit.
+Write nothing outside `cortex/`, never a spec, and do not stage or commit: no `git rm`, no `git add`.
