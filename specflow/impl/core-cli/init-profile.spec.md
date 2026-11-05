@@ -144,6 +144,12 @@ selects which loops are scheduled; it does not police what the user does.
 - **When** `cortex validate` runs
 - **Then** it is conformant — the field is optional and defaulted
 
+### CORE-CLI-INIT-PROFILE-12: A config that cannot supply a profile reads as the default
+
+- **Given** a config that does not parse, and separately one whose `profile` is outside the enum
+- **When** `readProfile` runs
+- **Then** it returns `specflow` and does not throw
+
 ## Notes
 
 - **Engineering call recorded per standing authorities (member-level scoping).** The plan

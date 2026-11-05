@@ -95,7 +95,7 @@ describe('AC: a bundle the developer deleted is not reinstalled', () => {
   );
 
   it(
-    "never touches a developer's own skill",
+    "[CORE-CLI-SYNC-27] never touches a developer's own skill",
     async () => {
       const { root, home } = await makeProject('own-skill', '3.3', ['verification-before-completion']);
       const mine = skillDir(root, 'my-own-skill');

@@ -90,7 +90,7 @@ describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
     expect(r.stderr).toContain('rule (a)');
   });
 
-  it('output past a pipe buffer arrives whole', () => {
+  it('[CORE-CLI-INIT-54] output past a pipe buffer arrives whole', () => {
     const repo = path.join(tmp, 'big');
     fs.mkdirSync(path.join(repo, 'specflow/impl/a'), { recursive: true });
     const criteria = Array.from({ length: 3000 }, (_, i) => `### A-B-${i + 1}: A title long enough to fill a pipe\n\n- **Then** ok\n`).join('\n');

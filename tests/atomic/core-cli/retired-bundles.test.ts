@@ -122,7 +122,7 @@ describe('applicableSkillMigrations is state-based, not cursor-based', () => {
 // ---------------------------------------------------------------------------
 
 describe("a developer's own skill is never a candidate", () => {
-  it('a directory no migration names is not returned, even across the full window', () => {
+  it('[CORE-CLI-SYNC-27] a directory no migration names is not returned, even across the full window', () => {
     const root = tmp('own-skill');
     installed(root, 'my-own-skill');
     expect(retiredBundles(root, ['specflow-entry'], SCHEMA_VERSION)).toEqual([]);
