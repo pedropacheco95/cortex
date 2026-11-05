@@ -22,6 +22,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { SCHEMA_VERSION_4 } from '../../../src/store/layout.js';
 import { fileURLToPath } from 'url';
 import { SUPPORTED_MAJOR, SUPPORTED_MINOR, SUPPORTED_VERSION } from '../../../src/schema/version.js';
 import { SCHEMA_VERSION } from '../../../src/cli/templates.js';
@@ -78,5 +79,12 @@ describe('B-014: the three schema-version declarations agree', () => {
         `cortex-schema.md describes ${v.major}.${v.minor} but the validator only supports ${SUPPORTED_VERSION}`,
       ).toBeLessThanOrEqual(SUPPORTED_MINOR);
     }
+  });
+});
+
+describe('the package and the store schema', () => {
+  it("[SCHEMA-VERSION-2-7] The package's major version equals the store's schema major", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, 'package.json'), 'utf-8')) as { version: string };
+    expect(pkg.version.split('.')[0]).toBe(SCHEMA_VERSION_4.split('.')[0]);
   });
 });
