@@ -179,14 +179,17 @@ describe('AC4: --partial recognises only its own project', () => {
     ownEdit = `---\nname: ${ownScoped}\ndescription: "user tuned"\n---\n\nmy tuned daily-bundle prompt\n`;
     fs.mkdirSync(path.join(base, ownScoped), { recursive: true });
     fs.writeFileSync(path.join(base, ownScoped, 'SKILL.md'), ownEdit, 'utf-8');
+    // The package no longer ships these skills, so the project must already hold them.
+    for (const skill of SCHEDULED_TASKS.flatMap((t) => t.requiredSkills)) {
+      fs.mkdirSync(path.join(root, '.claude', 'skills', skill), { recursive: true });
+      fs.writeFileSync(path.join(root, '.claude', 'skills', skill, 'SKILL.md'), `---\nname: ${skill}\n---\n`, 'utf-8');
+    }
 
     result = await init(root, { partial: true, noLlm: true, home, ...DARWIN });
   }, TEST_TIMEOUT);
   afterAll(() => { cleanTmp(root); cleanTmp(otherRoot); cleanTmp(home); });
 
   it("registered/preserved counts reflect only this project's tasks (4 written + 1 preserved = 5 packaged bundles)", () => {
-    // Since specflow.cortex-awareness Rule 3 the packaged skills cover every
-    // task, so --partial registers the full set.
     expect(result.exitCode).toBe(0);
     expect(result.summary).toContain('Scheduled tasks (--partial): 4 written');
     expect(result.summary).toContain('1 existing preserved');

@@ -86,11 +86,10 @@ describe('AC: a retired bundle is removed on sync (B-015)', () => {
     expect(result.summary).toContain('specflow-change-router');
   }, TEST_TIMEOUT);
 
-  it('leaves exactly one entry point installed afterwards', async () => {
+  it('leaves no trace of the old entry point afterwards', async () => {
     const { root, home } = await makePreRenameProject('one-gate', { marker: true });
     await sync(root, { yes: true, home, ...DARWIN });
 
-    expect(fs.existsSync(path.join(skillDir(root, 'specflow-entry'), 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(skillDir(root, 'specflow-change-router'))).toBe(false);
   }, TEST_TIMEOUT);
 
@@ -149,10 +148,10 @@ describe("AC: a developer's own skill is never touched", () => {
 });
 
 describe('AC: a currently-shipped bundle is never removed', () => {
-  it('specflow-entry is present after a sync that removes its predecessor', async () => {
+  it('verification-before-completion is present after a sync that removes a retired bundle', async () => {
     const { root, home } = await makePreRenameProject('shipped-safe', { marker: true });
     await sync(root, { yes: true, home, ...DARWIN });
-    expect(fs.existsSync(path.join(skillDir(root, 'specflow-entry'), 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(skillDir(root, 'verification-before-completion'), 'SKILL.md'))).toBe(true);
   }, TEST_TIMEOUT);
 });
 

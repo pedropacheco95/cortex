@@ -6,7 +6,7 @@
  * bundle as their vehicle. That spec is SUPERSEDED (build-order-v3 step 9) and
  * the bundle no longer ships, so its "bundle ships and init installs it" case
  * is retired with it — but the other two behaviours are general and worth
- * keeping, so they now ride on `cortex-archive-ingest`, the skill that
+ * keeping, so they now ride on `verification-before-completion`, a skill that
  * absorbed the retired one:
  *   - overwrite protection (user copy preserved without --yes, replaced with
  *     --yes) — Rule 4 of core-cli.init made real;
@@ -33,14 +33,14 @@ const PKG_SKILLS = path.join(REPO_ROOT, 'skills');
 const VALID_FIXTURE = path.join(REPO_ROOT, 'tests', 'fixtures', 'valid');
 
 describe('Overwrite protection becomes live', () => {
-  const USER_CONTENT = '---\nname: cortex-archive-ingest\n---\n\nMY USER-MODIFIED SKILL — do not clobber.\n';
+  const USER_CONTENT = '---\nname: verification-before-completion\n---\n\nMY USER-MODIFIED SKILL — do not clobber.\n';
 
   it('preserves a user-modified bundle byte-identical when run without --yes (no TTY)', async () => {
     const root = makeTmpDir('archive-ingest-preserve-proj');
     const home = makeTmpDir('archive-ingest-preserve-home');
     try {
       // Pre-seed a user-modified bundle before any init runs.
-      const target = path.join(root, '.claude', 'skills', 'cortex-archive-ingest', 'SKILL.md');
+      const target = path.join(root, '.claude', 'skills', 'verification-before-completion', 'SKILL.md');
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, USER_CONTENT, 'utf-8');
 
@@ -58,7 +58,7 @@ describe('Overwrite protection becomes live', () => {
     const root = makeTmpDir('archive-ingest-replace-proj');
     const home = makeTmpDir('archive-ingest-replace-home');
     try {
-      const target = path.join(root, '.claude', 'skills', 'cortex-archive-ingest', 'SKILL.md');
+      const target = path.join(root, '.claude', 'skills', 'verification-before-completion', 'SKILL.md');
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, USER_CONTENT, 'utf-8');
 
@@ -70,7 +70,7 @@ describe('Overwrite protection becomes live', () => {
       // byte for byte. Asserting against the package source rather than any
       // phrase in it keeps this test true as the skill's prose evolves.
       const shipped = fs.readFileSync(
-        path.join(PKG_SKILLS, 'cortex-archive-ingest', 'SKILL.md'),
+        path.join(PKG_SKILLS, 'verification-before-completion', 'SKILL.md'),
         'utf-8',
       );
       expect(after).toBe(shipped);

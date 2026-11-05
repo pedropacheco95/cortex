@@ -15,30 +15,18 @@ const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const SKILLS = path.join(PKG_ROOT, 'skills');
 const MIRROR = path.join(PKG_ROOT, '.claude', 'skills');
 
+import { INSTALLED_MARKER_FILENAME } from '../../../src/cli/scaffold.js';
+import { FINAL_BUNDLES, RETIRED_SKILL_NAMES } from '../../../src/store/migrate/system.js';
+
 const guard = await import(path.join(PKG_ROOT, 'scripts', 'measure-skill-descriptions.mjs'));
 const { evaluate, measureWorkingTree, TIERS, TIER_CEILING } = guard;
 
 const rows = measureWorkingTree(SKILLS);
 const byName = new Map(rows.map((r: { bundle: string }) => [r.bundle, r]));
 
-/** The 16 bundles this spec rewrote. specflow-entry (Tier C) is deliberately not among them. */
+/** The bundles this spec rewrote that still ship. */
 const REWRITTEN = [
-  'specflow-bugs',
-  'specflow-plan',
-  'specflow-develop',
-  'specflow-tests',
-  'specflow-onboard-codebase',
-  'specflow-spec-editor',
-  'specflow-ingest',
-  'specflow-brainstorm',
-  'specflow-lint',
-  'specflow-receive-review',
-  'specflow-intent-reconcile',
   'verification-before-completion',
-  'specflow-new-project',
-  'specflow-request-review',
-  'specflow-viewer',
-  'specflow-deep-onboard',
 ];
 
 describe('AC: the guard covers every bundle without a flag', () => {
@@ -88,20 +76,20 @@ describe('AC: the shipped listing conforms to its tier ceilings', () => {
 });
 
 describe('AC: a name-dispatched bundle fits Tier A', () => {
-  it('specflow-bugs is at most 120 chars and keeps its pinned phrases', () => {
-    const row = byName.get('specflow-bugs') as { after: number; description: string };
+  it('verification-before-completion is at most 120 chars and keeps its pinned phrases', () => {
+    const row = byName.get('verification-before-completion') as { after: number; description: string };
     expect(row.after).toBeLessThanOrEqual(120);
-    expect(row.description.toLowerCase()).toContain('is broken');
+    expect(row.description.toLowerCase()).toContain('evidence gate');
   });
 });
 
 describe('AC: a cold-phrasing entry point keeps its surface', () => {
-  it('specflow-new-project is at most 250 chars and keeps its pinned phrases', () => {
-    const row = byName.get('specflow-new-project') as { after: number; description: string };
+  it('specflow-spec is at most 250 chars and keeps its pinned phrases', () => {
+    const row = byName.get('specflow-spec') as { after: number; description: string };
     expect(row.after).toBeLessThanOrEqual(250);
     const d = row.description.toLowerCase();
-    expect(d).toContain('new project');
-    expect(d).toContain('i want to build');
+    expect(d).toContain('spec this');
+    expect(d).toContain('brainstorm');
   });
 });
 
@@ -139,24 +127,6 @@ describe('AC: a callable-only bundle carries no trigger surface', () => {
   });
 });
 
-describe('AC: specflow-entry is exempt and is not shrunk', () => {
-  it('is Tier C with no ceiling', () => {
-    expect(TIERS['specflow-entry']).toBe('C');
-    expect(TIER_CEILING.C).toBeNull();
-  });
-
-  it('keeps the full routing surface it had before this spec', () => {
-    // Pinned by size and content rather than by diffing against a git ref: once
-    // this change lands, HEAD is the post-spec tree, so a git comparison would
-    // pass vacuously (and would say nothing about a future shrink).
-    const row = byName.get('specflow-entry') as { after: number; description: string };
-    expect(row.after).toBeGreaterThan(1000);
-    const d = row.description.toLowerCase();
-    for (const phrase of ['add a feature', 'fix this bug', 'change this behavior', "what's the goal of"]) {
-      expect(d, `specflow-entry lost "${phrase}"`).toContain(phrase.toLowerCase());
-    }
-  });
-});
 
 /**
  * One distinctive phrase per rewritten bundle, taken from the description it
@@ -165,22 +135,7 @@ describe('AC: specflow-entry is exempt and is not shrunk', () => {
  * anything the moment this change is committed.
  */
 const SHED_PHRASE: Record<string, string> = {
-  'specflow-bugs': 'walking the spec-model diagnostic tree',
-  'specflow-plan': 'bite-sized tasks with exact paths',
-  'specflow-develop': 'the last stage of the spec-first spine',
-  'specflow-tests': 'A test that does not execute is not a test.',
-  'specflow-onboard-codebase': 'bottom-up atom extraction',
-  'specflow-spec-editor': 'manage bidirectional links',
-  'specflow-ingest': 'structured change manifest',
-  'specflow-brainstorm': 'asks ONE question at a time',
-  'specflow-lint': 'frontmatter schema, entity reference style',
-  'specflow-receive-review': 'instead of performative agreement',
-  'specflow-intent-reconcile': 'verbatim RED anchor test',
   'verification-before-completion': 'It is the evidence gate',
-  'specflow-new-project': 'tooling manifest, agents, skills, rules',
-  'specflow-request-review': 'Correctness belongs to the test suite',
-  'specflow-viewer': 'Business⇄Developer toggle',
-  'specflow-deep-onboard': 'compares structurally, investigates disagreements',
 };
 
 describe('AC: shed content survives in the body', () => {
@@ -224,5 +179,55 @@ describe('descriptions are single-line quoted scalars (Rule 5)', () => {
     const fm = /^---\n([\s\S]*?\n)---\n/.exec(raw)![1];
     expect(fm).not.toMatch(/^description:[ \t]*(>-|>|\|-|\|)[ \t]*$/m);
     expect(fm).toMatch(/^description: '.*'$/m);
+  });
+});
+
+const SHIPPED = [...FINAL_BUNDLES, 'cortex-migrate'].sort();
+
+function filesUnder(dir: string): string[] {
+  return (fs.readdirSync(dir, { recursive: true, withFileTypes: true }) as fs.Dirent[])
+    .filter((e) => e.isFile() && e.name !== INSTALLED_MARKER_FILENAME)
+    .map((e) => path.relative(dir, path.join(e.parentPath, e.name)))
+    .sort();
+}
+
+describe('AC: the package ships exactly the ten', () => {
+  const shipped = fs
+    .readdirSync(SKILLS, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(SKILLS, e.name, 'SKILL.md')))
+    .map((e) => e.name)
+    .sort();
+
+  it('lists FINAL_BUNDLES and cortex-migrate, and nothing else', () => {
+    expect(shipped).toHaveLength(10);
+    expect(shipped).toEqual(SHIPPED);
+  });
+
+  it('ships no bundle with a retired name', () => {
+    const patterns = RETIRED_SKILL_NAMES.map((n) => new RegExp(`^${n.replace('*', '.+')}$`));
+    for (const name of shipped) {
+      expect(patterns.some((p) => p.test(name)), `${name} is retired`).toBe(false);
+    }
+  });
+});
+
+describe('AC: the mirror holds the same ten', () => {
+  it('lists the ten and coordinate-sessions, and nothing else', () => {
+    const mirrored = fs
+      .readdirSync(MIRROR, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+    expect(mirrored).toEqual([...SHIPPED, 'coordinate-sessions'].sort());
+  });
+
+  it.each(SHIPPED)('%s is byte-identical, with no strays on either side', (bundle) => {
+    const files = filesUnder(path.join(SKILLS, bundle));
+    expect(files).toContain('SKILL.md');
+    expect(filesUnder(path.join(MIRROR, bundle))).toEqual(files);
+    for (const file of files) {
+      const source = fs.readFileSync(path.join(SKILLS, bundle, file));
+      expect(source.equals(fs.readFileSync(path.join(MIRROR, bundle, file))), file).toBe(true);
+    }
   });
 });

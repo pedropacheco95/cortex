@@ -4,8 +4,6 @@ Cortex is a holistic, owned-end-to-end system for understanding a codebase, dist
 
 ## Specflow
 
-Entry: run `specflow-entry` first — classify the request, then run the skill it routes to.
-
 This project uses Specflow — specs are the source of truth, code is an artifact. There are **two parallel spec trees**:
 
 - `specs-business/` — high-level outcomes, user journeys, and success metrics for stakeholders. **Read this first** to understand *why* something exists.

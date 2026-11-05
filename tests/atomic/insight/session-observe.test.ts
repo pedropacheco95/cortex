@@ -1042,42 +1042,6 @@ describe('session-observe scheduled-task registration (daily bundle member)', ()
 });
 
 // ---------------------------------------------------------------------------
-// the shipped skill bundle
-// ---------------------------------------------------------------------------
-describe('the cortex-loop-session-observe skill bundle', () => {
-  const PKG_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-  const pkg = path.join(PKG_ROOT, 'skills', 'cortex-loop', 'references', 'session-observe.md');
-  const mirror = path.join(PKG_ROOT, '.claude', 'skills', 'cortex-loop', 'references', 'session-observe.md');
-
-  it('ships in skills/ with a byte-identical .claude/skills mirror', () => {
-    expect(fs.existsSync(pkg)).toBe(true);
-    expect(fs.existsSync(mirror)).toBe(true);
-    expect(fs.readFileSync(pkg, 'utf-8')).toBe(fs.readFileSync(mirror, 'utf-8'));
-  });
-
-  it('teaches interactive-first processing and the claimed-observation proposals object (spec Rules 12-13)', () => {
-    const skill = fs.readFileSync(pkg, 'utf-8');
-    expect(skill).toContain('"observed"');
-    expect(skill).toContain('"candidates"');
-    expect(skill).toMatch(/interactive/i);
-    expect(skill).toMatch(/scheduled/i);
-    expect(skill).toMatch(/expired unobserved|three|3 attempts/i);
-  });
-
-  it('teaches the type routing, the write boundaries, and the distil boundary', () => {
-    const skill = fs.readFileSync(pkg, 'utf-8');
-    expect(skill).toContain('Reference for `cortex-loop`');
-    expect(skill).toContain('cortex loop-session-observe --collect');
-    expect(skill).toContain('--apply --proposals');
-    expect(skill).toContain('rule-candidate');
-    expect(skill).toContain('decision-candidate');
-    expect(skill).toContain('claude-sessions/');
-    expect(skill).toContain('## Query pointers');
-    expect(skill).toMatch(/never create entries/i);
-    expect(skill).toMatch(/never spawn a nested/i);
-    expect(skill).toContain('cortex-pulse-distil');
-  });
-});
 
 // ---------------------------------------------------------------------------
 // schema.id-registry Rule 4 (3.4 fifth revision): the drafted rule id reads
