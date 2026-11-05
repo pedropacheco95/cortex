@@ -32,8 +32,10 @@ export function jaccard(a: Set<string>, b: Set<string>): number {
   return inter / (a.size + b.size - inter);
 }
 
-export function checkNearDuplicate(store: Store): Finding[] {
-  const out: Finding[] = [];
+export interface NearDuplicatePair { a: string; b: string; why: string }
+
+export function nearDuplicatePairs(store: Store): NearDuplicatePair[] {
+  const out: NearDuplicatePair[] = [];
   const files = store.files.filter((f) => f.module !== null && f.module !== 'history');
   const about = (f: StoreFile): string | null => (typeof f.frontmatter?.['about'] === 'string' ? (f.frontmatter['about'] as string) : null);
   const tokens = new Map(files.map((f) => [f.path, aboutTokens(about(f) ?? '')]));
@@ -44,10 +46,15 @@ export function checkNearDuplicate(store: Store): Finding[] {
       const sameName = fileStem(a.path) === fileStem(b.path) && a.folder !== b.folder;
       const score = about(a) && about(b) ? jaccard(tokens.get(a.path)!, tokens.get(b.path)!) : 0;
       if (sameName || score >= NEAR_DUPLICATE_THRESHOLD) {
-        const why = sameName ? 'same name in two folders' : `about lines share ${score.toFixed(2)} of their words`;
-        out.push(finding('warning', 'check.near-duplicate', a.path, `near-duplicate of ${b.path} (${why}); one fact lives in one file`));
+        out.push({ a: a.path, b: b.path, why: sameName ? 'same name in two folders' : `about lines share ${score.toFixed(2)} of their words` });
       }
     }
   }
   return out;
+}
+
+export function checkNearDuplicate(store: Store): Finding[] {
+  return nearDuplicatePairs(store).map((p) =>
+    finding('warning', 'check.near-duplicate', p.a, `near-duplicate of ${p.b} (${p.why}); one fact lives in one file`),
+  );
 }

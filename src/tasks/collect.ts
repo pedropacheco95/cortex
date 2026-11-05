@@ -8,13 +8,22 @@ import { localToday } from '../store/types.js';
 import { taskRoster } from '../cli/task-scoping.js';
 import { HEARTBEAT_USAGE, NOT_ACCEPTED_MESSAGE } from '../cli/tasks-register.js';
 import { collectLearn, isInside } from './collect-learn.js';
+import { collectFresh } from './collect-fresh.js';
+import { collectQuality, type LintCounts } from './collect-quality.js';
+import { nameFlags } from './name-flags.js';
 
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
 }
 
-export interface CollectIO { stdout?: (l: string) => void; stderr?: (l: string) => void; home?: string; tmpDir?: string }
+export interface CollectIO {
+  stdout?: (l: string) => void;
+  stderr?: (l: string) => void;
+  home?: string;
+  tmpDir?: string;
+  lint?: (root: string) => LintCounts;
+}
 
 function localDate(d: Date): string {
   const p = (n: number): string => String(n).padStart(2, '0');
@@ -51,6 +60,40 @@ function learn(args: string[], root: string, io: Required<Pick<CollectIO, 'stdou
   return 0;
 }
 
+function fresh(args: string[], root: string, stdout: (l: string) => void): number {
+  const r = collectFresh(root, flag(args, '--today') ?? localToday());
+  if (args.includes('--json')) stdout(JSON.stringify(r, null, 2));
+  else {
+    stdout(`fresh: ${r.expired.length} expired, ${r.stale.length} stale, ${r.aged.length} aged, ${r.deadRules.length} dead rules, ` +
+      `${r.nearDuplicates.length} near-duplicates, ${r.scaffolding.length} scaffolding, ${r.openPitfalls.count} open pitfalls`);
+  }
+  return 0;
+}
+
+function quality(args: string[], root: string, io: Required<Pick<CollectIO, 'stdout' | 'stderr'>> & CollectIO): number {
+  const dir = flag(args, '--flags');
+  if (dir !== undefined) {
+    const base = flag(args, '--base');
+    if (base === undefined) {
+      io.stderr('cortex tasks collect quality: --flags needs --base <sha>');
+      return 2;
+    }
+    const r = nameFlags({ projectRoot: root, dir, base });
+    if (args.includes('--json')) io.stdout(JSON.stringify(r, null, 2));
+    else io.stdout(`flags: ${r.governed.length} governed, ${r.flagged.length} flagged`);
+    return 0;
+  }
+  const r = collectQuality({
+    projectRoot: root,
+    home: io.home ?? os.homedir(),
+    today: flag(args, '--today') ?? localToday(),
+    ...(io.lint === undefined ? {} : { lint: io.lint }),
+  });
+  if (args.includes('--json')) io.stdout(JSON.stringify(r, null, 2));
+  else io.stdout(r.ported ? `quality: rotation ${r.rotation.join(', ')}` : 'quality: not ported');
+  return 0;
+}
+
 export function tasksCollect(args: string[], root: string, io: CollectIO = {}): number {
   const stdout = io.stdout ?? ((l: string) => console.log(l));
   const stderr = io.stderr ?? ((l: string) => console.error(l));
@@ -64,6 +107,6 @@ export function tasksCollect(args: string[], root: string, io: CollectIO = {}): 
     return 1;
   }
   if (task === 'learn') return learn(rest, root, { ...io, stdout, stderr });
-  stderr(`cortex tasks collect ${task}: not built yet`);
-  return 1;
+  if (task === 'fresh') return fresh(rest, root, stdout);
+  return quality(rest, root, { ...io, stdout, stderr });
 }

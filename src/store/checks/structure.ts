@@ -154,7 +154,7 @@ export function checkDecision(store: Store): Finding[] {
   return out;
 }
 
-const CHANGE_KINDS = new Set(['change-request', 'decision-change', 'other']);
+const CHANGE_KINDS = new Set(['change-request', 'decision-change', 'spec-amendment', 'other']);
 
 export function checkChange(store: Store): Finding[] {
   const out: Finding[] = [];
@@ -186,6 +186,11 @@ export function checkAliases(store: Store): Finding[] {
 }
 
 const STORE_LINK = /\]\(((?:cortex\/)?(?:code|world|history|now)\/[^)\s#]+)(?:#[^)]*)?\)/g;
+
+/** The store-relative targets of every store link in a body. */
+export function storeLinkTargets(body: string): string[] {
+  return [...body.matchAll(STORE_LINK)].map((m) => m[1]!.replace(/^cortex\//, ''));
+}
 
 /** Store-relative or repo-relative links, and `source:` origins, that do not resolve. */
 export function checkLinks(store: Store): Finding[] {
