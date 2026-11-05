@@ -167,6 +167,12 @@ describe('store.managed-block: the Specs section', () => {
     expect([...SPECS_SECTION_STAGE2]).toEqual(ruleFence(11).split('\n\n'));
   });
 
+  it('[STORE-MANAGED-BLOCK-15] The hook sentence is true where no hook is installed', () => {
+    const lines = SPECS_SECTION_STAGE1.split('\n');
+    expect(lines).toContain('If `core.hooksPath` is `.githooks`, a git hook checks every commit. It runs no tests. It refuses:');
+    expect(lines.filter((l) => l.startsWith('A git hook'))).toEqual([]);
+  });
+
   it('A new folder or skill makes the block stale', async () => {
     const root = withSpecs('staleskill');
     await map(root);
