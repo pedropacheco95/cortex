@@ -121,6 +121,12 @@ In-session capture does not happen on its own: an audit of five sessions found a
 - **When** it is condensed
 - **Then** the written file holds `[redacted:github-token]` and `[redacted:credential]`, holds neither original string, and that session's `redactions` is 2
 
+### Trailers are parsed per schema S10
+
+- **Given** the values `core-cli.init#rule-7 — wording`, `a#b#c -- x y`, `a#b - why`, `core-cli.init wording`, `core-cli.init — wording` and `a#b —`
+- **When** each is parsed
+- **Then** the first three give spec id, item and reason, the target split at its last `#`, and the last three are malformed
+
 ### Amendments are recorded once
 
 - **Given** a repository with two commits carrying `Specflow-Amends: core-cli.init#rule-7 — wording` and `Specflow-Amends: core-cli.init#CORE-CLI-INIT-3 -- renamed`
@@ -144,12 +150,19 @@ In-session capture does not happen on its own: an audit of five sessions found a
 - **Given** `specflow.since` set to a commit, an older commit with a malformed trailer and a well-formed one, and a newer commit with a malformed trailer
 - **When** `--apply` runs
 - **Then** only the newer malformed trailer is listed, and the older well-formed one is recorded
+- **And** with no `specflow.since`, or one git cannot resolve, every malformed trailer is listed
 
 ### Without --apply nothing changes
 
 - **Given** unrecorded trailers
 - **When** `cortex store amendments` runs
 - **Then** it lists them and writes nothing
+
+### Outside a git repository nothing happens
+
+- **Given** a folder that is not a git repository
+- **When** `cortex store amendments` runs
+- **Then** it prints `not a git repository` and exits 0
 
 ### The bundle is mirrored and Tier D
 

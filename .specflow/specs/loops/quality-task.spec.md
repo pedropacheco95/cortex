@@ -39,7 +39,7 @@ It may write anywhere in `cortex/` (P11), but its two spec jobs only propose: sp
 1. **The bundle.** `skills/cortex-quality/SKILL.md`, mirrored byte for byte to `.claude/skills/cortex-quality/SKILL.md`, Tier D and 4.0-only (as `loops.learn-task` Rule 1). The skill never spawns a nested `claude` process.
 2. **`cortex tasks collect quality [--json] [--today YYYY-MM-DD]`** is read-only and exits 0 whatever it finds. Every key is always present:
    - `ported`: true when `specflow/INDEX.md` exists;
-   - `lint`: `{ exit, errors, warnings }` from `cortex specs lint --json`, or null when not ported;
+   - `lint`: `{ exit, errors, warnings }` from `cortex specs lint --json`, or null when not ported; when lint gives no result in that shape, `errors` and `warnings` are null and `notRun` says so, because an empty count must not read as a pass;
    - `coverage`: `{ criteria, tagged, unverified: [<criterion id>], untaggedTests }` from `cortex specs index --json`, or null when not ported;
    - `rotation`: Rule 3's spec ids, `[]` when not ported;
    - `area`: the folder under `specflow/impl/` of the first spec in `rotation`, or null;
@@ -88,6 +88,13 @@ It may write anywhere in `cortex/` (P11), but its two spec jobs only propose: sp
 - **Given** a 4.0 store with no `specflow/INDEX.md`
 - **When** `cortex tasks collect quality --json` runs
 - **Then** `ported` is false, `lint` and `coverage` are null, `rotation` is empty, `usage` and `store` are filled, and exit is 0
+
+### Lint that did not run does not read as a pass
+
+- **Given** `cortex specs lint --json` printing nothing, or text that is not its JSON shape
+- **When** collect runs on a ported repository
+- **Then** `lint` has its `exit`, null `errors` and `warnings`, and a `notRun` line
+- **And** real counts are kept, a failing lint included
 
 ### Coverage comes from the index
 
@@ -184,7 +191,7 @@ It may write anywhere in `cortex/` (P11), but its two spec jobs only propose: sp
 ### The skill handles the unported and unconfigured cases
 
 - **Given** the SKILL.md text
-- **Then** it contains the phrases `not ported` and `no test command configured`, and says a failed step is recorded and the next step runs
+- **Then** it contains the phrases `not ported`, `no test command configured` and `lint not run`, and says a failed step is recorded and the next step runs
 
 ### The skill fixes nothing
 
