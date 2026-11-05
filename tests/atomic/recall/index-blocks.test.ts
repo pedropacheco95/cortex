@@ -104,7 +104,7 @@ function estimate(content: string): number {
 // AC: The block lists entries newest first with their subjects (Rules 1, 2)
 // ---------------------------------------------------------------------------
 describe('AC: the block lists entries newest first with their subjects', () => {
-  it('appends a block after the template with the newest entry first and at most four subjects', () => {
+  it('[RECALL-INDEX-BLOCKS-1] appends a block after the template with the newest entry first and at most four subjects', () => {
     const root = project('ac1');
     const result = writeRecallIndexBlocks(root, twoDecisions());
     expect(result.written).toEqual(['atlas/decisions']);
@@ -165,7 +165,7 @@ describe('AC: the block lists entries newest first with their subjects', () => {
 // AC: Hand-written text outside the markers survives (Rules 1, 5)
 // ---------------------------------------------------------------------------
 describe('AC: hand-written text outside the markers survives', () => {
-  it('a hand-edited index with a block keeps every outside byte and gets the block replaced in place', () => {
+  it('[RECALL-INDEX-BLOCKS-2] a hand-edited index with a block keeps every outside byte and gets the block replaced in place', () => {
     const edited = DECISIONS_TEMPLATE.replace('**Read this when:** you need', '**Read this when:** you (locally edited) need');
     expect(edited).not.toBe(DECISIONS_TEMPLATE);
     const root = project('survive', { decisions: edited });
@@ -210,7 +210,7 @@ describe('AC: hand-written text outside the markers survives', () => {
 // AC: Over budget collapses to a count line and validates clean (Rule 3)
 // ---------------------------------------------------------------------------
 describe('AC: over budget collapses to a count line and validates clean', () => {
-  it('forty 15-word decisions keep the newest prefix, end with the collapse line, and raise no check.index-shape warning', () => {
+  it('[RECALL-INDEX-BLOCKS-3] forty 15-word decisions keep the newest prefix, end with the collapse line, and raise no check.index-shape warning', () => {
     const root = project('budget');
     writeRecallIndexBlocks(root, manyDecisions(40));
     const content = read(root, DECISIONS_REL);
@@ -259,7 +259,7 @@ describe('AC: over budget collapses to a count line and validates clean', () => 
 // AC: No entries, no block (Rule 4)
 // ---------------------------------------------------------------------------
 describe('AC: no entries, no block', () => {
-  it('an existing evidence block is removed when the index has no evidence entry; the file equals the template', () => {
+  it('[RECALL-INDEX-BLOCKS-4] an existing evidence block is removed when the index has no evidence entry; the file equals the template', () => {
     const root = project('empty');
     const withEvidence = recallIndexFixture(
       { 'pulse.usage': recallSubject({ evidence: ['evidence.2026-09-15-usage'] }) },
@@ -301,7 +301,7 @@ describe('AC: no entries, no block', () => {
 // AC: A rerun writes nothing (Rule 5)
 // ---------------------------------------------------------------------------
 describe('AC: a rerun writes nothing', () => {
-  it('a second run over the same index leaves both mtimes untouched and reports both files unchanged', () => {
+  it('[RECALL-INDEX-BLOCKS-5] a second run over the same index leaves both mtimes untouched and reports both files unchanged', () => {
     const root = project('rerun');
     const index = recallIndexFixture(
       {

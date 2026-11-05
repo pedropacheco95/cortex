@@ -361,7 +361,7 @@ describe('cutTitle and the two line shapes — Rule 7', () => {
     expect(cutTitle('abcdefghijklmnopqrstuvwxyz', 10)).toBe('abcdefghi…');
   });
 
-  it('recallLine is `Recall: <kind> <YYYY-MM-DD> <title cut to 60> (<path>)`', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-1] recallLine is `Recall: <kind> <YYYY-MM-DD> <title cut to 60> (<path>)`', () => {
     const index = sampleRecallIndex();
     expect(recallLine(index.entries['decision.2026-07-07-five-module-architecture'] as RecallEntry)).toBe(
       'Recall: decision 2026-07-07 Five-module architecture (.cortex/atlas/decisions/2026-07-07-five-module-architecture.md)',
@@ -372,7 +372,7 @@ describe('cutTitle and the two line shapes — Rule 7', () => {
     expect(line.endsWith('… (p/e.md)')).toBe(true);
   });
 
-  it('decidedLine is `Decided: <id> · Open: <T-id> <thread key text cut to 40>`', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-2] decidedLine is `Decided: <id> · Open: <T-id> <thread key text cut to 40>`', () => {
     expect(decidedLine('decision.2026-07-10-x', 'T-004', 'Do you want the counter in state/ or at the pulse root?')).toBe(
       'Decided: decision.2026-07-10-x · Open: T-004 Do you want the counter in state/ or at…',
     );
@@ -380,7 +380,7 @@ describe('cutTitle and the two line shapes — Rule 7', () => {
 });
 
 describe('markerLine — the PreRead form (schema §5 row (c))', () => {
-  it('lists Decided (max 3), Evidence (max 2), Open (max 2), newest first, empty parts omitted', () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-6] lists Decided (max 3), Evidence (max 2), Open (max 2), newest first, empty parts omitted', () => {
     const entries = {
       'decision.2026-01-01-a': recallEntry('decision', 'a', 'p/a.md', '2026-01-01'),
       'decision.2026-03-01-c': recallEntry('decision', 'c', 'p/c.md', '2026-03-01'),
@@ -400,7 +400,7 @@ describe('markerLine — the PreRead form (schema §5 row (c))', () => {
     expect(markerLine(recallSubject({ evidence: ['evidence.2026-09-15-usage'] }), 'pulse.usage', index)).toBe('Evidence: evidence.2026-09-15-usage');
   });
 
-  it('appends ` · more: cortex why <key>` when any part was cut, and returns null for an empty subject', () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-7] appends ` · more: cortex why <key>` when any part was cut, and returns null for an empty subject', () => {
     const entries: Record<string, ReturnType<typeof recallEntry>> = {};
     const decided: string[] = [];
     for (let i = 1; i <= 4; i++) {
@@ -421,7 +421,7 @@ describe('markerLine — the PreRead form (schema §5 row (c))', () => {
 describe('selectPointers — Rules 8–10', () => {
   const none = () => new Set<string>();
 
-  it('AC: a grep into a subject directory points at the newest current decision', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-1] AC: a grep into a subject directory points at the newest current decision', () => {
     const index = sampleRecallIndex();
     const { lines, fired } = selectPointers(index, ['R-001'], [], none());
     expect(lines).toEqual([
@@ -432,20 +432,20 @@ describe('selectPointers — Rules 8–10', () => {
     expect(lines.join('\n').length).toBeLessThanOrEqual(240);
   });
 
-  it('AC: a subject with a decision and an open thread gets the Decided line', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-2] AC: a subject with a decision and an open thread gets the Decided line', () => {
     const index = sampleRecallIndex();
     const { lines } = selectPointers(index, ['.specflow/specs/pulse/hygiene.spec.md'], [], none());
     expect(lines[0]).toBe('Decided: decision.2026-07-10-x · Open: T-004 Do you want the counter in state/ or at…');
     expect(lines.length).toBe(1);
   });
 
-  it('AC: a spec path matches by its id — the evidence entry is named via a Recall: evidence line', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-3] AC: a spec path matches by its id — the evidence entry is named via a Recall: evidence line', () => {
     const index = sampleRecallIndex();
     const { lines } = selectPointers(index, ['pulse.usage'], [], none());
     expect(lines).toEqual(['Recall: evidence 2026-09-15 Cortex usage over 41 sessions (.cortex/atlas/evidence/2026-09-15-usage.md)']);
   });
 
-  it('AC: subject beats keyword, open thread beats older decision', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-8] AC: subject beats keyword, open thread beats older decision', () => {
     const index = recallIndexFixture(
       { 'src/pulse/usage.ts': recallSubject({ decided: ['decision.2026-07-01-a'], threads: ['T-009'] }) },
       {
@@ -493,7 +493,7 @@ describe('selectPointers — Rules 8–10', () => {
     expect(fired).toEqual(['evidence.2026-09-15-usage', 'decision.2026-08-05-insight-pull-only-stance-reversed']);
   });
 
-  it('AC: the more tail names the subject', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-9] AC: the more tail names the subject', () => {
     const entries = {
       'decision.2026-01-01-a': recallEntry('decision', 'A', 'p/a.md', '2026-01-01'),
       'decision.2026-02-01-b': recallEntry('decision', 'B', 'p/b.md', '2026-02-01'),
@@ -508,7 +508,7 @@ describe('selectPointers — Rules 8–10', () => {
     expect(lines).toEqual(['Recall: decision 2026-03-01 C (p/c.md)', 'Recall: decision 2026-02-01 B (p/b.md) · more: cortex why R-003']);
   });
 
-  it('AC: budget trims the title to 20, then drops the second line, then the tail', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-10] AC: budget trims the title to 20, then drops the second line, then the tail', () => {
     const title = 'word '.repeat(40).trim();
     const entries = {
       'decision.2026-01-01-a': recallEntry('decision', title, '.cortex/atlas/decisions/2026-01-01-a.md', '2026-01-01'),
@@ -543,7 +543,7 @@ describe('selectPointers — Rules 8–10', () => {
     expect(single.fired).toEqual(['R-004', 'decision.2026-03-01-u']);
   });
 
-  it('Rule 9: a fired subject falls through to the next candidate, a fired entry is skipped within a subject', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-11] Rule 9: a fired subject falls through to the next candidate, a fired entry is skipped within a subject', () => {
     const index = sampleRecallIndex();
     const subjectFired = selectPointers(index, ['R-001', 'pulse.usage'], [], new Set(['R-001']));
     expect(subjectFired.lines[0]).toMatch(/^Recall: evidence 2026-09-15 /);
@@ -568,7 +568,7 @@ describe('selectPointers — Rules 8–10', () => {
     expect(selectPointers(index, ['R-008'], [], none())).toEqual({ lines: [], fired: [] });
   });
 
-  it('AC: the imperative-free grammar — every line starts Recall: or Decided:, no instruction words', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-15] AC: the imperative-free grammar — every line starts Recall: or Decided:, no instruction words', () => {
     const index = sampleRecallIndex();
     const payloads = [
       selectPointers(index, ['R-001'], [], none()).lines,
@@ -615,7 +615,7 @@ describe('Open: lines — hooks.prompt-route Rule 9', () => {
     expect(THREAD_LIST_TAIL).toBe(' · more: cortex thread list');
   });
 
-  it('AC "The first prompt of a session surfaces the previous session\'s hanging question": the exact string', () => {
+  it('[HOOKS-PROMPT-ROUTE-2] AC "The first prompt of a session surfaces the previous session\'s hanging question": the exact string', () => {
     expect(openLine('T-006', '2026-09-15T10:00:00.000Z', T006_TEXT, T006_PATH)).toBe(
       `Open: T-006 (2026-09-15) Do you want the counter in state/ or at the pulse root? (${T006_PATH})`,
     );
@@ -629,7 +629,7 @@ describe('Open: lines — hooks.prompt-route Rule 9', () => {
     expect(line).toBe('Open: T-010 (2026-09-10) Should the recall… (.cortex/pulse/threads/T-010-x.md)');
   });
 
-  it('AC "Three qualifying threads show the two newest and point onward": two short lines, the tail on the second', () => {
+  it('[HOOKS-PROMPT-ROUTE-9] AC "Three qualifying threads show the two newest and point onward": two short lines, the tail on the second', () => {
     const lines = fitOpenLines(
       [
         { id: 'T-012', opened: '2026-09-14T00:00:00Z', keyText: 'Should the recall index be rebuilt on every commit?', relPath: '.cortex/pulse/threads/T-012-rebuild.md' },
@@ -658,7 +658,7 @@ describe('Open: lines — hooks.prompt-route Rule 9', () => {
     expect(fitOpenLines([{ id: 'T-012', opened: '2026-09-14', keyText: 'x', relPath: '.cortex/pulse/threads/T-012-x.md' }], false)[0]).not.toContain('more:');
   });
 
-  it('AC "Budget cuts the key text, then the second line, never the path": two 200-char texts, 60-char slugs', () => {
+  it('[HOOKS-PROMPT-ROUTE-10] AC "Budget cuts the key text, then the second line, never the path": two 200-char texts, 60-char slugs', () => {
     const text = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' ').slice(0, 200);
     const slug = 'a'.repeat(60);
     const items = [
@@ -680,7 +680,7 @@ describe('Open: lines — hooks.prompt-route Rule 9', () => {
     expect(lines[0]).toContain('T-021');
   });
 
-  it('the cuts go 80 → 40 → 20 before the second line is dropped', () => {
+  it('[HOOKS-PROMPT-ROUTE-10] the cuts go 80 → 40 → 20 before the second line is dropped', () => {
     // Paths of 50 chars: at 80 two lines overflow, at 40 they fit.
     const text = Array.from({ length: 30 }, (_, i) => `w${i}`).join(' '); // > 80 chars
     const rel = (id: string) => `.cortex/pulse/threads/${id}-${'b'.repeat(20)}.md`;
@@ -701,7 +701,7 @@ describe('Open: lines — hooks.prompt-route Rule 9', () => {
     }
   });
 
-  it('when even one 20-char line with the tail is over budget, the tail goes last', () => {
+  it('[HOOKS-PROMPT-ROUTE-10] when even one 20-char line with the tail is over budget, the tail goes last', () => {
     const longPath = `.cortex/pulse/threads/T-040-${'c'.repeat(190)}.md`;
     const lines = fitOpenLines([{ id: 'T-040', opened: '2026-09-15', keyText: 'a question that is long enough to be cut', relPath: longPath }], true);
     expect(lines).toHaveLength(1);
@@ -714,7 +714,7 @@ describe('Open: lines — hooks.prompt-route Rule 9', () => {
     expect(fitOpenLines([], true)).toEqual([]);
   });
 
-  it('the imperative-free grammar: no read/consult/check/should/you tokens are ever added by the formatter', () => {
+  it('[HOOKS-PROMPT-ROUTE-11] the imperative-free grammar: no read/consult/check/should/you tokens are ever added by the formatter', () => {
     const line = openLine('T-006', '2026-09-15', 'the counter', T006_PATH);
     const words = line.replace(/\(.*\)$/, '').split(/\s+/);
     for (const banned of ['read', 'consult', 'check', 'should', 'you']) expect(words).not.toContain(banned);
@@ -742,16 +742,16 @@ describe('recallLine — the no-date form and id-before-title for rule and bug (
   const B031 = recallEntry('bug', 'camelCase column slipped into migrations', '.cortex/compass/bugs/B-031-camelcase-column.md', '2026-06-28', ['src/db']);
   const ENV = recallEntry('compass-doc', 'Environment', '.cortex/compass/environment.md', '', ['scheduled', 'jobs']);
 
-  it('a rule: `Recall: rule R-014 <title> (<path>)` — no date field, the id before the title', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-14] a rule: `Recall: rule R-014 <title> (<path>)` — no date field, the id before the title', () => {
     expect(recallLine(R014, 60, 'R-014')).toBe('Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)');
   });
 
-  it('a bug with an opened date: `Recall: bug 2026-06-28 B-031 <title> (<path>)`; without one the date is omitted', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-14] a bug with an opened date: `Recall: bug 2026-06-28 B-031 <title> (<path>)`; without one the date is omitted', () => {
     expect(recallLine(B031, 60, 'B-031')).toBe('Recall: bug 2026-06-28 B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)');
     expect(recallLine({ ...B031, date: '' }, 60, 'B-031')).toBe('Recall: bug B-031 camelCase column slipped into migrations (.cortex/compass/bugs/B-031-camelcase-column.md)');
   });
 
-  it('a compass document: `Recall: compass-doc Environment (<path>)` — no date, no id', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-13] a compass document: `Recall: compass-doc Environment (<path>)` — no date, no id', () => {
     expect(recallLine(ENV, 60, 'compass.environment')).toBe('Recall: compass-doc Environment (.cortex/compass/environment.md)');
   });
 
@@ -778,7 +778,7 @@ describe('selectPointers — strength order thread > bug > decision > rule > evi
     'T-050': recallEntry('thread', 'Rename the columns?', '.cortex/pulse/threads/T-050-rename.md', '2026-09-10'),
   };
 
-  it('AC: a grep into a governed directory points at the rule, and an open bug outranks it', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-14] AC: a grep into a governed directory points at the rule, and an open bug outranks it', () => {
     const ruleOnly = recallIndexFixture({ 'src/db': recallSubject({ rules: ['R-014'] }) }, entries);
     expect(selectPointers(ruleOnly, ['src/db'], [], none()).lines).toEqual([
       'Recall: rule R-014 No camelCase database columns (.cortex/compass/rules/R-014-no-camelcase-database-columns.md)',
@@ -826,7 +826,7 @@ describe('selectPointers — strength order thread > bug > decision > rule > evi
     expect(undated.lines[1]).toMatch(/^Recall: bug B-010 undated ten /);
   });
 
-  it('AC: a keyword search lands on a compass document — no date field, under 60 tokens', () => {
+  it('[HOOKS-SEARCH-ANNOTATE-13] AC: a keyword search lands on a compass document — no date field, under 60 tokens', () => {
     const index = recallIndexFixture(
       {},
       { 'compass.environment': recallEntry('compass-doc', 'Environment', '.cortex/compass/environment.md', '', ['scheduled', 'jobs', 'environment']) },
@@ -849,7 +849,7 @@ describe('markerLine — the Bugs: part rides last (hooks.pre-read-writeback Rul
     'R-001': recallEntry('rule', 'core', '.cortex/compass/rules/R-001-x.md', ''),
   };
 
-  it('`Decided: … · Bugs: <ids, max 2>` newest opened first, empty last; the tail when cut; rules never appear', () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-9] `Decided: … · Bugs: <ids, max 2>` newest opened first, empty last; the tail when cut; rules never appear', () => {
     const index = recallIndexFixture({}, entries);
     expect(markerLine(recallSubject({ decided: ['decision.2026-07-07-a'], bugs: ['B-019'], rules: ['R-001'] }), 'schema.validator', index)).toBe(
       'Decided: decision.2026-07-07-a · Bugs: B-019',
