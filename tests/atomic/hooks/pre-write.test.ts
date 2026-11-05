@@ -55,7 +55,7 @@ governs:
   - "src/db/**/*.ts"`;
 
 describe('path matching via governs globs (Rule 4a)', () => {
-  it('warns with rule ID, title, and source on a governs match', async () => {
+  it('[HOOKS-PRE-WRITE-1] warns with rule ID, title, and source on a governs match', async () => {
     const root = tmp('path');
     makeCortexProject(root);
     writeRule(root, 'R-014-db-naming.md', DB_RULE, 'Columns MUST be snake_case.\n');
@@ -78,7 +78,7 @@ describe('path matching via governs globs (Rule 4a)', () => {
     expect(parseEnvelope(stdout).additionalContext).toContain('may apply to src/db/x.ts');
   });
 
-  it('non-matching path → exit 0, EMPTY stdout (Rule 3)', async () => {
+  it('[HOOKS-PRE-WRITE-3] non-matching path → exit 0, EMPTY stdout (Rule 3)', async () => {
     const root = tmp('nomatch');
     makeCortexProject(root);
     writeRule(root, 'R-014-db-naming.md', DB_RULE);
@@ -99,7 +99,7 @@ check:
   pattern: "console\\\\.log"
   expect: absent`;
 
-  it('warns when an Edit new_string matches an expect:absent regex', async () => {
+  it('[HOOKS-PRE-WRITE-2] warns when an Edit new_string matches an expect:absent regex', async () => {
     const root = tmp('editcontent');
     makeCortexProject(root);
     writeRule(root, 'R-020-no-console-log.md', LOG_RULE);
@@ -210,7 +210,7 @@ check:
   pattern: "@anthropic-ai/"
   expect: absent`;
 
-  it('predicate passes on a governed path → silent (B-001 regression)', async () => {
+  it('[HOOKS-PRE-WRITE-6] predicate passes on a governed path → silent (B-001 regression)', async () => {
     const root = tmp('b001-silent');
     makeCortexProject(root);
     writeRule(root, 'R-001-no-llm-sdk.md', SDK_RULE);
@@ -220,7 +220,7 @@ check:
     expect(result).toEqual({ exitCode: 0, stdout: '' });
   });
 
-  it('predicate fires on the same governed path → warns', async () => {
+  it('[HOOKS-PRE-WRITE-2] predicate fires on the same governed path → warns', async () => {
     const root = tmp('b001-fires');
     makeCortexProject(root);
     writeRule(root, 'R-001-no-llm-sdk.md', SDK_RULE);
@@ -231,7 +231,7 @@ check:
     expect(parseEnvelope(stdout).additionalContext).toContain('R-001');
   });
 
-  it('predicateless rule (check: absent) still warns on path match', async () => {
+  it('[HOOKS-PRE-WRITE-7] predicateless rule (check: absent) still warns on path match', async () => {
     const root = tmp('b001-predicateless');
     makeCortexProject(root);
     writeRule(root, 'R-030-db-rule.md', `id: R-030\ntitle: DB conventions\nsource: []\ngoverns:\n  - "src/db/**"`);
@@ -278,7 +278,7 @@ check:
 });
 
 describe('never blocks, by envelope (Rule 2)', () => {
-  it('five matching rules → one allow envelope, no deny/ask/updatedInput, exit 0', async () => {
+  it('[HOOKS-PRE-WRITE-4] five matching rules → one allow envelope, no deny/ask/updatedInput, exit 0', async () => {
     const root = tmp('five');
     makeCortexProject(root);
     for (let i = 1; i <= 5; i++) {
@@ -300,7 +300,7 @@ describe('never blocks, by envelope (Rule 2)', () => {
 });
 
 describe('retired rules (Rule 4)', () => {
-  it('status: retired → silent even on a governs match', async () => {
+  it('[HOOKS-PRE-WRITE-8] status: retired → silent even on a governs match', async () => {
     const root = tmp('retired');
     makeCortexProject(root);
     writeRule(
@@ -314,7 +314,7 @@ describe('retired rules (Rule 4)', () => {
 });
 
 describe('degradation (Rule 6)', () => {
-  it('malformed rule file is skipped; valid rules still warn; hook-errors gains an entry; a degradation line rides along', async () => {
+  it('[HOOKS-PRE-WRITE-5] malformed rule file is skipped; valid rules still warn; hook-errors gains an entry; a degradation line rides along', async () => {
     const root = tmp('malformed');
     makeCortexProject(root);
     writeRule(root, 'R-001-broken.md', 'id: [unclosed\ntitle: broken');

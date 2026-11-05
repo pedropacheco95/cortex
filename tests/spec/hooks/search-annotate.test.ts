@@ -79,7 +79,7 @@ describe('hooks.search-annotate — a fresh project, end to end', () => {
     cleanTmp(home);
   });
 
-  it('Rule 1: init registers the PreToolUse Grep|Bash row alongside the rest of the set, and the project validates clean', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-16] Rule 1: init registers the PreToolUse Grep|Bash row alongside the rest of the set, and the project validates clean', async () => {
     expect(initExit).toBe(0);
     const settings = JSON.parse(fs.readFileSync(path.join(root, '.claude', 'settings.json'), 'utf-8'));
     expect(settings.hooks.PreToolUse).toContainEqual(SEARCH_ROW);
@@ -87,7 +87,7 @@ describe('hooks.search-annotate — a fresh project, end to end', () => {
     expect(report.violations.filter((v) => v.check === 'check.hook-config')).toEqual([]);
   });
 
-  it('Rules 2–8: a Grep on the rule file, through the dispatcher, points at the compiled decision in the allow envelope', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-1] Rules 2–8: a Grep on the rule file, through the dispatcher, points at the compiled decision in the allow envelope', async () => {
     const result = await runHook(
       'search-annotate',
       stdin(root, { tool_name: 'Grep', tool_input: { pattern: 'frontmatter', path: '.cortex/compass/rules/R-001-sample-rule.md' } }),
@@ -101,7 +101,7 @@ describe('hooks.search-annotate — a fresh project, end to end', () => {
     );
   });
 
-  it('Rules 3 + 9 interact: a Bash grep of the same subject in the same session is silent, the memory carries the key, and nothing was logged', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-11] Rules 3 + 9 interact: a Bash grep of the same subject in the same session is silent, the memory carries the key, and nothing was logged', async () => {
     const again = await runHook(
       'search-annotate',
       stdin(root, { tool_name: 'Bash', tool_input: { command: 'grep -rn "governs" .cortex/compass/rules/R-001-sample-rule.md' } }),
@@ -121,7 +121,7 @@ describe('hooks.search-annotate — a fresh project, end to end', () => {
     expect(parseEnvelope(fresh.stdout).additionalContext).toMatch(/^Recall: decision 2026-07-01 /);
   });
 
-  it('Rule 10: with the index deleted the hook is silent, unlogged, and the registration still validates', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-12] Rule 10: with the index deleted the hook is silent, unlogged, and the registration still validates', async () => {
     clearRecallIndexCache();
     fs.rmSync(path.join(root, '.cortex', 'recall-index.json'));
     const result = await runHook(
@@ -141,7 +141,7 @@ describe('hooks.search-annotate — check.hook-config demands the row from a Cor
     while (dirs.length > 0) cleanTmp(dirs.pop() as string);
   });
 
-  it('a settings file carrying `cortex hook session-start` but no search-annotate entry → one error naming the command and `cortex sync`', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-16] a settings file carrying `cortex hook session-start` but no search-annotate entry → one error naming the command and `cortex sync`', async () => {
     const root = makeTmpDir('search-annotate-spec-stale');
     dirs.push(root);
     copyDir(VALID_FIXTURE, root);
@@ -210,7 +210,7 @@ describe('hooks.search-annotate — compass carriers end to end (Rules 7–8, fi
   });
   afterEach(() => clearRecallIndexCache());
 
-  it('a Grep into src/db points at the rule (no date, id before title); a Grep on schema.ts leads with the bug and follows with the rule', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-14] a Grep into src/db points at the rule (no date, id before title); a Grep on schema.ts leads with the bug and follows with the rule', async () => {
     const dir = await runHook('search-annotate', stdin(root, { tool_name: 'Grep', tool_input: { pattern: 'column', path: 'src/db' } }, 'compass-a'));
     expect(dir.exitCode).toBe(0);
     expect(parseEnvelope(dir.stdout).additionalContext).toBe(
@@ -224,7 +224,7 @@ describe('hooks.search-annotate — compass carriers end to end (Rules 7–8, fi
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('a keyword search for "scheduled jobs" lands on environment.md by its heading tokens, never by its body', async () => {
+  it('[HOOKS-SEARCH-ANNOTATE-13] a keyword search for "scheduled jobs" lands on environment.md by its heading tokens, never by its body', async () => {
     const hit = await runHook('search-annotate', stdin(root, { tool_name: 'Bash', tool_input: { command: 'grep -rn "scheduled jobs" src/' } }, 'compass-c'));
     expect(parseEnvelope(hit.stdout).additionalContext).toBe('Recall: compass-doc Environment (.cortex/compass/environment.md)');
     const miss = await runHook('search-annotate', stdin(root, { tool_name: 'Bash', tool_input: { command: 'grep -rn "nightly staging" src/' } }, 'compass-d'));

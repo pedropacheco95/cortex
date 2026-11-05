@@ -39,7 +39,7 @@ function stdinJson(fields: Record<string, unknown>): string {
 }
 
 describe('AC session-start.1: fresh hygiene report → pointer plus one-line summary', () => {
-  it('generated 3 hours ago → pointer, v3 modules, and a hygiene line naming the report', async () => {
+  it('[HOOKS-SESSION-START-1] generated 3 hours ago → pointer, v3 modules, and a hygiene line naming the report', async () => {
     const root = tmp('ss1');
     makeCortexProject(root);
     writeHygieneReport(root, isoHoursAgo(3, new Date()), '3 stale purposes flagged.');
@@ -60,7 +60,7 @@ describe('AC session-start.1: fresh hygiene report → pointer plus one-line sum
 });
 
 describe('AC session-start.2: stale report → pointer only', () => {
-  it('generated 80 hours ago with a 48h window → no hygiene line', async () => {
+  it('[HOOKS-SESSION-START-2] generated 80 hours ago with a 48h window → no hygiene line', async () => {
     const root = tmp('ss2');
     makeCortexProject(root);
     writeHygieneReport(root, isoHoursAgo(80, new Date()), 'old news');
@@ -75,7 +75,7 @@ describe('AC session-start.2: stale report → pointer only', () => {
 });
 
 describe('AC session-start.3: uninitialised project → fully silent', () => {
-  it('cwd without .cortex/ → exit 0, empty stdout', async () => {
+  it('[HOOKS-SESSION-START-3] cwd without .cortex/ → exit 0, empty stdout', async () => {
     const root = tmp('ss3');
     const result = await runHook(
       'session-start',
@@ -87,7 +87,7 @@ describe('AC session-start.3: uninitialised project → fully silent', () => {
 });
 
 describe('AC session-start.4: malformed hygiene report degrades to pointer', () => {
-  it('unparseable frontmatter → pointer injected, hook-errors entry names hook + file + failure', async () => {
+  it('[HOOKS-SESSION-START-4] unparseable frontmatter → pointer injected, hook-errors entry names hook + file + failure', async () => {
     const root = tmp('ss4');
     makeCortexProject(root);
     fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
@@ -110,7 +110,7 @@ describe('AC session-start.4: malformed hygiene report degrades to pointer', () 
 });
 
 describe('AC session-start.5: payload respects the token budget', () => {
-  it('additionalContext is under 100 tokens (chars/4), per schema §5, on every source', async () => {
+  it('[HOOKS-SESSION-START-5] additionalContext is under 100 tokens (chars/4), per schema §5, on every source', async () => {
     const root = tmp('ss5');
     makeCortexProject(root, { modules: ['compass', 'atlas', 'archive', 'insight', 'pulse'] });
     writeHygieneReport(root, isoHoursAgo(1, new Date()), 'summary '.repeat(200));
@@ -126,7 +126,7 @@ describe('AC session-start.5: payload respects the token budget', () => {
 });
 
 describe('AC session-start.6: qualifying observations render as a compact digest', () => {
-  it('deployment (salient) + working-style (sessions>=3) digest; audience (non-qualifying) covered by the pointer', async () => {
+  it('[HOOKS-SESSION-START-6] deployment (salient) + working-style (sessions>=3) digest; audience (non-qualifying) covered by the pointer', async () => {
     const root = tmp('ss6');
     makeCortexProject(root);
     writeObservationEntry(root, 'deployment', {
@@ -156,7 +156,7 @@ describe('AC session-start.6: qualifying observations render as a compact digest
 });
 
 describe('AC session-start.7: no qualifying observations omits the digest entirely', () => {
-  it('every entry salient:false and sessions<3 → no Observations line, hygiene/pointer unaffected', async () => {
+  it('[HOOKS-SESSION-START-7] every entry salient:false and sessions<3 → no Observations line, hygiene/pointer unaffected', async () => {
     const root = tmp('ss7');
     makeCortexProject(root);
     writeHygieneReport(root, isoHoursAgo(1, new Date()), 'fresh and fine.');
@@ -173,7 +173,7 @@ describe('AC session-start.7: no qualifying observations omits the digest entire
 });
 
 describe('AC session-start.8: absent observations directory is silent, not an error', () => {
-  it('no insight/observations/ at all → digest omitted, no hook-errors entry, exit 0', async () => {
+  it('[HOOKS-SESSION-START-11] no insight/observations/ at all → digest omitted, no hook-errors entry, exit 0', async () => {
     const root = tmp('ss8');
     makeCortexProject(root);
     const { exitCode, stdout } = await runHook(

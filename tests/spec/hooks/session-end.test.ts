@@ -83,7 +83,7 @@ function pulseOnly(root: string, before: Map<string, string>): string[] {
 // ---------------------------------------------------------------------------
 
 describe('AC — a question left hanging becomes the record\'s open question', () => {
-  it('writes the full §4.5.3 record with the question from the transcript; stdout empty, exit 0', async () => {
+  it('[HOOKS-SESSION-END-4] writes the full §4.5.3 record with the question from the transcript; stdout empty, exit 0', async () => {
     const root = project('hanging');
     const transcript = writeTranscriptFile(root, [
       customTitleEntry('Recall step 1'),
@@ -149,7 +149,7 @@ describe('AC — a question left hanging becomes the record\'s open question', (
 });
 
 describe('AC — a fresher companion file wins over a lagging transcript and is then deleted', () => {
-  it('uses the companion\'s final paragraph with source stop and its `at`; the file is gone afterwards', async () => {
+  it('[HOOKS-SESSION-END-5] uses the companion\'s final paragraph with source stop and its `at`; the file is gone afterwards', async () => {
     const root = project('companion-fresh');
     const transcript = writeTranscriptFile(root, [
       turnAt('assistant', 'Two options.', T0),
@@ -169,7 +169,7 @@ describe('AC — a fresher companion file wins over a lagging transcript and is 
     expect(fs.existsSync(companionPathOf(root, 'sess-end'))).toBe(false);
   });
 
-  it('the companion file written by `cortex hook stop` is the one SessionEnd consumes', async () => {
+  it('[HOOKS-SESSION-END-5] the companion file written by `cortex hook stop` is the one SessionEnd consumes', async () => {
     const root = project('stop-then-end');
     const transcript = writeTranscriptFile(root, [turnAt('user', 'go', T0), turnAt('assistant', 'Working.', T1)]);
     await runStop({ session_id: 'sess-end', last_assistant_message: 'All set.\n\nWant me to open the PR?', cwd: root }, { now: new Date('2026-09-15T10:00:30.000Z') });
@@ -185,7 +185,7 @@ describe('AC — a fresher companion file wins over a lagging transcript and is 
 });
 
 describe('AC — an older companion file is ignored and still deleted', () => {
-  it('companion at 09:58 vs a transcript ending with a user message at 10:00 → open_question null, file deleted', async () => {
+  it('[HOOKS-SESSION-END-6] companion at 09:58 vs a transcript ending with a user message at 10:00 → open_question null, file deleted', async () => {
     const root = project('companion-old');
     const transcript = writeTranscriptFile(root, [
       turnAt('assistant', QUESTION, T1),
@@ -199,7 +199,7 @@ describe('AC — an older companion file is ignored and still deleted', () => {
 });
 
 describe('AC — an offer is recorded as an offer, an answered question is not recorded', () => {
-  it('offer with nothing after → kind offer; the same followed by a user reply → null', async () => {
+  it('[HOOKS-SESSION-END-7] offer with nothing after → kind offer; the same followed by a user reply → null', async () => {
     const root = project('offer');
     const offer = 'I can wire the sync path too if you want.';
     const t1 = writeTranscriptFile(root, [turnAt('user', 'ok', T0), turnAt('assistant', offer, T1)], 'one.jsonl');
@@ -212,7 +212,7 @@ describe('AC — an offer is recorded as an offer, an answered question is not r
 });
 
 describe('AC — approvals are paired with what was approved', () => {
-  it('records one entry pairing the approval with the preceding assistant paragraph', async () => {
+  it('[HOOKS-SESSION-END-8] records one entry pairing the approval with the preceding assistant paragraph', async () => {
     const root = project('approvals');
     const transcript = writeTranscriptFile(root, [
       turnAt('assistant', 'Two ways to do it.\n\nProposal: allocate T-ids from a separate counter file.', T0),
@@ -230,7 +230,7 @@ describe('AC — approvals are paired with what was approved', () => {
     expect(listThreads(root).threads.map((t) => t.kind)).toEqual(['approval', 'approval']);
   });
 
-  it('a `proceed` with no assistant message before it in the transcript is skipped', async () => {
+  it('[HOOKS-SESSION-END-8] a `proceed` with no assistant message before it in the transcript is skipped', async () => {
     const root = project('approvals-skip');
     const transcript = writeTranscriptFile(root, [
       turnAt('user', 'proceed', T0),
@@ -245,7 +245,7 @@ describe('AC — approvals are paired with what was approved', () => {
 });
 
 describe('AC — harness-injected user entries are not approvals and do not answer questions', () => {
-  it('teammate, system-reminder and tool_result-only user entries are ignored; the human\'s Approved. counts and replies', async () => {
+  it('[HOOKS-SESSION-END-9] teammate, system-reminder and tool_result-only user entries are ignored; the human\'s Approved. counts and replies', async () => {
     const root = project('injected');
     writeThread(root, makeThread({ id: 'T-003', body: 'Keep the counter in state/?' }));
     writeThread(root, makeThread({ id: 'T-004', body: 'Which root for the counter, pulse or state?' }));
@@ -278,7 +278,7 @@ describe('AC — harness-injected user entries are not approvals and do not answ
     expect(record?.session_kind).toBe('interactive');
   });
 
-  it('a question followed only by a <task-notification> user entry is still the open question', async () => {
+  it('[HOOKS-SESSION-END-9] a question followed only by a <task-notification> user entry is still the open question', async () => {
     const root = project('injected-q');
     const transcript = writeTranscriptFile(root, [
       turnAt('user', 'go', T0),
@@ -301,7 +301,7 @@ describe('AC — harness-injected user entries are not approvals and do not answ
 });
 
 describe('AC — tagged findings are captured, malformed tags are skipped', () => {
-  it('one well-formed tag survives next to a multi-line and a 301-character one', async () => {
+  it('[HOOKS-SESSION-END-10] one well-formed tag survives next to a multi-line and a 301-character one', async () => {
     const root = project('findings');
     const transcript = writeTranscriptFile(root, [
       turnAt('user', 'measure it', T0),
@@ -318,7 +318,7 @@ describe('AC — tagged findings are captured, malformed tags are skipped', () =
 });
 
 describe('AC — table rows, code fences and tagged text never feed the lexicon fallback', () => {
-  it('records exactly the tag and the prose sentence', async () => {
+  it('[HOOKS-SESSION-END-11] records exactly the tag and the prose sentence', async () => {
     const root = project('table-rows');
     const text = [
       'Results:',
@@ -340,7 +340,7 @@ describe('AC — table rows, code fences and tagged text never feed the lexicon 
 });
 
 describe('AC — status-ladder lines never feed the lexicon fallback', () => {
-  it('records exactly the prose sentence and nothing from the three ladder lines', async () => {
+  it('[HOOKS-SESSION-END-12] records exactly the prose sentence and nothing from the three ladder lines', async () => {
     const root = project('status-ladder');
     const text = [
       'Goal ladder:',
@@ -361,7 +361,7 @@ describe('AC — status-ladder lines never feed the lexicon fallback', () => {
 describe('AC — untagged measurements fall back to the lexicon in interactive sessions only', () => {
   const SENTENCE = 'The line-filtered pass measured 3.1x faster than a full parse.';
 
-  it('interactive → one lexicon finding; scheduled → zero findings and session_kind scheduled', async () => {
+  it('[HOOKS-SESSION-END-13] interactive → one lexicon finding; scheduled → zero findings and session_kind scheduled', async () => {
     const root = project('lexicon');
     const inter = writeTranscriptFile(root, [turnAt('user', 'run it', T0), turnAt('assistant', `Ok. ${SENTENCE}`, T1)], 'i.jsonl');
     const sched = writeTranscriptFile(root, [skillBaseDirUserTurn(), turnAt('assistant', `Ok. ${SENTENCE}`, T1)], 's.jsonl');
@@ -398,7 +398,7 @@ function scratchFixture(root: string): { scratch: string; transcript: string; de
 }
 
 describe('AC — scratchpad artefacts are copied with their first heading, using scratchpad_dir when given', () => {
-  it('two entries, defects.md copied byte-identically with its heading, big.md not copied; one artefact thread', async () => {
+  it('[HOOKS-SESSION-END-14] two entries, defects.md copied byte-identically with its heading, big.md not copied; one artefact thread', async () => {
     const root = project('artefacts');
     const { scratch, transcript, defects } = scratchFixture(root);
     await run(sessionEndStdin(root, transcript, { scratchpad_dir: scratch }), { now: NOW });
@@ -416,7 +416,7 @@ describe('AC — scratchpad artefacts are copied with their first heading, using
 });
 
 describe('AC — without scratchpad_dir the path heuristic applies', () => {
-  it('three entries, /elsewhere/scratchpad/notes.md among them', async () => {
+  it('[HOOKS-SESSION-END-15] three entries, /elsewhere/scratchpad/notes.md among them', async () => {
     const root = project('heuristic');
     const { transcript } = scratchFixture(root);
     await run(sessionEndStdin(root, transcript), { now: NOW });
@@ -432,7 +432,7 @@ describe('AC — without scratchpad_dir the path heuristic applies', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC — threads opened and answered are named in the record', () => {
-  it('a question and a tagged finding → two thread files, ids in creation order, counter 2, answered empty', async () => {
+  it('[HOOKS-SESSION-END-16] a question and a tagged finding → two thread files, ids in creation order, counter 2, answered empty', async () => {
     const root = project('threads');
     const transcript = writeTranscriptFile(root, [
       turnAt('user', 'measure then ask', T0),
@@ -480,7 +480,7 @@ describe('AC — threads opened and answered are named in the record', () => {
 });
 
 describe('AC — a scheduled session opens finding and artefact threads only', () => {
-  it('the record keeps the question and approval; threads/ holds finding and artefact only', async () => {
+  it('[HOOKS-SESSION-END-17] the record keeps the question and approval; threads/ holds finding and artefact only', async () => {
     const root = project('scheduled');
     const scratch = path.join(tmp('scratch-s'), 'scratchpad');
     fs.mkdirSync(scratch, { recursive: true });
@@ -509,7 +509,7 @@ describe('AC — a scheduled session opens finding and artefact threads only', (
 // ---------------------------------------------------------------------------
 
 describe('AC — message extraction is capped at the tail, prefix scans cover the whole file', () => {
-  it('5 MiB: partial, scheduled, the finding, the artefact and the question are recorded; approvals are empty', async () => {
+  it('[HOOKS-SESSION-END-18] 5 MiB: partial, scheduled, the finding, the artefact and the question are recorded; approvals are empty', async () => {
     const root = project('5mib');
     const scratch = path.join(tmp('scratch-5'), 'scratchpad');
     fs.mkdirSync(scratch, { recursive: true });
@@ -541,7 +541,7 @@ describe('AC — message extraction is capped at the tail, prefix scans cover th
 });
 
 describe('AC — a transcript over the hard cap still yields a tail record', () => {
-  it('70 MiB (sparse): partial, the open question is recorded, the head\'s finding is not, the run completes', async () => {
+  it('[HOOKS-SESSION-END-19] 70 MiB (sparse): partial, the open question is recorded, the head\'s finding is not, the run completes', async () => {
     const root = project('70mib');
     const transcript = writeSparseTranscript(root, {
       head: [turnAt('assistant', `Head: ${FINDING_TAG}`, T0)],
@@ -558,7 +558,7 @@ describe('AC — a transcript over the hard cap still yields a tail record', () 
 });
 
 describe('AC — bulk lines are skipped without loss of small ones', () => {
-  it('a 300 KiB tool_use line next to a small scratchpad Write → exactly one artefact, no error logged', async () => {
+  it('[HOOKS-SESSION-END-20] a 300 KiB tool_use line next to a small scratchpad Write → exactly one artefact, no error logged', async () => {
     const root = project('bulk');
     const transcript = writeTranscriptFile(root, [
       turnAt('user', 'go', T0),
@@ -577,7 +577,7 @@ describe('AC — bulk lines are skipped without loss of small ones', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC — missing transcript degrades to nothing', () => {
-  it('exit 0, empty stdout, no record/thread/scratch, exactly one hook-errors entry naming session-end', async () => {
+  it('[HOOKS-SESSION-END-21] exit 0, empty stdout, no record/thread/scratch, exactly one hook-errors entry naming session-end', async () => {
     const root = project('missing');
     const result = await run({ session_id: 'abc', transcript_path: '/nope.jsonl', cwd: root }, { now: NOW });
     expect(result).toEqual({ exitCode: 0, stdout: '' });
@@ -616,7 +616,7 @@ describe('AC — missing transcript degrades to nothing', () => {
 });
 
 describe('AC — only pulse is written', () => {
-  it('a full run with threads, artefacts and a companion touches only .cortex/pulse/', async () => {
+  it('[HOOKS-SESSION-END-22] a full run with threads, artefacts and a companion touches only .cortex/pulse/', async () => {
     const root = project('pulse-only');
     fs.mkdirSync(path.join(root, '.cortex', 'compass', 'rules'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex', 'compass', 'rules', 'R-001.md'), '---\nid: R-001\n---\n');
@@ -640,7 +640,7 @@ describe('AC — only pulse is written', () => {
 });
 
 describe('AC — re-firing for the same session replaces the record without doubling threads', () => {
-  it('second fire rewrites sessions/abc.json, threads/ still holds one file, threads_opened is ["T-001"]', async () => {
+  it('[HOOKS-SESSION-END-23] second fire rewrites sessions/abc.json, threads/ still holds one file, threads_opened is ["T-001"]', async () => {
     const root = project('refire');
     const transcript = writeTranscriptFile(root, [turnAt('user', 'go', T0), turnAt('assistant', QUESTION, T1)]);
     await run(sessionEndStdin(root, transcript, { session_id: 'abc', reason: 'resume' }), { now: NOW });

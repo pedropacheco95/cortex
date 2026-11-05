@@ -324,7 +324,7 @@ describe('silence and degradation paths', () => {
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('a tag whose file has NO insight entry is rejected: logged, remembered, no file created', async () => {
+  it('[HOOKS-POST-READ-3] a tag whose file has NO insight entry is rejected: logged, remembered, no file created', async () => {
     const root = tmp('noentry');
     makeCortexProject(root);
     const transcript = writeTranscript(root, [
@@ -359,7 +359,7 @@ describe('silence and degradation paths', () => {
     expect(memory.split('\n').filter((l) => l.trim())).toHaveLength(1);
   });
 
-  it('invalid payloads (multi-line, over-ceiling) → rejected, logged, remembered, nothing written', async () => {
+  it('[HOOKS-POST-READ-3] invalid payloads (multi-line, over-ceiling) → rejected, logged, remembered, nothing written', async () => {
     const root = tmp('invalid-payloads');
     makeCortexProject(root);
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.' });

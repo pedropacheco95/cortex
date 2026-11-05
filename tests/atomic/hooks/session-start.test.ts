@@ -78,7 +78,7 @@ describe('pointer payload (Rule 2, schema §5)', () => {
 });
 
 describe('hygiene line freshness (Rule 3)', () => {
-  it('fresh report (3h old, window 48) → hygiene line with the report path', async () => {
+  it('[HOOKS-SESSION-START-1] fresh report (3h old, window 48) → hygiene line with the report path', async () => {
     const root = tmp('fresh');
     makeCortexProject(root);
     writeHygieneReport(root, isoHoursAgo(3, NOW), '2 stale purposes, 1 dangling spec link.');
@@ -88,7 +88,7 @@ describe('hygiene line freshness (Rule 3)', () => {
     expect(ctx).toContain('(.cortex/pulse/reports/hygiene.md)');
   });
 
-  it('stale report (80h old, window 48) → no hygiene line', async () => {
+  it('[HOOKS-SESSION-START-2] stale report (80h old, window 48) → no hygiene line', async () => {
     const root = tmp('stale');
     makeCortexProject(root);
     writeHygieneReport(root, isoHoursAgo(80, NOW), 'anything');
@@ -118,7 +118,7 @@ describe('hygiene line freshness (Rule 3)', () => {
 });
 
 describe('silence when Cortex is absent (Rule 5)', () => {
-  it('no .cortex/ at all → exit 0, empty stdout, nothing written', async () => {
+  it('[HOOKS-SESSION-START-3] no .cortex/ at all → exit 0, empty stdout, nothing written', async () => {
     const root = tmp('absent');
     const result = await run(stdinFor(root), { now: NOW });
     expect(result).toEqual({ exitCode: 0, stdout: '' });
@@ -135,7 +135,7 @@ describe('silence when Cortex is absent (Rule 5)', () => {
 });
 
 describe('degradation (Rule 6, warn-never-block)', () => {
-  it('malformed hygiene report frontmatter → pointer still injected + hook-errors entry', async () => {
+  it('[HOOKS-SESSION-START-4] malformed hygiene report frontmatter → pointer still injected + hook-errors entry', async () => {
     const root = tmp('badreport');
     makeCortexProject(root);
     fs.mkdirSync(path.join(root, '.cortex', 'pulse', 'reports'), { recursive: true });
@@ -177,7 +177,7 @@ describe('degradation (Rule 6, warn-never-block)', () => {
 });
 
 describe('observations digest (Rule 4, schema §4.10.11)', () => {
-  it('qualifying entries (salient or sessions>=3) render as compact one-liners plus the pointer', async () => {
+  it('[HOOKS-SESSION-START-6] qualifying entries (salient or sessions>=3) render as compact one-liners plus the pointer', async () => {
     const root = tmp('obs-qualify');
     makeCortexProject(root);
     writeObservationEntry(root, 'deployment', {
@@ -200,7 +200,7 @@ describe('observations digest (Rule 4, schema §4.10.11)', () => {
     expect(ctx).toContain('(more: .cortex/insight/observations/)');
   });
 
-  it('no qualifying entries → digest omitted entirely', async () => {
+  it('[HOOKS-SESSION-START-7] no qualifying entries → digest omitted entirely', async () => {
     const root = tmp('obs-none');
     makeCortexProject(root);
     writeObservationEntry(root, 'audience', { salient: false, sessionsCount: 1 });
@@ -211,7 +211,7 @@ describe('observations digest (Rule 4, schema §4.10.11)', () => {
     expect(ctx).not.toContain('Observations:');
   });
 
-  it('absent observations/ directory → silent, no digest, no hook-errors entry', async () => {
+  it('[HOOKS-SESSION-START-11] absent observations/ directory → silent, no digest, no hook-errors entry', async () => {
     const root = tmp('obs-absent');
     makeCortexProject(root);
     const { stdout } = await run(stdinFor(root), { now: NOW });
@@ -254,7 +254,7 @@ describe('observations digest (Rule 4, schema §4.10.11)', () => {
     expect(log).toContain('observations/broken.md');
   });
 
-  it('truncates lowest-priority entries first to respect the 150-token digest budget', async () => {
+  it('[HOOKS-SESSION-START-5] truncates lowest-priority entries first to respect the 150-token digest budget', async () => {
     const root = tmp('obs-budget');
     makeCortexProject(root);
     // Many qualifying entries with long bodies — the digest must still fit
@@ -276,7 +276,7 @@ describe('observations digest (Rule 4, schema §4.10.11)', () => {
 });
 
 describe('token budget (schema §5, RULES.md rule 11)', () => {
-  it('payload stays under 100 tokens (chars/4) even with a huge hygiene summary', async () => {
+  it('[HOOKS-SESSION-START-5] payload stays under 100 tokens (chars/4) even with a huge hygiene summary', async () => {
     const root = tmp('budget');
     makeCortexProject(root);
     writeHygieneReport(root, isoHoursAgo(1, NOW), 'x'.repeat(2000));
@@ -302,7 +302,7 @@ function withEntrySkill(root: string): void {
 }
 
 describe('Rule 9: the entry line (schema §5, 3.3)', () => {
-  it('is injected under the specflow profile with the skill installed', async () => {
+  it('[HOOKS-SESSION-START-8] is injected under the specflow profile with the skill installed', async () => {
     const root = tmp('entry-on');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'specflow' } });
     withEntrySkill(root);
@@ -322,7 +322,7 @@ describe('Rule 9: the entry line (schema §5, 3.3)', () => {
     expect(payload).toContain(ENTRY_LINE);
   });
 
-  it('is omitted under the superpowers profile', async () => {
+  it('[HOOKS-SESSION-START-9] is omitted under the superpowers profile', async () => {
     const root = tmp('entry-off-profile');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'superpowers' } });
     withEntrySkill(root);
@@ -332,14 +332,14 @@ describe('Rule 9: the entry line (schema §5, 3.3)', () => {
     expect(payload).toContain('Modules:');
   });
 
-  it('is omitted when the skill is not installed — never point at an absent skill', async () => {
+  it('[HOOKS-SESSION-START-10] is omitted when the skill is not installed — never point at an absent skill', async () => {
     const root = tmp('entry-off-missing');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'specflow' } });
     const payload = parseEnvelope((await run(stdinFor(root), { now: NOW })).stdout).additionalContext as string;
     expect(payload).not.toContain('specflow-entry');
   });
 
-  it('stays inside the <100-token pointer budget (RULES 11)', async () => {
+  it('[HOOKS-SESSION-START-5] stays inside the <100-token pointer budget (RULES 11)', async () => {
     const root = tmp('entry-budget');
     makeCortexProject(root, { config: { schemaVersion: '3.0', profile: 'specflow' } });
     withEntrySkill(root);

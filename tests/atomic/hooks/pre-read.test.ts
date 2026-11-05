@@ -92,7 +92,7 @@ describe('purposeFirstLine helper', () => {
 });
 
 describe('invitation gate: the read-time marker suppresses the invite', () => {
-  it('a Purpose already carrying the read-time marker → no invitation line', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-2] a Purpose already carrying the read-time marker → no invitation line', async () => {
     const root = makeProject('marker');
     writeInsightEntry(root, 'src/a.ts', {
       purpose: `Corrected earlier.\n\n${READ_TIME_MARKER}alice/sess-1)*`,
@@ -177,7 +177,7 @@ describe('silence and degradation', () => {
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('insight present but no entry for the path → silent, no pulse entry', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-3] insight present but no entry for the path → silent, no pulse entry', async () => {
     const root = makeProject('noentry');
     writeInsightEntry(root, 'src/other.ts', { purpose: 'Someone else.' });
     expect(await run(stdinFor(root, path.join(root, 'src/a.ts')))).toEqual({ exitCode: 0, stdout: '' });
@@ -247,7 +247,7 @@ describe('Rule 6: recall marker', () => {
     ]) expect(isMarkedTarget(p), p).toBe(false);
   });
 
-  it('AC: a spec read with a recall subject gets the marker alone (no insight entry)', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-6] AC: a spec read with a recall subject gets the marker alone (no insight entry)', async () => {
     const root = makeProject('marker-spec');
     writeRecallIndexFixture(root, recallIndexFixture(
       { 'pulse.usage': recallSubject({ decided: [], evidence: ['evidence.2026-09-15-usage'], threads: ['T-004'] }) },
@@ -261,7 +261,7 @@ describe('Rule 6: recall marker', () => {
     expect(Math.ceil(env.additionalContext.length / 4)).toBeLessThanOrEqual(50);
   });
 
-  it('AC: a rule read with three of everything is cut to 3/2/2, newest first, and pointed onward', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-7] AC: a rule read with three of everything is cut to 3/2/2, newest first, and pointed onward', async () => {
     const root = makeProject('marker-rule');
     const entries: Record<string, ReturnType<typeof recallEntry>> = {};
     for (let i = 1; i <= 4; i++) entries[`decision.2026-09-0${i}-d${i}`] = recallEntry('decision', `d${i}`, `.cortex/atlas/decisions/2026-09-0${i}-d${i}.md`, `2026-09-0${i}`);
@@ -283,7 +283,7 @@ describe('Rule 6: recall marker', () => {
     );
   });
 
-  it('AC: the schema document aggregates its clause subjects', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-8] AC: the schema document aggregates its clause subjects', async () => {
     const root = makeProject('marker-schema');
     fs.writeFileSync(path.join(root, 'cortex-schema.md'), '## 4. Files\n\n### 4.11 recall-index.json\n\n## 5. Hook payload contracts\n');
     writeRecallIndexFixture(root, recallIndexFixture(
@@ -300,7 +300,7 @@ describe('Rule 6: recall marker', () => {
     expect(ctx).toBe('Decided: decision.2026-08-05-x · Open: T-010');
   });
 
-  it('AC: a source file with an insight entry AND a path subject gets summary + invitation, no marker, under 75 tokens', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-10] AC: a source file with an insight entry AND a path subject gets summary + invitation, no marker, under 75 tokens', async () => {
     const root = makeProject('marker-source');
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120 });
     writeRecallIndexFixture(root, recallIndexFixture(
@@ -315,7 +315,7 @@ describe('Rule 6: recall marker', () => {
     expect(Math.ceil(ctx.length / 4)).toBeLessThanOrEqual(75);
   });
 
-  it('AC: a spec file with both a (fixture) insight entry and a subject gets the summary then the Decided: line, under 100 tokens', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-10] AC: a spec file with both a (fixture) insight entry and a subject gets the summary then the Decided: line, under 100 tokens', async () => {
     const root = makeProject('marker-both');
     writeInsightEntry(root, USAGE_SPEC, {
       purpose: `Specifies usage.\n\n${READ_TIME_MARKER}alice/sess-1)*`,
@@ -365,7 +365,7 @@ describe('Rule 6: recall marker', () => {
     expect(ctx.endsWith('\nDecided: decision.2026-08-05-x · Evidence: evidence.2026-09-15-usage')).toBe(true);
   });
 
-  it('AC: no index → no marker, empty stdout (no insight entry either), and hook-errors.md is not created', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-11] AC: no index → no marker, empty stdout (no insight entry either), and hook-errors.md is not created', async () => {
     const root = makeProject('marker-noindex');
     expect(await run(stdinFor(root, path.join(root, USAGE_SPEC)))).toEqual({ exitCode: 0, stdout: '' });
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
@@ -578,7 +578,7 @@ describe('Rule 7: read deferral — constants and helpers', () => {
 });
 
 describe('Rule 7: read deferral — the criteria', () => {
-  it('AC: flag absent, false, or "yes" → never a deny; the Rule 2 allow payload, no read-deferred/ directory, under 75 tokens', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-12] AC: flag absent, false, or "yes" → never a deny; the Rule 2 allow payload, no read-deferred/ directory, under 75 tokens', async () => {
     const variants: Array<[string, Record<string, unknown>]> = [
       ['absent', { schemaVersion: '3.4', hooks: { preRead: true }, loop: { enabled: false } }],
       ['false', DEFER_OFF],
@@ -596,7 +596,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     }
   });
 
-  it('AC: flag on — the first read of a source file is deferred, with the summary in its place (the four pinned lines)', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-13] AC: flag on — the first read of a source file is deferred, with the summary in its place (the four pinned lines)', async () => {
     const { root, transcript } = makeDeferProject('deny');
     const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
     const parsed = JSON.parse(result.stdout) as { hookSpecificOutput: Record<string, unknown> };
@@ -622,7 +622,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     expect(fs.existsSync(readsMemoryPath(root, 's1'))).toBe(false);
   });
 
-  it('AC: the retry proceeds with the ordinary payload and no duplicate note; the third read is the duplicate', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-14] AC: the retry proceeds with the ordinary payload and no duplicate note; the third read is the duplicate', async () => {
     const { root, transcript } = makeDeferProject('retry');
     const stdin = deferStdin(root, path.join(root, 'src/a.ts'), transcript);
     const first = await track(run(stdin));
@@ -655,7 +655,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     expect(fs.existsSync(ledgerPath(root))).toBe(false);
   });
 
-  it('AC: gated and scaffolding kinds are never deferred — each payload is byte-identical to the flag-off run', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-15] AC: gated and scaffolding kinds are never deferred — each payload is byte-identical to the flag-off run', async () => {
     const kinds = [
       '.specflow/specs/pulse/usage.spec.md',
       '.cortex/compass/rules/R-001-core-no-llm-calls.md',
@@ -713,7 +713,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     expect(fs.readFileSync(ledgerPath(root), 'utf-8')).toBe('src/forty.ts\n');
   });
 
-  it('AC: the circuit breaker holds at 25 — a 26th eligible file gets the allow payload and the ledger keeps 25 lines', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-17] AC: the circuit breaker holds at 25 — a 26th eligible file gets the allow payload and the ledger keeps 25 lines', async () => {
     const { root, transcript } = makeDeferProject('breaker');
     const ledger = ledgerPath(root);
     fs.mkdirSync(path.dirname(ledger), { recursive: true });
@@ -736,7 +736,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     expect(fs.readFileSync(ledger, 'utf-8').split('\n').filter((l) => l.length > 0)).toHaveLength(25);
   });
 
-  it('AC: scheduled and unknown sessions are never deferred — skill preamble, scheduled-task tag, a missing path, no transcript_path', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-18] AC: scheduled and unknown sessions are never deferred — skill preamble, scheduled-task tag, a missing path, no transcript_path', async () => {
     const { root } = makeDeferProject('sessions');
     const preamble = writeTranscriptFile(root, [skillBaseDirUserTurn(), textTurn('assistant', 'ok')], 'preamble.jsonl');
     const tagged = writeTranscriptFile(root, [scheduledTaskUserTurn(), textTurn('assistant', 'ok')], 'tagged.jsonl');
@@ -764,7 +764,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     expect(fs.existsSync(path.join(root, '.cortex', READ_DEFER_DIR))).toBe(false);
   });
 
-  it('AC: an unwritable ledger (a directory in its place) means allow, once logged naming pre-read and the ledger path', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-19] AC: an unwritable ledger (a directory in its place) means allow, once logged naming pre-read and the ledger path', async () => {
     const { root, transcript } = makeDeferProject('unwritable');
     fs.mkdirSync(ledgerPath(root), { recursive: true });
     const result = await track(run(deferStdin(root, path.join(root, 'src/a.ts'), transcript)));
@@ -834,7 +834,7 @@ describe('Rule 7: read deferral — the criteria', () => {
     expect(lines[3]).toBe(RETRY_SENTENCE);
   });
 
-  it('AC: the deny never leaks — across every run above the JSON never contains "ask" or updatedInput, and deny appeared only where named', () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-20] AC: the deny never leaks — across every run above the JSON never contains "ask" or updatedInput, and deny appeared only where named', () => {
     expect(seenStdouts.length).toBeGreaterThan(20);
     for (const out of seenStdouts) {
       expect(out).not.toContain('"ask"');
@@ -880,7 +880,7 @@ describe('Rule 8: stale marker — grammar and constants', () => {
 });
 
 describe('Rule 8: stale marker — the criteria', () => {
-  it('AC: a stale entry is marked on the summary line within the ceiling; the invitation follows unchanged; under 75 tokens', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-21] AC: a stale entry is marked on the summary line within the ceiling; the invitation follows unchanged; under 75 tokens', async () => {
     const root = makeProject('r8-summary');
     writeSource(root, 'src/a.ts');
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120, sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
@@ -896,7 +896,7 @@ describe('Rule 8: stale marker — the criteria', () => {
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('AC (and): an entry whose source_sha256 is the hash of the body carries no marker', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-21] AC (and): an entry whose source_sha256 is the hash of the body carries no marker', async () => {
     const root = makeProject('r8-fresh');
     writeSource(root, 'src/a.ts');
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120, sha256: sha256Of(A_BODY), builtAtCommit: BUILT_LONG });
@@ -953,7 +953,7 @@ describe('Rule 8: stale marker — the criteria', () => {
     clearRecallIndexCache();
   });
 
-  it('AC: a stale entry is marked on the deferral reason\'s first line; the last line is the retry sentence; at most 1,000 characters', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-22] AC: a stale entry is marked on the deferral reason\'s first line; the last line is the retry sentence; at most 1,000 characters', async () => {
     const { root, transcript } = makeDeferProject('r8-deny');
     writeSource(root, 'src/a.ts');
     const purpose600 = 'Counts Cortex usage from session transcripts and reports it. '.repeat(10).trim().slice(0, 600);
@@ -1003,7 +1003,7 @@ describe('Rule 8: stale marker — the criteria', () => {
     expect((env.permissionDecisionReason as string).split('\n')[0]).toBe(`Deferred: src/a.ts (~2532 tok, 235 lines). ${A_PURPOSE}`);
   });
 
-  it('AC: an unreadable target (a directory) is never marked and never logged — the payload is exactly what Rules 2–6 produce', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-23] AC: an unreadable target (a directory) is never marked and never logged — the payload is exactly what Rules 2–6 produce', async () => {
     const root = makeProject('r8-dir');
     fs.mkdirSync(path.join(root, 'src', 'a.ts'), { recursive: true });
     writeInsightEntry(root, 'src/a.ts', { purpose: 'Does A.', tokens: 120, sha256: STALE_SHA, builtAtCommit: BUILT_LONG });
@@ -1064,7 +1064,7 @@ describe('Rule 6 (fifth revision): an open bug rides the marker last, and alone 
     return root;
   }
 
-  it('AC: the spec read carries `Decided: … · Bugs: B-019`; the source read is summary, invitation, then `Bugs: B-019` alone, under 100 tokens', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-9] AC: the spec read carries `Decided: … · Bugs: B-019`; the source read is summary, invitation, then `Bugs: B-019` alone, under 100 tokens', async () => {
     const root = bugProject('bugs-ac');
     const spec = parseEnvelope((await run(stdinFor(root, path.join(root, VALIDATOR_SPEC)))).stdout).additionalContext;
     expect(spec).toBe('Decided: decision.2026-07-07-a · Bugs: B-019');
@@ -1075,7 +1075,7 @@ describe('Rule 6 (fifth revision): an open bug rides the marker last, and alone 
     expect(Math.ceil(source.length / 4)).toBeLessThanOrEqual(100);
   });
 
-  it('AC (and): with the bug resolved — the index recompiled without it — the source read carries no marker at all', async () => {
+  it('[HOOKS-PRE-READ-WRITEBACK-9] AC (and): with the bug resolved — the index recompiled without it — the source read carries no marker at all', async () => {
     const root = bugProject('bugs-resolved', { bugs: [] });
     const source = parseEnvelope((await run(stdinFor(root, path.join(root, XREF)))).stdout).additionalContext;
     expect(source.split('\n')).toEqual([`${XREF}: Checks cross-references. (~300 tok). Rules: -.`, XREF_INVITE]);

@@ -43,7 +43,7 @@ describe('Rule 11 — constants and the companion path', () => {
 });
 
 describe('AC — the Stop companion records the last assistant message and nothing else', () => {
-  it('writes text capped at exactly 2000 characters and an iso `at`; stdout empty; nothing else changes', async () => {
+  it('[HOOKS-SESSION-END-2] writes text capped at exactly 2000 characters and an iso `at`; stdout empty; nothing else changes', async () => {
     const root = tmp('records');
     makeCortexProject(root);
     const before = snapshotTree(root);

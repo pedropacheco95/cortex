@@ -43,7 +43,7 @@ governs:
   - "src/db/**/*.ts"`;
 
 describe('AC pre-write.1: path-matching rule warns with ID, title, and source', () => {
-  it('Write to src/db/schema.ts under R-014 → allow + warning with all three', async () => {
+  it('[HOOKS-PRE-WRITE-1] Write to src/db/schema.ts under R-014 → allow + warning with all three', async () => {
     const root = tmp('pw1');
     makeCortexProject(root);
     writeRule(root, 'R-014-db-naming.md', R014, 'Columns MUST be snake_case.\n');
@@ -66,7 +66,7 @@ describe('AC pre-write.1: path-matching rule warns with ID, title, and source', 
 });
 
 describe('AC pre-write.2: content-predicate rule warns on proposed content', () => {
-  it('Edit whose new_string contains console.log → warning naming R-020', async () => {
+  it('[HOOKS-PRE-WRITE-2] Edit whose new_string contains console.log → warning naming R-020', async () => {
     const root = tmp('pw2');
     makeCortexProject(root);
     writeRule(
@@ -101,7 +101,7 @@ check:
 });
 
 describe('AC pre-write.3: no matching rule → empty stdout', () => {
-  it('globs match only src/db/** and the Write targets docs/readme.md', async () => {
+  it('[HOOKS-PRE-WRITE-3] globs match only src/db/** and the Write targets docs/readme.md', async () => {
     const root = tmp('pw3');
     makeCortexProject(root);
     writeRule(root, 'R-014-db-naming.md', R014);
@@ -119,7 +119,7 @@ describe('AC pre-write.3: no matching rule → empty stdout', () => {
 });
 
 describe('AC pre-write.4: never blocks, by envelope', () => {
-  it('five simultaneous matches → exit 0, no "deny", no "ask", no updatedInput', async () => {
+  it('[HOOKS-PRE-WRITE-4] five simultaneous matches → exit 0, no "deny", no "ask", no updatedInput', async () => {
     const root = tmp('pw4');
     makeCortexProject(root);
     for (let i = 1; i <= 5; i++) {
@@ -143,7 +143,7 @@ describe('AC pre-write.4: never blocks, by envelope', () => {
 });
 
 describe('AC pre-write.5: malformed rule file degrades without losing the others', () => {
-  it('broken R-001 + valid matching R-002 → R-002 warning, hook-errors names R-001-broken.md', async () => {
+  it('[HOOKS-PRE-WRITE-5] broken R-001 + valid matching R-002 → R-002 warning, hook-errors names R-001-broken.md', async () => {
     const root = tmp('pw5');
     makeCortexProject(root);
     writeRule(root, 'R-001-broken.md', 'id: {unclosed\nnope');
@@ -164,7 +164,7 @@ describe('AC pre-write.5: malformed rule file degrades without losing the others
 });
 
 describe('AC pre-write.7: predicate passes on a governed path → silent (B-001 regression)', () => {
-  it('R-001 with an expect:absent regex, Write to a governed path with conforming content → exit 0, empty stdout', async () => {
+  it('[HOOKS-PRE-WRITE-6] R-001 with an expect:absent regex, Write to a governed path with conforming content → exit 0, empty stdout', async () => {
     const root = tmp('pw7');
     makeCortexProject(root);
     writeRule(
@@ -197,7 +197,7 @@ check:
 });
 
 describe('AC pre-write.8: predicateless rule still warns on path match', () => {
-  it('R-030 with governs and no check: field → Write to src/db/schema.ts warns naming R-030', async () => {
+  it('[HOOKS-PRE-WRITE-7] R-030 with governs and no check: field → Write to src/db/schema.ts warns naming R-030', async () => {
     const root = tmp('pw8');
     makeCortexProject(root);
     writeRule(
@@ -224,7 +224,7 @@ governs:
 });
 
 describe('AC pre-write.6: retired rules are silent', () => {
-  it('path-matching rule with status: retired → empty stdout', async () => {
+  it('[HOOKS-PRE-WRITE-8] path-matching rule with status: retired → empty stdout', async () => {
     const root = tmp('pw6');
     makeCortexProject(root);
     writeRule(

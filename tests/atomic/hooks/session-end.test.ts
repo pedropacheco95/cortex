@@ -78,7 +78,7 @@ describe('Rule 5 — engineering-call constants and prefix triggers', () => {
 });
 
 describe('AC — message extraction is capped at the tail, prefix scans cover the whole file', () => {
-  it('a 5 MiB transcript: tail holds the question, prefix holds title/tool_use/finding/first user/open ids, partial is true', async () => {
+  it('[HOOKS-SESSION-END-18] a 5 MiB transcript: tail holds the question, prefix holds title/tool_use/finding/first user/open ids, partial is true', async () => {
     const dir = tmp('5mib');
     const { path: p, size } = writeLargeTranscript(dir, {
       head: [
@@ -132,7 +132,7 @@ describe('AC — message extraction is capped at the tail, prefix scans cover th
 });
 
 describe('AC — a transcript over the hard cap still yields a tail record', () => {
-  it('a 70 MiB (sparse) transcript: the tail is read, the prefix pass is skipped, partial is true', async () => {
+  it('[HOOKS-SESSION-END-19] a 70 MiB (sparse) transcript: the tail is read, the prefix pass is skipped, partial is true', async () => {
     const dir = tmp('70mib');
     const p = writeSparseTranscript(dir, {
       head: [customTitleEntry('Huge'), turnAt('assistant', `Head: ${FINDING_TAG}`, T0)],
@@ -152,7 +152,7 @@ describe('AC — a transcript over the hard cap still yields a tail record', () 
 });
 
 describe('AC — bulk lines are skipped without loss of small ones', () => {
-  it('a 300 KiB tool_use line is skipped by the prefix pass; the 200-byte Write line next to it is kept', async () => {
+  it('[HOOKS-SESSION-END-20] a 300 KiB tool_use line is skipped by the prefix pass; the 200-byte Write line next to it is kept', async () => {
     const dir = tmp('bulk');
     const bulk = fileToolTurnAt('Write', '/tmp/x/scratchpad/bulk.md', T0, { content: 'y'.repeat(300 * 1024) });
     const small = fileToolTurnAt('Write', '/tmp/x/scratchpad/small.md', T1);
@@ -194,7 +194,7 @@ describe('Rule 7 — the lexicons are pinned exactly as the spec quotes them', (
 });
 
 describe('AC — a question left hanging becomes the record\'s open question (extractOpenQuestion)', () => {
-  it('the last assistant paragraph ending in ? with no user message after → question from the transcript', () => {
+  it('[HOOKS-SESSION-END-4] the last assistant paragraph ending in ? with no user message after → question from the transcript', () => {
     const out = extractOpenQuestion(
       [msg('user', 'go on', T0), msg('assistant', `Here is the plan.\n\n${QUESTION}`, T1)],
       null,
@@ -202,13 +202,13 @@ describe('AC — a question left hanging becomes the record\'s open question (ex
     expect(out).toEqual({ kind: 'question', text: QUESTION, timestamp: T1, source: 'transcript' });
   });
 
-  it('a user message after the last assistant text → null; a plain statement → null', () => {
+  it('[HOOKS-SESSION-END-7] a user message after the last assistant text → null; a plain statement → null', () => {
     expect(extractOpenQuestion([msg('assistant', QUESTION, T0), msg('user', 'no, leave it', T1)], null)).toBeNull();
     expect(extractOpenQuestion([msg('assistant', 'Done. All tests pass.', T0)], null)).toBeNull();
     expect(extractOpenQuestion([], null)).toBeNull();
   });
 
-  it('the offer lexicon yields kind offer; text is capped at 600 characters', () => {
+  it('[HOOKS-SESSION-END-7] the offer lexicon yields kind offer; text is capped at 600 characters', () => {
     const out = extractOpenQuestion([msg('assistant', 'I can wire the sync path too if you want.', T0)], null);
     expect(out?.kind).toBe('offer');
     expect(out?.text).toBe('I can wire the sync path too if you want.');
@@ -227,14 +227,14 @@ describe('AC — a question left hanging becomes the record\'s open question (ex
 });
 
 describe('AC — a fresher companion file wins over a lagging transcript; an older one is ignored', () => {
-  it('companion `at` later than every tail timestamp → its final paragraph, source stop, timestamp at', () => {
+  it('[HOOKS-SESSION-END-5] companion `at` later than every tail timestamp → its final paragraph, source stop, timestamp at', () => {
     const tail = [msg('assistant', 'Two remain.', T0), msg('user', 'ok, which one?', T1)];
     const out = extractOpenQuestion(tail, { text: 'Both work.\n\nShall I keep the counter in state/?', at: T3 });
     // Ends with `?` → question, even though the offer lexicon also matches (Rule 7a's order).
     expect(out).toEqual({ kind: 'question', text: 'Shall I keep the counter in state/?', timestamp: T3, source: 'stop' });
   });
 
-  it('companion `at` not later than the tail → ignored; the transcript rule decides', () => {
+  it('[HOOKS-SESSION-END-6] companion `at` not later than the tail → ignored; the transcript rule decides', () => {
     const tail = [msg('assistant', QUESTION, T1), msg('user', 'state/', T2)];
     expect(extractOpenQuestion(tail, { text: 'Older question?', at: T0 })).toBeNull();
     const hanging = [msg('assistant', QUESTION, T2)];
@@ -247,7 +247,7 @@ describe('AC — a fresher companion file wins over a lagging transcript; an old
 });
 
 describe('AC — approvals are paired with what was approved (extractApprovals)', () => {
-  it('pairs a lexicon-matching user message with the preceding assistant paragraph; skips one with no assistant before', () => {
+  it('[HOOKS-SESSION-END-8] pairs a lexicon-matching user message with the preceding assistant paragraph; skips one with no assistant before', () => {
     const out = extractApprovals([
       msg('assistant', 'Two ways.\n\nProposal: allocate T-ids from a separate counter file.', T0),
       msg('user', 'approved, go ahead', T1),
@@ -258,7 +258,7 @@ describe('AC — approvals are paired with what was approved (extractApprovals)'
     ]);
   });
 
-  it('a match with no preceding assistant message at all is skipped; non-matching user text is ignored', () => {
+  it('[HOOKS-SESSION-END-8] a match with no preceding assistant message at all is skipped; non-matching user text is ignored', () => {
     expect(extractApprovals([msg('user', 'proceed', T0), msg('assistant', 'ok', T1)])).toEqual([]);
     expect(extractApprovals([msg('assistant', 'Plan.', T0), msg('user', 'hmm, not sure', T1)])).toEqual([]);
   });
@@ -278,7 +278,7 @@ describe('AC — approvals are paired with what was approved (extractApprovals)'
 });
 
 describe('AC — tagged findings are captured, malformed tags are skipped (extractFindings)', () => {
-  it('a single-line ≤300 tag is captured with split bears_on; multi-line and 301-char bodies are skipped', () => {
+  it('[HOOKS-SESSION-END-10] a single-line ≤300 tag is captured with split bears_on; multi-line and 301-char bodies are skipped', () => {
     const multiline = '<cortex:finding kind="conclusion">first line\nsecond line</cortex:finding>';
     const tooLong = `<cortex:finding kind="conclusion">${'z'.repeat(301)}</cortex:finding>`;
     const out = extractFindings(
@@ -309,17 +309,17 @@ describe('AC — tagged findings are captured, malformed tags are skipped (extra
 describe('AC — untagged measurements fall back to the lexicon in interactive sessions only', () => {
   const SENTENCE = 'The line-filtered pass measured 3.1x faster than a full parse.';
 
-  it('interactive: a tail assistant sentence with a digit and a lexicon hit becomes a lexicon finding', () => {
+  it('[HOOKS-SESSION-END-13] interactive: a tail assistant sentence with a digit and a lexicon hit becomes a lexicon finding', () => {
     const out = extractFindings([], [msg('assistant', `Ran it twice. ${SENTENCE} Good enough.`, T1)], 'interactive');
     expect(out).toEqual([{ kind: 'measurement', text: SENTENCE, timestamp: T1, source: 'lexicon' }]);
   });
 
-  it('scheduled: the same tail yields no lexicon findings; tags still count', () => {
+  it('[HOOKS-SESSION-END-13] scheduled: the same tail yields no lexicon findings; tags still count', () => {
     expect(extractFindings([], [msg('assistant', SENTENCE, T1)], 'scheduled')).toEqual([]);
     expect(extractFindings([msg('assistant', FINDING_TAG, T0)], [msg('assistant', SENTENCE, T1)], 'scheduled').length).toBe(1);
   });
 
-  it('table rows, fenced code and tagged text never feed the lexicon; prose still does', () => {
+  it('[HOOKS-SESSION-END-11] table rows, fenced code and tagged text never feed the lexicon; prose still does', () => {
     const text = [
       '| 2 | CLI surface | 131,659 | **52,246** | code 2.5× cheaper |',
       '  | 3 | anatomy | 43,000 | 25,284 | code 1.7× cheaper |',
@@ -336,7 +336,7 @@ describe('AC — untagged measurements fall back to the lexicon in interactive s
     ]);
   });
 
-  it('status-ladder lines (bar glyph, "done when", a percentage) never feed the lexicon; prose still does', () => {
+  it('[HOOKS-SESSION-END-12] status-ladder lines (bar glyph, "done when", a percentage) never feed the lexicon; prose still does', () => {
     const text = [
       'A  Cortex reliably reaches prior conclusions ........ 80% ████████░░  done when pointer follow-rate > 0 in `cortex usage`',
       '0% ░░░░░░░░░░  done when a grep into the schema returns a Decided/Open pointer, measured',
@@ -368,7 +368,7 @@ function toolUse(name: string, filePath: string): ExtractedToolUse {
 }
 
 describe('AC — scratchpad artefacts are copied with their first heading, using scratchpad_dir when given', () => {
-  it('keeps only paths under scratchpad_dir; copies text ≤64 KiB byte-identically; records the first heading', () => {
+  it('[HOOKS-SESSION-END-14] keeps only paths under scratchpad_dir; copies text ≤64 KiB byte-identically; records the first heading', () => {
     const root = tmp('artefacts');
     makeCortexProject(root);
     const scratch = path.join(tmp('scratch'), 'x', 'scratchpad');
@@ -437,7 +437,7 @@ describe('AC — scratchpad artefacts are copied with their first heading, using
 });
 
 describe('AC — without scratchpad_dir the path heuristic applies', () => {
-  it('keeps every Write/Edit whose path contains a /scratchpad/ segment', () => {
+  it('[HOOKS-SESSION-END-15] keeps every Write/Edit whose path contains a /scratchpad/ segment', () => {
     const root = tmp('heuristic');
     makeCortexProject(root);
     const uses = [
@@ -487,7 +487,7 @@ describe('Rule 7 — harness-injected user entries are not the human\'s messages
     expect(isHarnessInjected(msg('assistant', '<cortex:finding kind="conclusion">x</cortex:finding>'))).toBe(false);
   });
 
-  it('humanMessages keeps order and drops only the injected user entries', () => {
+  it('[HOOKS-SESSION-END-9] humanMessages keeps order and drops only the injected user entries', () => {
     const list = [
       msg('assistant', 'Proposal: X.', T0),
       msg('user', '<teammate-message>approved, go ahead</teammate-message>', T1),

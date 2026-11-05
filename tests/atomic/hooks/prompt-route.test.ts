@@ -185,7 +185,7 @@ describe('engineering-call constants', () => {
 // ---------------------------------------------------------------------------
 
 describe("AC: the first prompt of a session surfaces the previous session's hanging question", () => {
-  it('emits the UserPromptSubmit envelope with exactly the pinned Open: line and records T-006 in the fired memory', async () => {
+  it('[HOOKS-PROMPT-ROUTE-2] emits the UserPromptSubmit envelope with exactly the pinned Open: line and records T-006 in the fired memory', async () => {
     const { root } = resumptionProject('resume');
     const result = await fire(stdin(root, 'state/ please'));
     expect(result.exitCode).toBe(0);
@@ -197,7 +197,7 @@ describe("AC: the first prompt of a session surfaces the previous session's hang
     expect(readFired(root, 's2')).toEqual(['T-006']);
   });
 
-  it("fires regardless of the prompt's vocabulary — a one-word answer still gets the line", async () => {
+  it("[HOOKS-PROMPT-ROUTE-2] fires regardless of the prompt's vocabulary — a one-word answer still gets the line", async () => {
     const { root } = resumptionProject('resume-vocab');
     const result = await fire(stdin(root, 'yes'));
     expect(result.lines).toHaveLength(1);
@@ -219,7 +219,7 @@ describe("AC: the first prompt of a session surfaces the previous session's hang
 // ---------------------------------------------------------------------------
 
 describe('AC: resumption has four gates and each one holds', () => {
-  it('(a) the Stop companion `pulse/state/sessions/s2.last.json` exists → silent', async () => {
+  it('[HOOKS-PROMPT-ROUTE-3] (a) the Stop companion `pulse/state/sessions/s2.last.json` exists → silent', async () => {
     const { root } = resumptionProject('gate-a');
     const companion = stopStatePath(root, 's2');
     fs.mkdirSync(path.dirname(companion), { recursive: true });
@@ -233,13 +233,13 @@ describe('AC: resumption has four gates and each one holds', () => {
     expect(await run(stdin(root, 'state/ please'))).toEqual(SILENT);
   });
 
-  it('(b) s1.json has session_kind: scheduled → silent', async () => {
+  it('[HOOKS-PROMPT-ROUTE-3] (b) s1.json has session_kind: scheduled → silent', async () => {
     const { root } = resumptionProject('gate-b');
     writeRecord(root, 's1', { session_kind: 'scheduled', threads_opened: ['T-006'] });
     expect(await run(stdin(root, 'state/ please'))).toEqual(SILENT);
   });
 
-  it('(c) s1.json ended eight days ago → silent; seven days less an hour → fires', async () => {
+  it('[HOOKS-PROMPT-ROUTE-3] (c) s1.json ended eight days ago → silent; seven days less an hour → fires', async () => {
     const stale = resumptionProject('gate-c-stale');
     writeRecord(stale.root, 's1', { ended: isoHoursAgo(8 * 24, NOW), threads_opened: ['T-006'] });
     expect(await run(stdin(stale.root, 'state/ please'), { now: NOW })).toEqual(SILENT);
@@ -249,12 +249,12 @@ describe('AC: resumption has four gates and each one holds', () => {
     expect((await fire(stdin(fresh.root, 'state/ please'), { now: NOW })).lines).toHaveLength(1);
   });
 
-  it('(d) T-006 is an approval thread → silent (approvals are not addressed to the next session)', async () => {
+  it('[HOOKS-PROMPT-ROUTE-3] (d) T-006 is an approval thread → silent (approvals are not addressed to the next session)', async () => {
     const { root } = resumptionProject('gate-d', { kind: 'approval', body: '**Approved:** the counter lives in state/\n**Approval:** yes' });
     expect(await run(stdin(root, 'state/ please'))).toEqual(SILENT);
   });
 
-  it("(e) s1.json's session_id is s2 (this session's own record) → skipped → silent", async () => {
+  it("[HOOKS-PROMPT-ROUTE-3] (e) s1.json's session_id is s2 (this session's own record) → skipped → silent", async () => {
     const root = project('gate-e');
     writeThreadFile(root, { id: 'T-006', kind: 'question', opened: '2026-09-15T10:00:00.000Z', body: COUNTER_TEXT });
     writeRecord(root, 's2', { threads_opened: ['T-006'] });
@@ -281,7 +281,7 @@ describe('AC: resumption has four gates and each one holds', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: naming a thread id surfaces it on any prompt', () => {
-  it('`let\'s pick up T-003 now` on a non-first prompt → one Open: T-003 line', async () => {
+  it('[HOOKS-PROMPT-ROUTE-4] `let\'s pick up T-003 now` on a non-first prompt → one Open: T-003 line', async () => {
     const root = project('mention-id');
     writeThreadFile(root, { id: 'T-003', kind: 'offer', body: 'I can wire the counter into the usage report if wanted' });
     writeFired(root, 's9');
@@ -290,7 +290,7 @@ describe('AC: naming a thread id surfaces it on any prompt', () => {
     expect(result.lines[0]).toMatch(/^Open: T-003 \(2026-09-15\) I can wire the counter/);
   });
 
-  it('the lowercase `t-003` is not a ref → nothing', async () => {
+  it('[HOOKS-PROMPT-ROUTE-4] the lowercase `t-003` is not a ref → nothing', async () => {
     const root = project('mention-id-lower');
     writeThreadFile(root, { id: 'T-003', kind: 'offer', body: 'I can wire the counter into the usage report if wanted' });
     writeFired(root, 's9');
@@ -303,7 +303,7 @@ describe('AC: naming a thread id surfaces it on any prompt', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: two shared words qualify a thread; one does not', () => {
-  it('`where should the counter live, state or root?` → one Open: T-004 line', async () => {
+  it('[HOOKS-PROMPT-ROUTE-5] `where should the counter live, state or root?` → one Open: T-004 line', async () => {
     const root = project('mention-two');
     writeThreadFile(root, { id: 'T-004', kind: 'question', body: COUNTER_TEXT });
     writeFired(root, 's3');
@@ -312,7 +312,7 @@ describe('AC: two shared words qualify a thread; one does not', () => {
     expect(result.lines[0]).toMatch(/^Open: T-004 /);
   });
 
-  it('`something about the counter` (one shared word) → nothing', async () => {
+  it('[HOOKS-PROMPT-ROUTE-5] `something about the counter` (one shared word) → nothing', async () => {
     const root = project('mention-one');
     writeThreadFile(root, { id: 'T-004', kind: 'question', body: COUNTER_TEXT });
     writeFired(root, 's3');
@@ -333,7 +333,7 @@ describe('AC: two shared words qualify a thread; one does not', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: finding and artefact threads are never surfaced', () => {
-  it('ids named and every key word shared, yet stdout is empty', async () => {
+  it('[HOOKS-PROMPT-ROUTE-6] ids named and every key word shared, yet stdout is empty', async () => {
     const root = project('kinds');
     writeThreadFile(root, { id: 'T-007', kind: 'finding', body: '2 insight invocations over 55 sessions\n**Kind:** measurement\n**Source:** lexicon' });
     writeThreadFile(root, { id: 'T-008', kind: 'artefact', body: '**Path:** /tmp/x/scratchpad/defects.md\n**Heading:** Defects\n**Copy:** .cortex/pulse/scratch/s1/defects.md' });
@@ -343,7 +343,7 @@ describe('AC: finding and artefact threads are never surfaced', () => {
     ).toEqual(SILENT);
   });
 
-  it('a finding thread named by the previous record is not surfaced by resumption either', async () => {
+  it('[HOOKS-PROMPT-ROUTE-6] a finding thread named by the previous record is not surfaced by resumption either', async () => {
     const root = project('kinds-resume');
     writeThreadFile(root, { id: 'T-007', kind: 'finding', body: '2 insight invocations over 55 sessions\n**Kind:** measurement\n**Source:** lexicon' });
     writeRecord(root, 's1', { threads_opened: ['T-007'] });
@@ -373,7 +373,7 @@ describe('AC: harness-injected prompts never fire', () => {
     });
   }
 
-  it('a scheduled-task tag anywhere in the prompt is harness-shaped too', async () => {
+  it('[HOOKS-PROMPT-ROUTE-7] a scheduled-task tag anywhere in the prompt is harness-shaped too', async () => {
     const root = project('harness-scheduled');
     writeThreadFile(root, { id: 'T-004', kind: 'question', body: COUNTER_TEXT });
     writeRecord(root, 's1', { threads_opened: ['T-004'] });
@@ -386,7 +386,7 @@ describe('AC: harness-injected prompts never fire', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: once per session per thread, shared with the search hook', () => {
-  it('memory holding T-004 → nothing; memory cleared → the line and T-004 appended; a third run → nothing', async () => {
+  it('[HOOKS-PROMPT-ROUTE-8] memory holding T-004 → nothing; memory cleared → the line and T-004 appended; a third run → nothing', async () => {
     const root = project('once');
     writeThreadFile(root, { id: 'T-004', kind: 'question', body: COUNTER_TEXT });
     const memPath = writeFired(root, 's5', ['T-004']);
@@ -420,7 +420,7 @@ describe('AC: once per session per thread, shared with the search hook', () => {
 describe('AC: three qualifying threads show the two newest and point onward', () => {
   const REBUILD = 'Should the recall index be rebuilt on every commit?';
 
-  it('two lines naming T-012 then T-011, the second ending ` · more: cortex thread list`, T-010 unnamed', async () => {
+  it('[HOOKS-PROMPT-ROUTE-9] two lines naming T-012 then T-011, the second ending ` · more: cortex thread list`, T-010 unnamed', async () => {
     const root = project('three');
     writeThreadFile(root, { id: 'T-010', kind: 'question', opened: '2026-09-10T10:00:00.000Z', body: REBUILD }, 'T-010-rebuild.md');
     writeThreadFile(root, { id: 'T-011', kind: 'question', opened: '2026-09-12T10:00:00.000Z', body: REBUILD }, 'T-011-rebuild.md');
@@ -479,7 +479,7 @@ describe('AC: budget cuts the key text, then the second line, never the path', (
   const SLUG_A = 'a'.repeat(60);
   const SLUG_B = 'b'.repeat(60);
 
-  it('the payload is ≤240 characters, each line ends with its intact path, the key text ends with `…`, and a lone line ends with the tail', async () => {
+  it('[HOOKS-PROMPT-ROUTE-10] the payload is ≤240 characters, each line ends with its intact path, the key text ends with `…`, and a lone line ends with the tail', async () => {
     const root = project('budget');
     const a = longKeyText(0);
     const b = longKeyText(1);
@@ -508,7 +508,7 @@ describe('AC: budget cuts the key text, then the second line, never the path', (
 // ---------------------------------------------------------------------------
 
 describe('AC: the general index is never consulted', () => {
-  it('a recall-index.json whose entry matches every prompt word, no open threads, a non-first prompt → empty stdout and the index file never opened', async () => {
+  it('[HOOKS-PROMPT-ROUTE-12] a recall-index.json whose entry matches every prompt word, no open threads, a non-first prompt → empty stdout and the index file never opened', async () => {
     const root = project('no-index');
     const indexPath = path.join(root, '.cortex', 'recall-index.json');
     fs.writeFileSync(
@@ -543,14 +543,14 @@ describe('AC: the general index is never consulted', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: fail-open is silent and unlogged', () => {
-  it('no stdin → silent, unlogged', async () => {
+  it('[HOOKS-PROMPT-ROUTE-13] no stdin → silent, unlogged', async () => {
     const root = project('fo-nostdin');
     expect(await run(undefined, { cwd: root })).toEqual(SILENT);
     expect(await run('not an object', { cwd: root })).toEqual(SILENT);
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('`{"prompt":"x"}` (no session_id) → silent, even with a matching open thread', async () => {
+  it('[HOOKS-PROMPT-ROUTE-13] `{"prompt":"x"}` (no session_id) → silent, even with a matching open thread', async () => {
     const root = project('fo-nosid');
     writeThreadFile(root, { id: 'T-004', kind: 'question', body: COUNTER_TEXT });
     expect(await run({ prompt: 'the counter in state or the pulse root', cwd: root })).toEqual(SILENT);
@@ -568,13 +568,13 @@ describe('AC: fail-open is silent and unlogged', () => {
     expect(fs.existsSync(recallFiredPath(root, 's2'))).toBe(false);
   });
 
-  it('a root without `.cortex/` → silent, nothing created', async () => {
+  it('[HOOKS-PROMPT-ROUTE-13] a root without `.cortex/` → silent, nothing created', async () => {
     const root = tmp('fo-nocortex');
     expect(await run(stdin(root, 'state/ please'))).toEqual(SILENT);
     expect(fs.readdirSync(root)).toEqual([]);
   });
 
-  it('a `.cortex/` without `pulse/threads/` → silent, unlogged (first and non-first prompt)', async () => {
+  it('[HOOKS-PROMPT-ROUTE-13] a `.cortex/` without `pulse/threads/` → silent, unlogged (first and non-first prompt)', async () => {
     const root = project('fo-nothreads');
     writeRecord(root, 's1', { threads_opened: ['T-006'] });
     expect(await run(stdin(root, 'state/ please'))).toEqual(SILENT);
@@ -583,7 +583,7 @@ describe('AC: fail-open is silent and unlogged', () => {
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('a thread file containing `{not: [yaml` is skipped — silent, unlogged; a sibling still routes', async () => {
+  it('[HOOKS-PROMPT-ROUTE-13] a thread file containing `{not: [yaml` is skipped — silent, unlogged; a sibling still routes', async () => {
     const root = project('fo-badthread');
     const dir = threadsDirOf(root);
     fs.mkdirSync(dir, { recursive: true });
@@ -597,7 +597,7 @@ describe('AC: fail-open is silent and unlogged', () => {
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('a `pulse/sessions/s1.json` containing `{not json` is skipped — silent, unlogged; a parseable sibling still resumes', async () => {
+  it('[HOOKS-PROMPT-ROUTE-13] a `pulse/sessions/s1.json` containing `{not json` is skipped — silent, unlogged; a parseable sibling still resumes', async () => {
     const root = project('fo-badrecord');
     writeThreadFile(root, { id: 'T-006', kind: 'question', opened: '2026-09-15T10:00:00.000Z', body: COUNTER_TEXT });
     const dir = path.join(root, '.cortex', 'pulse', 'sessions');
@@ -611,7 +611,7 @@ describe('AC: fail-open is silent and unlogged', () => {
     expect(fs.existsSync(hookErrorsPath(root))).toBe(false);
   });
 
-  it('nothing is written to stderr across the expected-empty states', async () => {
+  it('[HOOKS-PROMPT-ROUTE-13] nothing is written to stderr across the expected-empty states', async () => {
     const root = project('fo-stderr');
     const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -646,7 +646,7 @@ describe('AC: fail-open is silent and unlogged', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: only pulse state is written', () => {
-  it('across a resumption fire, a mention fire and a silent run, the only path created or changed is `pulse/state/recall-fired/<id>`; no thread file changed', async () => {
+  it('[HOOKS-PROMPT-ROUTE-14] across a resumption fire, a mention fire and a silent run, the only path created or changed is `pulse/state/recall-fired/<id>`; no thread file changed', async () => {
     const root = project('writes');
     writeThreadFile(root, { id: 'T-006', kind: 'question', opened: '2026-09-15T10:00:00.000Z', body: COUNTER_TEXT });
     writeThreadFile(root, { id: 'T-003', kind: 'offer', body: 'I can wire the counter into the usage report if wanted' }, 'T-003-wire.md');
@@ -770,7 +770,7 @@ describe('AC: the imperative-free grammar', () => {
   const OPEN_SHAPE = /^Open: (?<id>T-\d{3,}) \((?<date>\d{4}-\d{2}-\d{2})\) (?<text>.+?) \((?<path>\.cortex\/pulse\/threads\/T-\d{3,}-\S+\.md)\)(?<tail> · more: cortex thread list)?$/;
   const IMPERATIVES = /\b(read|consult|check|should|you)\b/i;
 
-  it('every emitted line begins `Open: T-` in the pinned shape, the grammar around the key text carries no read/consult/check/should/you, and no envelope carries `decision` or `continue`', () => {
+  it('[HOOKS-PROMPT-ROUTE-11] every emitted line begins `Open: T-` in the pinned shape, the grammar around the key text carries no read/consult/check/should/you, and no envelope carries `decision` or `continue`', () => {
     expect(emitted.length).toBeGreaterThan(8);
     for (const payload of emitted) {
       const lines = payload.split('\n');
