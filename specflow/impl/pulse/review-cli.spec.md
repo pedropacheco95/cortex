@@ -1,0 +1,117 @@
+---
+id: pulse.review-cli
+status: implemented
+depends_on:
+  - core-cli.init
+  - schema.validator
+implements: ../../promises/pulse/developer-approves-what-the-system-proposes.business.md
+governed_by:
+  - R-001
+governs:
+  - "src/pulse/review.ts"
+---
+
+# Pulse Review CLI
+
+> **SUPERSEDED at schema 4.0 (draft, 2026-10-14).** In a 4.0 store (`cortex/`, `cortex-schema.md` Part II), the pulse review CLI does not exist: the knowledge it served is found by pulling from `cortex/MAP.md`, and rules will be pushed by the optional Senses layer. **This spec stays in force for 3.x stores (`.cortex/`) until that project's migration is accepted** (`store.migrate`), and its code keeps running until then. Retired with a banner, not deleted, per the repo's convention.
+
+## Intent
+
+The pulse review CLI is the human gate of the propose-don't-mutate convention (design §10.3, §11.5): `cortex pulse-list` shows pending suggestions, `cortex pulse-accept <id>` applies one exactly as proposed, `cortex pulse-reject <id>` records a dismissal that suppresses re-proposal for the configured window. It is shared infrastructure — every current and future loop's suggestions flow through this one gate. Deterministic Core; no LLM.
+
+## Entities
+
+- **READS:** **every** `.cortex/pulse/reports/*.md` **and** `.cortex/pulse/suggestions.md` (schema §4.5 proposal sections — single S-namespace: `## S-NNN` with `**Source:**`, `**Target:**`, fenced `**Proposed addition:**`); `.cortex/pulse/dismissed.md` (root, suppression memory); `.cortex/cortex.config.json` (`pulse.dismissedWindowDays`, default 90).
+- **WRITES:** the accepted suggestion's `**Target:**` file (append the fenced block verbatim); the pulse file that holds the suggestion — a `reports/*.md` report or the root `suggestions.md` — for the status annotation only; `dismissed.md` (root, rejection records). Nothing else, ever.
+- **CREATES:** `dismissed.md` (at the pulse root) if absent (with its §4.5 header).
+
+## Rules
+
+1. **Commands.** `cortex pulse-list`, `cortex pulse-accept <S-NNN>`, `cortex pulse-reject <S-NNN>`. Exit codes: 0 success (including "nothing pending" and idempotent no-ops); 1 unknown id, malformed suggestion entry, or refused target.
+2. **`pulse-list`** discovers proposal sections across **all** `pulse/reports/*.md` reports and the root `pulse/suggestions.md` (§4.5 single S-namespace) and prints each **pending** one — id, title, source, target, and the proposed block — excluding: entries with `**Status:** accepted|rejected`, and ids present in `dismissed.md` whose `**Expires:**` is in the future. An expired dismissal no longer suppresses (design §10.3: snooze, not ban).
+3. **`pulse-accept`** appends the suggestion's fenced block **verbatim** (with a separating blank line) to its `**Target:**` file and annotates the entry `**Status:** accepted`. No reinterpretation, no reformatting — what was shown is what lands.
+4. **Target roots.** A `**Target:**` must lie inside `.cortex/cerebrum/` (curated knowledge) or be a **new** `.claude/skills/<name>/SKILL.md` (`skill-proposal`-typed suggestions — now produced by `pulse.distil`'s skill lens, formerly the retired skill-suggest loop; design §11.4 item 12); anything else is refused (exit 1, naming the path). Cerebrum targets must already exist except the core files (created if absent); a skills target that already exists is refused — accept never overwrites a skill.
+4b. **Duplicate ids are a hard error.** The same `S-NNN` appearing in two pulse files → exit 1 naming both files, no action taken (§4.5).
+5. **`pulse-reject`** annotates `**Status:** rejected` and appends a `dismissed.md` section (`**Dismissed:**` now, `**Expires:**` now + `pulse.dismissedWindowDays`).
+6. **Idempotence.** Accept or reject on an already-decided id → notice + exit 0, no further change. Accept on a rejected id (or vice versa) → error exit 1 (a decision reversal is a human edit, not a CLI path).
+7. **Blast radius.** A run touches at most: the one target file, the pulse file holding the suggestion, `dismissed.md`, and — 3.4 fifth revision — `.cortex/compass/registry.md` when Rule 7b applies. Malformed entries are reported (exit 1 for the addressed id; skipped-with-notice in `pulse-list`) — never half-applied.
+7b. **A new rule file is registered on accept (`schema.id-registry` Rule 4).** When the accepted suggestion's `**Target:**` is a `.cortex/compass/rules/R-NNN-<slug>.md` file that does not yet exist, accept first reads the registry: if `R-NNN` is already on a line with a different slug, it refuses (exit 1) naming that line and `cortex id next rule`, and neither the file nor the status annotation is written; otherwise the file lands and `R-NNN <slug>` is appended to the registry in the same run (created from disk first when absent, Rule 2 there). A human act writing compass, the same standing as the accept itself; loops never touch the registry (RULES.md rule 7).
+8. **Deterministic Core.** No LLM, no network, no subprocess (governed by R-001).
+
+## Acceptance Criteria
+
+### PULSE-REVIEW-CLI-1: pulse-list shows pending only
+
+- **Given** `suggestions.md` with `S-001` (pending), `S-002` (`**Status:** accepted`), and `S-003` pending but dismissed with `**Expires:**` tomorrow
+- **When** `cortex pulse-list` runs
+- **Then** the output contains `S-001` with its title, target, and proposed block, and neither `S-002` nor `S-003`
+
+### PULSE-REVIEW-CLI-2: Expired dismissal resurfaces
+
+- **Given** `S-003`'s dismissal has `**Expires:**` yesterday
+- **When** `cortex pulse-list` runs
+- **Then** `S-003` appears as pending
+
+### PULSE-REVIEW-CLI-3: Accept applies the block verbatim
+
+- **Given** `S-001` targeting `.cortex/cerebrum/environment.md` with a fenced block `Chrome profile: profile-X`
+- **When** `cortex pulse-accept S-001` runs
+- **Then** `environment.md` ends with exactly that text (separated by a blank line)
+- **And** the `S-001` entry now carries `**Status:** accepted`
+- **And** no other file changed
+
+### PULSE-REVIEW-CLI-4: Non-cerebrum target refused
+
+- **Given** a suggestion targeting `src/schema/validate.ts`
+- **When** `cortex pulse-accept` addresses it
+- **Then** exit code 1, the message names the refused path, and no file changed
+
+### PULSE-REVIEW-CLI-5: Reject records the window
+
+- **Given** config `pulse.dismissedWindowDays: 30`
+- **When** `cortex pulse-reject S-001` runs
+- **Then** `dismissed.md` gains an `S-001` section whose `**Expires:**` is 30 days after `**Dismissed:**`
+
+### PULSE-REVIEW-CLI-6: Deciding twice is safe
+
+- **Given** `S-001` already accepted
+- **When** `cortex pulse-accept S-001` runs again
+- **Then** exit 0 with an "already accepted" notice and zero file changes
+- **And** `cortex pulse-reject S-001` exits 1 (reversal is not a CLI path)
+
+### PULSE-REVIEW-CLI-7: Discovery spans all pulse reports
+
+- **Given** `S-004` proposed inside `pulse/reports/rule-candidates.md` (not the root `suggestions.md`)
+- **When** `cortex pulse-list` and `cortex pulse-accept S-004` run
+- **Then** both find it, and accept applies its block
+
+### PULSE-REVIEW-CLI-8: Skill proposal accepted to a new skill only
+
+- **Given** `S-005` targeting `.claude/skills/my-workflow/SKILL.md` (nonexistent)
+- **When** `cortex pulse-accept S-005` runs
+- **Then** the file is created with the proposed block
+- **And** a second suggestion targeting an existing skill file is refused, exit 1
+
+### PULSE-REVIEW-CLI-9: Duplicate id across files errors
+
+- **Given** `S-006` present in two different pulse files
+- **When** any command addresses `S-006`
+- **Then** exit 1 naming both files, nothing changed
+
+### PULSE-REVIEW-CLI-10: Fenced payload round-trips byte-exact (B-003 regression)
+
+- **Given** a proposal whose payload is a draft SKILL.md containing a triple-backtick example, wrapped per §4.5 in a four-backtick outer fence
+- **When** `cortex pulse-accept` applies it
+- **Then** the created file contains the payload byte-exact, inner fences included
+
+### PULSE-REVIEW-CLI-11: Unknown id errors
+
+- **When** `cortex pulse-accept S-999` runs against a suggestions file without it
+- **Then** exit code 1 naming `S-999`
+
+## Notes
+
+- The suggestion entry format this CLI parses was locked in schema §4.5 as part of this round (standing authority: schema addition unblocking the current spec) — `**Target:**` + fenced `**Proposed addition:**` + optional `**Status:**`.
+- v1 is accept-as-is or reject; editing-before-accept is deliberately out (business Out of Scope).
+- Also supports: every loop that writes suggestions (`pulse.*`, future `cortex-loop-*`). Primary parent remains `pulse.developer-approves-what-the-system-proposes`.
+- Journey-layer tests deferred to v1.1 pending the test-runner loop (project-wide convention, established in the hooks round).

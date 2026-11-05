@@ -1,0 +1,13 @@
+#!/bin/sh
+# cortex-managed: cortex hooks install rewrites this file
+existing="$(git rev-parse --git-common-dir)/hooks/pre-merge-commit"
+if [ -x "$existing" ]; then
+  "$existing" "$@" || exit $?
+fi
+[ -d specflow ] || exit 0
+if ! command -v cortex >/dev/null 2>&1; then
+  echo "specflow: warning: cortex not found on PATH; specflow/INDEX.md was not refreshed" >&2
+  exit 0
+fi
+cortex specs index --staged || echo "specflow: warning: specflow/INDEX.md was not refreshed" >&2
+exit 0

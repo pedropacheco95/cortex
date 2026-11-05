@@ -1,0 +1,17 @@
+#!/bin/sh
+# cortex-managed: cortex hooks install rewrites this file
+input="$(cat)"
+existing="$(git rev-parse --git-common-dir)/hooks/pre-push"
+if [ -x "$existing" ]; then
+  printf '%s\n' "$input" | "$existing" "$@" || exit $?
+fi
+if ! command -v cortex >/dev/null 2>&1; then
+  echo "specflow: cortex not found on PATH; the check cannot run. Install it, or use --no-verify and say so." >&2
+  exit 1
+fi
+printf '%s\n' "$input" | cortex check --pre-push
+code=$?
+if [ "$code" -ge 2 ]; then
+  echo "specflow: the check could not run (exit $code). If cortex is older than these hooks, update it and try again; or use --no-verify and say so." >&2
+fi
+exit $code

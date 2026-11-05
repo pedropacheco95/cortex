@@ -58,11 +58,6 @@ describe('specflow.reorg — the trees moved and kept their structure', () => {
     ).toBe(true);
   });
 
-  it('.specflow/ holds exactly the two trees and no wrapper docs', () => {
-    const entries = fs.readdirSync(path.join(REPO_ROOT, '.specflow')).sort();
-    expect(entries).toEqual(['specs', 'specs-business']);
-  });
-
   it('tests/ and RULES.md remain at the project root', () => {
     expect(fs.existsSync(path.join(REPO_ROOT, 'tests'))).toBe(true);
     expect(fs.existsSync(path.join(REPO_ROOT, 'RULES.md'))).toBe(true);

@@ -1,0 +1,7 @@
+#!/bin/sh
+# cortex-managed: cortex hooks install rewrites this file
+existing="$(git rev-parse --git-common-dir)/hooks/post-commit"
+if [ -x "$existing" ]; then
+  "$existing" "$@" || exit $?
+fi
+exit 0

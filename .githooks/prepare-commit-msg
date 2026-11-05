@@ -1,0 +1,12 @@
+#!/bin/sh
+# cortex-managed: cortex hooks install rewrites this file
+existing="$(git rev-parse --git-common-dir)/hooks/prepare-commit-msg"
+if [ -x "$existing" ]; then
+  "$existing" "$@" || exit $?
+fi
+marker="$(git rev-parse --git-path specflow-amend)"
+rm -f "$marker"
+case " $(ps -o args= -p "$PPID") " in
+  *" --amend "*|*" --amen "*|*" --ame "*|*" --am "*) git rev-parse HEAD > "$marker" ;;
+esac
+exit 0

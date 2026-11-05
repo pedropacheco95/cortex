@@ -7,5 +7,23 @@
   "migration": {
     "from": "3.4",
     "accepted": "2026-10-19"
+  },
+  "specflow": {
+    "tests": [
+      {
+        "runner": "vitest",
+        "include": [
+          "**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs}"
+        ],
+        "exclude": [
+          "**/e2e/**"
+        ]
+      }
+    ],
+    "rules": {
+      "b": "off",
+      "c": "off"
+    },
+    "since": "527ad417528efe2364b132d59a482b347ba7d286"
   }
 }

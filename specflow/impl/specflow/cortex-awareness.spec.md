@@ -1,0 +1,85 @@
+---
+id: specflow.cortex-awareness
+status: retired
+depends_on:
+  - core-cli.init
+  - schema.validator
+governs:
+  - "skills/specflow-*/**"
+implements: ../../promises/specflow/developer-gets-spec-work-grounded-in-project-memory.business.md
+governed_by: []
+---
+
+# Cortex-Awareness Pass over the SpecFlow Skills
+
+> **RETIRED for 4.0 stores (Specflow batch, 2026-11-04).** New home and any behaviour left without one: `../loops/_retirements.md`. The old skills leave the package in Round 2 (P12); a project on a 3.x store keeps only the 3.x Core commands until its migration is accepted.
+
+## Intent
+
+Design §16.2's final step: the `specflow-*` skills become Cortex-aware — each reads the knowledge layer before producing output, at a depth calibrated to what it produces — and all of them ship in the package so `cortex init` installs the aware versions everywhere (completing design §13 step 4's "all 22 skills"). Awareness is added to the existing skill bodies, never rewriting what already works: minimal diffs per tier.
+
+## Entities
+
+- **READS:** the current skill bodies (`.claude/skills/specflow-*/`, including `references/` subdirectories).
+- **WRITES:** the package `skills/specflow-*/` bundles (source of truth after this round) and the project-local `.claude/skills/specflow-*/` copies (synced, as init would).
+- **CREATES:** nothing else. This spec's deliverable is prompt content plus packaging.
+
+## Rules
+
+1. **Three depth tiers (Pedro's calibration), per-skill contracts:**
+
+   | Skill | Tier | Required awareness (mechanically assertable in the body) |
+   |---|---|---|
+   | `specflow-plan` | Deep | Before planning: read `.cortex/_index.md`; run `cortex insight file|concept|element` for the files and concepts the plan will touch, carrying the trust caveat; collect applicable compass rules (both `governs`-matched and `check:`-predicated) and write each predicate into the task that must satisfy it; consult atlas decisions for the touched domain. Governed in full by `specflow.plan-skill`. |
+   | `specflow-brainstorm` | Moderate | Index-first; read the neighbouring specs, `atlas/decisions/`, and `compass/rules/` bearing on the idea, and surface any conflict **before** proposing approaches; `cortex insight concept|file` for the surrounding code with the trust caveat. Governed in full by `specflow.brainstorm-skill`. |
+   | `specflow-request-review` | Moderate | Read the compass rules governing the touched files so craft feedback cites recorded conventions rather than taste; anchor to the diff-vs-plan, not the whole tree. Governed in full by `specflow.review-pair`. |
+   | `specflow-receive-review` | Light | One awareness note: verify a suggestion against the gated layers (compass rules, specs) before applying it. Governed in full by `specflow.review-pair`. |
+   | `specflow-develop` | Deep | Before coding (its planning half moved to `specflow-plan` — `specflow.develop-split`): read `.cortex/_index.md`; pull anatomy rows for task-relevant files (via `spec_links`/`governs`) and use purpose lines to avoid whole-file reads; collect applicable cerebrum rules (both `governs`-matched and `check:`-predicated) and honour them; consult atlas decisions relevant to the touched domain; run `cortex validate` before finishing; gap documentation lands at `.cortex/pulse/gaps.md`, never a root `gaps.md` (§8.5). |
+   | `specflow-tests` | Deep | Before generating: read applicable cerebrum rules and **incorporate `check:` predicates into generated atomic/spec tests** (design §8.4 bridge 1); read anatomy for the governed files of the spec under test; note the four-tier/`covers:` conventions per schema §3/§4.8; verification output lands at `.cortex/pulse/reports/verification.md`, never `tests/verification-report.md` (§8.5). |
+   | `specflow-entry` | Deep | **Renamed from `specflow-change-router` at the 2026-08 gate round (`specflow.entry-gate`).** Route by checking **which Cortex module the request touches** (bridge 6): grep anatomy/cerebrum/atlas indexes as part of classification; route bug-shaped reports toward the §4.3 ledger flow. |
+   | `specflow-onboard-codebase` | Moderate | Build from the scanned anatomy when `.cortex/anatomy/` exists (bridge 5) instead of re-walking the tree; draft rules referencing schema §4.2 format; bug findings land in the §4.3 ledger, never a root `bugs.md` deliverable (§8.5). |
+   | `specflow-deep-onboard` | Moderate | Same anatomy-first input as onboard; pass outputs through `.cortex/pulse/` conventions where the design names them (§8.5) — including the pass-merge instructions, which reference the ledger, not per-pass `bugs.md` files. |
+   | `specflow-ingest` | Moderate | Requirement-shaped sources → specs; memory-shaped remainder → hand off to `cortex-ingest` (the sibling boundary, both directions); business specs written alongside atlas cross-references (bridge 2). |
+   | `specflow-new-project` | Moderate | Read `cerebrum/preferences.md` (when present) for stack/convention defaults before proposing them; scaffold per the schema's tree conventions. |
+   | `specflow-spec-editor` | Moderate | Check `governed_by:`/rule references when editing specs; run `cortex validate` after modifications (replacing its hand-rolled coherence walk with the mechanical backbone plus its judgment layer). |
+   | `specflow-viewer` | Light | May read anatomy purpose lines to enrich rendering; no required reads — one awareness note only. |
+   | `specflow-lint` | Light | Name `cortex validate` as the mechanical backbone it layers judgment on; no duplicate reimplementation of validator checks. |
+   | `specflow-bugs` | Light | **Correctness fix:** file bugs as `.cortex/cerebrum/bugs/B-NNN-<slug>.md` per schema §4.3 (seven-type frontmatter) — never the legacy root `bugs.md` — so the daily triage loop finds them. |
+
+2. **Additive, minimal diffs.** Each body gains a clearly-delimited Cortex-awareness section (or targeted line edits where the tier demands, e.g. specflow-bugs' write target); existing workflow content is not restructured. Light tier = smallest possible touch.
+3. **Package + local in lockstep.** Every `specflow-*` bundle (whole directories, `references/` included) land in the package `skills/` dir — the source of truth — and the project-local `.claude/skills/` copies are synced identically. Init's Rule-4 machinery now ships all of them; count pins update accordingly.
+4. **No behavioural code changes.** This round touches prompts and packaging only; Core is untouched except test count-pins.
+
+## Acceptance Criteria
+
+### Every skill carries its tier's contract
+
+- **Given** the updated bodies
+- **When** each is checked against the Rule 1 table
+- **Then** every Deep skill's body contains its required-read instructions (index-first, anatomy, cerebrum incl. predicates where specified, atlas, `cortex validate` where specified); every Moderate skill contains its targeted reads; every Light skill contains exactly its minimal touch
+
+### specflow-bugs writes to the ledger
+
+- **Given** the updated `specflow-bugs` body
+- **Then** it instructs filing at `.cortex/cerebrum/bugs/B-NNN-<slug>.md` with §4.3 seven-type frontmatter and contains no instruction to write a root `bugs.md`
+
+### specflow-tests incorporates check predicates
+
+- **Given** the updated `specflow-tests` body
+- **Then** it instructs reading rules' `check:` predicates and generating tests that enforce them (bridge 1, by name or by section)
+
+### Every specflow bundle ships and installs
+
+- **Given** a fresh project init with a fake home
+- **Then** `.claude/skills/` contains every `specflow-*` bundle (with their `references/` files) alongside the cortex bundles, and the summary's installed count reflects the full set
+
+### Package and local copies are identical
+
+- **Given** the round's final state
+- **Then** every `skills/specflow-*/` file is byte-identical to its `.claude/skills/specflow-*/` counterpart
+
+## Notes
+
+- Verification is atomic + spec tier only (prompt-structure assertions + contract conformance): behavioural verification of awareness in live sessions is journey-tier, deferred post-v1 per the standing convention. "Tests pass" is a weaker signal than usual here — acknowledged; the rule-19 enumeration of every skill's diff is the compensating control.
+- Journey-layer tests deferred to v1.1 pending real-session verification infrastructure (project-wide convention).
+- Rule 3's count pin is package-wide, not specflow-wide, so it moves whenever any bundle is added. The 2026-08 superpowers-absorption round moved it from 26 to 28: the package now also ships `verification-before-completion` (a Bucket-2 bundle governed by `discipline.verification-skill`, deliberately not `specflow-`prefixed) and the reference directory `skills/_conventions/` (no `SKILL.md`, governed by `discipline.hardening-convention`). The `specflow-*` ACs above are unaffected — they filter on the prefix. The 2026-08 round then added four spine/review bundles, moving the pin to 32 and extending the Rule 1 table with their tiers; each new skill's full contract lives in its own spec (`specflow.plan-skill`, `specflow.brainstorm-skill`, `specflow.review-pair`), with Rule 1 here holding only the awareness tier.
