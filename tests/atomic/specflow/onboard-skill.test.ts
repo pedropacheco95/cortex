@@ -136,4 +136,16 @@ describe('specflow.onboard-skill', () => {
   it('A limited run says what it covered', () => {
     expect(port).toContain('A run the person limits to a slice says so in its counts, and it is finished when `cortex specs port --verify` lists none of that slice\'s files.');
   });
+
+  it('A tag is proposed only after reading the test body', () => {
+    expect(port).toContain('A `tag` is proposed only after reading the test body against the criterion, never from a test\'s name or its place in the file: a wrong tag makes rule (c) trust the wrong thing.');
+  });
+
+  it("A tag's reason says what the test proves", () => {
+    expect(port).toContain('Its `reason` says in a few words what the body proves that the criterion requires.');
+  });
+
+  it('A tag may name a criterion outside the slice', () => {
+    expect(port).toContain('A tag may name a criterion in any live spec, inside the slice or not.');
+  });
 });

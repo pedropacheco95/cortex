@@ -144,7 +144,7 @@ describe('store.migrate foreign stores (amendment 2026-10-19)', () => {
     expect(review).toContain('3.x status open-worked-around');
   });
 
-  it('takes the area from specs when a bug has no affects', async () => {
+  it('A bug without affects takes its area from its specs', async () => {
     const root = foreign('area');
     fs.writeFileSync(path.join(root, '.cortex/compass/bugs/B-104-late.md'), "---\nid: B-104\ntitle: Late\ntype: crash\nseverity: low\nstatus: open\ndiscovered: '2026-09-04'\nspecs:\n  - billing.late\n---\n\nLate.\n");
     const { text } = await run(root, []);

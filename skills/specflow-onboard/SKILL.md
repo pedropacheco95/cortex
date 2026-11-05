@@ -36,6 +36,8 @@ Every spawned agent is awaited before its output is used. Every spawned agent wr
 - `new-criterion`: no criterion matches, so it gives the `title` and the `spec` it belongs in;
 - `delete`: only when the behaviour is not wanted, with the reason.
 
+A `tag` is proposed only after reading the test body against the criterion, never from a test's name or its place in the file: a wrong tag makes rule (c) trust the wrong thing. Its `reason` says in a few words what the body proves that the criterion requires. A tag may name a criterion in any live spec, inside the slice or not.
+
 A test you cannot place is proposed as `new-criterion`, never left out and never proposed for deletion for lack of a match. No line names a retired spec's criterion; a test that proves only a retired spec's behaviour proposes `delete` and names that spec in `reason`. The pass is finished when `cortex specs port --verify` exits 0: run it before asking for approval. A run the person limits to a slice says so in its counts, and it is finished when `cortex specs port --verify` lists none of that slice's files.
 
 **Approval, then application.** Show the person the counts per area and the lines that are not plain tags. Nothing is applied before the person's approval, per repository; approval may be per area. The person's decisions go in `.cortex-port/decisions.md`. Only after that does the main session apply the approved rows: a promise replaces its business spec; `serves:` is added to each spec and its `implements:` removed; a tag goes at the start of the test name (`[CRIT-ID]`, or `[A-1, B-2]` for several), or as `@pytest.mark.criterion("CRIT-ID")` in pytest, one marker per id; new criteria are added in commits of their own. Applying a tag adds that prefix or marker and nothing else.
