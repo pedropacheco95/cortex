@@ -37,21 +37,9 @@ Verify any time:
 cortex validate .     # Conformant: YES, 0 errors, 0 warnings — the goal state
 ```
 
-## 2. Extract insight (the first real step)
+## 2. Insight extraction (3.x stores only)
 
-An empty insight layer isn't useful. Populate it by running the extraction skill **inside a Claude Code session** on the project:
-
-> **"run the initial extraction"** — or *"extract insight"*, *"map this codebase"*
-
-This invokes `cortex-extract-insight`, which:
-1. runs the deterministic **L1** structural pass (Core),
-2. **plans** logically-coherent scopes and writes the plan to `.cortex/pulse/extraction/plan.md` (it presents the plan for review on large/ambiguous codebases; auto-runs on small ones),
-3. extracts **L2** (purpose) for every file and **L3** (deep understanding) for the central ones, in parallel per scope,
-4. runs the cross-scope **L4** unification pass (concepts, semantic graph, clusters).
-
-It's resumable — if it's interrupted, re-invoking it picks up from the last checkpoint. Progress lands in `.cortex/pulse/extraction/progress.md`.
-
-There is **no `cortex extract-insight` CLI command** — extraction is agentic, so it lives in a Skill, not in Core.
+The extraction skill left the package at 4.0, and a 4.0 project has no insight layer: its knowledge lives in `cortex/`, filed by the `cortex-remember` skill. A project still on a 3.x store keeps the extraction it already has, and the queries below read that. Core makes no LLM calls, so there is no extraction command either.
 
 ## 3. Query insight — your daily driver
 
@@ -107,7 +95,7 @@ Following Connections and Query pointers lets you traverse the codebase by *conc
 
 Claude answers by gathering the relevant insight entries and reasoning over them — grounded in the extracted understanding of *this* codebase, not in priors about how similar codebases usually work.
 
-**6 — (Optional) Reverse-engineer specs for the deepest model.** To go from "I understand the code" to a durable, structural model of *what it's supposed to do*, turn the code into a spec tree — in a session: *"onboard this codebase"* (`specflow-onboard-codebase`), or *"deep onboard"* for a high-confidence 3-pass merge (`specflow-deep-onboard`). You get business + developer specs with acceptance criteria, bidirectionally linked.
+**6 — (Optional) Reverse-engineer specs for the deepest model.** To go from "I understand the code" to a durable, structural model of *what it's supposed to do*, turn the code into a spec tree — in a session: *"onboard this codebase"* (`specflow-onboard`). You get proposals for promises and specs with acceptance criteria, and nothing is applied until you approve it.
 
 **Why this beats a one-shot tool:** the understanding you just built is committed to `.cortex/insight/`, queryable by every future session, and kept current by the daily refresh loop as the code changes. You investigate once; it stays true. And because the query surface is deterministic Core, consulting it later costs no tokens.
 
@@ -119,7 +107,7 @@ The CLAUDE.md block `cortex init` installed teaches the core discipline:
 >
 > Before substantive work on a file, query its insight entry. Before cross-file changes, query the concept. Where insight conflicts with a compass rule or a spec, **the gated layer wins** — insight is context, not authority.
 
-You don't have to do anything for this — it's in every session's context. The skills (`specflow-develop`, `specflow-entry`, `specflow-tests`, etc.) also query insight at the right moments.
+You don't have to do anything for this — it's in every session's context.
 
 ## 6. Activate the scheduled loops (one-time, needs a Desktop session)
 
@@ -162,7 +150,7 @@ When a document authorizes downstream content — a client spec, a contract, a m
 
 > In a session: **"ingest this client spec"** (or drop the document and ask to ingest it)
 
-This invokes `cortex-archive-ingest`: it classifies the document type, stores the source verbatim under `.cortex/archive/documents/<slug>/`, extracts structured content into `extracted/`, and then asks whether you want a change plan drafted. If yes, the proposed rules/specs/decisions each carry `provenance: derives_from:` back to the source — and route through the pulse gate for your approval. Superseded versions are preserved for audit.
+This invokes `cortex-remember`: it writes a dated digest to `cortex/history/sources/`, copies the original file byte for byte to `history/sources/raw/` (gitignored), files the facts with the digest as their source, and files every ask in the document as a spec request in `cortex/now/proposals.md`.
 
 ## 9. Working under SpecFlow (if the project is spec-managed)
 
@@ -176,7 +164,7 @@ Specs are the source of truth. The build loop for any change:
 6. Run tests; update the spec's status.
 7. Re-check the business spec for drift; fix it in the same change if the dev change invalidated it.
 
-If a change is reported as broken, the `specflow-bugs` skill diagnoses it against a seven-type taxonomy and files it in `compass/bugs/` before anyone touches code. Onboarding an *existing* codebase into specs: `specflow-onboard-codebase` (or `specflow-deep-onboard` for high-confidence multi-pass).
+If a change is reported as broken, say *"file this bug"*: the `cortex-remember` skill files it as an open item in `cortex/code/<area>/`, and moves it to `history/` when it is fixed. Onboarding an *existing* codebase into specs: `specflow-onboard`.
 
 ## 10. Command cheat-sheet
 
@@ -193,8 +181,8 @@ cortex pulse-list | -accept | -reject   # the human gate
 And in a Claude Code session (skills, not CLI):
 
 ```
-run the initial extraction        → cortex-extract-insight
-ingest this <document>            → cortex-archive-ingest
+remember this / file this bug     → cortex-remember
+keep this <document>              → cortex-remember
 run cortex-register-tasks         → register the 5 bundles (Desktop session)
 ```
 
