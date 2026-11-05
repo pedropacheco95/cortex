@@ -204,6 +204,60 @@ The validator operates on files, not database records. It reads artefacts and pr
 - **When** `cortex validate` runs
 - **Then** `check.business-status` reports nothing for it
 
+### SCHEMA-VALIDATOR-26: Test-style markers in a business spec are warned
+
+- **Given** a business spec whose body has `**Given**`, `**When**` and `**Then**` lines
+- **When** the check runs
+- **Then** `check.business-spec` reports a `warning` naming Given/When/Then
+
+### SCHEMA-VALIDATOR-27: Prose using the same words is not
+
+- **Given** a business spec whose prose reads `When this works, … Then the team benefits, given time.`
+- **When** the check runs
+- **Then** `check.business-spec` reports nothing about Given/When/Then
+
+### SCHEMA-VALIDATOR-28: A depends_on cycle is reported
+
+- **Given** two specs whose `depends_on` lists name each other
+- **When** the check runs
+- **Then** `check.xref-acyclic` reports an `error` for the cycle
+
+### SCHEMA-VALIDATOR-29: An overview missing a required heading is reported
+
+- **Given** an `_overview.md` with no `## What it covers` heading
+- **When** the check runs
+- **Then** `check.overview-shape` reports a `warning` naming `## What it covers`
+
+### SCHEMA-VALIDATOR-30: A spec id that disagrees with its path is reported
+
+- **Given** a spec at `schema/validator.spec.md` with `id: schema.wrong-id`
+- **When** the check runs
+- **Then** `check.id-matches-path` reports an `error`
+
+### SCHEMA-VALIDATOR-31: A governs glob that matches no file is warned
+
+- **Given** a spec whose `governs:` holds one glob that matches files and one, `src/ghost/**/*.ts`, that matches none
+- **When** the check runs
+- **Then** `check.dev-spec-governs-resolves` reports exactly one `warning`, naming the second glob, and the report stays conformant
+
+### SCHEMA-VALIDATOR-32: A unique id resolves to its one file
+
+- **Given** one rule file with the id `R-001`
+- **When** the index is built
+- **Then** `idToFiles` holds that one path for `R-001` and `resolveId` returns it
+
+### SCHEMA-VALIDATOR-33: A governed_by id with no alias stays an error on a 4.0 project
+
+- **Given** a 4.0 project whose dev spec has `governed_by: [R-001]`, and no store file with that alias
+- **When** `cortex validate` runs
+- **Then** the report has an `error` on the `governed_by` key
+
+### SCHEMA-VALIDATOR-34: The report has one shape
+
+- **Given** a valid project
+- **When** `validate` returns
+- **Then** its report has a string `schemaVersion` and `target`, a boolean `conformant`, a `violations` array, and numeric `counts.error` and `counts.warning`
+
 ## Notes
 
 - The contract is `cortex-schema.md` (schema v1.0). Rules 5-11 of this spec map onto its mechanical check catalogue (Appendix A); the per-facet definitions live in `cortex-schema.md` §1 (layout), §2-§3 (tree/test conventions), §4 (frontmatter), §5 (hooks), §6 (cross-references), §7-§9 (index/overview/CLAUDE/loop templates), §10 (versioning). If the schema adds or renames a facet, revise this spec in the same change.

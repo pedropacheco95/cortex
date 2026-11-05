@@ -105,6 +105,12 @@ The session-reading layer is the shared substrate (design §11.5, §16.2 step 10
 - **Given** any sequence of list/read/extract calls (message, tool-use and title helpers alike) over a fixture home
 - **Then** no file under the fixture home or project root was created, modified, or deleted
 
+### LOOPS-SESSION-READING-13: Malformed or partial entries never break the reader
+
+- **Given** in turn: a user-role entry with `tool_use`-shaped parts, an assistant `Read` with no `timestamp`, a `Bash` use with a short command, `Write` and `Bash` uses whose `file_path` and `command` are not strings, and assistant entries with string content or no `message`
+- **When** `extractToolUses` runs on each
+- **Then** it never throws: the user-role entry and the entries with no content array give `[]`, the record with no timestamp has no `timestamp` key, the short command is carried whole, and the non-string inputs give name-only records
+
 ## Notes
 
 - **Resolves design §10.7 / open question #9** (case 2: global storage, project-filtered). Distil (now carrying the absorbed skill lens) and session-observe remain in v1 scope; the design doc was updated in this round to record the verified answer. (The former separate `skill-suggest` consumer is retired — folded into distil.)
