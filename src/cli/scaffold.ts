@@ -737,8 +737,8 @@ export function registrationSummaryLines(regStatus: { unregistered: string[]; to
     lines.push(
       `Scheduled tasks: payloads ready — ${regStatus.unregistered.length} of ${regStatus.total} not yet registered with the Claude Desktop app (cadences apply once registered).`,
     );
-    lines.push('To activate them: open this folder in Claude Desktop (new session) and say:');
-    lines.push('    run cortex-register-tasks');
+    lines.push('To activate them: open this folder in Claude Desktop (new session) and type:');
+    lines.push('    /cortex-register-tasks');
     lines.push(
       `Note: the app asks you to approve each task registration (${regStatus.total} prompts) — "always allow" is not offered for task creation, so stay at the keyboard.`,
     );

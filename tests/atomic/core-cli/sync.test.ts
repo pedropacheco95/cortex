@@ -278,7 +278,7 @@ describe('scaffold.ts: registrationSummaryLines', () => {
   it('renders the instruction block when something is unregistered', () => {
     const lines = registrationSummaryLines({ unregistered: ['daily', 'test-runner'], total: 5 });
     expect(lines.join('\n')).toContain('2 of 5 not yet registered');
-    expect(lines.join('\n')).toContain('run cortex-register-tasks');
+    expect(lines.join('\n')).toContain('/cortex-register-tasks');
     expect(lines.join('\n')).toContain('cortex tasks verify');
   });
 });

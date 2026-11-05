@@ -362,10 +362,8 @@ export function tasksPlan(opts: Pick<TasksRegistryOptions, 'projectRoot' | 'home
   }
   lines.push('');
   lines.push(
-    taskRoster(path.resolve(opts.projectRoot)) === 'store-v4'
-      ? 'To register: type /cortex-register-tasks in a Claude Desktop session for this project ' +
-          '(the app\'s own scheduled-tasks tools exist only there). Confirm with `cortex tasks verify`.'
-      : NOT_ACCEPTED_MESSAGE,
+    'To register: type /cortex-register-tasks in a Claude Desktop session for this project ' +
+      '(the app\'s own scheduled-tasks tools exist only there). Confirm with `cortex tasks verify`.',
   );
   return { exitCode: 0, output: lines.join('\n') };
 }
@@ -577,10 +575,11 @@ export function verifyTasks(opts: TasksRegistryOptions): TasksCommandResult {
     lines.push(`ok   ${row.canonical}: enabled, cron "${String(cron)}", payload present${drift}`);
   }
   const total = ownRows(root, opts.home).length;
+  // `register` refuses on the 3.x roster, but a 3.x project's own copy of the skill still registers.
   const remedy =
     taskRoster(root) === 'store-v4'
       ? 'type /cortex-register-tasks in a Desktop session, or quit the Desktop app and run `cortex tasks register`'
-      : NOT_ACCEPTED_MESSAGE;
+      : 'type /cortex-register-tasks in a Desktop session';
   lines.push(
     failures === 0
       ? `All ${total} Cortex tasks registered, enabled, and backed by payloads.`

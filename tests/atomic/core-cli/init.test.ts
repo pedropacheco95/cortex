@@ -973,7 +973,7 @@ describe('Rule 15: summary names every change and the Desktop reminder', () => {
 // Rules 13/15 — registration instruction block (B-009 final mechanism)
 // ---------------------------------------------------------------------------
 describe('Rules 13/15: register-in-Desktop instruction block vs all-registered one-liner', () => {
-  it('registry missing (app never ran) → instruction block: 5 of 5, run cortex-register-tasks, verify', async () => {
+  it('registry missing (app never ran) → instruction block: 5 of 5, /cortex-register-tasks, verify', async () => {
     const root = makeTmpDir('regblock-proj');
     const home = makeTmpDir('regblock-home');
     const appSupportDir = makeTmpDir('regblock-appsupport'); // empty: no registry anywhere
@@ -982,8 +982,8 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
       expect(result.exitCode).toBe(0);
       const s = result.summary;
       expect(s).toContain('5 of 5 not yet registered with the Claude Desktop app');
-      expect(s).toContain('open this folder in Claude Desktop (new session) and say:');
-      expect(s).toContain('run cortex-register-tasks');
+      expect(s).toContain('open this folder in Claude Desktop (new session) and type:');
+      expect(s).toContain('/cortex-register-tasks');
       expect(s).toContain('approve each task registration (5 prompts)');
       expect(s).toContain('"always allow" is not offered for task creation');
       expect(s).toContain('Then confirm with: cortex tasks verify');
@@ -1013,7 +1013,7 @@ describe('Rules 13/15: register-in-Desktop instruction block vs all-registered o
       expect(s).toContain('Scheduled tasks: all 5 registered with the Claude Desktop app');
       expect(s).toContain('cortex tasks verify');
       expect(s).not.toContain('not yet registered');
-      expect(s).not.toContain('run cortex-register-tasks');
+      expect(s).not.toContain('/cortex-register-tasks');
     } finally {
       cleanTmp(root); cleanTmp(home); cleanTmp(appSupportDir);
     }

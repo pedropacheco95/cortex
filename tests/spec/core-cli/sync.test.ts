@@ -296,7 +296,7 @@ describe('AC6: task payloads refresh and the instruction block appears when unre
   });
 
   it('prints the open-Desktop-and-run instruction block (no registry → all five unregistered)', () => {
-    expect(result.summary).toContain('run cortex-register-tasks');
+    expect(result.summary).toContain('/cortex-register-tasks');
     expect(result.summary).toMatch(/not yet registered/);
   });
 
@@ -319,7 +319,7 @@ describe('AC6: task payloads refresh and the instruction block appears when unre
     const r = await sync(r2, { home: h2, appSupportDir, ...DARWIN_SYNC });
     expect(r.exitCode).toBe(0);
     expect(r.summary).toMatch(/all 5 registered/);
-    expect(r.summary).not.toContain('run cortex-register-tasks');
+    expect(r.summary).not.toContain('/cortex-register-tasks');
     cleanTmp(r2); cleanTmp(h2); cleanTmp(appSupportDir);
   }, TEST_TIMEOUT);
 });

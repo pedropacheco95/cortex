@@ -73,6 +73,21 @@ describe('An unaccepted store stays on the 3.x roster', () => {
     expect(fs.existsSync(path.join(fx.root, 'cortex', 'now'))).toBe(false);
   });
 
+  it("a 3.x project's plan --json keeps the shape its own copy of the skill reads, and verify points at that skill", () => {
+    const fx = fixture(unacceptedProject);
+    const plan = JSON.parse(tasksPlan(fx.opts, true).output);
+    expect(Object.keys(plan).sort()).toEqual(['planVersion', 'projectRoot', 'taskCount', 'tasks']);
+    expect(Object.keys(plan.tasks[0]).sort()).toEqual(
+      ['canonical', 'cronExpression', 'cwd', 'description', 'enabled', 'id', 'model', 'payloadPath', 'permissionMode', 'useWorktree'],
+    );
+    expect(plan.tasks.find((t: { canonical: string }) => t.canonical === 'weekly-curation')).toMatchObject({
+      id: scopedTaskName(fx.root, 'weekly-curation'), cronExpression: '0 4 * * 6', model: 'claude-opus-4-8',
+    });
+    const last = verifyTasks(fx.opts).output.trim().split('\n').pop()!;
+    expect(last).toContain('/cortex-register-tasks');
+    expect(last).not.toContain('cortex tasks register');
+  });
+
   it('the Rule 13 message is exact', () => {
     expect(NOT_ACCEPTED_MESSAGE).toBe('this project has no 4.0 tasks until its store is accepted (cortex migrate --accept)');
   });
