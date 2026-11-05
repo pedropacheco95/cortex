@@ -309,6 +309,12 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **When** `cortex init` runs
 - **Then** it exits 0, the skill is installed, and nothing under `cortex/` other than `MAP.md` changed
 
+### init on a store with no migration field runs only the update route
+
+- **Given** a project created by `cortex store init`, so its `cortex/cortex.json` has no `migration` field, with no `.cortex/` folder and no skills installed
+- **When** `cortex init` runs
+- **Then** it exits 0, the final skill set is in `.claude/skills/`, `cortex/cortex.json` is unchanged, and nothing under `cortex/` other than `MAP.md` changed
+
 ### init on an unaccepted migration refuses
 
 - **Given** a project with `cortex/cortex.json` whose `migration.accepted` is `null`, and a `.cortex/` folder
