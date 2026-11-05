@@ -40,7 +40,7 @@ function store(entries: Record<string, { fm: Record<string, unknown>; body: stri
 const findings = (root: string, check: string) => validateStore(root, '2026-10-14').findings.filter((f) => f.check === check);
 
 describe('store.rules', () => {
-  it('a well-formed rule loads with its fields and text', () => {
+  it('[STORE-RULES-1] a well-formed rule loads with its fields and text', () => {
     const root = tmpRepo('s4');
     storeInit(root);
     fs.writeFileSync(path.join(root, 'cortex/world/rules/state-your-uncertainty.md'), S4_EXAMPLE);
@@ -50,7 +50,7 @@ describe('store.rules', () => {
     expect(validateStore(root, '2026-10-14').findings).toEqual([]);
   });
 
-  it('missing applies_when is an error', () => {
+  it('[STORE-RULES-2] missing applies_when is an error', () => {
     const r = rule({});
     delete (r['fm'] as Record<string, unknown>)['applies_when'];
     const root = store({ 'world/rules/deploys.md': r });
@@ -58,19 +58,19 @@ describe('store.rules', () => {
     expect(hit).toMatchObject({ level: 'error', path: 'world/rules/deploys.md' });
   });
 
-  it('an unknown scope value is an error', () => {
+  it('[STORE-RULES-3] an unknown scope value is an error', () => {
     const root = store({ 'world/rules/deploys.md': rule({ scope: ['prompt'] }) });
     const hit = findings(root, 'check.rule')[0];
     expect(hit?.level).toBe('error');
     expect(hit?.message).toContain('prompt');
   });
 
-  it('a bad command regex is an error', () => {
+  it('[STORE-RULES-4] a bad command regex is an error', () => {
     const root = store({ 'world/rules/deploys.md': rule({ match: { commands: ['git push (--force'] } }) });
     expect(findings(root, 'check.rule')[0]?.level).toBe('error');
   });
 
-  it('a topic-style description is linted', () => {
+  it('[STORE-RULES-5] a topic-style description is linted', () => {
     const root = store({ 'world/rules/deploys.md': rule({ applies_when: 'Anything about deployments' }) });
     const hit = findings(root, 'check.applies-when')[0];
     expect(hit?.level).toBe('warning');
@@ -78,12 +78,12 @@ describe('store.rules', () => {
     expect(hit?.message).toMatch(/topic phrasing "about"/);
   });
 
-  it('a situation-style description passes the lint', () => {
+  it('[STORE-RULES-6] a situation-style description passes the lint', () => {
     const root = store({ 'world/rules/deploys.md': rule({ applies_when: 'The agent is about to run a command that deploys to production' }) });
     expect(findings(root, 'check.applies-when')).toEqual([]);
   });
 
-  it('always rules are listed for the map', () => {
+  it('[STORE-RULES-7] always rules are listed for the map', () => {
     const root = store({
       'world/rules/never-push-main.md': rule({ applies_when: 'always' }, 'Never push to main.\n'),
       'world/rules/deploys.md': rule({}),

@@ -89,7 +89,7 @@ async function provenanceViolations(root: string): Promise<Violation[]> {
 }
 
 describe('check.provenance: the three source-type forms', () => {
-  it('a resolvable archive reference on a compass rule passes', async () => {
+  it('[PROVENANCE-FRONTMATTER-CHECK-1] a resolvable archive reference on a compass rule passes', async () => {
     const root = tmp('archive-ok');
     makeProject(root);
     const ref = writeArchiveDoc(root);
@@ -97,7 +97,7 @@ describe('check.provenance: the three source-type forms', () => {
     expect(await provenanceViolations(root)).toEqual([]);
   });
 
-  it('an unresolvable archive reference errors, naming the reference', async () => {
+  it('[PROVENANCE-FRONTMATTER-CHECK-2] an unresolvable archive reference errors, naming the reference', async () => {
     const root = tmp('archive-dangling');
     makeProject(root);
     const rulePath = writeRule(
@@ -112,7 +112,7 @@ describe('check.provenance: the three source-type forms', () => {
     expect(violations[0]!.message).toContain('does not resolve');
   });
 
-  it('a resolvable atlas-decision reference on a dev spec passes', async () => {
+  it('[PROVENANCE-FRONTMATTER-CHECK-3] a resolvable atlas-decision reference on a dev spec passes', async () => {
     const root = tmp('atlas-ok');
     makeProject(root);
     const ref = writeDecision(root);
@@ -130,7 +130,7 @@ describe('check.provenance: the three source-type forms', () => {
     expect(violations[0]!.message).toContain('2026-01-01-never-recorded.md');
   });
 
-  it('a well-formed claude-sessions reference passes with no disk lookup (cited-not-resolved)', async () => {
+  it('[PROVENANCE-FRONTMATTER-CHECK-4] a well-formed claude-sessions reference passes with no disk lookup (cited-not-resolved)', async () => {
     const root = tmp('session-ok');
     makeProject(root);
     // No claude-sessions/ content exists anywhere on disk — must still pass.
@@ -149,7 +149,7 @@ describe('check.provenance: the three source-type forms', () => {
 });
 
 describe('check.provenance: entry shape', () => {
-  it('a reference matching none of the three forms errors', async () => {
+  it('[PROVENANCE-FRONTMATTER-CHECK-5] a reference matching none of the three forms errors', async () => {
     const root = tmp('unknown-form');
     makeProject(root);
     writeDecision(root); // decisions dir exists
@@ -181,7 +181,7 @@ describe('check.provenance: entry shape', () => {
     expect(violations[0]!.message).toContain('must be a list');
   });
 
-  it('absence of provenance everywhere is conformant — authored directly, never a finding', async () => {
+  it('[PROVENANCE-FRONTMATTER-CHECK-6] absence of provenance everywhere is conformant — authored directly, never a finding', async () => {
     const root = tmp('absent');
     makeProject(root);
     writeArchiveDoc(root);
@@ -194,7 +194,7 @@ describe('check.provenance: entry shape', () => {
 });
 
 describe('backward-traversal index: source → derivations', () => {
-  it('returns every artefact deriving from a given source, across kinds', async () => {
+  it('[PROVENANCE-FRONTMATTER-CHECK-7] returns every artefact deriving from a given source, across kinds', async () => {
     const root = tmp('index-multi');
     makeProject(root);
     const archiveRef = writeArchiveDoc(root);

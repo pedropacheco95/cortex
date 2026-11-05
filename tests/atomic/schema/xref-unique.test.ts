@@ -24,7 +24,7 @@ describe('buildIndex keeps duplicates', () => {
     cleanup(singleRoot);
   });
 
-  it('two R-026 files → idToFiles holds both paths and resolveId finds nothing', async () => {
+  it('[SCHEMA-VALIDATOR-12] two R-026 files → idToFiles holds both paths and resolveId finds nothing', async () => {
     const index = await buildIndex(dupRoot);
     const files = index.idToFiles?.get('R-026');
     expect(files).toBeDefined();
@@ -52,7 +52,7 @@ describe('check.xref-unique reads the index over every kind', () => {
     });
     afterAll(() => cleanup(root));
 
-    it('exactly one §6 error at one of the R-026 files naming both; non-conformant', async () => {
+    it('[SCHEMA-VALIDATOR-9] exactly one §6 error at one of the R-026 files naming both; non-conformant', async () => {
       const report = await validate(root);
       const found = report.violations.filter((v) => v.check === 'check.xref-unique');
       expect(found).toHaveLength(1);
@@ -78,7 +78,7 @@ describe('check.xref-unique reads the index over every kind', () => {
     });
     afterAll(() => cleanup(root));
 
-    it('exactly one check.xref-unique error naming both bug files', async () => {
+    it('[SCHEMA-VALIDATOR-10] exactly one check.xref-unique error naming both bug files', async () => {
       const report = await validate(root);
       const found = report.violations.filter((v) => v.check === 'check.xref-unique');
       expect(found).toHaveLength(1);
@@ -102,7 +102,7 @@ describe('check.xref-unique reads the index over every kind', () => {
     });
     afterAll(() => cleanup(root));
 
-    it('the uniqueness error AND an unresolved governed_by error at the dev spec', async () => {
+    it('[SCHEMA-VALIDATOR-12] the uniqueness error AND an unresolved governed_by error at the dev spec', async () => {
       const report = await validate(root);
       expect(report.violations.filter((v) => v.check === 'check.xref-unique')).toHaveLength(1);
       const unresolved = report.violations.filter(

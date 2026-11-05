@@ -102,7 +102,7 @@ describe('AC: every shape classifies to exactly one kind (Rule 1)', () => {
 });
 
 describe('AC: gated refs resolve through the project index (Rule 2)', () => {
-  it('the five resolve with target equal to their file paths, and R-999 does not', async () => {
+  it('[SCHEMA-BEARS-ON-2] the five resolve with target equal to their file paths, and R-999 does not', async () => {
     const { root, index, clauses } = await acProject();
     const expected: [string, string][] = [
       ['R-001', '.cortex/compass/rules/R-001-core-no-llm-calls.md'],
@@ -133,7 +133,7 @@ describe('AC: gated refs resolve through the project index (Rule 2)', () => {
 });
 
 describe('AC: a concept resolves from either insight layout (Rule 2)', () => {
-  it('flat and scoped concepts resolve, a missing one does not', async () => {
+  it('[SCHEMA-BEARS-ON-3] flat and scoped concepts resolve, a missing one does not', async () => {
     const { root, index, clauses } = await acProject();
     const flat = resolveRef(root, index, clauses, 'concept:hook-safety');
     expect(flat).toEqual({ kind: 'concept', resolved: true, target: '.cortex/insight/concepts/hook-safety.md' });
@@ -142,7 +142,7 @@ describe('AC: a concept resolves from either insight layout (Rule 2)', () => {
     expect(resolveRef(root, index, clauses, 'concept:missing')).toEqual({ kind: 'concept', resolved: false });
   });
 
-  it('a project with no insight/ at all does not resolve and raises no exception', async () => {
+  it('[SCHEMA-BEARS-ON-3] a project with no insight/ at all does not resolve and raises no exception', async () => {
     const root = tmp('no-insight');
     write(root, '.cortex/cortex.config.json', '{}');
     const index = await buildIndex(root);
@@ -164,7 +164,7 @@ describe('AC: a clause resolves through the clause index (Rule 2)', () => {
 });
 
 describe('AC: a path resolves as a file or a directory, never outside the project (Rule 2)', () => {
-  it('src/pulse/usage.ts and ./src/hooks/ resolve; src/gone.ts, ../etc/passwd and /etc/passwd do not', async () => {
+  it('[SCHEMA-BEARS-ON-4] src/pulse/usage.ts and ./src/hooks/ resolve; src/gone.ts, ../etc/passwd and /etc/passwd do not', async () => {
     const { root, index, clauses } = await acProject();
     expect(resolveRef(root, index, clauses, 'src/pulse/usage.ts')).toEqual({ kind: 'path', resolved: true, target: 'src/pulse/usage.ts' });
     expect(resolveRef(root, index, clauses, './src/hooks/')).toEqual({ kind: 'path', resolved: true, target: 'src/hooks/' });

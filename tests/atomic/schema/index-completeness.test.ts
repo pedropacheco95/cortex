@@ -63,7 +63,7 @@ describe('An index that omits a bug is warned with the count', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('exactly one warning at compass/bugs/_index.md: index lists 4 of 5 bugs (missing: B-004); conformant', async () => {
+  it('[SCHEMA-VALIDATOR-14] exactly one warning at compass/bugs/_index.md: index lists 4 of 5 bugs (missing: B-004); conformant', async () => {
     const report = await validate(root);
     const found = report.violations.filter((v) => v.check === 'check.index-completeness');
     expect(found).toHaveLength(1);
@@ -87,7 +87,7 @@ describe('A collapsed index counts as complete', () => {
   });
   afterAll(() => cleanup(root));
 
-  it('neither index produces a check.index-completeness finding', async () => {
+  it('[SCHEMA-VALIDATOR-15] neither index produces a check.index-completeness finding', async () => {
     const report = await validate(root);
     expect(report.violations.filter((v) => v.check === 'check.index-completeness')).toEqual([]);
   });

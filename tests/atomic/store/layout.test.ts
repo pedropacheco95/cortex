@@ -13,7 +13,7 @@ import { tmpRepo, cleanRepos, writeStoreFile, writeConfig, baseFm, snapshot } fr
 afterEach(cleanRepos);
 
 describe('store.layout', () => {
-  it('classifies files by module and folder', () => {
+  it('[STORE-LAYOUT-1] classifies files by module and folder', () => {
     const root = tmpRepo('classify');
     writeConfig(root);
     writeStoreFile(root, 'code/hooks/pre-read.md', baseFm());
@@ -26,7 +26,7 @@ describe('store.layout', () => {
     expect(byPath['history/incidents/2026-09-01-x.md']).toMatchObject({ module: 'history', folder: 'history/incidents' });
   });
 
-  it('loads a file without frontmatter as frontmatter: null', () => {
+  it('[STORE-LAYOUT-2] loads a file without frontmatter as frontmatter: null', () => {
     const root = tmpRepo('nofm');
     writeConfig(root);
     writeStoreFile(root, 'world/people/rui.md', null, 'Rui runs ops.\n');
@@ -34,7 +34,7 @@ describe('store.layout', () => {
     expect(f.frontmatter).toBeNull();
   });
 
-  it('parses origin as a string or a list, and reports a malformed one', () => {
+  it('[STORE-LAYOUT-3] parses origin as a string or a list, and reports a malformed one', () => {
     const root = tmpRepo('origin');
     writeConfig(root);
     fs.mkdirSync(path.join(root, 'cortex/world/terms'), { recursive: true });
@@ -55,7 +55,7 @@ describe('store.layout', () => {
     expect(files['world/terms/c.md']!.origin).toHaveProperty('error');
   });
 
-  it('parses verified into a date and a method, and reports a malformed one', () => {
+  it('[STORE-LAYOUT-4] parses verified into a date and a method, and reports a malformed one', () => {
     const root = tmpRepo('verified');
     writeConfig(root);
     writeStoreFile(root, 'world/terms/fare.md', baseFm({ verified: '2026-10-12 (told)' }));
@@ -65,13 +65,13 @@ describe('store.layout', () => {
     expect(files['world/terms/tide.md']!.verified).toHaveProperty('error');
   });
 
-  it('parses now/ items with their until dates', () => {
+  it('[STORE-LAYOUT-5] parses now/ items with their until dates', () => {
     const items = parseNowItems('- Rui away until: 2026-10-20\n\n## Release freeze\nuntil: 2026-11-01\nNo deploys.\n');
     expect(items).toHaveLength(2);
     expect(items.map((i) => i.until)).toEqual(['2026-10-20', '2026-11-01']);
   });
 
-  it('store init creates a valid empty store and keeps visibility', () => {
+  it('[STORE-LAYOUT-6] store init creates a valid empty store and keeps visibility', () => {
     const root = tmpRepo('init');
     fs.mkdirSync(path.join(root, '.cortex'));
     fs.writeFileSync(path.join(root, '.cortex/cortex.config.json'), JSON.stringify({ schemaVersion: '3.4', visibility: { repo: 'public', allow: [] } }));
@@ -86,7 +86,7 @@ describe('store.layout', () => {
     expect(fs.readFileSync(path.join(root, '.gitignore'), 'utf8')).toContain('cortex/history/sources/raw/');
   });
 
-  it('store init is idempotent', () => {
+  it('[STORE-LAYOUT-7] store init is idempotent', () => {
     const root = tmpRepo('init2');
     storeInit(root);
     writeStoreFile(root, 'world/terms/fare.md', baseFm());

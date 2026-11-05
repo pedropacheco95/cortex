@@ -16,7 +16,7 @@ const TODAY = '2026-10-14';
 const of = (root: string, check: string) => validateStore(root, TODAY).findings.filter((f) => f.check === check);
 
 describe('store.validate', () => {
-  it('a clean store validates with exit 0', () => {
+  it('[STORE-VALIDATE-1] a clean store validates with exit 0', () => {
     const root = tmpRepo('clean');
     storeInit(root);
     writeStoreFile(root, 'world/terms/fare.md', baseFm({ about: 'What a fare is on these ferries' }), 'The price of one crossing.\n');
@@ -25,7 +25,7 @@ describe('store.validate', () => {
     expect(r.exitCode).toBe(0);
   });
 
-  it('missing required frontmatter is an error', () => {
+  it('[STORE-VALIDATE-2] missing required frontmatter is an error', () => {
     const root = tmpRepo('missing');
     storeInit(root);
     const fm = baseFm();
@@ -38,7 +38,7 @@ describe('store.validate', () => {
     expect(r.exitCode).toBe(1);
   });
 
-  it('a file without an origin is an error', () => {
+  it('[STORE-VALIDATE-3] a file without an origin is an error', () => {
     const root = tmpRepo('no-origin');
     storeInit(root);
     const fm = baseFm();
@@ -51,7 +51,7 @@ describe('store.validate', () => {
     expect(r.exitCode).toBe(1);
   });
 
-  it('a malformed or misplaced origin is an error', () => {
+  it('[STORE-VALIDATE-4] a malformed or misplaced origin is an error', () => {
     const root = tmpRepo('bad-origin');
     storeInit(root);
     writeStoreFile(root, 'world/terms/fare.md', baseFm({ origin: '/Users/someone/.claude/projects/x.jsonl' }));
@@ -61,7 +61,7 @@ describe('store.validate', () => {
     expect(errs.find((f) => f.path === 'world/terms/tide.md')?.message).toMatch(/external: is allowed only in history\/sources/);
   });
 
-  it('a folder outside the layout is an error', () => {
+  it('[STORE-VALIDATE-5] a folder outside the layout is an error', () => {
     const root = tmpRepo('layout');
     storeInit(root);
     writeStoreFile(root, 'world/misc/x.md', baseFm());
@@ -69,7 +69,7 @@ describe('store.validate', () => {
     expect(hit?.level).toBe('error');
   });
 
-  it('naming: ids and dates are refused where they do not belong', () => {
+  it('[STORE-VALIDATE-6] naming: ids and dates are refused where they do not belong', () => {
     const root = tmpRepo('naming');
     storeInit(root);
     writeStoreFile(root, 'world/rules/R-002.md', baseFm({ applies_when: 'always', scope: ['action'], source: 'user@2026-10-12' }), 'Never push.\n');
@@ -79,7 +79,7 @@ describe('store.validate', () => {
     expect(paths).toContain('world/terms/2026-10-01-fare.md');
   });
 
-  it('near-duplicates are flagged once, naming both files', () => {
+  it('[STORE-VALIDATE-7] near-duplicates are flagged once, naming both files', () => {
     const root = tmpRepo('neardup');
     storeInit(root);
     writeStoreFile(root, 'code/hooks/read-hook-latency.md', baseFm({ about: 'The read hook adds latency to every read' }));
@@ -91,7 +91,7 @@ describe('store.validate', () => {
     expect(`${hits[0]!.path} ${hits[0]!.message}`).toContain('world/systems/read-hook.md');
   });
 
-  it('an alias shared by two files is an error', () => {
+  it('[STORE-VALIDATE-8] an alias shared by two files is an error', () => {
     const root = tmpRepo('alias');
     storeInit(root);
     writeStoreFile(root, 'code/schema/xref-check.md', baseFm({ about: 'The xref check misses stale ids', aliases: ['B-019'] }));
@@ -102,7 +102,7 @@ describe('store.validate', () => {
     expect(hit?.message).toContain('history/incidents/2026-09-01-xref.md');
   });
 
-  it('an edited history file is flagged; an appended correction is not', () => {
+  it('[STORE-VALIDATE-9] an edited history file is flagged; an appended correction is not', () => {
     const root = tmpRepo('append');
     gitInit(root);
     storeInit(root);
@@ -115,7 +115,7 @@ describe('store.validate', () => {
     expect(of(root, 'check.append-only')).toHaveLength(0);
   });
 
-  it('with no store, it fails clearly', async () => {
+  it('[STORE-VALIDATE-12] with no store, it fails clearly', async () => {
     const root = tmpRepo('nostore');
     const out: string[] = [];
     const code = await storeCli(['validate'], root, { stdout: (l) => out.push(l) });
@@ -126,7 +126,7 @@ describe('store.validate', () => {
 });
 
 describe('store.validate Rule 6 (amendment 2026-10-14)', () => {
-  it('flags "(private)" on a public store', () => {
+  it('[STORE-VALIDATE-11] flags "(private)" on a public store', () => {
     const root = tmpRepo('private');
     storeInit(root);
     const cfgPath = path.join(root, 'cortex/cortex.json');
@@ -150,31 +150,31 @@ describe('store.validate Rule 4 (status transitions, amendment 2026-10-19)', () 
   };
   const line = '- 2026-10-19: pending → reconciled, spec test fails on the probe\n';
 
-  it('a status change with its transition line passes', () => {
+  it('[STORE-VALIDATE-10] a status change with its transition line passes', () => {
     const { root, p, original } = setup('transition');
     fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"') + line);
     expect(of(root, 'check.append-only')).toHaveLength(0);
   });
 
-  it('a transition line after an appended correction passes', () => {
+  it('[STORE-VALIDATE-10] a transition line after an appended correction passes', () => {
     const { root, p, original } = setup('transition-correction');
     fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"') + '\n## Correction 2026-10-18\nThe stakeholder was the client.\n' + line);
     expect(of(root, 'check.append-only')).toHaveLength(0);
   });
 
-  it('a status change with no transition line warns', () => {
+  it('[STORE-VALIDATE-10] a status change with no transition line warns', () => {
     const { root, p, original } = setup('transition-bare');
     fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"'));
     expect(of(root, 'check.append-only')).toHaveLength(1);
   });
 
-  it('an edit to another field warns, even with a transition line', () => {
+  it('[STORE-VALIDATE-10] an edit to another field warns, even with a transition line', () => {
     const { root, p, original } = setup('transition-spec');
     fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"').replace('spec: "auth.policy"', 'spec: "auth.other"') + line);
     expect(of(root, 'check.append-only')).toHaveLength(1);
   });
 
-  it('the same edit outside history/changes warns', () => {
+  it('[STORE-VALIDATE-10] the same edit outside history/changes warns', () => {
     const { root, p, original } = setup('transition-incident', 'history/incidents');
     fs.writeFileSync(p, original.replace('status: "pending"', 'status: "reconciled"') + line);
     expect(of(root, 'check.append-only')).toHaveLength(1);

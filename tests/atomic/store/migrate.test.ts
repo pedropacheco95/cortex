@@ -38,7 +38,7 @@ function row(text: string, ref: string): string {
 }
 
 describe('store.migrate', () => {
-  it('accounts for every entry in a dry run and writes nothing', async () => {
+  it('[STORE-MIGRATE-1] accounts for every entry in a dry run and writes nothing', async () => {
     const root = repo('dry');
     const before = snapshot(root);
     const { code, text } = await run(root, []);
@@ -49,7 +49,7 @@ describe('store.migrate', () => {
     expect(snapshot(root)).toEqual(before);
   });
 
-  it('follows the mapping table by default', async () => {
+  it('[STORE-MIGRATE-2] follows the mapping table by default', async () => {
     const root = repo('defaults');
     const { text } = await run(root, []);
     expect(row(text, 'compass/rules/R-001-core-no-llm-calls.md')).toMatch(/world\/rules\/core-no-llm-calls\.md \| review/);
@@ -61,7 +61,7 @@ describe('store.migrate', () => {
     expect(text).toMatch(/\| dropped by decision \| 6 \|/);
   });
 
-  it('dropped insight summaries are counted, left on disk, and observations still migrate', async () => {
+  it('[STORE-MIGRATE-3] dropped insight summaries are counted, left on disk, and observations still migrate', async () => {
     const root = repo('dropped');
     const { text } = await run(root, ['--apply']);
     expect(text).toContain('| anatomy | 3 |');
@@ -78,7 +78,7 @@ describe('store.migrate', () => {
     expect(written).toContain('code/repo/jev-evaluation.md');
   });
 
-  it('carries the 3.x citation graph into origin', async () => {
+  it('[STORE-MIGRATE-4] carries the 3.x citation graph into origin', async () => {
     const root = repo('provenance');
     const { text } = await run(root, ['--apply']);
     const s = sha(root);
@@ -92,7 +92,7 @@ describe('store.migrate', () => {
     expect(text).toContain('provenance refs: 2/3');
   });
 
-  it('migrated files carry their 3.x origin, one per merged entry', async () => {
+  it('[STORE-MIGRATE-7] migrated files carry their 3.x origin, one per merged entry', async () => {
     const root = repo('origin');
     await run(root, ['--apply']);
     const s = sha(root);
@@ -100,14 +100,14 @@ describe('store.migrate', () => {
     expect(fm(root, 'world/agreements/working-preferences.md')['origin']).toEqual([1, 2, 3].map((n) => `migrated:compass/preferences.md#${n}@${s}`));
   });
 
-  it('counts multi-entry files per entry', async () => {
+  it('[STORE-MIGRATE-8] counts multi-entry files per entry', async () => {
     const root = repo('multi');
     const { text } = await run(root, []);
     for (const n of [1, 2, 3]) expect(row(text, `compass/preferences.md#${n}`)).toContain('world/agreements/working-preferences.md');
     expect(row(text, 'compass/preferences.md#4')).toBe('');
   });
 
-  it('unmapped entries block apply', async () => {
+  it('[STORE-MIGRATE-9] unmapped entries block apply', async () => {
     const root = repo('unmapped');
     fs.mkdirSync(path.join(root, '.cortex/atlas/unknown-kind'), { recursive: true });
     fs.writeFileSync(path.join(root, '.cortex/atlas/unknown-kind/x.md'), 'x\n');
@@ -118,7 +118,7 @@ describe('store.migrate', () => {
     expect(fs.existsSync(path.join(root, 'cortex'))).toBe(false);
   });
 
-  it('a plan file overrides a default', async () => {
+  it('[STORE-MIGRATE-10] a plan file overrides a default', async () => {
     const root = repo('plan');
     const plan = path.join(root, 'plan.json');
     fs.writeFileSync(plan, JSON.stringify({ 'insight/observations/jev-evaluation.md': 'world/systems/jev.md' }));
@@ -126,7 +126,7 @@ describe('store.migrate', () => {
     expect(row(text, 'insight/observations/jev-evaluation.md')).toMatch(/\| world\/systems\/jev\.md \| plan \|/);
   });
 
-  it('refuses a bad plan', async () => {
+  it('[STORE-MIGRATE-11] refuses a bad plan', async () => {
     const root = repo('badplan');
     const plan = path.join(root, 'plan.json');
     fs.writeFileSync(plan, JSON.stringify({ 'compass/nope.md': 'world/terms/x.md' }));
@@ -139,7 +139,7 @@ describe('store.migrate', () => {
     expect(r.text).toContain('world/misc/x.md');
   });
 
-  it('apply writes a valid store and keeps the old one', async () => {
+  it('[STORE-MIGRATE-12] apply writes a valid store and keeps the old one', async () => {
     const root = repo('apply');
     const before = snapshot(path.join(root, '.cortex'));
     const { code } = await run(root, ['--apply']);
@@ -151,7 +151,7 @@ describe('store.migrate', () => {
     expect(snapshot(path.join(root, '.cortex'))).toEqual(before);
   });
 
-  it('apply is re-runnable', async () => {
+  it('[STORE-MIGRATE-13] apply is re-runnable', async () => {
     const root = repo('rerun');
     await run(root, ['--apply']);
     const first = snapshot(path.join(root, 'cortex'));
@@ -160,7 +160,7 @@ describe('store.migrate', () => {
     expect(snapshot(path.join(root, 'cortex'))).toEqual(first);
   });
 
-  it('carries pending proposals over, not dropped', async () => {
+  it('[STORE-MIGRATE-14] carries pending proposals over, not dropped', async () => {
     const root = repo('proposals');
     const { text } = await run(root, ['--apply']);
     const p = fs.readFileSync(path.join(root, 'cortex/now/proposals.md'), 'utf8');
@@ -172,7 +172,7 @@ describe('store.migrate', () => {
     expect(validateStore(root, TODAY).findings.filter((f) => f.check === 'check.now-until')).toEqual([]);
   });
 
-  it('accept switches the blocks and deletes nothing', async () => {
+  it('[STORE-MIGRATE-18] accept switches the blocks and deletes nothing', async () => {
     const root = repo('accept');
     fs.writeFileSync(path.join(root, 'CLAUDE.md'), '# P\n\n<!-- cortex:start v3.4 -->\nold\n<!-- cortex:end -->\n');
     await run(root, ['--apply']);
@@ -197,7 +197,7 @@ describe('store.migrate Rules 13–14 (amendment 2026-10-14)', () => {
     return root;
   }
 
-  it('turns session and source references into origins', async () => {
+  it('[STORE-MIGRATE-5] turns session and source references into origins', async () => {
     const root = repoX('sessions');
     const { code } = await run(root, ['--apply']);
     expect(code).toBe(0);
@@ -212,7 +212,7 @@ describe('store.migrate Rules 13–14 (amendment 2026-10-14)', () => {
     }
   });
 
-  it('applies redactions and edits to the migrated text only', async () => {
+  it('[STORE-MIGRATE-6] applies redactions and edits to the migrated text only', async () => {
     const root = repoX('redact');
     const before = snapshot(path.join(root, '.cortex'));
     const r = path.join(root, 'r.json');

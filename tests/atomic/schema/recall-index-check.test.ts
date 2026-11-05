@@ -49,7 +49,7 @@ function run(root: string, doc: unknown): ReturnType<typeof checkRecallIndex> {
 }
 
 describe('check.recall-index: absence is never a finding (Rule 13)', () => {
-  it('no file → no violations', () => {
+  it('[RECALL-RECALL-INDEX-17] no file → no violations', () => {
     const root = tmp('absent');
     fs.mkdirSync(path.join(root, '.cortex'), { recursive: true });
     expect(checkRecallIndex(root)).toEqual([]);
@@ -101,7 +101,7 @@ describe('check.recall-index: shape errors (Rule 13; clause §4.11; severity err
     expect(violations.map((v) => v.message).join('\n')).toMatch(/R-003/);
   });
 
-  it('an id in decided/evidence/threads absent from entries is one error naming the id', () => {
+  it('[RECALL-RECALL-INDEX-17] an id in decided/evidence/threads absent from entries is one error naming the id', () => {
     const root = tmp('dangling-id');
     const doc = valid();
     (doc['subjects'] as Record<string, Record<string, string[]>>)['R-001']!['decided'] = ['decision.2026-07-01-a', 'decision.gone'];

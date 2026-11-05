@@ -99,7 +99,7 @@ describe('check.visibility: pinned constants (Rule 4)', () => {
 });
 
 describe('check.visibility: silent unless the repo is declared public (Rule 3)', () => {
-  it('visibility absent, repo unknown, repo private → no violation even with an ssh target in compass', () => {
+  it('[SCHEMA-VISIBILITY-1] visibility absent, repo unknown, repo private → no violation even with an ssh target in compass', () => {
     for (const [label, vis] of [
       ['absent', undefined],
       ['unknown', { repo: 'unknown' }],
@@ -125,7 +125,7 @@ describe('check.visibility: silent unless the repo is declared public (Rule 3)',
 });
 
 describe('check.visibility: a public repo warns with the line, per family (Rules 4–6)', () => {
-  it('five lines, five warnings, one family each, all warnings, message per Rule 5', () => {
+  it('[SCHEMA-VISIBILITY-2] five lines, five warnings, one family each, all warnings, message per Rule 5', () => {
     const root = project('families', { repo: 'public' });
     const file = write(root, '.cortex/compass/environment.md', ENVIRONMENT_LINES);
     const out = checkVisibility(root);
@@ -207,7 +207,7 @@ describe('check.visibility: a public repo warns with the line, per family (Rules
 });
 
 describe('check.visibility: safe hosts and dev ports never match (Rule 4 exclusions)', () => {
-  it('the four pinned safe lines emit nothing', () => {
+  it('[SCHEMA-VISIBILITY-3] the four pinned safe lines emit nothing', () => {
     const root = project('safe', { repo: 'public' });
     write(root, '.cortex/compass/environment.md', [
       'GitHub remote: github.com/acme/app (private)',
@@ -261,7 +261,7 @@ describe('check.visibility: safe hosts and dev ports never match (Rule 4 exclusi
     expect(out[1]?.message).toContain('carries a port'); // port is more specific than the bare ipv4 on the same line
   });
 
-  it('a code reference (file.ext:line) is not a port; a real host:port on the same file still is', () => {
+  it('[SCHEMA-VISIBILITY-4] a code reference (file.ext:line) is not a port; a real host:port on the same file still is', () => {
     const root = project('code-ref', { repo: 'public' });
     write(root, '.cortex/compass/bugs/B-099-x.md', [
       'Evidence: src/hooks/post-read.ts:74 and layout.ts:60',
@@ -276,7 +276,7 @@ describe('check.visibility: safe hosts and dev ports never match (Rule 4 exclusi
 });
 
 describe('check.visibility: ignored files are out of scope, re-included ones are in (Rule 2)', () => {
-  it('root .gitignore excludes atlas/sources/*; a negated pattern re-includes one file', () => {
+  it('[SCHEMA-VISIBILITY-5] root .gitignore excludes atlas/sources/*; a negated pattern re-includes one file', () => {
     const root = project('gitignore', { repo: 'public' });
     fs.writeFileSync(path.join(root, '.gitignore'), '.cortex/atlas/sources/*\n!.cortex/atlas/sources/reframe.md\n', 'utf-8');
     write(root, '.cortex/atlas/sources/notes.md', 'ssh ops@db.acme.net\n');
@@ -304,7 +304,7 @@ describe('check.visibility: ignored files are out of scope, re-included ones are
 });
 
 describe('check.visibility: an allow glob silences a file and is reported (Rule 5)', () => {
-  it('an exact-path allow entry skips the file and records a note; other files still warn', () => {
+  it('[SCHEMA-VISIBILITY-6] an exact-path allow entry skips the file and records a note; other files still warn', () => {
     const root = project('allow', { repo: 'public', allow: ['.cortex/compass/environment.md'] });
     write(root, '.cortex/compass/environment.md', ENVIRONMENT_LINES);
     write(root, '.cortex/compass/other.md', 'vm 10.0.0.9\n');
@@ -336,7 +336,7 @@ describe('check.visibility: an allow glob silences a file and is reported (Rule 
 });
 
 describe('check.visibility: the per-file cap holds (Rule 5)', () => {
-  it('30 distinct-address lines → 20 line warnings plus one "… and 10 more lines" warning', () => {
+  it('[SCHEMA-VISIBILITY-7] 30 distinct-address lines → 20 line warnings plus one "… and 10 more lines" warning', () => {
     const root = project('cap', { repo: 'public' });
     const lines = Array.from({ length: 30 }, (_, i) => `vm 10.0.${Math.floor(i / 250)}.${(i % 250) + 1}`);
     const file = write(root, '.cortex/compass/inventory.md', lines.join('\n') + '\n');

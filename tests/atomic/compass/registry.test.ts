@@ -114,7 +114,7 @@ describe('Rule 1: the file — header and line grammar', () => {
 });
 
 describe('AC: allocation appends the next id in its kind\'s block', () => {
-  it('R-004 lands after R-003 and before B-001; B-020 lands last; every pre-existing line is byte-identical', () => {
+  it('[SCHEMA-ID-REGISTRY-1] R-004 lands after R-003 and before B-001; B-020 lands last; every pre-existing line is byte-identical', () => {
     const root = tmp('append');
     const before = writeRegistry(root, threeRulesNineteenBugs());
 
@@ -170,7 +170,7 @@ describe('AC: allocation appends the next id in its kind\'s block', () => {
 });
 
 describe('AC: a file that predates the registry still raises the floor', () => {
-  it('B-021-orphan.md on disk, unlisted, makes the next bug B-022', () => {
+  it('[SCHEMA-ID-REGISTRY-2] B-021-orphan.md on disk, unlisted, makes the next bug B-022', () => {
     const root = tmp('floor');
     writeRegistry(root, threeRulesNineteenBugs());
     plantFile(root, 'bugs', 'B-021-orphan.md');
@@ -191,7 +191,7 @@ describe('AC: a file that predates the registry still raises the floor', () => {
 });
 
 describe('AC: an absent registry is created on first allocation', () => {
-  it('three rules and nineteen bugs on disk, no registry → header, rules, bugs by filename slug, then B-020 new', () => {
+  it('[SCHEMA-ID-REGISTRY-3] three rules and nineteen bugs on disk, no registry → header, rules, bugs by filename slug, then B-020 new', () => {
     const root = tmp('create');
     for (let i = 1; i <= 3; i++) plantFile(root, 'rules', `R-${pad(i)}-rule-${i}.md`);
     for (let i = 1; i <= 19; i++) plantFile(root, 'bugs', `B-${pad(i)}-bug-${i}.md`);

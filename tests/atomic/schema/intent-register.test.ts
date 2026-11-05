@@ -101,7 +101,7 @@ async function violations(root: string): Promise<Violation[]> {
 // ---------------------------------------------------------------------------
 
 describe('AC: a well-formed register validates clean', () => {
-  it('accepts a reconciled entry whose landing, criterion, and covering test all resolve', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-1] accepts a reconciled entry whose landing, criterion, and covering test all resolve', async () => {
     const root = tmp('valid');
     makeProject(root);
     writeSpec(root);
@@ -122,7 +122,7 @@ describe('AC: a well-formed register validates clean', () => {
     expect(await violations(root)).toEqual([]);
   });
 
-  it('accepts a flagged entry whose landing is a compass rule and whose bug resolves', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-1] accepts a flagged entry whose landing is a compass rule and whose bug resolves', async () => {
     const root = tmp('valid-flagged');
     makeProject(root);
     writeRule(root);
@@ -142,7 +142,7 @@ describe('AC: a well-formed register validates clean', () => {
     expect(await violations(root)).toEqual([]);
   });
 
-  it('accepts a landing that cites a spec with no criterion fragment', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-1] accepts a landing that cites a spec with no criterion fragment', async () => {
     const root = tmp('valid-no-fragment');
     makeProject(root);
     writeSpec(root);
@@ -168,7 +168,7 @@ describe('AC: a well-formed register validates clean', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: an absent register is not a violation', () => {
-  it('raises nothing when intent-register.yaml does not exist', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-2] raises nothing when intent-register.yaml does not exist', async () => {
     const root = tmp('absent');
     makeProject(root);
     expect(fs.existsSync(path.join(root, '.cortex', 'archive', 'intent-register.yaml'))).toBe(false);
@@ -181,7 +181,7 @@ describe('AC: an absent register is not a violation', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: a pending entry needs no landing', () => {
-  it('accepts a pending entry with no landing, covering test, or bug', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-7] accepts a pending entry with no landing, covering test, or bug', async () => {
     const root = tmp('pending');
     makeProject(root);
     writeRegister(
@@ -203,7 +203,7 @@ describe('AC: a pending entry needs no landing', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: a dangling landing is an error', () => {
-  it('errors when the landing names a spec id that does not exist', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-3] errors when the landing names a spec id that does not exist', async () => {
     const root = tmp('dangling-landing');
     makeProject(root);
     const coveringTest = writeCoveringTest(root);
@@ -252,7 +252,7 @@ describe('AC: a dangling landing is an error', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: a landing criterion that does not exist in the spec is an error', () => {
-  it('errors when the spec resolves but has no such acceptance-criterion heading', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-4] errors when the spec resolves but has no such acceptance-criterion heading', async () => {
     const root = tmp('missing-criterion');
     makeProject(root);
     writeSpec(root);
@@ -279,7 +279,7 @@ describe('AC: a landing criterion that does not exist in the spec is an error', 
 // ---------------------------------------------------------------------------
 
 describe('AC: a reconciled entry without its covering test is an error', () => {
-  it('errors when covering_spec_test is missing entirely', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-5] errors when covering_spec_test is missing entirely', async () => {
     const root = tmp('reconciled-no-test');
     makeProject(root);
     writeSpec(root);
@@ -298,7 +298,7 @@ describe('AC: a reconciled entry without its covering test is an error', () => {
     expect(v.some((x) => x.message.includes('IR-008') && x.message.includes('requires "covering_spec_test"'))).toBe(true);
   });
 
-  it('errors when the covering_spec_test path does not exist on disk', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-5] errors when the covering_spec_test path does not exist on disk', async () => {
     const root = tmp('reconciled-bad-path');
     makeProject(root);
     writeSpec(root);
@@ -324,7 +324,7 @@ describe('AC: a reconciled entry without its covering test is an error', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: a flagged entry without a resolving bug is an error', () => {
-  it('errors when flagged_bug is missing', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-6] errors when flagged_bug is missing', async () => {
     const root = tmp('flagged-no-bug');
     makeProject(root);
     writeRule(root);
@@ -343,7 +343,7 @@ describe('AC: a flagged entry without a resolving bug is an error', () => {
     expect(v.some((x) => x.message.includes('IR-010') && x.message.includes('requires "flagged_bug"'))).toBe(true);
   });
 
-  it('errors when flagged_bug names no file under compass/bugs/', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-6] errors when flagged_bug names no file under compass/bugs/', async () => {
     const root = tmp('flagged-bad-bug');
     makeProject(root);
     writeRule(root);
@@ -369,7 +369,7 @@ describe('AC: a flagged entry without a resolving bug is an error', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC: malformed entries are caught', () => {
-  it('errors on a duplicate IR id', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-8] errors on a duplicate IR id', async () => {
     const root = tmp('dup-id');
     makeProject(root);
     writeRegister(
@@ -391,7 +391,7 @@ describe('AC: malformed entries are caught', () => {
     expect(v.some((x) => x.message.includes('duplicate entry id "IR-020"'))).toBe(true);
   });
 
-  it('errors on a malformed id', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-8] errors on a malformed id', async () => {
     const root = tmp('bad-id');
     makeProject(root);
     writeRegister(
@@ -408,7 +408,7 @@ describe('AC: malformed entries are caught', () => {
     expect(v.some((x) => x.message.includes('is not of the form IR-NNN'))).toBe(true);
   });
 
-  it('errors on a non-ISO date', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-8] errors on a non-ISO date', async () => {
     const root = tmp('bad-date');
     makeProject(root);
     writeRegister(
@@ -425,7 +425,7 @@ describe('AC: malformed entries are caught', () => {
     expect(v.some((x) => x.message.includes('is not an ISO calendar date'))).toBe(true);
   });
 
-  it('errors on an unknown status', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-8] errors on an unknown status', async () => {
     const root = tmp('bad-status');
     makeProject(root);
     writeRegister(
@@ -453,7 +453,7 @@ describe('AC: malformed entries are caught', () => {
     expect(joined).toContain('missing required field "anchor_test"');
   });
 
-  it('errors when entries is not a list', async () => {
+  it('[ARCHIVE-INTENT-REGISTER-8] errors when entries is not a list', async () => {
     const root = tmp('entries-not-list');
     makeProject(root);
     writeRegister(root, `entries: nope\n`);

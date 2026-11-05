@@ -57,7 +57,7 @@ const AC_DOC = [
 ].join('\n');
 
 describe('AC: a present clause resolves at every depth', () => {
-  it('schema:§6, schema:§6.2 and schema:§4.10.11 all resolve', () => {
+  it('[SCHEMA-SCHEMA-CLAUSES-1] schema:§6, schema:§6.2 and schema:§4.10.11 all resolve', () => {
     const root = tmp('present');
     writeSchemaDoc(root, AC_DOC);
     const index = loadClauseIndex(root);
@@ -74,7 +74,7 @@ describe('AC: a present clause resolves at every depth', () => {
 });
 
 describe('AC: an absent clause does not resolve', () => {
-  it('schema:§6.9 and schema:§99 do not resolve against the same document', () => {
+  it('[SCHEMA-SCHEMA-CLAUSES-2] schema:§6.9 and schema:§99 do not resolve against the same document', () => {
     const root = tmp('absent');
     writeSchemaDoc(root, AC_DOC);
     const index = loadClauseIndex(root);
@@ -91,7 +91,7 @@ describe('AC: an absent clause does not resolve', () => {
 });
 
 describe('AC: a retitled section still resolves', () => {
-  it('### 6.2 Something else entirely still resolves schema:§6.2 — the number is the key', () => {
+  it('[SCHEMA-SCHEMA-CLAUSES-3] ### 6.2 Something else entirely still resolves schema:§6.2 — the number is the key', () => {
     const root = tmp('retitled');
     writeSchemaDoc(root, '## 6. Cross-reference conventions\n\n### 6.2 Something else entirely\n');
     expect(clauseResolves(loadClauseIndex(root), 'schema:§6.2')).toBe(true);
@@ -99,7 +99,7 @@ describe('AC: a retitled section still resolves', () => {
 });
 
 describe('AC: headings inside code fences are ignored', () => {
-  it('a ### 7.9 line that sits only inside a fence does not resolve', () => {
+  it('[SCHEMA-SCHEMA-CLAUSES-4] a ### 7.9 line that sits only inside a fence does not resolve', () => {
     const root = tmp('fenced');
     writeSchemaDoc(
       root,
@@ -134,7 +134,7 @@ describe('AC: malformed refs are rejected by the grammar, not looked up', () => 
     expect(clauseNumber('schema:§4.10.11')).toBe('4.10.11');
   });
 
-  it('clauseResolves never consults the index for a malformed ref', () => {
+  it('[SCHEMA-SCHEMA-CLAUSES-5] clauseResolves never consults the index for a malformed ref', () => {
     const index = new Set(['5', '6', '6.2']);
     const has = vi.spyOn(index, 'has');
     for (const ref of malformed) expect(clauseResolves(index, ref)).toBe(false);
@@ -166,7 +166,7 @@ describe('AC: the document is read once per run', () => {
 });
 
 describe('AC: a project without the schema document resolves nothing, without error', () => {
-  it('returns an empty index and every clause ref is unresolved', () => {
+  it('[SCHEMA-SCHEMA-CLAUSES-7] returns an empty index and every clause ref is unresolved', () => {
     const root = tmp('no-doc');
     let index: Set<string> | undefined;
     expect(() => {
@@ -176,7 +176,7 @@ describe('AC: a project without the schema document resolves nothing, without er
     expect(clauseResolves(index as Set<string>, 'schema:§6')).toBe(false);
   });
 
-  it('a schema document somewhere other than the project root is never consulted', () => {
+  it('[SCHEMA-SCHEMA-CLAUSES-7] a schema document somewhere other than the project root is never consulted', () => {
     const root = tmp('elsewhere');
     fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
     fs.writeFileSync(path.join(root, 'docs', 'cortex-schema.md'), '## 6. Cross-reference\n', 'utf-8');

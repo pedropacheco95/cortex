@@ -115,7 +115,7 @@ function bugFiles(root: string): string[] {
 
 describe('compass.bug-currency slice: promote stamps, validate checks shape, why surfaces the currency', () => {
   it(
-    'a git checkout: the promoted draft carries found_at_commit, the registry issued its id; owner/fix_in_flight validate by shape; a malformed stamp is the only check.bug error; why lists the bug with its three fields',
+    '[COMPASS-BUG-CURRENCY-1, COMPASS-BUG-CURRENCY-2, COMPASS-BUG-CURRENCY-6] a git checkout: the promoted draft carries found_at_commit, the registry issued its id; owner/fix_in_flight validate by shape; a malformed stamp is the only check.bug error; why lists the bug with its three fields',
     async () => {
       const root = tmp('git');
       expect(await init3x(root)).toBe(0);
@@ -171,7 +171,7 @@ describe('compass.bug-currency slice: promote stamps, validate checks shape, why
   );
 
   it(
-    'a non-git directory: the promoted draft has no found_at_commit key and validates clean',
+    '[COMPASS-BUG-CURRENCY-6] a non-git directory: the promoted draft has no found_at_commit key and validates clean',
     async () => {
       const root = tmp('no-git');
       expect(await init3x(root)).toBe(0);

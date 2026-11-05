@@ -56,7 +56,7 @@ function ofCheck(violations: Violation[]): Violation[] {
 }
 
 describe('AC: check.bears-on errors on a dangling gated ref and warns on the rest', () => {
-  it('one error naming R-999 (rule), three warnings naming the concept, clause and path; nothing for pulse.usage', async () => {
+  it('[SCHEMA-BEARS-ON-5] one error naming R-999 (rule), three warnings naming the concept, clause and path; nothing for pulse.usage', async () => {
     const root = tmp('mixed');
     const file = decision(root, '2026-09-15-x', 'bears_on: [R-999, "concept:nope", "schema:§99", src/gone.ts, pulse.usage]');
     const { index, clauses } = await seed(root);
@@ -107,7 +107,7 @@ describe('AC: check.bears-on errors on a dangling gated ref and warns on the res
 });
 
 describe('AC: a malformed entry is an error on a gated carrier (Rule 5)', () => {
-  it('an empty string and a schema:-prefixed string that fails the grammar are each an error at key bears_on', async () => {
+  it('[SCHEMA-BEARS-ON-6] an empty string and a schema:-prefixed string that fails the grammar are each an error at key bears_on', async () => {
     const root = tmp('malformed-entries');
     const file = decision(root, '2026-09-15-a', 'bears_on: ["", "schema:§ 5"]');
     const { index, clauses } = await seed(root);
@@ -121,7 +121,7 @@ describe('AC: a malformed entry is an error on a gated carrier (Rule 5)', () => 
     expect(violations.some((v) => v.message.includes('"schema:§ 5"'))).toBe(true);
   });
 
-  it('a scalar bears_on (not a list) is one error at key bears_on', async () => {
+  it('[SCHEMA-BEARS-ON-6] a scalar bears_on (not a list) is one error at key bears_on', async () => {
     const root = tmp('malformed-scalar');
     const file = decision(root, '2026-09-15-b', 'bears_on: R-001');
     const { index, clauses } = await seed(root);
@@ -166,7 +166,7 @@ describe('Rule 4: only the two gated carriers, only when bears_on is present', (
     expect(ofCheck(await checkBearsOn(root, index, clauses))).toEqual([]);
   });
 
-  it('threads and observations carrying dangling refs produce nothing here', async () => {
+  it('[SCHEMA-BEARS-ON-7] threads and observations carrying dangling refs produce nothing here', async () => {
     const root = tmp('ungated');
     write(root, '.cortex/pulse/threads/T-001-x.md', '---\nid: T-001\nbears_on: [src/gone.ts, R-999]\n---\n');
     write(root, '.cortex/insight/observations/scale.md', '---\nkind: insight-observation\nbears_on: [src/gone.ts, R-999]\n---\n');

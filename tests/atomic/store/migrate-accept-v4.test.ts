@@ -74,11 +74,11 @@ function snapshot(dir: string): Record<string, string> {
 const section = (text: string): string => text.slice(text.indexOf('project skills to adjust:'));
 
 describe('store.migrate at 4.0: exports', () => {
-  it('The final set is the nine of Rule 18 step 2, without cortex-migrate', () => {
+  it('[STORE-MIGRATE-60] The final set is the nine of Rule 18 step 2, without cortex-migrate', () => {
     expect([...FINAL_BUNDLES].sort()).toEqual(['cortex-fresh', 'cortex-learn', 'cortex-quality', 'cortex-register-tasks', 'cortex-remember', 'specflow-onboard', 'specflow-review', 'specflow-spec', 'verification-before-completion']);
   });
 
-  it('The retired list holds the spec names and no final bundle', () => {
+  it('[STORE-MIGRATE-61] The retired list holds the spec names and no final bundle', () => {
     const spec = fs.readFileSync(path.join(specsRoot(REPO), 'store/migrate.spec.md'), 'utf8');
     const line = spec.split('\n').find((l) => l.includes('**The retired list**'))!;
     const names = [...line.slice(line.indexOf('):')).matchAll(/`([^`]+)`/g)].map((m) => m[1]!);
@@ -92,7 +92,7 @@ describe('store.migrate at 4.0: exports', () => {
 });
 
 describe('core-cli.sync Rule 27: the shipped list', () => {
-  it('The shipped list covers the history', () => {
+  it('[CORE-CLI-SYNC-52] The shipped list covers the history', () => {
     const git = (...args: string[]): string => execFileSync('git', args, { cwd: REPO, encoding: 'utf8', maxBuffer: 1 << 26 });
     for (const [name, versions] of [['cortex-register-tasks', 4], ['verification-before-completion', 3]] as const) {
       expect(SHIPPED_3X_HASHES[name], name).toHaveLength(versions);
@@ -108,7 +108,7 @@ describe('core-cli.sync Rule 27: the shipped list', () => {
     }
   });
 
-  it('Every retired name with a shipped copy is on the list, and no other name is', () => {
+  it('[CORE-CLI-SYNC-77] Every retired name with a shipped copy is on the list, and no other name is', () => {
     for (const n of Object.keys(SHIPPED_3X_HASHES)) {
       expect(isRetiredName(n) || n === 'cortex-register-tasks' || n === 'verification-before-completion', n).toBe(true);
     }
@@ -117,7 +117,7 @@ describe('core-cli.sync Rule 27: the shipped list', () => {
 });
 
 describe('store.migrate Rules 8 and 9', () => {
-  it('Apply takes over a bare store-init config', async () => {
+  it('[STORE-MIGRATE-16] Apply takes over a bare store-init config', async () => {
     const make = (label: string): string => {
       const root = tmpRepo(label);
       gitInit(root);
@@ -146,7 +146,7 @@ describe('store.migrate Rules 8 and 9', () => {
     expect(fs.readFileSync(p, 'utf8')).toBe(before);
   });
 
-  it('Accept replaces an accepted value that is not a date', async () => {
+  it('[STORE-MIGRATE-17] Accept replaces an accepted value that is not a date', async () => {
     const root = project('notdate', 'soon');
     const first = await accept(root, pkg());
     expect(first.code, first.text).toBe(0);
@@ -156,14 +156,14 @@ describe('store.migrate Rules 8 and 9', () => {
     expect(read()).toBe(TODAY);
   });
 
-  it('A store is accepted only by a date', () => {
+  it('[STORE-MIGRATE-62] A store is accepted only by a date', () => {
     const root = project('dates', 'soon');
     expect(migrationAccepted(loadStore(root))).toBe(false);
     const dated = project('dated', '2026-11-01');
     expect(migrationAccepted(loadStore(dated))).toBe(true);
   });
 
-  it('A re-run of accept changes nothing it should keep', async () => {
+  it('[STORE-MIGRATE-41] A re-run of accept changes nothing it should keep', async () => {
     const root = project('rerun', '2026-10-19');
     const p = pkg();
     expect((await accept(root, p)).code).toBe(0);
@@ -175,7 +175,7 @@ describe('store.migrate Rules 8 and 9', () => {
 });
 
 describe('store.migrate Rule 18: bundles', () => {
-  it('Accept installs the day-to-day bundles', async () => {
+  it('[STORE-MIGRATE-42] Accept installs the day-to-day bundles', async () => {
     const root = project('install');
     const { code, text } = await accept(root, pkg([...FINAL_BUNDLES, 'cortex-migrate']));
     expect(code, text).toBe(0);
@@ -187,7 +187,7 @@ describe('store.migrate Rule 18: bundles', () => {
     expect(fs.readdirSync(path.join(root, '.claude/skills')).filter((n) => n.startsWith('.cortex-tmp-'))).toEqual([]);
   });
 
-  it('Accept ends at the right block stage', async () => {
+  it('[STORE-MIGRATE-54] Accept ends at the right block stage', async () => {
     const root = project('stage');
     fs.mkdirSync(path.join(root, 'specflow'));
     const { code, text } = await accept(root, pkg());
@@ -197,7 +197,7 @@ describe('store.migrate Rule 18: bundles', () => {
     for (const line of SPECS_SECTION_STAGE2) expect(block).toContain(line);
   });
 
-  it("A re-run never overwrites a project's edit", async () => {
+  it("[STORE-MIGRATE-43] A re-run never overwrites a project's edit", async () => {
     const root = project('edit');
     const dir = bundle(root, 'specflow-review', { 'SKILL.md': 'ours\n' });
     const { text } = await accept(root, pkg());
@@ -205,7 +205,7 @@ describe('store.migrate Rule 18: bundles', () => {
     expect(text).toContain('skills: .claude/skills/specflow-review exists with different content; left alone');
   });
 
-  it('A plain file or a folder marker at a bundle name does not crash accept', async () => {
+  it('[STORE-MIGRATE-63] A plain file or a folder marker at a bundle name does not crash accept', async () => {
     const root = project('oddshapes');
     fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
     fs.writeFileSync(path.join(root, '.claude/skills/cortex-remember'), 'a note\n');
@@ -220,7 +220,7 @@ describe('store.migrate Rule 18: bundles', () => {
     expect(text).not.toContain('skills: installed specflow-spec');
   });
 
-  it('An accept that cannot finish reports it and records no date', async () => {
+  it('[STORE-MIGRATE-64] An accept that cannot finish reports it and records no date', async () => {
     const root = project('blocked');
     fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
     fs.writeFileSync(path.join(root, '.claude/skills/.cortex-tmp-cortex-learn'), 'a note\n');
@@ -235,14 +235,14 @@ describe('store.migrate Rule 18: bundles', () => {
     expect(read()).toBe(TODAY);
   });
 
-  it('A bundle the package lacks is skipped', async () => {
+  it('[STORE-MIGRATE-44] A bundle the package lacks is skipped', async () => {
     const root = project('lacks');
     const { code, text } = await accept(root, pkg(FINAL_BUNDLES.filter((n) => n !== 'specflow-spec')));
     expect(code).toBe(0);
     expect(text).toContain('skills: specflow-spec is missing from the package; not installed');
   });
 
-  it('The retired specflow bundles are listed, not deleted', async () => {
+  it('[STORE-MIGRATE-45] The retired specflow bundles are listed, not deleted', async () => {
     const root = project('retired');
     const dev = bundle(root, 'specflow-develop', { 'SKILL.md': 'dev\n' });
     writeInstalledMarker(path.join(dev, INSTALLED_MARKER_FILENAME), hashDirectoryContent(dev, [INSTALLED_MARKER_FILENAME]));
@@ -259,7 +259,7 @@ describe('store.migrate Rule 18: bundles', () => {
 });
 
 describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
-  it('A retired name is found, and only as a whole token', async () => {
+  it('[STORE-MIGRATE-46] A retired name is found, and only as a whole token', async () => {
     const root = project('token');
     bundle(root, 'release', { 'SKILL.md': 'run specflow-develop\n' });
     bundle(root, 'docs', { 'SKILL.md': 'run specflow-spec and specflow-onboard\n' });
@@ -269,7 +269,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(s).not.toContain('docs');
   });
 
-  it('Patterned names are found', async () => {
+  it('[STORE-MIGRATE-47] Patterned names are found', async () => {
     const root = project('pattern');
     bundle(root, 'notes', { 'SKILL.md': 'x\n', 'references/notes.md': 'see cortex-pulse-distil and cortex-loop-hygiene\n' });
     const s = section((await accept(root, pkg())).text);
@@ -278,7 +278,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(line).toContain('cortex-pulse-distil');
   });
 
-  it('Both path terms are found, in any text file', async () => {
+  it('[STORE-MIGRATE-48] Both path terms are found, in any text file', async () => {
     const root = project('paths');
     bundle(root, 'p', { 'SKILL.md': 'read .cortex/compass\n', 'scripts/run.sh': 'cat .specflow/specs-business/x\n' });
     const s = section((await accept(root, pkg())).text);
@@ -286,7 +286,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(s).toContain('- p/scripts/run.sh: .specflow/');
   });
 
-  it('The new paths do not match', async () => {
+  it('[STORE-MIGRATE-49] The new paths do not match', async () => {
     const root = project('newpaths');
     bundle(root, 'p', { 'SKILL.md': 'specflow/impl/ and .cortex-migrate/\n' });
     const s = section((await accept(root, pkg())).text);
@@ -294,7 +294,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(s).not.toContain('- p/');
   });
 
-  it('The port does not change what is listed', async () => {
+  it('[STORE-MIGRATE-50] The port does not change what is listed', async () => {
     const a = project('before');
     bundle(a, 'p', { 'SKILL.md': 'see .specflow/specs/a.spec.md\n' });
     fs.mkdirSync(path.join(a, '.specflow'));
@@ -306,7 +306,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(line((await accept(b, pkg())).text)).toBe('- p/SKILL.md: .specflow/');
   });
 
-  it('Packaged bundles are left out unless changed', async () => {
+  it('[STORE-MIGRATE-51] Packaged bundles are left out unless changed', async () => {
     const root = project('packaged');
     const p = pkg();
     fs.writeFileSync(path.join(p, 'skills/cortex-remember/SKILL.md'), 'read .cortex/\n');
@@ -317,7 +317,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(s).toContain('- verification-before-completion/SKILL.md: specflow-plan');
   });
 
-  it('A binary file and a symlink do not break the scan', async () => {
+  it('[STORE-MIGRATE-52] A binary file and a symlink do not break the scan', async () => {
     const root = project('binary');
     bundle(root, 'p', { 'SKILL.md': 'x\n' });
     fs.writeFileSync(path.join(root, '.claude/skills/p/logo.png'), Buffer.from([0x89, 0x50, 0x00, 0x2e, 0x63, 0x6f, 0x72, 0x74, 0x65, 0x78, 0x2f]));
@@ -328,7 +328,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(section(text)).not.toContain('logo.png');
   });
 
-  it('Core edits no project skill', async () => {
+  it('[STORE-MIGRATE-53] Core edits no project skill', async () => {
     const root = project('noedit');
     const dir = bundle(root, 'release', { 'SKILL.md': 'run specflow-develop\n' });
     const before = snapshot(dir);
@@ -339,7 +339,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(lines.at(-1)).toBe(`Adjust them with the skill-adjust step of ${path.join(p, 'skills/cortex-migrate/SKILL.md')}`);
   });
 
-  it('Retired bundles and cortex-migrate are left out of the scan', async () => {
+  it('[STORE-MIGRATE-55] Retired bundles and cortex-migrate are left out of the scan', async () => {
     const root = project('leftout');
     bundle(root, 'specflow-develop', { 'SKILL.md': 'read .cortex/\n' });
     bundle(root, 'cortex-migrate', { 'SKILL.md': 'read .cortex/\n' });
@@ -350,14 +350,14 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(s).not.toContain('Adjust them');
   });
 
-  it('A step 2 bundle the package lacks is scanned', async () => {
+  it('[STORE-MIGRATE-56] A step 2 bundle the package lacks is scanned', async () => {
     const root = project('lackscan');
     bundle(root, 'specflow-review', { 'SKILL.md': 'run specflow-plan\n' });
     const s = section((await accept(root, pkg(FINAL_BUNDLES.filter((n) => n !== 'specflow-review')))).text);
     expect(s).toContain('- specflow-review/SKILL.md: specflow-plan');
   });
 
-  it('Lines and terms are ordered', async () => {
+  it('[STORE-MIGRATE-57] Lines and terms are ordered', async () => {
     const root = project('order');
     bundle(root, 'b', { 'SKILL.md': 'specflow-plan\n' });
     bundle(root, 'a', { 'SKILL.md': '.specflow/x .cortex/y specflow-plan\n' });
@@ -366,7 +366,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(lines[1]).toBe('- b/SKILL.md: specflow-plan');
   });
 
-  it('A symlink inside a bundle is listed, not counted', async () => {
+  it('[STORE-MIGRATE-58] A symlink inside a bundle is listed, not counted', async () => {
     const root = project('innerlink');
     const dir = bundle(root, 'p', { 'SKILL.md': 'x\n' });
     fs.symlinkSync(root, path.join(dir, 'refs'));
@@ -375,7 +375,7 @@ describe('store.migrate Rule 18 step 5: the project-skill scan', () => {
     expect(s).toContain('- p/refs: symlink, not read');
   });
 
-  it('An unedited older copy of a final bundle is not listed', async () => {
+  it('[STORE-MIGRATE-59] An unedited older copy of a final bundle is not listed', async () => {
     const first = execFileSync('git', ['log', '--format=%h', '--reverse', '88895ca', '--', 'skills/verification-before-completion'], { cwd: REPO, encoding: 'utf8' }).split('\n')[0]!;
     const old = execFileSync('git', ['show', `${first}:skills/verification-before-completion/SKILL.md`], { cwd: REPO, encoding: 'utf8' });
     const root = project('older');

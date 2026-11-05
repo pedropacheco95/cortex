@@ -44,14 +44,14 @@ describe('B-014: the three schema-version declarations agree', () => {
     expect(declaredDocVersion()).toMatch(/^\d+\.\d+$/);
   });
 
-  it('the validator implements the version the contract declares', () => {
+  it('[SCHEMA-VERSION-2-1] the validator implements the version the contract declares', () => {
     expect(
       SUPPORTED_VERSION,
       'src/schema/version.ts is out of step with cortex-schema.md — bump SUPPORTED_MAJOR/SUPPORTED_MINOR when the contract gains a version',
     ).toBe(declaredDocVersion());
   });
 
-  it('cortex init scaffolds new projects at the version the contract declares', () => {
+  it('[SCHEMA-VERSION-2-1] cortex init scaffolds new projects at the version the contract declares', () => {
     expect(
       SCHEMA_VERSION,
       'src/cli/templates.ts SCHEMA_VERSION is out of step with cortex-schema.md — new projects would be scaffolded against a stale contract',

@@ -44,7 +44,7 @@ async function bugViolations(root: string): Promise<Violation[]> {
 }
 
 describe('The three fields validate by shape only', () => {
-  it('owner, fix_in_flight and a 7-hex found_at_commit raise no check.bug violation', async () => {
+  it('[COMPASS-BUG-CURRENCY-1] owner, fix_in_flight and a 7-hex found_at_commit raise no check.bug violation', async () => {
     const root = tmp('shape-ok');
     writeBug(root, 'B-020', 'x', ['owner: pedro', 'fix_in_flight: feature/registry', 'found_at_commit: 2b217df']);
     expect(await bugViolations(root)).toEqual([]);
@@ -77,7 +77,7 @@ describe('The three fields validate by shape only', () => {
 });
 
 describe('A malformed stamp is an error; a bare status is not', () => {
-  it('found_at_commit with a non-hex character is one check.bug error naming found_at_commit', async () => {
+  it('[COMPASS-BUG-CURRENCY-2] found_at_commit with a non-hex character is one check.bug error naming found_at_commit', async () => {
     const root = tmp('bad-stamp');
     writeBug(root, 'B-021', 'y', ['found_at_commit: 2b217dfz']);
     const v = await bugViolations(root);
@@ -99,7 +99,7 @@ describe('A malformed stamp is an error; a bare status is not', () => {
     for (const x of v) expect(x.location.key).toBe('found_at_commit');
   });
 
-  it('status: triaged with neither owner nor fix_in_flight is not a violation', async () => {
+  it('[COMPASS-BUG-CURRENCY-2] status: triaged with neither owner nor fix_in_flight is not a violation', async () => {
     const root = tmp('bare-triaged');
     const dir = path.join(root, '.cortex', 'compass', 'bugs');
     fs.mkdirSync(dir, { recursive: true });

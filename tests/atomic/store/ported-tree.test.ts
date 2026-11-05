@@ -30,7 +30,7 @@ function ported(): string {
 }
 
 describe('code that names the spec tree, on a ported project', () => {
-  it('A Spec: trailer resolves under specflow/', () => {
+  it('[STORE-VALIDATE-16] A Spec: trailer resolves under specflow/', () => {
     const findings = validateStore(ported(), '2026-11-05').findings.filter((f) => f.check === 'check.trailers');
     expect(findings).toHaveLength(1);
     expect(JSON.stringify(findings[0])).toContain('billing.gone');

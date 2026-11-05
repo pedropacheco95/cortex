@@ -82,7 +82,7 @@ Uses:
 `;
 
 describe('check.insight-entry', () => {
-  it('a well-formed L3 entry under anatomy/ produces no violation', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-3] a well-formed L3 entry under anatomy/ produces no violation', async () => {
     const root = tmp('entry-clean');
     makeInsightProject(root);
     writeInsight(root, 'anatomy/src/auth/session.ts.md', GOOD_L3);
@@ -131,7 +131,7 @@ describe('check.insight-entry', () => {
     expect(warnings[0]?.message).toContain('interim dogfood');
   });
 
-  it('tolerates an absent insight module', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-15] tolerates an absent insight module', async () => {
     const root = tmp('entry-absent');
     makeCortexProject(root, { config: { schemaVersion: '3.0' }, modules: ['compass', 'atlas', 'pulse'] });
     expect(await violationsFor(root, 'check.insight-entry')).toEqual([]);
@@ -143,7 +143,7 @@ describe('check.insight-entry', () => {
 // ---------------------------------------------------------------------------
 
 describe('check.insight-scope-registry', () => {
-  it('a well-formed registry whose paths resolve produces no violation', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-5] a well-formed registry whose paths resolve produces no violation', async () => {
     const root = tmp('registry-clean');
     makeInsightProject(root);
     fs.mkdirSync(path.join(root, 'src/auth'), { recursive: true });
@@ -166,7 +166,7 @@ scopes:
     expect(await violationsFor(root, 'check.insight-scope-registry')).toEqual([]);
   });
 
-  it('errors on a depends_on cycle', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-6] errors on a depends_on cycle', async () => {
     const root = tmp('registry-cycle');
     makeInsightProject(root);
     fs.mkdirSync(path.join(root, 'src/a'), { recursive: true });
@@ -326,7 +326,7 @@ function graphWith(edge: Record<string, unknown>): string {
 }
 
 describe('check.insight-graph', () => {
-  it('a well-formed v3 trio passes clean', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-9] a well-formed v3 trio passes clean', async () => {
     const root = tmp('graph-clean');
     makeInsightProject(root);
     writeInsight(root, 'graph.json', graphWith({}));
@@ -362,7 +362,7 @@ describe('check.insight-graph', () => {
     expect(await violationsFor(root, 'check.insight-graph')).toEqual([]);
   });
 
-  it('errors on empty evidence, a non-enum edge_type, and a float confidence', async () => {
+  it('[INSIGHT-STORAGE-FORMAT-10, INSIGHT-STORAGE-FORMAT-11] errors on empty evidence, a non-enum edge_type, and a float confidence', async () => {
     const root = tmp('graph-bad-edge');
     makeInsightProject(root);
     writeInsight(root, 'graph.json', graphWith({ evidence: '', edge_type: 'related-to', confidence: 0.85 }));
@@ -391,7 +391,7 @@ describe('check.insight-graph', () => {
     expect(errors.some((e) => e.message.includes('node id'))).toBe(true);
   });
 
-  it('warns (not errors) on a dangling edge endpoint', async () => {
+  it('[SCHEMA-VALIDATOR-INSIGHT-CHECKS-4] warns (not errors) on a dangling edge endpoint', async () => {
     const root = tmp('graph-dangling');
     makeInsightProject(root);
     writeInsight(root, 'graph.json', graphWith({ target: 'concept:billing' }));
@@ -456,7 +456,7 @@ describe('check.insight-graph', () => {
 // ---------------------------------------------------------------------------
 
 describe('check.pulse (extended)', () => {
-  it('errors on a gated-layer-update targeting insight/map/, and on a multi-payload section', async () => {
+  it('[SCHEMA-VALIDATOR-INSIGHT-CHECKS-6] errors on a gated-layer-update targeting insight/map/, and on a multi-payload section', async () => {
     const root = tmp('pulse-bad');
     makeInsightProject(root);
     writePulse(
@@ -531,7 +531,7 @@ loop: cortex-init
     expect(v).toEqual([]);
   });
 
-  it('tolerates an absent Type as rule-candidate with only a warning', async () => {
+  it('[SCHEMA-VALIDATOR-INSIGHT-CHECKS-7] tolerates an absent Type as rule-candidate with only a warning', async () => {
     const root = tmp('pulse-untyped');
     makeInsightProject(root);
     writePulse(
@@ -618,7 +618,7 @@ a hyperscale target.
 `;
 
 describe('check.insight-observations', () => {
-  it('tolerates an entirely absent observations/ directory', async () => {
+  it('[INSIGHT-SESSION-OBSERVE-9] tolerates an entirely absent observations/ directory', async () => {
     const root = tmp('obs-absent');
     makeInsightProject(root);
     expect(await violationsFor(root, 'check.insight-observations')).toEqual([]);
@@ -680,7 +680,7 @@ describe('check.insight-observations', () => {
     expect(errors.some((e) => e.location.key === 'sessions' && e.message.includes('not a well-formed'))).toBe(true);
   });
 
-  it('bears_on (3.4) is shape-checked only: a list of non-empty strings passes even when nothing resolves', async () => {
+  it('[SCHEMA-BEARS-ON-7] bears_on (3.4) is shape-checked only: a list of non-empty strings passes even when nothing resolves', async () => {
     const root = tmp('obs-bears-on-ok');
     makeInsightProject(root);
     writeInsight(root, 'observations/_index.md', '# Observations\n\n**Read this when:** …\n\n**What\'s here:** scale.md\n');

@@ -62,7 +62,7 @@ function keysOf(violations: Violation[]): string[] {
 }
 
 describe('An evidence file has the contract frontmatter (the validate half)', () => {
-  it('the AC fixture yields no check.evidence violation', async () => {
+  it('[ATLAS-EVIDENCE-1] the AC fixture yields no check.evidence violation', async () => {
     const root = tmp('valid');
     evidence(root, '2026-09-15-usage', VALID_FM);
     expect(mine(await checkEvidence(root))).toEqual([]);
@@ -101,7 +101,7 @@ describe('An evidence file has the contract frontmatter (the validate half)', ()
 });
 
 describe('Every required field is enforced, at error severity', () => {
-  it('missing instrument, kind: guess, findings: [], window: { from: yesterday }, bears_on: [] → five errors at those keys', async () => {
+  it('[ATLAS-EVIDENCE-2] missing instrument, kind: guess, findings: [], window: { from: yesterday }, bears_on: [] → five errors at those keys', async () => {
     const root = tmp('five');
     const file = evidence(root, '2026-09-15-usage', [
       'id: evidence.2026-09-15-usage',
@@ -165,7 +165,7 @@ describe('Every required field is enforced, at error severity', () => {
 });
 
 describe('Id and filename must agree; supersedes must point at evidence', () => {
-  it('2026-09-15-usage.md with id evidence.2026-09-14-usage and a decision in supersedes → errors at id (naming the filename) and supersedes (naming the target)', async () => {
+  it('[ATLAS-EVIDENCE-3] 2026-09-15-usage.md with id evidence.2026-09-14-usage and a decision in supersedes → errors at id (naming the filename) and supersedes (naming the target)', async () => {
     const root = tmp('id-supersedes');
     write(root, '.cortex/atlas/decisions/2026-07-07-scoped-extraction.md', '---\nid: decision.2026-07-07-scoped-extraction\ntitle: x\ndate: 2026-07-07T00:00:00Z\n---\n');
     evidence(root, '2026-09-15-usage', [
@@ -207,7 +207,7 @@ describe('Id and filename must agree; supersedes must point at evidence', () => 
 });
 
 describe('An absent directory is not a finding', () => {
-  it('no .cortex/atlas/evidence/ → no check.evidence and no check.layout violation mentioning evidence', async () => {
+  it('[ATLAS-EVIDENCE-4] no .cortex/atlas/evidence/ → no check.evidence and no check.layout violation mentioning evidence', async () => {
     const root = tmp('absent');
     write(root, '.cortex/atlas/_index.md', '# Atlas — index\n');
     write(root, '.cortex/atlas/decisions/_index.md', '# Decisions — index\n');
@@ -245,13 +245,13 @@ function pulseErrors(violations: Violation[]): Violation[] {
 }
 
 describe('An evidence-candidate is gated like a decision-candidate (check.pulse)', () => {
-  it('type in enum, target under .cortex/atlas/evidence/, Proposed file payload → no check.pulse violation', async () => {
+  it('[ATLAS-EVIDENCE-11] type in enum, target under .cortex/atlas/evidence/, Proposed file payload → no check.pulse violation', async () => {
     const root = tmp('gate-ok');
     write(root, '.cortex/pulse/reports/x.md', REPORT_HEADER + section('.cortex/atlas/evidence/2026-09-15-audit.md', 'Proposed file'));
     expect((await checkPulse(root)).filter((v) => v.check === 'check.pulse')).toEqual([]);
   });
 
-  it('a target under atlas/decisions/ is an error for the section', async () => {
+  it('[ATLAS-EVIDENCE-11] a target under atlas/decisions/ is an error for the section', async () => {
     const root = tmp('gate-root');
     write(root, '.cortex/pulse/reports/x.md', REPORT_HEADER + section('.cortex/atlas/decisions/y.md', 'Proposed file'));
     const errors = pulseErrors(await checkPulse(root));
@@ -260,7 +260,7 @@ describe('An evidence-candidate is gated like a decision-candidate (check.pulse)
     expect(errors[0]?.message).toContain('.cortex/atlas/evidence/');
   });
 
-  it('a Proposed addition payload is an error for the section — evidence is create-only', async () => {
+  it('[ATLAS-EVIDENCE-11] a Proposed addition payload is an error for the section — evidence is create-only', async () => {
     const root = tmp('gate-payload');
     write(root, '.cortex/pulse/reports/x.md', REPORT_HEADER + section('.cortex/atlas/evidence/2026-09-15-audit.md', 'Proposed addition'));
     const errors = pulseErrors(await checkPulse(root));
