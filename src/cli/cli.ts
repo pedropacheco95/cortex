@@ -52,6 +52,7 @@
  */
 import { init } from './init.js';
 import { PROCESS_PROFILES, isProcessProfile, type ProcessProfile } from './profile.js';
+import { isEntryPoint } from '../entry.js';
 
 /**
  * Every live verb the dispatcher matches, with a one-line synopsis — the
@@ -745,8 +746,6 @@ export async function run(argv: string[]): Promise<number> {
 }
 
 // Guard: only run CLI when invoked directly.
-const scriptUrl = import.meta.url;
-const scriptPath = process.argv[1];
-if (scriptPath && (scriptUrl.endsWith(scriptPath) || scriptUrl.endsWith(scriptPath.replace(/\\/g, '/')))) {
+if (isEntryPoint(import.meta.url)) {
   run(process.argv.slice(2)).then(process.exit);
 }
