@@ -16,13 +16,19 @@ const TODAY = '2026-10-14';
 const of = (root: string, check: string) => validateStore(root, TODAY).findings.filter((f) => f.check === check);
 
 describe('store.validate', () => {
-  it('[STORE-VALIDATE-1] a clean store validates with exit 0', () => {
+  it('[STORE-VALIDATE-1] a clean store validates with exit 0', async () => {
     const root = tmpRepo('clean');
     storeInit(root);
     writeStoreFile(root, 'world/terms/fare.md', baseFm({ about: 'What a fare is on these ferries' }), 'The price of one crossing.\n');
     const r = validateStore(root, TODAY);
     expect(r.findings).toEqual([]);
     expect(r.exitCode).toBe(0);
+    const out: string[] = [];
+    expect(await storeCli(['validate'], root, { stdout: (l) => out.push(l) })).toBe(0);
+    expect(out).toEqual(['store: no findings']);
+    out.length = 0;
+    await storeCli(['validate', '--json'], root, { stdout: (l) => out.push(l) });
+    expect(JSON.parse(out.join('\n'))).toEqual({ findings: [], exitCode: 0 });
   });
 
   it('[STORE-VALIDATE-2] missing required frontmatter is an error', () => {
