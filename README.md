@@ -8,7 +8,7 @@ It has two parts. **Core** is a deterministic TypeScript CLI that never calls an
 
 - Schema 4.0.
 - **macOS only.** The scheduled tasks use Claude Code Desktop.
-- Requires Claude Code and Node.js 20 or later.
+- Requires Claude Code, Node.js 20 or later, and [pnpm](https://pnpm.io/installation).
 - Not published to npm yet. Install from source.
 
 ## Install
@@ -21,7 +21,9 @@ pnpm build
 pnpm add -g "$PWD"
 ```
 
-You now have a `cortex` binary on your `PATH`.
+If `pnpm add -g` says the global bin directory is not in `PATH`, run `pnpm setup`, open a new terminal, and run it again.
+
+You now have a `cortex` binary on your `PATH`. It runs from this clone, so keep the folder.
 
 ## Quick start
 
