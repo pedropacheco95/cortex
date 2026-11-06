@@ -1,7 +1,7 @@
 ---
 about: What the agent may decide on its own, and what it must bring to the user
 permanence: changing
-verified: "2026-07-10 (told)"
+verified: "2026-11-06 (told)"
 origin:
   - migrated:compass/standing-authorities.md#1@d7ed910
   - migrated:compass/standing-authorities.md#2@d7ed910
@@ -18,6 +18,7 @@ origin:
   - migrated:compass/standing-authorities.md#13@d7ed910
   - migrated:compass/standing-authorities.md#14@d7ed910
   - migrated:compass/standing-authorities.md#15@d7ed910
+  - session:13ecca9a-2346-4535-8492-95892e9bd065
 applies_when: The agent is about to decide whether to act on its own or bring a question to the user first
 scope:
   - action
@@ -45,10 +46,6 @@ File in `compass/bugs/` with the seven-type classification and a populated `prop
 **Blocking-batch exception:** when a filed bug blocks the correctness of the current or immediately-next batch (not merely future rounds), it rides with the blocking batch even past the threshold — the scoped reason is *unblock the batch*, never "small enough to ride". Record that reason explicitly on the ride so exceptions don't erode the general rule. (First exercise: B-003 riding the bug-triage batch — skill-suggest's draft payloads contain fences, so the batch's own outputs would be mangled without it.)
 
 **Ride-along is for mechanical fixes only.** When a filed bug has design surface — multiple sub-decisions, edge cases not obvious from the report — defer to the next round even if the line count is small. (B-002's handling is the template: small-looking fix, but crash-recovery semantics deserved a spec Rule, so it waited.) Resolved bugs stay filed permanently (see `preferences.md`).
-
-## Orchestration depth constraint (temporary)
-
-Until §16.2 step 11 (writer/verifier harness) is complete, `/goal` invocations must be scoped so `specflow-develop` runs at **Minimal or Light depth** — sub-agents cannot spawn sub-agents (the same constraint that killed SpecFlow's agent path, design §8.3), so Standard/Full recursive orchestration fails silently. If a spec's scope would trigger Standard or Full, **split the batch**. Fan-out failures are recovered by breaking the work apart, not by retrying at lower depth mid-run. This constraint lifts when step 11 ships.
 
 ## Extraction preference
 

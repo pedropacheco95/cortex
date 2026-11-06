@@ -1,16 +1,19 @@
 ---
-about: "Initial extraction is a plan not a pipeline — scoped, recursive, with a cross-scope unification pass"
+about: "Superseded at schema 4.0, which has no insight layer. Was: initial extraction is a plan not a pipeline — scoped, recursive, with a cross-scope unification pass"
 permanence: changing
-verified: "2026-07-07 (told)"
+verified: "2026-11-06 (told)"
 origin:
   - migrated:atlas/decisions/2026-07-07-scoped-extraction.md@d7ed910
   - source:history/sources/2026-07-07-cortex-v3-reframe.md
+  - session:13ecca9a-2346-4535-8492-95892e9bd065
 aliases:
   - decision.2026-07-07-scoped-extraction
   - 2026-07-07-scoped-extraction
 ---
 
 ## Answer
+
+**Superseded by schema 4.0.** A 4.0 store has no insight layer: insight is dropped by decision and not migrated (schema S9.3, `store.migrate` Rule 12), so there is nothing to extract. This repo accepted 4.0 on 2026-10-19. The text below is the 3.x answer, kept as the record.
 
 # Initial extraction is a plan, not a pipeline
 
