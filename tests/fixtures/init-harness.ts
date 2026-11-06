@@ -8,12 +8,8 @@ import * as path from 'path';
 import * as os from 'os';
 import { execFileSync } from 'child_process';
 
-let counter = 0;
-
 export function makeTmpDir(label: string): string {
-  const dir = path.join(os.tmpdir(), `cortex-init-${label}-${Date.now()}-${counter++}`);
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  return fs.mkdtempSync(path.join(os.tmpdir(), `cortex-init-${label}-`));
 }
 
 export function cleanTmp(dir: string): void {

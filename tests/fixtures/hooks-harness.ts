@@ -6,12 +6,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-let counter = 0;
-
 export function makeTmpDir(label: string): string {
-  const dir = path.join(os.tmpdir(), `cortex-hooks-${label}-${Date.now()}-${counter++}`);
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  return fs.mkdtempSync(path.join(os.tmpdir(), `cortex-hooks-${label}-`));
 }
 
 export function cleanTmp(dir: string): void {

@@ -19,11 +19,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FLAT_ROOT = path.resolve(HERE, '../../fixtures/valid');
 const SCOPED_ROOT = path.resolve(HERE, '../../fixtures/insight-scoped');
 
-let counter = 0;
 const tmpRoots: string[] = [];
 function makeTmpRoot(label: string): string {
-  const dir = path.join(os.tmpdir(), `cortex-insight-cli-v3-${label}-${Date.now()}-${counter++}`);
-  fs.mkdirSync(dir, { recursive: true });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `cortex-insight-cli-v3-${label}-`));
   tmpRoots.push(dir);
   return dir;
 }

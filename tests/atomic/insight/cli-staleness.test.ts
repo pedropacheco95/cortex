@@ -36,11 +36,9 @@ const BODY = 'export function issue(): string {\n  return "token";\n}\n';
 const BUILT = '9f2c1ab';
 const EXTRACTED = '2026-07-07T14:00:00Z';
 
-let counter = 0;
 const tmpRoots: string[] = [];
 function makeTmpRoot(label: string): string {
-  const dir = path.join(os.tmpdir(), `cortex-insight-stale-${label}-${Date.now()}-${counter++}`);
-  fs.mkdirSync(dir, { recursive: true });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `cortex-insight-stale-${label}-`));
   tmpRoots.push(dir);
   return dir;
 }
