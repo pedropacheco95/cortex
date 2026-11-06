@@ -40,6 +40,22 @@ async function exitOf(root: string): Promise<number> {
   try { return await validateRun([root]); } finally { console.log = log; }
 }
 
+describe('schema.validator Rule 17: the version a 4.0 report names', () => {
+  async function printed(args: string[]): Promise<string> {
+    const log = console.log;
+    const lines: string[] = [];
+    console.log = (l: string) => { lines.push(l); };
+    try { await validateRun(args); } finally { console.log = log; }
+    return lines.join('\n');
+  }
+
+  it('[SCHEMA-VALIDATOR-35] a 4.0 report names the store\'s version', async () => {
+    const root = project('version', false);
+    expect(await printed([root])).toContain('Schema version: 4.0');
+    expect(JSON.parse(await printed([root, '--json'])).schemaVersion).toBe('4.0');
+  });
+});
+
 describe('schema.validator Rule 15: a 4.0 project', () => {
   it('[SCHEMA-VALIDATOR-16] runs the store and spec-tree checks; a governed_by alias resolves', async () => {
     const root = project('ok', false);

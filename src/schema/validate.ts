@@ -26,7 +26,7 @@ import { checkClaudeMd } from './checks/claude-md.js';
 import { checkLoopMd } from './checks/loop-md.js';
 import { checkConstellation } from './checks/constellation.js';
 import { checkRecallIndex } from './checks/recall-index.js';
-import { loadStore } from '../store/layout.js';
+import { loadStore, SCHEMA_VERSION_4 } from '../store/layout.js';
 import { validateLoaded } from '../store/validate.js';
 import {
   checkInsightIndex,
@@ -243,5 +243,6 @@ async function validateFourOh(root: string, target: string): Promise<ValidationR
   ];
   violations.push(...withoutStoreAliases(specViolations, store));
   const counts = countViolations(violations);
-  return { schemaVersion: SUPPORTED_VERSION, target, conformant: counts.error === 0, violations, counts };
+  const schemaVersion = typeof store.config?.['schemaVersion'] === 'string' ? store.config['schemaVersion'] : SCHEMA_VERSION_4;
+  return { schemaVersion, target, conformant: counts.error === 0, violations, counts };
 }
