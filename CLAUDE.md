@@ -14,7 +14,7 @@ cortex/
 ├── specflow/            # promises/, impl/, generated INDEX.md (see Specs below)
 ├── skills/              # skill bundles; .claude/skills/ mirrors them
 ├── src/                 # Core: cli, store, specflow, tasks, schema, hooks, and 3.x modules
-├── tests/               # atomic/, spec/, journey/, scenario/, fixtures/, setup/
+├── tests/               # atomic/, spec/, fixtures/, setup/; journey/ and scenario/ are empty
 ├── .githooks/           # the git check, written by cortex hooks install
 ├── README.md            # what Cortex is and how to install it
 └── onboarding.md        # setting up a project
@@ -40,8 +40,6 @@ pnpm dev                         # run the CLI from dist/
 pnpm test                        # full suite
 pnpm test:atomic                 # tests/atomic
 pnpm test:spec                   # tests/spec
-pnpm exec vitest run tests/journey
-pnpm exec vitest run tests/scenario
 pnpm add -g "$PWD"               # install the cortex binary (not on npm)
 cortex validate                  # check the store and specs
 cortex specs lint                # check spec shape and cross-references
