@@ -100,6 +100,17 @@ describe('core-cli.init Rule 19: the bin runs through symlinks', () => {
     expect(JSON.parse(r.stdout).counts.criteria).toBe(3000);
   });
 
+  it('[CORE-CLI-INIT-58] hook-called verbs stay safe on a 4.0 project', () => {
+    const repo = path.join(tmp, 'four-oh');
+    fs.mkdirSync(path.join(repo, 'cortex'), { recursive: true });
+    fs.writeFileSync(path.join(repo, 'cortex/cortex.json'), '{"schemaVersion":"4.0"}\n');
+    for (const args of [['hook', 'session-start'], ['insight-refresh-fast'], ['loop-insight-refresh', '--fast']]) {
+      const r = spawnSync(path.join(tmp, 'cortex'), args, { encoding: 'utf-8', input: '{}', cwd: repo });
+      expect(r.status, args.join(' ')).toBe(0);
+      expect(fs.existsSync(path.join(repo, '.cortex')), args.join(' ')).toBe(false);
+    }
+  });
+
   it('[CORE-CLI-INIT-29] importing the module does not run it', () => {
     const script = path.join(tmp, 'import.mjs');
     fs.writeFileSync(script, `await import(${JSON.stringify(path.join(out, 'cli/cli.js'))});\nconsole.log('imported');\n`);

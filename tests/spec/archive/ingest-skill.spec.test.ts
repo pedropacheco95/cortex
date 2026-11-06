@@ -152,6 +152,7 @@ describe('An emitted promotion is acceptable by the gate it targets (B-020)', ()
     async () => {
       const root = tmp('accept');
       expect(await cortex(root, ['init', '--no-llm', '--yes'])).toBe(0);
+      write(root, '.cortex/cortex.config.json', '{"schemaVersion":"3.4"}\n');
       write(root, `.cortex/${EXTRACTED}`, '# Asks\n\n- A-08: coordinators read compass first.\n');
       write(root, '.cortex/pulse/state/suggestion-counter', '2\n');
       write(root, '.cortex/pulse/reports/archive-ingestion.md', REPORT_HEADER + RULE_SECTION + '\n' + STAKEHOLDER_SECTION);
