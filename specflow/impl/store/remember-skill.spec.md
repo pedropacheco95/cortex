@@ -41,10 +41,11 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
     - then the line `Run specflow-spec on this ask.`, the ask quoted verbatim from the document, and `source: <digest path>`.
 
     The skill does not judge the ask, reconcile it against the specs, or run specflow-spec: that session does (`specflow.spec-skill` Rules 9 and 14). Its `origin` is `source:<digest path>`. It ends each with the readback `Spec request: <ask> → now/proposals.md#P-<YYYY-MM-DD>-<slug> (origin: source:<digest path>)`. A digest with no asks files no item. This paragraph comes in the source digest section of the SKILL.md, after its numbered steps. Rule 9 still holds for this rule: the Rule 2 steps and the description do not change.
-12. **Bugs** (2026-11-04, owner decision: bugs go to this skill, which files and closes them; schema S3, "Bugs in 4.0"). The description gains `"file this bug"` after `"from now on"`, and it is the only change to the description. This section comes after the Rule 2 steps.
+12. **Bugs** (2026-11-04, owner decision: bugs go to this skill, which files and closes them; schema S3, "Bugs in 4.0"). The description gains `"file this bug"` after `"from now on"`, and it is the only change Rule 12 makes to the description. This section comes after the Rule 2 steps.
     - **Filing.** A bug goes in `code/<area>/<slug>.md` with the S3 frontmatter and `status: open`, and no `B-NNN` id. `<area>` is the first folder of the affected path, else `repo`. Its diagnosis (type, severity, owner, fix in flight, the commit it was found at) goes in body lines, as far as they are known. The steps of Rule 2 otherwise apply, and the readback is the `Filing:` line.
     - **Closing.** When the bug is fixed, the skill writes `history/incidents/<today>-<slug>.md` holding the bug's text, `aliases` and `origin` list with this session's origin added, drops `status`, and adds the body line `Fixed: <today>, <commit or change>`. It then removes the `code/` file and re-points any link to it found by `rg '<old path>' cortex/`. It runs `cortex store validate`, and ends with `Closed: <bug in ≤ 12 words> → <path> (origin: <origin>)`.
     - Only a person's word or observed evidence that the fix landed closes a bug; a fix in flight does not.
+13. **Ingest** (2026-11-06, owner decision). The description gains `"ingest this"` after `"file this bug"`, so a user who says it reaches the source digest of Rule 7. `something the store` becomes `what the store`, to stay in the listing budget. "Read this" is not a trigger: reading a document does not mean keeping it.
 
 ## Acceptance Criteria
 
@@ -131,7 +132,7 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 ### STORE-REMEMBER-SKILL-14: The Rule 2 steps and description are unchanged
 
 - **Given** the SKILL.md text before and after this amendment
-- **When** the numbered steps are compared, and the description apart from the phrase of Rule 12
+- **When** the numbered steps are compared, and the description apart from the changes of Rules 12 and 13
 - **Then** they are identical
 
 ### STORE-REMEMBER-SKILL-15: The write gate stands alone
@@ -171,3 +172,11 @@ Writing must be as cheap as reading (vision §2). When the user says "remember t
 - **Given** the SKILL.md text
 - **When** its bug section is read
 - **Then** it says a bug closes only on a person's word or observed evidence that the fix landed
+
+## Acceptance Criteria: ingest (amendment 2026-11-06)
+
+### STORE-REMEMBER-SKILL-21: The description routes an ingest here
+
+- **Given** the skill's frontmatter `description`
+- **When** the listing budget check runs on it
+- **Then** it contains `"ingest this"`, does not contain `read this`, and the check passes
