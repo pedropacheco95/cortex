@@ -180,6 +180,7 @@ describe('AC: loop-write invariant — every write under .cortex/insight/ + puls
 
 describe('AC: CLI dispatch — tiers required, v2 verbs retired', () => {
   it('tierless loop-insight-refresh is refused with the retirement pointer', async () => {
+    process.chdir(fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-tierless-')));
     expect(await run(['loop-insight-refresh', '--collect'])).toBe(1);
     expect(err.join('\n')).toContain('exactly one of --fast, --daily, or --full');
   });
