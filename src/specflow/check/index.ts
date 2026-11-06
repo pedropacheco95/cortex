@@ -345,7 +345,8 @@ export function check(args: string[], start = '.', io: CheckIO = {}): number {
   const [mode, value, extra] = args;
   const validRange = mode === '--range' && value !== undefined && /^[^.]+(\.[^.]+)*\.\.[^.].*$/.test(value);
   const prePush = mode === '--pre-push' && value === undefined;
-  if (extra !== undefined || !(validRange || prePush || (mode === '--commit-msg' && value !== undefined))) {
+  const byHand = prePush && io.stdin === undefined && process.stdin.isTTY === true;
+  if (byHand || extra !== undefined || !(validRange || prePush || (mode === '--commit-msg' && value !== undefined))) {
     out(USAGE);
     return 2;
   }

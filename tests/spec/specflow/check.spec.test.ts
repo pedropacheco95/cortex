@@ -958,3 +958,18 @@ describe('specflow.check: hooks and config', () => {
     }
   });
 });
+
+describe('specflow.check Rule 1: pre-push by hand', () => {
+  it('[SPECFLOW-CHECK-92] run by hand, pre-push does not wait for input', () => {
+    const tty = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+    const out: string[] = [];
+    try {
+      expect(check(['--pre-push'], tmpRepo('pre-push-tty'), { stdout: (l) => out.push(l), stderr: () => {} })).toBe(2);
+    } finally {
+      if (tty) Object.defineProperty(process.stdin, 'isTTY', tty);
+      else delete (process.stdin as { isTTY?: boolean }).isTTY;
+    }
+    expect(out.join('\n')).toContain('usage: cortex check');
+  });
+});
