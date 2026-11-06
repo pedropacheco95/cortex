@@ -53,6 +53,8 @@
  *
  * Verbs: init, sync, store, specs, check, hooks, migrate, validate, scan, insight, why, recall, usage, thread, id, hook, constellation, tasks, pulse-list, pulse-accept, pulse-reject, pulse-hygiene, pulse-distil, loop-rule-decay, loop-atlas-staleness, loop-onboarding-drift, loop-bug-triage, loop-specflow-lint, loop-specflow-verify, loop-spec-drift, loop-test-runner, test-run, insight-refresh-fast, loop-insight-refresh, loop-session-observe
  */
+import * as fs from 'fs';
+import * as path from 'path';
 import { parseInitArgs, setupProject } from './setup.js';
 import { isEntryPoint } from '../entry.js';
 import { check } from '../specflow/check/index.js';
@@ -189,11 +191,53 @@ const PULSE_LOOP_COMMANDS = new Set([
   'thread',
 ]);
 
+/** core-cli.init Rule 22: the verbs that serve only a 3.x store. `hook` and the fast insight tier are left out: a stale hook line must never fail. */
+const THREE_X_VERBS = new Set([
+  'scan',
+  'insight',
+  'why',
+  'recall',
+  'usage',
+  'thread',
+  'id',
+  'constellation',
+  'pulse-list',
+  'pulse-accept',
+  'pulse-reject',
+  'pulse-hygiene',
+  'pulse-distil',
+  'loop-rule-decay',
+  'loop-atlas-staleness',
+  'loop-onboarding-drift',
+  'loop-bug-triage',
+  'loop-specflow-lint',
+  'loop-specflow-verify',
+  'loop-spec-drift',
+  'loop-test-runner',
+  'test-run',
+  'loop-session-observe',
+  'loop-insight-refresh',
+]);
+
+/** Rule 22: a 3.x verb on a 4.0 project would create `.cortex/`, and `cortex sync` would then refuse the project. */
+function refusedOnFourOh(argv: string[]): boolean {
+  const verb = argv[0];
+  if (verb === undefined || !THREE_X_VERBS.has(verb)) return false;
+  if (verb === 'loop-insight-refresh' && argv.includes('--fast')) return false;
+  return fs.existsSync(path.join(process.cwd(), 'cortex', 'cortex.json'))
+    && !fs.existsSync(path.join(process.cwd(), '.cortex', 'cortex.config.json'));
+}
+
 export async function run(argv: string[]): Promise<number> {
   // `cortex hook <name>` — names match init's settings.json registrations.
   if (argv[0] === 'hook') {
     const { main } = await import('../hooks/cli.js');
     return main(argv.slice(1));
+  }
+
+  if (refusedOnFourOh(argv)) {
+    console.error(`cortex ${argv[0]}: refused — this verb serves 3.x projects and this project is on the 4.0 store. Nothing ran.`);
+    return USAGE_EXIT;
   }
 
   // Single migration chokepoint (pulse reorg): fold any legacy flat
