@@ -26,7 +26,7 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 
 ## Rules
 
-1. **Modes.** `cortex check --commit-msg <file>` judges the staged commit (the git `commit-msg` hook). `cortex check --range <base>..<head>` judges every commit in that range. `cortex check --pre-push` reads git's pre-push lines from stdin and runs range mode for each pushed ref (`specflow.git-hooks`). Any other argument shape prints usage and exits 2.
+1. **Modes.** `cortex check --commit-msg <file>` judges the staged commit (the git `commit-msg` hook). `cortex check --range <base>..<head>` judges every commit in that range. `cortex check --pre-push` reads git's pre-push lines from stdin and runs range mode for each pushed ref (`specflow.git-hooks`). With stdin a terminal, `--pre-push` prints the usage text and exits 2 instead of waiting for lines. Any other argument shape prints usage and exits 2.
 2. **Exit codes.** 0: allowed, warnings included. 1: refused. 2: usage error, or an internal error. An internal error prints `specflow: internal error in the check (not a verdict on your change): <message>`. Git treats 1 and 2 alike, so a broken check stops the commit and says so; it never reads as a pass.
 3. **Path classes.** Each changed path gets the first class that fits:
    - `generated`: `specflow/INDEX.md`
@@ -642,6 +642,12 @@ It is a port of the bench's variant B check, which refused 4 times in 94 commits
 - **Given** `specflow.rules.b` is `refuse`, a staged new case with a `${}` name, and separately one starting with a static tag, and one left unchanged
 - **When** the check runs
 - **Then** the first exits 1 naming its file and line, and the other two exit 0
+
+### SPECFLOW-CHECK-92: Run by hand, pre-push does not wait for input
+
+- **Given** stdin is a terminal and no pre-push lines were passed
+- **When** `cortex check --pre-push` runs
+- **Then** it prints the usage text and exits 2
 
 ## Notes
 
