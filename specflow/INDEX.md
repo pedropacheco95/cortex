@@ -3498,6 +3498,8 @@ Untagged tests: 1162
 
 ## Tags naming no criterion
 
+- **STORE-REMEMBER-SKILL-21** `tests/atomic/store/remember-skill.test.ts` › [STORE-REMEMBER-SKILL-21] The description routes an ingest here
+
 ## Retired
 
 - **anatomy.contributor-gets-a-legible-codebase** (`specflow/promises/anatomy/contributor-gets-a-legible-codebase.business.md`)

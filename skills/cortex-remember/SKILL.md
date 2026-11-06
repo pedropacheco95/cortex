@@ -1,7 +1,7 @@
 ---
 name: cortex-remember
 description: >
-  File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", "file this bug", or explains something the store doesn't hold.
+  File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", "file this bug", "ingest this", or explains what the store doesn't hold.
 ---
 
 # Cortex: remember
