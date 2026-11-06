@@ -97,13 +97,21 @@ describe('store.remember-skill', () => {
   it('[STORE-REMEMBER-SKILL-14] The Rule 2 steps and description are unchanged', () => {
     const steps = text.slice(text.indexOf('## Steps, in order'), text.indexOf('## Rules from the user'));
     expect(createHash('sha256').update(steps).digest('hex')).toBe('0010439c3960541834abb7a8c2e58b00ed82567b3194044fc4e62804363c923a');
-    expect(text).toContain(`File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", "file this bug", or explains something the store doesn't hold.`);
+    expect(text).toContain(`File one fact in this project's cortex/ store, in the one place it belongs, and show where. Use when the user says "remember this", "note that", "from now on", "file this bug", "ingest this", or explains what the store doesn't hold.`);
   });
 
   it('[STORE-REMEMBER-SKILL-15] The write gate stands alone', () => {
     const pre = text.slice(0, text.indexOf('## Steps, in order'));
     expect(pre).toContain("This project's store is migrated but not accepted (cortex migrate --accept); nothing filed.");
     expect(pre).not.toMatch(/store\.[a-z-]+|core-cli\.|specflow\.[a-z-]+/);
+  });
+
+  it('[STORE-REMEMBER-SKILL-21] The description routes an ingest here', () => {
+    const out = execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'measure-skill-descriptions.mjs')], { cwd: ROOT, encoding: 'utf8' });
+    const description = text.split('---')[1]!;
+    expect(description).toContain('"ingest this"');
+    expect(description.toLowerCase()).not.toContain('read this');
+    expect(out).toContain('OK    all');
   });
 
   it('[STORE-REMEMBER-SKILL-16] The description routes a bug here', () => {
