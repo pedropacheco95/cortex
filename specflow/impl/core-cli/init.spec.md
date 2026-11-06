@@ -74,6 +74,8 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 
 21. **A source install is clean.** The repository root carries a `pnpm-workspace.yaml` that decides every dependency build script, so `pnpm install` on a clean clone exits 0 with no ignored-build error.
 
+22. **3.x verbs refuse on a 4.0 project.** When the working directory has `cortex/cortex.json` and no `.cortex/cortex.config.json`, these verbs write nothing, print `cortex <verb>: refused — this verb serves 3.x projects and this project is on the 4.0 store. Nothing ran.` to stderr, and exit 2: `scan`, `insight`, `why`, `recall`, `usage`, `thread`, `id`, `constellation`, `pulse-list`, `pulse-accept`, `pulse-reject`, `pulse-hygiene`, `pulse-distil`, `loop-rule-decay`, `loop-atlas-staleness`, `loop-onboarding-drift`, `loop-bug-triage`, `loop-specflow-lint`, `loop-specflow-verify`, `loop-spec-drift`, `loop-test-runner`, `test-run`, `loop-session-observe`, and `loop-insight-refresh` without `--fast`. `hook`, `insight-refresh-fast` and `loop-insight-refresh --fast` stay as they are: a stale git or session hook line must never fail.
+
 ## Acceptance Criteria
 
 ### CORE-CLI-INIT-1: `--help` prints usage and writes nothing
@@ -436,6 +438,24 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Given** the installed dependencies under `node_modules/.pnpm` and the repository's `pnpm-workspace.yaml`
 - **When** each package whose `package.json` has a `preinstall`, `install` or `postinstall` script, or that holds a `binding.gyp`, is listed
 - **Then** each is named under `allowBuilds`
+
+### CORE-CLI-INIT-56: A 3.x verb on a 4.0 project refuses and creates no `.cortex/`
+
+- **Given** a project set up by `cortex init`
+- **When** each verb Rule 22 lists runs
+- **Then** it exits 2, prints the refusal, and `.cortex/` does not exist, and `cortex sync` still exits 0 afterwards
+
+### CORE-CLI-INIT-57: A 3.x project keeps its verbs
+
+- **Given** a project with `.cortex/cortex.config.json` and `cortex/cortex.json`
+- **When** `cortex pulse-list` runs
+- **Then** it is not refused
+
+### CORE-CLI-INIT-58: Hook-called verbs stay safe on a 4.0 project
+
+- **Given** a 4.0 project
+- **When** `cortex hook session-start`, `cortex insight-refresh-fast` or `cortex loop-insight-refresh --fast` runs
+- **Then** it exits 0 and `.cortex/` does not exist
 
 ## Notes
 
