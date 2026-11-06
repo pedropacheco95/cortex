@@ -72,6 +72,8 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 
     **The old setup.** Rules 1 to 17 now describe the exported `init()` function only. It stays in `src/cli/init.ts` because tests build 3.x fixtures with it, and no CLI path reaches it. This rule wins over them, and over `core-cli.init-profile` Rule 2 on the CLI path. A 3.x project created now would be one `cortex sync` refuses and whose skills no longer ship.
 
+21. **A source install is clean.** The repository root carries a `pnpm-workspace.yaml` that decides every dependency build script, so `pnpm install` on a clean clone exits 0 with no ignored-build error.
+
 ## Acceptance Criteria
 
 ### CORE-CLI-INIT-1: `--help` prints usage and writes nothing
@@ -428,6 +430,12 @@ Init operates on the project directory, the user's `~/.claude/`, and the git rep
 - **Given** any directory
 - **When** `cortex --help` runs
 - **Then** stdout carries ``Run `cortex init` to set up a project`` and lists `init [target]`
+
+### CORE-CLI-INIT-55: Every dependency with a build script is decided
+
+- **Given** the installed dependencies under `node_modules/.pnpm` and the repository's `pnpm-workspace.yaml`
+- **When** each package whose `package.json` has a `preinstall`, `install` or `postinstall` script, or that holds a `binding.gyp`, is listed
+- **Then** each is named under `allowBuilds`
 
 ## Notes
 
