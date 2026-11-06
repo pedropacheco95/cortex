@@ -24,7 +24,7 @@ function copyDir(src: string, dest: string): void {
 }
 
 export function makeTmpFixture(testName: string): string {
-  const tmpDir = path.join(os.tmpdir(), `cortex-test-${testName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `cortex-test-${testName}-`));
   copyDir(VALID_FIXTURE, tmpDir);
   return tmpDir;
 }

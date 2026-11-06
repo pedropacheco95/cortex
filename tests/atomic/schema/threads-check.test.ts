@@ -73,7 +73,7 @@ describe('check.threads: AC "Malformed thread files are warned, never fatal"', (
   });
 
   it('[PULSE-THREADS-19] through `validate`, the warnings appear and the report stays conformant (exit code unaffected)', async () => {
-    const root = path.join(os.tmpdir(), `cortex-threads-validate-${Date.now()}`);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cortex-threads-validate-'));
     fs.cpSync(path.resolve('tests/fixtures/valid'), root, { recursive: true });
     dirs.push(root);
     const raw = threadRawFixture({ id: 'T-010' }).replace('status: open', 'status: maybe').replace(/^expires: .*\n/m, '');

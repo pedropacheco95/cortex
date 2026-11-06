@@ -16,11 +16,10 @@ const VALID_FIXTURE = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 const BIZ_REL = path.join('.specflow', 'specs-business', 'schema', 'contributor-trusts-project-knowledge.business.md');
 const DEV_REL = path.join('.specflow', 'specs', 'schema', 'validator.spec.md');
 
-let counter = 0;
 const dirs: string[] = [];
 
 function makeFixtureCopy(label: string): string {
-  const dir = path.join(os.tmpdir(), `cortex-bizstatus-${label}-${Date.now()}-${counter++}`);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `cortex-bizstatus-${label}-`));
   fs.cpSync(VALID_FIXTURE, dir, { recursive: true });
   dirs.push(dir);
   return dir;
