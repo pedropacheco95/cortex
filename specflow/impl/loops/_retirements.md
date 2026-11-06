@@ -97,7 +97,7 @@ D3 and D6 left `diagnoses-and-tests-mean-what-they-say` with nothing behind it; 
 | `compass/developer-gets-bugs-triaged-without-asking` | `developer-gets-upkeep-proposals-without-asking`, Rule 5 | A filed bug is counted, aged and closed only on evidence | Daily classification and its second opinion (D3) |
 | `loops/developer-trusts-changes-the-system-writes` | `developer-gets-upkeep-proposals-without-asking`, Rule 6 | Nothing scheduled changes code, tests or specs | The worker, the blind judge, verified proposals (D9) |
 
-Not folded: `anatomy/contributor-gets-a-legible-codebase`. Its outcome is a map built from the code with no hand-written documentation. Its banner names the insight layer as the home, and 4.0 has none (D8). The store holds what the code can't say, which is the opposite outcome, so no live promise can carry it. It stays as it is until Pedro rules.
+Not folded: `anatomy/contributor-gets-a-legible-codebase`. Its outcome is a map built from the code with no hand-written documentation. Its banner names the insight layer as the home, and 4.0 has none (D8). The store holds what the code can't say, which is the opposite outcome, so no live promise can carry it. Pedro retired it on 2026-11-06 with nothing kept.
 
 **Live specs with `depends_on` a retired spec.** Ids still resolve, so nothing breaks: `schema.version-2` → `reorg`; `archive.intent-register`, `provenance.frontmatter-check` → `archive.ingest-skill`; `insight.refresh-loops`, `insight.session-observe` → `insight.extract-skill`.
 

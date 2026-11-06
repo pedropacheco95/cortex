@@ -1,6 +1,6 @@
 ---
 id: anatomy.contributor-gets-a-legible-codebase
-status: implemented
+status: retired
 implemented_by:
   - ../../impl/anatomy/scanner.spec.md
   - ../../impl/anatomy/refresh-fast.spec.md
@@ -9,11 +9,7 @@ implemented_by:
 
 # A contributor gets a codebase Claude can read without manual documentation
 
-> **SUPERSEDED at v3 (build-order-v3 step 7; design §5.10).** The outcome
-> survives — a codebase Claude can read without manual documentation — but it
-> is now delivered by the insight layer (`cortex insight file/concept/element`
-> over `.cortex/insight/`), not the anatomy map. The implementing anatomy dev
-> specs are themselves superseded. Retained for lineage.
+> **RETIRED (Pedro, 2026-11-06).** Nothing is kept. The outcome is a map built from the code with no hand-written documentation. Its last home was the insight layer, which 4.0 does not have (D8), and the store holds what the code can't say, the opposite outcome. See `../../impl/loops/_retirements.md`.
 
 ## Outcome
 
