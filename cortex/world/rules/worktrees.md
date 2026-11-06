@@ -18,6 +18,6 @@ source: user@2026-10-21
 - Create every worktree under `~/worktrees/cortex/<slug>`. Never beside the repo, never loose in `~`. That folder is excluded from Spotlight.
 - Remove the worktree when its PR is merged (`git worktree remove`, then delete the branch).
 
-Pedro, 2026-10-21, verbatim (stated for levapp, applies to every project as `~/worktrees/<project>/<slug>`): "Worktrees: always work in a git worktree, never in the main checkout. Create every worktree under `~/worktrees/<project>/<slug>` (for this repo: `~/worktrees/levapp/<slug>`), never beside the repo or loose in `~`. That folder is excluded from Spotlight. Remove your worktree when its PR is merged."
+Pedro, 2026-10-21 (stated for another project, applies to every project as `~/worktrees/<project>/<slug>`; the quote omits that project's own path): "Worktrees: always work in a git worktree, never in the main checkout. Create every worktree under `~/worktrees/<project>/<slug>`, never beside the repo or loose in `~`. That folder is excluded from Spotlight. Remove your worktree when its PR is merged."
 
 Context: on 2026-10-20 the `cortex-v4` worktree sat beside the repo at `~/Documents/Projetos/cortex-v4` for a week after its merge; a search of `~` on 2026-10-21 found no other loose cortex worktrees.

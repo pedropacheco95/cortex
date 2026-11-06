@@ -20,7 +20,7 @@ commands always use whichever account `gh auth switch` last activated
 globally, independent of the git remote's identity — a session must check or
 set the active `gh` account separately before `gh pr create` or similar.
 
-As of 2026-11-04, `origin` on the current Mac is the HTTPS URL `https://github.com/pedropacheco95/cortex.git`, so the repo-local credential helper is what pins the account there, and `pedropacheco-berd` is the active `gh` account.
+As of 2026-11-04, `origin` on the current Mac is the HTTPS URL `https://github.com/pedropacheco95/cortex.git`, so the repo-local credential helper is what pins the account there, and the work GitHub account is the active `gh` account.
 
 <!-- 3.x fields of insight/observations/github-account-pinning.md, carried verbatim by cortex migrate -->
 ```yaml
