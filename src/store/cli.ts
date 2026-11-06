@@ -49,6 +49,7 @@ export async function storeCli(args: string[], root = '.', io: StoreCliIO = {}):
       return 1;
     }
     if (rest.includes('--json')) stdout(JSON.stringify({ findings: r.findings, exitCode: r.exitCode }, null, 2));
+    else if (r.findings.length === 0) stdout('store: no findings');
     else for (const f of r.findings) stdout(formatFinding(f));
     return r.exitCode;
   }

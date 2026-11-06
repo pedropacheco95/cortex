@@ -18,7 +18,7 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 
 ## Rules
 
-1. `cortex store validate [--json]` runs every S11 check and prints one line per finding: `<level> <check> <path>: <message>`. It exits 1 if any finding is an `error`, 0 otherwise.
+1. `cortex store validate [--json]` runs every S11 check and prints one line per finding: `<level> <check> <path>: <message>`. It exits 1 if any finding is an `error`, 0 otherwise. With no findings it prints `store: no findings`; `--json` is unchanged.
 2. `check.store-config`, `check.store-layout`, `check.frontmatter`, `check.naming`, `check.decision`, `check.change`, `check.aliases`, `check.links`, `check.append-only`, `check.visibility` and `check.trailers` follow S11 as written.
 3. `check.near-duplicate` compares `about` lines after lower-casing, removing punctuation and the stop-word list in `src/store/checks/stopwords.ts`. Two files sharing ≥ 0.8 token Jaccard, or two files with the same name in different folders, give one warning naming both.
 4. `check.append-only` compares each committed `history/` file with its first committed version. Text added after the old content inside a `## Correction <date>` section is allowed; any other difference warns. Outside git, it is skipped. **Status transitions** (2026-10-19, schema S5): in `history/changes/` only, the frontmatter `status` value may differ from the original when the body ends with one appended transition line per change, `- <YYYY-MM-DD>: <from> → <to>, <reason>`. The check compares both versions with the `status` value masked, and the text after the original body must be transition lines and `## Correction` sections only. A changed `status` with no transition line, an edit to any other field, or a transition line outside `history/changes/` still warns.
@@ -33,7 +33,7 @@ One command that tells whether a 4.0 store keeps its contract (schema S11): stru
 
 - **Given** a store created by `cortex store init` plus one well-formed term file (with `origin`)
 - **When** `cortex store validate` runs
-- **Then** it prints no findings and exits 0
+- **Then** it prints `store: no findings` and exits 0
 
 ### STORE-VALIDATE-2: Missing required frontmatter is an error
 
